@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ShowUp — The Pitch</title>
+<style>
+:root {
+  --sand:#E8DDD0;--terra:#C4622D;--burnt:#A0522D;
+  --olive:#5C6B3A;--fig:#6B2D4E;--gold:#C49A3C;
+  --charcoal:#3A3A3A;--muted:#6A6A6A;--cream:#FBF7F2;
+  --serif:Georgia,'Times New Roman',serif;
+  --sans:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);}
+.hero{background:var(--fig);padding:80px 24px;text-align:center;}
+.hero-logo{font-family:var(--serif);font-size:52px;color:white;font-weight:700;margin-bottom:8px;}
+.hero-tagline{font-family:var(--serif);font-size:22px;color:var(--gold);font-style:italic;margin-bottom:20px;}
+.hero-sub{font-size:16px;color:rgba(255,255,255,0.75);max-width:560px;margin:0 auto 32px;line-height:1.7;}
+.hero-badge{display:inline-block;background:var(--terra);color:white;font-size:13px;font-weight:700;padding:8px 20px;border-radius:20px;letter-spacing:0.04em;}
+.container{max-width:780px;margin:0 auto;padding:0 24px;}
+.section{padding:60px 0;}
+.section-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:var(--terra);margin-bottom:12px;}
+.section-title{font-family:var(--serif);font-size:32px;color:var(--charcoal);font-weight:700;margin-bottom:16px;line-height:1.3;}
+.section-body{font-size:15px;color:var(--muted);line-height:1.8;margin-bottom:20px;}
+.divider{height:1px;background:linear-gradient(to right,var(--fig),transparent);opacity:0.2;margin:0;}
+.card-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;margin-top:24px;}
+.card{background:var(--cream);border-radius:14px;padding:22px;border:1px solid rgba(58,58,58,0.10);box-shadow:0 2px 14px rgba(100,50,20,0.08);}
+.card-icon{font-size:28px;margin-bottom:12px;}
+.card-title{font-family:var(--serif);font-size:17px;font-weight:700;color:var(--charcoal);margin-bottom:8px;}
+.card-body{font-size:13px;color:var(--muted);line-height:1.7;}
+.feature-list{display:flex;flex-direction:column;gap:12px;margin-top:20px;}
+.feature-item{background:var(--cream);border-radius:12px;padding:18px 20px;border-left:4px solid var(--terra);box-shadow:0 2px 10px rgba(100,50,20,0.07);}
+.feature-item.fig{border-left-color:var(--fig);}
+.feature-item.olive{border-left-color:var(--olive);}
+.feature-item.gold{border-left-color:var(--gold);}
+.feature-name{font-size:15px;font-weight:700;color:var(--charcoal);margin-bottom:4px;}
+.feature-desc{font-size:13px;color:var(--muted);line-height:1.6;}
+.badge{display:inline-block;font-size:10px;font-weight:800;padding:2px 8px;border-radius:10px;margin-left:8px;letter-spacing:0.04em;vertical-align:middle;}
+.badge-new{background:var(--gold);color:white;}
+.badge-updated{background:var(--olive);color:white;}
+.data-table{width:100%;border-collapse:collapse;margin-top:20px;}
+.data-table th{background:var(--fig);color:white;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;padding:12px 16px;text-align:left;}
+.data-table td{padding:12px 16px;font-size:13px;border-bottom:1px solid rgba(58,58,58,0.08);color:var(--charcoal);background:var(--cream);}
+.data-table tr:last-child td{border-bottom:none;}
+.data-table td:first-child{font-weight:600;}
+.badge-vis{background:var(--olive);color:white;font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;}
+.badge-priv{background:#c0392b;color:white;font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;}
+.badge-future{background:var(--gold);color:white;font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;}
+.timeline{display:flex;flex-direction:column;gap:0;margin-top:24px;}
+.timeline-item{display:flex;gap:20px;padding-bottom:28px;position:relative;}
+.timeline-item:last-child{padding-bottom:0;}
+.timeline-dot{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;margin-top:2px;}
+.timeline-line{position:absolute;left:19px;top:42px;bottom:0;width:2px;background:rgba(58,58,58,0.12);}
+.timeline-content{flex:1;}
+.timeline-title{font-size:16px;font-weight:700;color:var(--charcoal);margin-bottom:4px;}
+.timeline-sub{font-size:13px;color:var(--muted);line-height:1.6;}
+.timeline-tag{display:inline-block;font-size:11px;font-weight:700;padding:2px 10px;border-radius:10px;margin-top:6px;color:white;}
+.revenue-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;margin-top:24px;}
+.revenue-card{background:var(--cream);border-radius:14px;padding:22px;border:1px solid rgba(58,58,58,0.10);box-shadow:0 2px 14px rgba(100,50,20,0.08);}
+.revenue-priority{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px;}
+.revenue-title{font-family:var(--serif);font-size:17px;font-weight:700;color:var(--charcoal);margin-bottom:8px;}
+.revenue-desc{font-size:13px;color:var(--muted);line-height:1.6;margin-bottom:12px;}
+.revenue-est{font-size:12px;font-weight:700;color:var(--terra);}
+.quote-block{background:var(--fig);border-radius:16px;padding:32px;margin:32px 0;text-align:center;}
+.quote-text{font-family:var(--serif);font-size:20px;color:white;font-style:italic;line-height:1.6;margin-bottom:12px;}
+.quote-attr{font-size:12px;color:rgba(255,255,255,0.6);text-transform:uppercase;letter-spacing:0.08em;}
+.stats-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:16px;margin-top:24px;}
+.stat-card{background:var(--cream);border-radius:12px;padding:20px;text-align:center;border:1px solid rgba(58,58,58,0.10);}
+.stat-number{font-family:var(--serif);font-size:32px;font-weight:700;color:var(--terra);margin-bottom:4px;}
+.stat-label{font-size:12px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:0.06em;}
+.moat-section{background:var(--fig);padding:60px 44px;margin:0;}
+.moat-card{background:rgba(255,255,255,0.09);border:1px solid rgba(255,255,255,0.15);border-radius:14px;padding:22px;}
+.moat-card-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;margin-top:24px;}
+.moat-quote{background:rgba(255,255,255,0.1);border-radius:16px;padding:32px;margin-top:32px;text-align:center;}
+.footer{background:var(--charcoal);padding:40px 24px;text-align:center;}
+.footer-logo{font-family:var(--serif);font-size:24px;color:var(--gold);font-weight:700;margin-bottom:8px;}
+.footer-tag{font-size:14px;color:rgba(255,255,255,0.5);font-style:italic;}
+.footer-link{display:inline-block;margin-top:16px;color:var(--terra);font-size:13px;text-decoration:none;font-weight:600;}
+@media(max-width:600px){.hero-logo{font-size:38px;}.section-title{font-size:26px;}.moat-section{padding:40px 24px;}}
+</style>
+</head>
+<body>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="hero-logo">ShowUp</div>
+  <div class="hero-tagline">Your living room for great TV.</div>
+  <div class="hero-sub">ShowUp is the social TV tracking app for people who take their couch seriously. Track what you're watching, save what's next, and share it all with your crowd. Good taste lives here.</div>
+  <div class="hero-badge">&#127871; Beta &mdash; May 2026</div>
+</div>
+
+<div class="container">
+
+  <!-- THE PITCH -->
+  <div class="section">
+    <div class="section-label">The Pitch</div>
+    <div class="section-title">Netflix knows what you watch. ShowUp knows why.</div>
+    <div class="section-body">Every streaming service tracks what you watch. None of them know who you are, what you love, or who convinced you to press play. ShowUp does. We're building the first social TV tracking app that combines real viewing behavior with rich lifestyle data — creating an audience intelligence platform that streaming services, advertisers and data firms can't build on their own.</div>
+    <div class="section-body">But first and most importantly — we're building something people actually want to use. A warm, social, beautifully designed app where TV lovers track their shows, discover new ones through friends they trust, and share their couch life with their crowd. The data is the business. The app is the product people love.</div>
+    <div class="quote-block">
+      <div class="quote-text">"We know not just what people watch — but who convinced them to watch it."</div>
+      <div class="quote-attr">ShowUp &mdash; The Influence Graph</div>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- WHERE WE ARE -->
+  <div class="section">
+    <div class="section-label">Where We Are</div>
+    <div class="section-title">Built from concept in March 2026 to live hosted app through multiple development sessions.</div>
+    <div class="stats-row">
+      <div class="stat-card"><div class="stat-number">4</div><div class="stat-label">Core screens</div></div>
+      <div class="stat-card"><div class="stat-number">11</div><div class="stat-label">Beta testers ready</div></div>
+      <div class="stat-card"><div class="stat-number">25+</div><div class="stat-label">Data points collected</div></div>
+      <div class="stat-card"><div class="stat-number">Live</div><div class="stat-label">Hosted on Vercel</div></div>
+    </div>
+    <div class="feature-list" style="margin-top:28px;">
+      <div class="feature-item">
+        <div class="feature-name">&#10003; Full onboarding flow</div>
+        <div class="feature-desc">Profile setup with name, city, state, age range and gender. Followed immediately by Tell Us More — a psychographic screen collecting career, hobbies, household type, viewing habits and show discovery preferences. All data private, never visible to other users.</div>
+      </div>
+      <div class="feature-item fig">
+        <div class="feature-name">&#10003; Three core tracking tabs</div>
+        <div class="feature-desc">Currently Watching on My TV, My List (Save your next binge) and Already Binged — each with show entry, streaming service selection and smart grouping by service. Shows move between tabs as users progress through them.</div>
+      </div>
+      <div class="feature-item olive">
+        <div class="feature-name">&#10003; Remote rating system</div>
+        <div class="feature-desc">1-5 remote ratings on Already Binged. Dark charcoal remotes go full gold when selected. Ratings feed directly into the Friends Favorites ranking engine in the Living Room.</div>
+      </div>
+      <div class="feature-item gold">
+        <div class="feature-name">&#10003; The Living Room</div>
+        <div class="feature-desc">Social hub showing Your Crowd, their watching lists and Friends Favorites — crowd-sourced rankings averaged across the entire friend group with circle badges, streaming service labels and drill-down detail on who rated what.</div>
+      </div>
+      <div class="feature-item">
+        <div class="feature-name">&#10003; 5 Living Room themes</div>
+        <div class="feature-desc">Users pick their room style in Settings — Tuscany, Cabin, Modern, Formal or Coastal. Each switches the entire app color palette. Room choice is stored as a lifestyle data point correlated with viewing behavior.</div>
+      </div>
+      <div class="feature-item fig">
+        <div class="feature-name">&#10003; Invite Friends system <span class="badge badge-new">NEW</span></div>
+        <div class="feature-desc">Persistent Invite Friends button in the top nav on every screen. Opens a modal with a personal invite link and one-tap copy. Branded invite landing page live at /invite.html. Functional invite flow — real account creation and Living Room joining — built in Supabase.</div>
+      </div>
+      <div class="feature-item olive">
+        <div class="feature-name">&#10003; Invisible data infrastructure <span class="badge badge-new">NEW</span></div>
+        <div class="feature-desc">Every show tracks source (manual vs Living Room), Influenced By (which friend prompted the add) and Added At timestamp. Every reaction captures sentiment and timestamp. Session count and lastActive on every user. All invisible, all feeding the influence graph from day one.</div>
+      </div>
+      <div class="feature-item gold">
+        <div class="feature-name">&#10003; Settings + Privacy Policy <span class="badge badge-new">NEW</span></div>
+        <div class="feature-desc">Full settings screen with room theme selector, profile editing and legal links. Standalone privacy policy at /privacy.html ready for attorney review. Consent line on onboarding screen. Terms of Use placeholder in place.</div>
+      </div>
+      <div class="feature-item">
+        <div class="feature-name">&#10003; Live on the internet</div>
+        <div class="feature-desc">Hosted on Vercel, version controlled on GitHub. Real URL, opens on any phone or laptop, auto-deploys when updated. Three pages live: the app, privacy policy and invite landing page.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- COMPETITIVE -->
+  <div class="section">
+    <div class="section-label">Competitive Landscape</div>
+    <div class="section-title">Why existing apps fall short.</div>
+    <div class="section-body">ShowUp does not compete by having the most features or the deepest metadata. It competes by being easier, warmer, more social and more human than anything currently available. The product should never feel like homework.</div>
+    <div class="card-grid">
+      <div class="card">
+        <div class="card-icon">&#128253;</div>
+        <div class="card-title">Trakt</div>
+        <div class="card-body">Powerful and feature-rich but complex, overwhelming and has a difficult social connection flow. Built for TV hobbyists not mainstream users. The friend-connecting experience is frustrating enough to cause drop-off.</div>
+      </div>
+      <div class="card">
+        <div class="card-icon">&#128250;</div>
+        <div class="card-title">TV Time</div>
+        <div class="card-body">Large user base and strong tracking functionality but less centered on close friend groups. More utility-focused than community-focused. Recommendations feel impersonal. Tracking feels like a chore.</div>
+      </div>
+      <div class="card">
+        <div class="card-icon">&#10024;</div>
+        <div class="card-title">ShowUp</div>
+        <div class="card-body">Wins through simplicity, human recommendations and friend-focused discovery. Warm UX. Mainstream usability. Low-friction engagement. Social-first from the first screen to the last.</div>
+      </div>
+    </div>
+    <div class="quote-block">
+      <div class="quote-text">"Not another algorithm. Recommendations from people you trust."</div>
+      <div class="quote-attr">ShowUp vs. Every Streaming Service</div>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- BRAND VOICE -->
+  <div class="section">
+    <div class="section-label">Brand Voice <span class="badge badge-updated">UPDATED</span></div>
+    <div class="section-title">The language of ShowUp.</div>
+    <div class="section-body">ShowUp has a distinct voice — warm, social, conversational and never corporate. These sample phrases work to guide our final brand vision for every touchpoint from onboarding to marketing to social content. <strong>Not final.</strong></div>
+    <div class="card-grid">
+      <div class="card">
+        <div class="card-icon">&#127863;</div>
+        <div class="card-title">Core Positioning</div>
+        <div class="card-body">
+          "Not another algorithm."<br><br>
+          "Less scrolling. Better recommendations."<br><br>
+          "Your people. Your shows."<br><br>
+          "Good taste lives here."<br><br>
+          "Recommendations from people you trust."<br><br>
+          "Streaming is better with friends."
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-icon">&#128172;</div>
+        <div class="card-title">Emotional Anchors</div>
+        <div class="card-body">
+          "Friends on the couch."<br><br>
+          "Group text energy."<br><br>
+          "Wine night energy."<br><br>
+          "What are you watching?"<br><br>
+          "See what your friends are obsessed with."<br><br>
+          "Find your next favorite through friends."
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-icon">&#127968;</div>
+        <div class="card-title">In-App Language</div>
+        <div class="card-body">
+          Pull up a chair &rarr;<br><br>
+          Currently Watching on My TV<br><br>
+          Save your next binge<br><br>
+          Already Binged &mdash; Done Watching &#10003;<br><br>
+          The Living Room &mdash; Your Crowd<br><br>
+          Friends Favorites<br><br>
+          Invite Friends
+        </div>
+      </div>
+    </div>
+    <div class="section-body" style="margin-top:20px;"><strong>Social content direction:</strong> Short-form Instagram content featuring authentic friend group dynamics, regional personalities, streaming opinions and "what are you watching?" conversations. The tone should feel real, slightly chaotic, smart but not polished — conversational instead of corporate. The contrast between different regional and personality types is a natural recurring content theme.</div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- THE APP -->
+  <div class="section">
+    <div class="section-label">The App</div>
+    <div class="section-title">Four screens. One living room.</div>
+    <div class="section-body">ShowUp is deliberately simple. Four tabs, one social hub, one settings screen. Every feature earns its place.</div>
+    <div class="card-grid">
+      <div class="card">
+        <div class="card-icon">&#128250;</div>
+        <div class="card-title">Currently Watching on My TV</div>
+        <div class="card-body">Add shows you're actively watching with their streaming service. When you finish, hit Done Watching &#10003; — the show moves to Already Binged with a confetti celebration. Shows grouped by streaming service.</div>
+      </div>
+      <div class="card">
+        <div class="card-icon">&#127871;</div>
+        <div class="card-title">My List</div>
+        <div class="card-body">Save your next binge. Add shows you want to watch with their streaming service. Queue It Up moves a show straight to watching. Grouped by service so you can see everything on each platform at a glance.</div>
+      </div>
+      <div class="card">
+        <div class="card-icon">&#128252;</div>
+        <div class="card-title">Already Binged</div>
+        <div class="card-body">Your finished shows. Rate each 1 to 5 remotes. Leave a comment — "What did you think?" The more you rate the richer your data and the more valuable Friends Favorites rankings become for everyone.</div>
+      </div>
+      <div class="card">
+        <div class="card-icon">&#127968;</div>
+        <div class="card-title">The Living Room</div>
+        <div class="card-body">Your social hub. See Your Crowd's watching lists, tap into any friend's profile, leave reactions. Toggle to Friends Favorites for crowd-sourced rankings — every show rated, averaged and ranked with who rated what.</div>
+      </div>
+      <div class="card">
+        <div class="card-icon">&#128100;</div>
+        <div class="card-title">Your Profile</div>
+        <div class="card-body">Name, city, age range, gender. Editable anytime. Private data never shown to other users. Feeds into future personalized recommendations and psychographic matching.</div>
+      </div>
+      <div class="card">
+        <div class="card-icon">&#9881;&#65039;</div>
+        <div class="card-title">Settings</div>
+        <div class="card-body">Living Room theme selector — five distinct room styles that change the entire app palette. Profile editing, preferences, privacy policy. Placeholders for notifications, log out and delete data — active after Supabase.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- THE DATA -->
+  <div class="section">
+    <div class="section-label">The Data</div>
+    <div class="section-title">What we collect, what users see, and why it matters.</div>
+    <div class="section-body">ShowUp collects two types of data — what users see and interact with, and what is captured silently. The visible data makes the app valuable to users. The invisible data makes the company valuable to buyers.</div>
+    <table class="data-table">
+      <tr><th>Data Point</th><th>Visible to Friends</th><th>Type</th></tr>
+      <tr><td>First name + last initial</td><td><span class="badge-vis">Yes</span></td><td>Profile</td></tr>
+      <tr><td>City</td><td><span class="badge-vis">Yes</span></td><td>Profile</td></tr>
+      <tr><td>Show lists (watching, saved, binged)</td><td><span class="badge-vis">Yes</span></td><td>Behavioral</td></tr>
+      <tr><td>Show ratings (remotes)</td><td><span class="badge-vis">Yes</span></td><td>Behavioral</td></tr>
+      <tr><td>Reactions and comments</td><td><span class="badge-vis">Yes</span></td><td>Social</td></tr>
+      <tr><td>Age range</td><td><span class="badge-priv">Never</span></td><td>Psychographic</td></tr>
+      <tr><td>Gender</td><td><span class="badge-priv">Never</span></td><td>Psychographic</td></tr>
+      <tr><td>Career category</td><td><span class="badge-priv">Never</span></td><td>Psychographic</td></tr>
+      <tr><td>Hobbies (up to 7)</td><td><span class="badge-priv">Never</span></td><td>Psychographic</td></tr>
+      <tr><td>Household type</td><td><span class="badge-priv">Never</span></td><td>Psychographic</td></tr>
+      <tr><td>Viewing habits + frequency</td><td><span class="badge-priv">Never</span></td><td>Psychographic</td></tr>
+      <tr><td>Show discovery method</td><td><span class="badge-priv">Never</span></td><td>Psychographic</td></tr>
+      <tr><td>Living Room theme choice</td><td><span class="badge-priv">Never</span></td><td>Lifestyle</td></tr>
+      <tr><td>Income range</td><td><span class="badge-future">Hidden &mdash; future</span></td><td>Psychographic</td></tr>
+      <tr><td>Relationship status</td><td><span class="badge-future">Hidden &mdash; future</span></td><td>Psychographic</td></tr>
+      <tr><td>Education level</td><td><span class="badge-future">Hidden &mdash; future</span></td><td>Psychographic</td></tr>
+      <tr><td>How heard about ShowUp</td><td><span class="badge-future">Hidden &mdash; future</span></td><td>Psychographic</td></tr>
+      <tr><td>Source of show addition</td><td><span class="badge-priv">Never</span></td><td>Influence</td></tr>
+      <tr><td>Influenced by (friend ID)</td><td><span class="badge-priv">Never</span></td><td>Influence</td></tr>
+      <tr><td>Reaction sentiment</td><td><span class="badge-priv">Never</span></td><td>Influence</td></tr>
+      <tr><td>Session count + timestamps</td><td><span class="badge-priv">Never</span></td><td>Engagement</td></tr>
+      <tr><td>Show added timestamp</td><td><span class="badge-priv">Never</span></td><td>Engagement</td></tr>
+    </table>
+    <div class="quote-block" style="margin-top:32px;">
+      <div class="quote-text">"ShowUp users don't just rate shows. They tell us who they are, how they live, and who influences what they watch. That combination doesn't exist anywhere else."</div>
+      <div class="quote-attr">The ShowUp Data Advantage</div>
+    </div>
+    <div class="section-body"><strong>Setting up for Supabase:</strong> Every data point above is already structured in the app — ready to map directly to Supabase database columns. When Supabase is connected, data begins saving permanently, real user accounts are created and the influence graph starts building in real time. No restructuring required.</div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- THE BUSINESS -->
+  <div class="section">
+    <div class="section-label">The Business</div>
+    <div class="section-title">How ShowUp makes money on the way to 100,000+ users.</div>
+    <div class="section-body">Three revenue paths in priority order — starting with the easiest and building toward the most valuable.</div>
+    <div class="revenue-grid">
+      <div class="revenue-card">
+        <div class="revenue-priority" style="color:var(--terra);">Priority #1 &mdash; Start Now</div>
+        <div class="revenue-title">Affiliate Partnerships</div>
+        <div class="revenue-desc">ShowUp users are actively deciding what to watch and where. Every time a user signs up for a new streaming service after seeing a show on ShowUp — we earn a commission. Netflix, Hulu, HBO Max, Paramount+ and others all have affiliate programs. Most natural revenue model for a show tracking app. Zero user friction.</div>
+        <div class="revenue-est">$5&ndash;25 per new subscriber referred.</div>
+      </div>
+      <div class="revenue-card">
+        <div class="revenue-priority" style="color:var(--fig);">Priority #2 &mdash; Build Relationships Now</div>
+        <div class="revenue-title">Brand Partnerships</div>
+        <div class="revenue-desc">ShowUp's living room positioning is a natural fit for wine brands, spirits companies, snack brands and streaming services launching new shows. Sponsored show recommendations, branded Living Room moments, curated watch lists from partners. Premium placement for brands that match the audience's lifestyle.</div>
+        <div class="revenue-est">$1,000&ndash;50,000 per campaign. Start conversations at 1,000+ users.</div>
+      </div>
+      <div class="revenue-card">
+        <div class="revenue-priority" style="color:var(--olive);">Priority #3 &mdash; The Long Game</div>
+        <div class="revenue-title">Data Licensing</div>
+        <div class="revenue-desc">The primary exit and revenue strategy. Anonymized, aggregated psychographic and behavioral data sold to streaming services, advertisers, content producers and data firms. ShowUp knows not just what people watch but who they are, how they live and who influenced their viewing choices. That combination doesn't exist anywhere else.</div>
+        <div class="revenue-est">Serious buyer conversations at 100,000+ users. Acquisition range at &gt;100,000 engaged users with complete profiles.</div>
+      </div>
+    </div>
+    <div class="section-body" style="margin-top:32px;"><strong>Target exit:</strong> Data firm acquisition. Companies like Nielsen, Comscore, Antenna and Parrot Analytics pay significant money for exactly what ShowUp is building — behavioral and psychographic data tied to entertainment consumption with a verified social influence layer. Realistic acquisition range: $2M&ndash;$20M depending on user scale and data quality at time of sale. Timeline: 12+ months post-launch with strong growth.</div>
+    <div class="timeline" style="margin-top:28px;">
+      <div class="timeline-item">
+        <div class="timeline-dot" style="background:var(--terra);">&#127871;</div>
+        <div class="timeline-line"></div>
+        <div class="timeline-content">
+          <div class="timeline-title">Now &mdash; Beta Launch</div>
+          <div class="timeline-sub">10 friends and family testing the live app. Supabase connection next — real accounts, real data saving, real friend connections.</div>
+          <span class="timeline-tag" style="background:var(--terra);">In progress</span>
+        </div>
+      </div>
+      <div class="timeline-item">
+        <div class="timeline-dot" style="background:var(--fig);">&#128247;</div>
+        <div class="timeline-line"></div>
+        <div class="timeline-content">
+          <div class="timeline-title">3+ Months &mdash; 500 Engaged Users</div>
+          <div class="timeline-sub">TMDb show search and poster art. Affiliate programs registered. First brand partnership conversations. App Store submission.</div>
+          <span class="timeline-tag" style="background:var(--fig);">Up next</span>
+        </div>
+      </div>
+      <div class="timeline-item">
+        <div class="timeline-dot" style="background:var(--olive);">&#128202;</div>
+        <div class="timeline-line"></div>
+        <div class="timeline-content">
+          <div class="timeline-title">6&ndash;12 Months &mdash; 5,000 Active Users</div>
+          <div class="timeline-sub">Personalized recommendations engine. First data licensing conversations. Streaming service direct partnerships. Freemium tier consideration.</div>
+          <span class="timeline-tag" style="background:var(--olive);">Building toward</span>
+        </div>
+      </div>
+      <div class="timeline-item">
+        <div class="timeline-dot" style="background:var(--gold);">&#127942;</div>
+        <div class="timeline-content">
+          <div class="timeline-title">12+ Months &mdash; &gt;100,000 Users</div>
+          <div class="timeline-sub">Data licensing as primary revenue. Acquisition conversations with data firms and media companies. ShowUp influence graph as primary asset.</div>
+          <span class="timeline-tag" style="background:var(--gold);">The goal</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- THE MOAT - full width dark section -->
+<div class="moat-section">
+  <div style="max-width:780px;margin:0 auto;">
+    <div class="section-label" style="color:var(--gold);">The Moat</div>
+    <div class="section-title" style="color:white;font-size:38px;margin-bottom:16px;">What no one else can copy.</div>
+    <div class="section-body" style="color:rgba(255,255,255,0.72);">Pure show tracking apps are commodities. Letterboxd does it for movies. Goodreads does it for books. The TV space has no clear winner — and none of them have what ShowUp is quietly building underneath. This is not a feature. It is a structural advantage that compounds over time.</div>
+    <div class="moat-card-grid">
+      <div class="moat-card">
+        <div class="card-icon">&#128310;</div>
+        <div class="card-title" style="color:white;font-family:var(--serif);font-size:17px;font-weight:700;margin-bottom:8px;">The Influence Graph</div>
+        <div class="card-body" style="color:rgba(255,255,255,0.72);font-size:13px;line-height:1.7;">ShowUp silently tracks when a show spreads from one friend to another — who saw it in a Living Room, who added it next, whose recommendations actually get followed. Nielsen has been trying to build this for 20 years through surveys and panels. ShowUp builds it organically through a product people love using every day.</div>
+      </div>
+      <div class="moat-card">
+        <div class="card-icon">&#129742;</div>
+        <div class="card-title" style="color:white;font-family:var(--serif);font-size:17px;font-weight:700;margin-bottom:8px;">Psychographic + Behavioral</div>
+        <div class="card-body" style="color:rgba(255,255,255,0.72);font-size:13px;line-height:1.7;">ShowUp knows what you watch AND who you are. Career, hobbies, household type, viewing habits — correlated with specific show ratings and friend influence. That combination does not exist anywhere else. Streaming services pay significant money to understand their audiences. ShowUp knows more than they do.</div>
+      </div>
+      <div class="moat-card">
+        <div class="card-icon">&#129309;</div>
+        <div class="card-title" style="color:white;font-family:var(--serif);font-size:17px;font-weight:700;margin-bottom:8px;">First Party Trust</div>
+        <div class="card-body" style="color:rgba(255,255,255,0.72);font-size:13px;line-height:1.7;">Users choose to share this data. They fill in their career, their hobbies, their household. That consent and trust — built through a product they genuinely enjoy — is the foundation of a data asset that survives any privacy regulation change. As third-party cookies die, first-party data becomes the most valuable asset in digital media.</div>
+      </div>
+      <div class="moat-card">
+        <div class="card-icon">&#127968;</div>
+        <div class="card-title" style="color:white;font-family:var(--serif);font-size:17px;font-weight:700;margin-bottom:8px;">The Living Room Network</div>
+        <div class="card-body" style="color:rgba(255,255,255,0.72);font-size:13px;line-height:1.7;">ShowUp is not a solo app — it is a network. Every user who joins brings their social graph. Every friend connection creates a new node in the influence map. Networks compound — the value of each new user makes every existing user's data more valuable. This is why scale matters and why timing matters now.</div>
+      </div>
+    </div>
+    <div class="moat-quote">
+      <div style="font-family:var(--serif);font-size:22px;color:white;font-style:italic;line-height:1.6;margin-bottom:10px;">"We know not just what people watch — but who convinced them to watch it. That is the data no one else has."</div>
+      <div style="font-size:12px;color:rgba(255,255,255,0.5);text-transform:uppercase;letter-spacing:0.08em;">The ShowUp Advantage</div>
+    </div>
+  </div>
+</div>
+
+<div class="container">
+
+  <!-- WHAT'S COMING -->
+  <div class="section">
+    <div class="section-label">What's Coming</div>
+    <div class="section-title">After Supabase — the next phase.</div>
+    <div class="section-body">The current prototype validates the concept. Supabase connects real accounts, real data and real friend networks. These features are designed and ready to build immediately after — in rough priority order.</div>
+    <div class="feature-list">
+      <div class="feature-item">
+        <div class="feature-name">Real user accounts with magic link login</div>
+        <div class="feature-desc">Email-based login with no password. Data saves permanently between sessions. Every user has their own profile, their own lists, their own Living Room. The app becomes a real product, not a prototype.</div>
+      </div>
+      <div class="feature-item fig">
+        <div class="feature-name">Real friend connections and permissions</div>
+        <div class="feature-desc">Invite links that actually work. Friend requests with pending and accepted states. Four relationship states enforced: pending (no access), active (full mutual visibility), hidden (mutual invisibility — neither party sees the other and the hidden person is not notified) and removed.</div>
+      </div>
+      <div class="feature-item olive">
+        <div class="feature-name">TMDb show search and poster art</div>
+        <div class="feature-desc">Users type a show name and real results appear with artwork. No more free-form text. Titles become standardized — critical for accurate Friends Favorites rankings across the network. Every show card gets real poster art. Single biggest visual upgrade to the app.</div>
+      </div>
+      <div class="feature-item gold">
+        <div class="feature-name">Living Room theme saved permanently</div>
+        <div class="feature-desc">Users pick their room and it saves. Room choice becomes a stored data point — lifestyle preference correlated with viewing behavior and psychographic profile.</div>
+      </div>
+      <div class="feature-item">
+        <div class="feature-name">Influence graph goes live</div>
+        <div class="feature-desc">Source tracking, influencedBy and timestamp fields start populating a real database. The social influence map begins building from day one. Captured automatically — no user action required.</div>
+      </div>
+      <div class="feature-item fig">
+        <div class="feature-name">App Store submission</div>
+        <div class="feature-desc">Supabase enables real authentication required by both Apple and Google for store approval. App wrapped with Capacitor and submitted to both stores. Apple Developer Account ($99/year) and Google Play ($25 one-time).</div>
+      </div>
+      <div class="feature-item olive">
+        <div class="feature-name">Taste badges — earned through real behavior</div>
+        <div class="feature-desc">Badges displayed on profiles earned from genuine activity: Trendsetter (added a show before any friends), Good Influence (5 friends added a show after seeing it on your list), Binge Master, Top Critic. Gamification that reinforces the core social behavior ShowUp is built on.</div>
+      </div>
+      <div class="feature-item gold">
+        <div class="feature-name">"People like you are watching" recommendations</div>
+        <div class="feature-desc">A recommendation engine using psychographic matching — showing users what people with the same career, hobbies and household type are rating highly. ShowUp's killer feature at scale. Requires 50-100 users with complete profiles before the matches mean anything.</div>
+      </div>
+      <div class="feature-item">
+        <div class="feature-name">AI-assisted show discovery</div>
+        <div class="feature-desc">"I want a gritty crime thriller" — conversational show discovery powered by AI and TMDb data, filtered through what people like you are rating highly on ShowUp. A genuinely differentiated feature that no existing tracking app offers.</div>
+      </div>
+      <div class="feature-item fig">
+        <div class="feature-name">Fun profile stats</div>
+        <div class="feature-desc">Hours watched by platform, favorite genres, most used streaming services, top-rated shows — displayed on user profiles. Increases engagement, encourages return visits and gives users a reason to fill in more data.</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- FOOTER -->
+<div class="footer">
+  <div class="footer-logo">ShowUp</div>
+  <div class="footer-tag">Good taste lives here.</div>
+  <div style="margin-top:16px;">
+    <a href="/" class="footer-link" style="margin-right:20px;">Open the app &rarr;</a>
+    <a href="/privacy.html" class="footer-link">Privacy Policy</a>
+  </div>
+  <div style="margin-top:20px;font-size:11px;color:rgba(255,255,255,0.3);">ShowUp Beta &mdash; Version 0.1 &mdash; May 2026</div>
+</div>
+
+</body>
+</html>
