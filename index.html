@@ -197,6 +197,18 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
 .dnf-card .show-title{color:var(--muted);}
 .didnt-finish-btn{background:none;border:1px solid rgba(192,57,43,0.3);color:#c0392b;border-radius:6px;padding:4px 10px;font-family:var(--sans);font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap;margin-left:6px;}
 .didnt-finish-btn:hover{background:#fdecea;}
+
+.btn-hide{background:none;border:none;cursor:pointer;padding:2px 6px;font-size:14px;color:var(--muted);border-radius:4px;transition:all 0.2s;}
+.btn-hide:hover{color:var(--fig);}
+.btn-hide.hidden{color:#c0392b;}
+.show-card.is-hidden{opacity:0.45;border-style:dashed;}
+.hidden-badge{font-size:10px;font-weight:700;color:#c0392b;background:#fdecea;padding:1px 7px;border-radius:8px;margin-left:6px;vertical-align:middle;}
+
+/* SECTION HEADERS in friend profiles - bigger and bolder */
+.friend-section-header{display:flex;align-items:center;gap:10px;margin:24px 0 12px;}
+.friend-section-header-line{flex:1;height:2px;background:var(--border);}
+.friend-section-title{font-family:var(--serif);font-size:16px;font-weight:700;color:var(--fig);white-space:nowrap;padding:4px 14px;background:var(--fig);color:white;border-radius:20px;}
+.friend-section-count{font-size:11px;color:var(--muted);white-space:nowrap;}
 </style>
 </head>
 <body>
@@ -952,6 +964,7 @@ function buildCard(s, list) {
   var actions='';
   if(list==='watched') actions=remoteRating(list,s.id,s.rating);
   if(list==='watchlist') actions='<button class="btn-start" onclick="moveToWatching('+s.id+')">Queue It Up</button>';
+  actions+=hideBtn(list, s);
   actions+='<button class="btn-remove" onclick="removeShow(\''+list+'\','+s.id+')">&#x2715;</button>';
   var moveLink=list==='watching'?'<div class="show-move" style="display:flex;align-items:center;gap:0;"><button class="done-watching-btn" onclick="markWatched('+s.id+')">Done Watching &#10003;</button><button class="didnt-finish-btn" onclick="markDNF('+s.id+')">Didn\'t Finish</button></div>':'';
   var showSpill=list==='watched';
@@ -960,7 +973,23 @@ function buildCard(s, list) {
     ?'<div class="inline-react"><input class="react-input" id="'+inpId+'" placeholder="What did you think?" /><button class="btn-send" onclick="submitReact(\''+list+'\','+s.id+')">Send</button><button class="btn-cancel" onclick="toggleReact(\''+list+'\','+s.id+')">Cancel</button></div>'
     :'<button class="btn-react-toggle" onclick="toggleReact(\''+list+'\','+s.id+')">+ What did you think?</button>';
   var hasReact=reactionsHTML(s.reactions)||reactToggle;
-  return '<div class="show-card"><div class="show-card-top">'+tvIcon()+'<div class="show-info"><div class="show-title">'+s.title+'</div>'+moveLink+'</div><div class="show-actions">'+actions+'</div></div>'+(hasReact?'<div class="react-area">'+reactionsHTML(s.reactions)+reactToggle+'</div>':'')+'</div>';
+  return '<div class="show-card'+(s.hidden?' is-hidden':'')+'"><div class="show-card-top">'+tvIcon()+'<div class="show-info"><div class="show-title">'+s.title+(s.hidden?'<span class="hidden-badge">Hidden from friends</span>':'')+'</div>'+moveLink+'</div><div class="show-actions">'+actions+'</div></div>'+(hasReact?'<div class="react-area">'+reactionsHTML(s.reactions)+reactToggle+'</div>':'')+'</div>';
+}
+
+
+
+function hideBtn(list, s) {
+  var isHidden = s.hidden ? true : false;
+  var icon = isHidden ? '&#128683;' : '&#128065;&#65039;';
+  var title = isHidden ? 'Show to friends' : 'Hide from friends';
+  return '<button class="btn-hide' + (isHidden ? ' hidden' : '') + '" onclick="toggleHide(\''+list+'\','+s.id+')" title="'+title+'">' + icon + '</button>';
+}
+
+function toggleHide(list, id) {
+  var s = state[list].find(function(x){ return x.id === id; });
+  if (!s) return;
+  s.hidden = !s.hidden;
+  renderList(list);
 }
 
 function toggleReact(list,id){var s=state[list].find(function(x){return x.id===id;});if(!s)return;s.showReact=!s.showReact;renderList(list);if(s.showReact)setTimeout(function(){var el=document.getElementById('inp-'+list+'-'+id);if(el)el.focus();},50);}
@@ -1044,10 +1073,10 @@ function showFriend(id) {
     +'<div><div style="font-family:Georgia,serif;font-size:20px;font-weight:700">'+f.name+"'s Living Room</div>"
     +'<div style="font-size:13px;color:var(--muted)">'+f.city+'</div></div></div>'
     + top5HTML
-    +'<div class="section-label">On Right Now</div>'+fGrouped(f.watching,'w')
-    +'<div class="section-label">Saving a Seat</div>'+fGrouped(f.watchlist,'wl')
+    +'<div class="friend-section-header"><div class="friend-section-line" style="flex:1;height:2px;background:var(--border);"></div><div class="friend-section-title" style="font-family:var(--serif);font-size:14px;font-weight:700;color:white;white-space:nowrap;padding:5px 16px;background:var(--terra);border-radius:20px;">&#128250; On Right Now</div><div class="friend-section-line" style="flex:1;height:2px;background:var(--border);"></div></div>'+fGrouped(f.watching.filter(function(x){return !x.hidden;}),'w')
+    +'<div class="friend-section-header"><div class="friend-section-line" style="flex:1;height:2px;background:var(--border);"></div><div class="friend-section-title" style="font-family:var(--serif);font-size:14px;font-weight:700;color:white;white-space:nowrap;padding:5px 16px;background:var(--olive);border-radius:20px;">&#128771; Saving a Seat</div><div class="friend-section-line" style="flex:1;height:2px;background:var(--border);"></div></div>'+fGrouped(f.watchlist.filter(function(x){return !x.hidden;}),'wl')
   +(f.watched&&f.watched.length
-    ? '<div class="section-label">Already Binged</div>'+fGrouped(f.watched.filter(function(x){return !x.dnf;}),'wd')
+    ? '<div class="friend-section-header"><div class="friend-section-line" style="flex:1;height:2px;background:var(--border);"></div><div class="friend-section-title" style="font-family:var(--serif);font-size:14px;font-weight:700;color:white;white-space:nowrap;padding:5px 16px;background:var(--fig);border-radius:20px;">&#128252; Already Binged</div><div class="friend-section-line" style="flex:1;height:2px;background:var(--border);"></div></div>'+fGrouped(f.watched.filter(function(x){return !x.dnf&&!x.hidden;}),'wd')
       +(f.watched.filter(function(x){return x.dnf;}).length
         ? '<div class="dnf-section"><div class="dnf-header">&#128683; Didn&#39;t Finish</div>'
           + f.watched.filter(function(x){return x.dnf;}).map(function(s){
