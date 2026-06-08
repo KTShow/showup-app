@@ -210,6 +210,58 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
 .friend-section-title{font-family:var(--serif);font-size:16px;font-weight:700;color:var(--fig);white-space:nowrap;padding:4px 14px;background:var(--fig);color:white;border-radius:20px;}
 .friend-section-count{font-size:11px;color:var(--muted);white-space:nowrap;}
 </style>
+<style>
+/* LOGIN SCREEN */
+.login-wrap{flex:1;display:flex;align-items:center;justify-content:center;padding:30px 20px;background:var(--sand);}
+.login-card{background:var(--cream);border:1px solid var(--border);border-radius:20px;padding:36px 32px;width:100%;max-width:420px;box-shadow:0 4px 24px rgba(100,50,20,0.10);}
+.login-logo{font-family:var(--serif);font-size:34px;color:var(--terra);font-weight:700;margin-bottom:4px;}
+.login-tag{font-size:14px;color:var(--muted);margin-bottom:6px;}
+.login-sub{font-family:var(--serif);font-size:15px;color:var(--fig);font-style:italic;margin-bottom:28px;}
+.login-label{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px;display:block;}
+.login-input{width:100%;background:white;border:1px solid var(--border);border-radius:10px;padding:12px 14px;font-family:var(--sans);font-size:15px;color:var(--charcoal);outline:none;margin-bottom:14px;}
+.login-input:focus{border-color:var(--terra);}
+.btn-magic{width:100%;background:var(--terra);color:white;border:none;border-radius:10px;padding:14px;font-family:var(--sans);font-size:16px;font-weight:700;cursor:pointer;margin-top:4px;}
+.btn-magic:hover{background:var(--burnt);}
+.btn-magic:disabled{opacity:0.6;cursor:not-allowed;}
+.login-note{text-align:center;margin-top:14px;font-size:12px;color:var(--muted);line-height:1.6;}
+.login-sent{text-align:center;padding:20px 0;}
+.login-sent-icon{font-size:42px;margin-bottom:12px;}
+.login-sent-title{font-family:var(--serif);font-size:20px;color:var(--fig);font-weight:700;margin-bottom:8px;}
+.login-sent-sub{font-size:13px;color:var(--muted);line-height:1.7;}
+.login-error{background:#fdecea;border:1px solid rgba(192,57,43,0.2);border-radius:8px;padding:10px 14px;font-size:13px;color:#c0392b;margin-bottom:12px;display:none;}
+.auth-loading{text-align:center;padding:40px 20px;color:var(--muted);font-size:14px;}
+</style>
+</head>
+<body>
+<div class="confetti-wrap" id="confetti-wrap"></div>
+
+<!-- LOGIN SCREEN -->
+<div id="screen-login" class="screen active">
+  <div class="login-wrap">
+    <div class="login-card">
+      <div id="login-form-view">
+        <div class="login-logo">ShowUp</div>
+        <div class="login-tag">Good taste lives here.</div>
+        <div class="login-sub">Your living room awaits.</div>
+        <div class="login-error" id="login-error"></div>
+        <label class="login-label">Enter your email to get started</label>
+        <input class="login-input" id="login-email" type="email" placeholder="you@example.com" />
+        <button class="btn-magic" id="login-btn" onclick="handleMagicLink()">Pull up a chair &rarr;</button>
+        <div class="login-note">We'll send you a magic link — no password needed.<br>
+        By joining you agree to our <a href="/privacy.html" target="_blank" style="color:var(--terra);">Privacy Policy</a>.</div>
+      </div>
+      <div id="login-sent-view" style="display:none;">
+        <div class="login-sent">
+          <div class="login-sent-icon">&#128140;</div>
+          <div class="login-sent-title">Check your inbox</div>
+          <div class="login-sent-sub">We sent a magic link to <strong id="login-sent-email"></strong>.<br>Tap it and you're in — no password needed.</div>
+        </div>
+        <button class="btn-magic" style="margin-top:16px;" onclick="resetLoginForm()">Use a different email</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 </head>
 <body>
 <div class="confetti-wrap" id="confetti-wrap"></div>
@@ -581,6 +633,710 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
     </div>
   </div>
 </div>
+
+
+<script type="module">
+import {
+  supabase,
+  sendMagicLink,
+  signOut,
+  getSession,
+  onAuthStateChange,
+  getUserProfile,
+  createUserProfile,
+  saveTellMoreData,
+  updateUserProfile,
+  updateRoom,
+  recordSession,
+  deleteUserData,
+  loadShows,
+  addShow as dbAddShow,
+  updateShowStatus,
+  updateShowRating,
+  toggleShowHidden,
+  removeShow as dbRemoveShow,
+  addReaction as dbAddReaction,
+  loadTop5,
+  saveTop5,
+  getMyLivingRoom,
+  getFriendsWithShows,
+  processInvite,
+  getPendingInvites,
+  subscribeToFriendShows,
+  subscribeToPendingInvites,
+  unsubscribe,
+  generateUsername,
+} from './supabase.js';
+
+// ============================================================
+// AUTH BOOTSTRAP
+// Runs once on page load. Determines which screen to show.
+// ============================================================
+async function bootstrap() {
+  const session = await getSession();
+
+  if (!session) {
+    // No session — show login
+    showScreen('login');
+    return;
+  }
+
+  // Logged in — check if they have a profile
+  const profile = await getUserProfile();
+
+  if (!profile) {
+    // Authenticated but no profile — they need onboarding
+    showScreen('onboard');
+    return;
+  }
+
+  // Fully set up — load their data and go to app
+  await loadUserIntoState(profile, session);
+}
+
+// ============================================================
+// AUTH STATE LISTENER
+// Handles magic link callback (user taps link in email)
+// ============================================================
+onAuthStateChange(async (session) => {
+  if (session) {
+    const profile = await getUserProfile();
+    if (!profile) {
+      showScreen('onboard');
+    } else {
+      await loadUserIntoState(profile, session);
+      await recordSession();
+    }
+  }
+});
+
+// ============================================================
+// LOAD USER INTO APP STATE
+// ============================================================
+async function loadUserIntoState(profile, session) {
+  // Build the state.user object from Supabase profile
+  state.user = {
+    id: profile.id,
+    first: profile.first_name || '',
+    last: profile.last_initial || '',
+    initials: [(profile.first_name||'')[0], (profile.last_initial||'')[0]].filter(Boolean).join('').toUpperCase(),
+    city: profile.city || '',
+    state: profile.state || '',
+    age: profile.age_range || '',
+    gender: profile.gender || '',
+    room: profile.room || 'tuscany',
+    username: profile.username,
+    top5: [],
+    career: profile.career || '',
+    hobbies: profile.hobbies || [],
+    household: profile.household || [],
+    watchWhen: profile.watch_when || '',
+    watchFreq: profile.watch_freq || '',
+    discovery: profile.discovery || [],
+    sessionCount: profile.session_count || 0,
+    lastActive: profile.last_active,
+    createdAt: profile.created_at,
+  };
+
+  // Load shows from Supabase
+  try {
+    const shows = await loadShows();
+    state.watching = shows.filter(s => s.status === 'watching').map(normalizeShow);
+    state.watchlist = shows.filter(s => s.status === 'watchlist').map(normalizeShow);
+    state.watched = shows.filter(s => s.status === 'watched' || s.status === 'dnf').map(normalizeShow);
+  } catch(e) {
+    console.error('Error loading shows:', e);
+  }
+
+  // Load top5
+  try {
+    const top5 = await loadTop5();
+    state.user.top5 = top5.map(t => ({ title: t.title, platform: t.platform }));
+  } catch(e) {
+    console.error('Error loading top5:', e);
+  }
+
+  // Load friends
+  try {
+    const friends = await getFriendsWithShows();
+    state.friends = friends;
+  } catch(e) {
+    console.error('Error loading friends:', e);
+    state.friends = [];
+  }
+
+  // Set room theme
+  setRoom(state.user.room);
+  updateAvatar();
+
+  // Update invite link with real username
+  updateInviteLinks(state.user.username);
+
+  // Wire up real-time subscriptions
+  setupRealtime();
+
+  // Check for pending invite in URL
+  checkUrlForInvite();
+
+  // Show the main app
+  showScreen('app');
+  renderAll();
+}
+
+// Normalize a Supabase show row to the shape the UI expects
+function normalizeShow(s) {
+  return {
+    id: s.id,
+    title: s.title,
+    platform: s.platform || '',
+    rating: s.rating || 0,
+    hidden: s.hidden || false,
+    dnf: s.dnf || false,
+    source: s.source || 'manual',
+    influencedBy: s.influenced_by || null,
+    addedAt: s.added_at,
+    reactions: (s.reactions || []).map(r => ({
+      user: r.user_id, // will be enriched later when we have user names
+      initials: '?',
+      color: '#5C6B3A',
+      text: r.text,
+      sentiment: r.sentiment,
+      reactedAt: r.reacted_at,
+    })),
+    showReact: false,
+  };
+}
+
+// ============================================================
+// SCREEN NAVIGATION
+// ============================================================
+function showScreen(name) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  const el = document.getElementById('screen-' + name);
+  if (el) el.classList.add('active');
+}
+
+// Expose globally so existing onclick handlers still work
+window.backToApp = function() {
+  showScreen('app');
+};
+window.goToSettings = function() {
+  showScreen('settings');
+  renderRoomGrid();
+};
+window.goToProfile = function() {
+  if (!state.user) return;
+  document.getElementById('pr-first').value = state.user.first || '';
+  document.getElementById('pr-last').value = state.user.last || '';
+  document.getElementById('pr-city').value = state.user.city || '';
+  document.getElementById('pr-age').value = state.user.age || '';
+  document.getElementById('pr-gender').value = state.user.gender || '';
+  const stSel = document.getElementById('pr-state');
+  for (let i = 0; i < stSel.options.length; i++) {
+    if (stSel.options[i].value === state.user.state) { stSel.selectedIndex = i; break; }
+  }
+  showScreen('profile');
+  renderTop5();
+  const t5p = document.getElementById('top5-platform');
+  if (t5p && t5p.options.length <= 1) {
+    PLATFORMS.forEach(p => { const o = document.createElement('option'); o.value = p; o.textContent = p; t5p.appendChild(o); });
+  }
+};
+window.backFromSettings = function() { showScreen('app'); };
+window.goToTellMore = function() { showScreen('tellmore'); };
+
+// ============================================================
+// LOGIN
+// ============================================================
+window.handleMagicLink = async function() {
+  const email = document.getElementById('login-email').value.trim();
+  const errEl = document.getElementById('login-error');
+  const btn = document.getElementById('login-btn');
+  errEl.style.display = 'none';
+
+  if (!email || !email.includes('@')) {
+    errEl.textContent = 'Please enter a valid email address.';
+    errEl.style.display = 'block';
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = 'Sending…';
+
+  try {
+    await sendMagicLink(email);
+    document.getElementById('login-sent-email').textContent = email;
+    document.getElementById('login-form-view').style.display = 'none';
+    document.getElementById('login-sent-view').style.display = 'block';
+  } catch(e) {
+    errEl.textContent = 'Something went wrong. Please try again.';
+    errEl.style.display = 'block';
+    btn.disabled = false;
+    btn.textContent = 'Pull up a chair →';
+  }
+};
+
+window.resetLoginForm = function() {
+  document.getElementById('login-form-view').style.display = 'block';
+  document.getElementById('login-sent-view').style.display = 'none';
+  document.getElementById('login-email').value = '';
+  const btn = document.getElementById('login-btn');
+  btn.disabled = false;
+  btn.textContent = 'Pull up a chair →';
+};
+
+// ============================================================
+// ONBOARDING — override completeOnboard to save to Supabase
+// ============================================================
+window.completeOnboard = async function() {
+  const first = document.getElementById('ob-first').value.trim();
+  const last  = document.getElementById('ob-last').value.trim();
+  const age   = document.getElementById('ob-age').value;
+  const gender= document.getElementById('ob-gender').value;
+  const city  = document.getElementById('ob-city').value.trim();
+  const st    = document.getElementById('ob-state').value;
+
+  if (!first) {
+    document.getElementById('ob-first').style.borderColor = '#C4622D';
+    setTimeout(() => document.getElementById('ob-first').style.borderColor = '', 900);
+    return;
+  }
+
+  const btn = document.querySelector('#screen-onboard .btn-join');
+  if (btn) { btn.disabled = true; btn.textContent = 'Setting up your room…'; }
+
+  try {
+    const profile = await createUserProfile({
+      firstName: first,
+      lastInitial: last,
+      city,
+      state: st,
+      ageRange: age,
+      gender,
+    });
+
+    state.user = {
+      id: profile.id,
+      first,
+      last,
+      initials: [(first||'')[0], (last||'')[0]].filter(Boolean).join('').toUpperCase(),
+      city,
+      state: st,
+      age,
+      gender,
+      room: 'tuscany',
+      username: profile.username,
+      top5: [],
+    };
+
+    updateAvatar();
+    updateInviteLinks(profile.username);
+    showScreen('tellmore');
+  } catch(e) {
+    console.error('Onboard error:', e);
+    if (btn) { btn.disabled = false; btn.textContent = 'Pull up a chair →'; }
+    alert('Something went wrong setting up your account. Please try again.');
+  }
+};
+
+// ============================================================
+// TELL US MORE — override saveTellMore to save to Supabase
+// ============================================================
+window.saveTellMore = async function() {
+  const get = id => { const b = document.querySelector('#'+id+' .pill-btn.selected'); return b ? b.textContent.trim() : ''; };
+  const getMulti = id => { const btns = document.querySelectorAll('#'+id+' .pill-btn.selected'); const vals = []; btns.forEach(b => vals.push(b.textContent.trim())); return vals; };
+  const skipIds = ['career-pills','household-pills','when-pills','frequency-pills','discovery-pills'];
+  const hobbies = [];
+  document.querySelectorAll('#screen-tellmore .pill-btn.selected').forEach(b => {
+    let skip = false; skipIds.forEach(id => { if (b.closest('#'+id)) skip = true; }); if (!skip) hobbies.push(b.textContent.trim());
+  });
+
+  const psychData = {
+    career: get('career-pills'),
+    household: getMulti('household-pills'),
+    watchWhen: get('when-pills'),
+    watchFreq: get('frequency-pills'),
+    discovery: getMulti('discovery-pills'),
+    hobbies,
+  };
+
+  if (state.user) {
+    Object.assign(state.user, psychData);
+    try {
+      await saveTellMoreData(psychData);
+    } catch(e) {
+      console.error('Error saving Tell Us More:', e);
+    }
+  }
+
+  showScreen('app');
+  renderAll();
+};
+
+window.skipTellMore = function() {
+  showScreen('app');
+  renderAll();
+};
+
+// ============================================================
+// SAVE PROFILE — override to save to Supabase
+// ============================================================
+window.saveProfile = async function() {
+  const first = document.getElementById('pr-first').value.trim();
+  const last  = document.getElementById('pr-last').value.trim();
+  const city  = document.getElementById('pr-city').value.trim();
+  const st    = document.getElementById('pr-state').value;
+  const age   = document.getElementById('pr-age').value;
+  const gender= document.getElementById('pr-gender').value;
+
+  const btn = document.querySelector('#screen-profile .btn-join');
+  if (btn) { btn.disabled = true; btn.textContent = 'Saving…'; }
+
+  try {
+    await updateUserProfile({
+      firstName: first,
+      lastInitial: last,
+      city,
+      state: st,
+      ageRange: age,
+      gender,
+      room: state.user ? state.user.room : 'tuscany',
+    });
+
+    // Save top5
+    if (state.user && state.user.top5) {
+      await saveTop5(state.user.top5);
+    }
+
+    if (state.user) {
+      state.user.first = first;
+      state.user.last = last;
+      state.user.city = city;
+      state.user.state = st;
+      state.user.age = age;
+      state.user.gender = gender;
+      state.user.initials = [(first||'')[0], (last||'')[0]].filter(Boolean).join('').toUpperCase();
+    }
+
+    updateAvatar();
+    showScreen('app');
+  } catch(e) {
+    console.error('Error saving profile:', e);
+    alert('Error saving profile. Please try again.');
+    if (btn) { btn.disabled = false; btn.textContent = 'Save Changes'; }
+  }
+};
+
+// ============================================================
+// ROOM — override setRoom to persist to Supabase
+// ============================================================
+const _originalSetRoom = window.setRoom;
+window.setRoom = async function(roomKey) {
+  _originalSetRoom(roomKey);
+  if (state.user && state.user.id) {
+    try {
+      await updateRoom(roomKey);
+    } catch(e) {
+      console.error('Error saving room:', e);
+    }
+  }
+};
+
+// ============================================================
+// SHOWS — override add/remove/rate/hide to hit Supabase
+// ============================================================
+window.addShow = async function(list) {
+  const tId = list==='watching'?'w-title':list==='watchlist'?'wl-title':'wd-title';
+  const pId = list==='watching'?'w-platform':list==='watchlist'?'wl-platform':'wd-platform';
+  const tEl = document.getElementById(tId);
+  const pEl = document.getElementById(pId);
+  const title = tEl.value.trim();
+  const platform = pEl.value;
+
+  if (!title || !platform) {
+    tEl.style.borderColor = '#C4622D';
+    setTimeout(() => tEl.style.borderColor = '', 900);
+    return;
+  }
+
+  const src = state.lastViewedFriend ? 'living_room' : 'manual';
+  const inf = state.lastViewedFriend || null;
+
+  try {
+    const show = await dbAddShow({ title, platform, status: list === 'watchlist' ? 'watchlist' : list === 'watching' ? 'watching' : 'watched', source: src, influencedBy: inf });
+    state[list].push({
+      id: show.id,
+      title, platform,
+      rating: 0,
+      hidden: false,
+      dnf: false,
+      source: src,
+      influencedBy: inf,
+      addedAt: show.added_at,
+      reactions: [],
+      showReact: false,
+    });
+    tEl.value = ''; pEl.value = '';
+    renderList(list);
+  } catch(e) {
+    console.error('Error adding show:', e);
+    alert('Error adding show. Please try again.');
+  }
+};
+
+window.markWatched = async function(id) {
+  const idx = state.watching.findIndex(x => x.id === id);
+  if (idx === -1) return;
+  const show = state.watching.splice(idx, 1)[0];
+  show.status = 'watched';
+  state.watched.push(show);
+  launchConfetti();
+  renderList('watching');
+  renderList('watched');
+  try {
+    await updateShowStatus(id, 'watched');
+  } catch(e) {
+    console.error('Error updating show status:', e);
+  }
+};
+
+window.markDNF = async function(id) {
+  const idx = state.watching.findIndex(x => x.id === id);
+  if (idx === -1) return;
+  const show = state.watching.splice(idx, 1)[0];
+  show.dnf = true;
+  show.rating = 0;
+  state.watched.push(show);
+  renderList('watching');
+  renderList('watched');
+  try {
+    await updateShowStatus(id, 'dnf', { dnf: true, rating: 0 });
+  } catch(e) {
+    console.error('Error marking DNF:', e);
+  }
+};
+
+window.moveToWatching = async function(id) {
+  const idx = state.watchlist.findIndex(x => x.id === id);
+  if (idx === -1) return;
+  const show = state.watchlist.splice(idx, 1)[0];
+  state.watching.push(show);
+  renderList('watchlist');
+  renderList('watching');
+  try {
+    await updateShowStatus(id, 'watching');
+  } catch(e) {
+    console.error('Error moving show:', e);
+  }
+};
+
+window.rate = async function(list, id, n) {
+  const s = state[list].find(x => x.id === id);
+  if (!s) return;
+  s.rating = (s.rating === n) ? 0 : n;
+  renderList(list);
+  try {
+    await updateShowRating(id, s.rating);
+  } catch(e) {
+    console.error('Error saving rating:', e);
+  }
+};
+
+window.toggleHide = async function(list, id) {
+  const s = state[list].find(x => x.id === id);
+  if (!s) return;
+  s.hidden = !s.hidden;
+  renderList(list);
+  try {
+    await toggleShowHidden(id, s.hidden);
+  } catch(e) {
+    console.error('Error toggling hide:', e);
+  }
+};
+
+window.removeShow = async function(list, id) {
+  state[list] = state[list].filter(x => x.id !== id);
+  renderList(list);
+  try {
+    await dbRemoveShow(id);
+  } catch(e) {
+    console.error('Error removing show:', e);
+  }
+};
+
+// ============================================================
+// REACTIONS — override to save to Supabase
+// ============================================================
+window.submitReact = async function(list, id) {
+  const s = state[list].find(x => x.id === id);
+  const inp = document.getElementById('inp-'+list+'-'+id);
+  if (!s || !inp || !inp.value.trim()) return;
+  const u = state.user;
+  const txt = inp.value.trim();
+  const sentiment = detectSentiment(txt);
+
+  s.reactions.push({
+    user: u ? (u.first + (u.last ? ' ' + u.last : '')) : 'You',
+    initials: u ? u.initials : 'Y',
+    color: '#C4622D',
+    text: txt,
+    sentiment,
+    reactedAt: new Date().toISOString(),
+  });
+  s.showReact = false;
+  renderList(list);
+
+  try {
+    await dbAddReaction(id, txt, sentiment);
+  } catch(e) {
+    console.error('Error saving reaction:', e);
+  }
+};
+
+// ============================================================
+// LOG OUT
+// ============================================================
+window.handleSignOut = async function() {
+  try {
+    await signOut();
+    state.user = null;
+    state.watching = [];
+    state.watchlist = [];
+    state.watched = [];
+    state.friends = [];
+    showScreen('login');
+  } catch(e) {
+    console.error('Error signing out:', e);
+  }
+};
+
+// ============================================================
+// DELETE ACCOUNT
+// ============================================================
+window.handleDeleteData = async function() {
+  const confirmed = confirm('Are you sure? This permanently deletes your account and all your data. This cannot be undone.');
+  if (!confirmed) return;
+  try {
+    await deleteUserData();
+    state.user = null;
+    showScreen('login');
+  } catch(e) {
+    console.error('Error deleting data:', e);
+    alert('Error deleting account. Please contact us at hello@showup.app');
+  }
+};
+
+// ============================================================
+// INVITE LINKS
+// ============================================================
+function updateInviteLinks(username) {
+  const link = `showup.app/join/${username}`;
+  const els = document.querySelectorAll('.invite-link, #invite-modal-link');
+  els.forEach(el => el.textContent = link);
+}
+
+window.openInviteModal = function() {
+  const u = state.user;
+  const name = u && u.first ? u.first : 'your friend';
+  document.getElementById('invite-modal-sub').textContent = name + " wants you on the couch. Join their ShowUp Living Room.";
+  if (u && u.username) {
+    document.getElementById('invite-modal-link').textContent = `showup.app/join/${u.username}`;
+  }
+  document.getElementById('invite-modal').classList.add('active');
+};
+
+window.closeInviteModal = function() {
+  document.getElementById('invite-modal').classList.remove('active');
+};
+
+window.copyInviteLink = function() {
+  const link = document.getElementById('invite-modal-link').textContent;
+  const btn = document.getElementById('invite-copy-btn');
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(link).then(() => {
+      btn.textContent = 'Copied! ✓';
+      setTimeout(() => btn.textContent = 'Copy link', 1800);
+    });
+  }
+};
+
+window.copyInvite = function() {
+  const btn = document.getElementById('copy-btn');
+  const link = document.querySelector('.invite-link');
+  if (navigator.clipboard && link) {
+    navigator.clipboard.writeText(link.textContent).then(() => {
+      btn.textContent = 'Copied! ✓';
+      setTimeout(() => btn.textContent = 'Copy invite link', 1800);
+    });
+  }
+};
+
+// Check URL for /join/username invite pattern
+function checkUrlForInvite() {
+  const path = window.location.pathname;
+  const match = path.match(/^\/join\/(.+)$/);
+  if (match) {
+    const inviterUsername = match[1];
+    processInvite(inviterUsername).then(result => {
+      if (result.status === 'pending_created') {
+        alert(`Your request to join has been sent! You'll be added once they approve.`);
+      }
+    }).catch(e => console.error('Invite error:', e));
+    // Clean up URL
+    window.history.replaceState({}, '', '/');
+  }
+}
+
+// ============================================================
+// REAL-TIME
+// ============================================================
+let realtimeChannel = null;
+
+function setupRealtime() {
+  if (realtimeChannel) unsubscribe(realtimeChannel);
+  const friendIds = state.friends.map(f => f.id).filter(Boolean);
+  if (!friendIds.length) return;
+  realtimeChannel = subscribeToFriendShows(friendIds, () => {
+    // Reload friends on any change
+    getFriendsWithShows().then(friends => {
+      state.friends = friends;
+      renderFriends();
+    }).catch(console.error);
+  });
+}
+
+// ============================================================
+// WIRE UP SETTINGS BUTTONS (log out / delete)
+// Replace "Coming soon" placeholders with real handlers
+// ============================================================
+function wireSettingsButtons() {
+  const settingsCard = document.querySelectorAll('.settings-card');
+  settingsCard.forEach(card => {
+    card.querySelectorAll('.settings-row').forEach(row => {
+      const label = row.querySelector('.settings-row-label');
+      if (!label) return;
+      if (label.textContent.trim() === 'Log Out') {
+        row.style.cursor = 'pointer';
+        row.style.opacity = '1';
+        row.querySelector('span:last-child').textContent = '›';
+        row.onclick = handleSignOut;
+      }
+      if (label.textContent.trim() === 'Delete My Data') {
+        row.style.cursor = 'pointer';
+        row.style.opacity = '1';
+        row.querySelector('span:last-child').textContent = '›';
+        row.onclick = handleDeleteData;
+      }
+    });
+  });
+}
+
+// ============================================================
+// START
+// ============================================================
+init(); // original init() for platform dropdowns
+wireSettingsButtons();
+bootstrap();
 
 <script>
 var PLATFORMS = ['Amazon Prime Video','Apple TV+','Disney+','HBO Max','Hulu','Netflix','Paramount+','Peacock','Showtime','Starz','Other'];
@@ -1250,7 +2006,7 @@ function saveTellMore(){
 
 init();
 </script>
-
+</script>
 <!-- INVITE MODAL -->
 <div class="invite-modal-overlay" id="invite-modal">
   <div class="invite-modal">
