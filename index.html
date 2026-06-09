@@ -700,6 +700,13 @@ async function bootstrap() {
 // ============================================================
 onAuthStateChange(async (session) => {
   if (session) {
+    // Don't interrupt if user is mid-onboarding or tell-us-more
+    const onboarding = document.getElementById('screen-onboard');
+    const tellmore = document.getElementById('screen-tellmore');
+    const midOnboarding = onboarding && onboarding.classList.contains('active');
+    const midTellMore = tellmore && tellmore.classList.contains('active');
+    if (midOnboarding || midTellMore) return;
+
     const profile = await getUserProfile();
     if (!profile) {
       showScreen('onboard');
@@ -1337,7 +1344,7 @@ function wireSettingsButtons() {
 init(); // original init() for platform dropdowns
 wireSettingsButtons();
 bootstrap();
-</script>
+
 <script>
 var PLATFORMS = ['Amazon Prime Video','Apple TV+','Disney+','HBO Max','Hulu','Netflix','Paramount+','Peacock','Showtime','Starz','Other'];
 var CONFETTI_COLORS = ['#C4622D','#6B2D4E','#C49A3C','#5C6B3A','#F5EFE6','#D4734E'];
@@ -1353,77 +1360,10 @@ var ROOMS = {
 var state = {
   user: null,
   lastViewedFriend: null,
-  watching: [
-    {id:1,title:'Game of Thrones',platform:'HBO Max',rating:0,reactions:[],showReact:false,source:'manual',addedAt:'2025-01-01T00:00:00.000Z'},
-    {id:2,title:'Only Murders in the Building',platform:'Hulu',rating:0,reactions:[],showReact:false,source:'manual',addedAt:'2025-01-01T00:00:00.000Z'},
-    {id:3,title:'Euphoria',platform:'HBO Max',rating:0,reactions:[],showReact:false,source:'manual',addedAt:'2025-01-01T00:00:00.000Z'},
-    {id:4,title:'A Man on the Inside',platform:'Netflix',rating:0,reactions:[],showReact:false,source:'manual',addedAt:'2025-01-01T00:00:00.000Z'},
-    {id:5,title:'Tulsa King',platform:'Paramount+',rating:0,reactions:[],showReact:false,source:'manual',addedAt:'2025-01-01T00:00:00.000Z'}
-  ],
-  watchlist: [
-    {id:6,title:'Dutton Ranch',platform:'Paramount+',rating:0,reactions:[],showReact:false,source:'manual',addedAt:'2025-01-01T00:00:00.000Z'},
-    {id:7,title:'Andor',platform:'Disney+',rating:0,reactions:[],showReact:false,source:'manual',addedAt:'2025-01-01T00:00:00.000Z'},
-    {id:8,title:'Rooster',platform:'HBO Max',rating:0,reactions:[],showReact:false,source:'manual',addedAt:'2025-01-01T00:00:00.000Z'},
-    {id:9,title:'Hacks',platform:'HBO Max',rating:0,reactions:[],showReact:false,source:'manual',addedAt:'2025-01-01T00:00:00.000Z'},
-    {id:10,title:'The Morning Show',platform:'Apple TV+',rating:0,reactions:[],showReact:false,source:'manual',addedAt:'2025-01-01T00:00:00.000Z'}
-  ],
-  watched: [
-    {id:11,title:'Bosch',platform:'Amazon Prime Video',rating:5,reactions:[],showReact:false,source:'manual',addedAt:'2025-01-01T00:00:00.000Z'},
-    {id:12,title:"The Queen's Gambit",platform:'Netflix',rating:5,reactions:[],showReact:false,source:'manual',addedAt:'2025-01-01T00:00:00.000Z'},
-    {id:13,title:'Landman',platform:'Paramount+',rating:4,reactions:[],showReact:false,source:'manual',addedAt:'2025-01-01T00:00:00.000Z'},
-    {id:14,title:'Virgin River',platform:'Netflix',rating:3,reactions:[],showReact:false,source:'manual',addedAt:'2025-01-01T00:00:00.000Z'},
-    {id:15,title:'The White Lotus',platform:'HBO Max',rating:5,reactions:[],showReact:false,source:'manual',addedAt:'2025-01-01T00:00:00.000Z'},
-    {id:16,title:'Mad Men',platform:'Netflix',rating:5,reactions:[],showReact:false,source:'manual',addedAt:'2025-01-01T00:00:00.000Z'},
-    {id:17,title:'Rings of Power',platform:'Amazon Prime Video',rating:0,reactions:[],showReact:false,dnf:true,source:'manual',addedAt:'2025-01-01T00:00:00.000Z'},
-    {id:18,title:'1923',platform:'Paramount+',rating:0,reactions:[],showReact:false,dnf:true,source:'manual',addedAt:'2025-01-01T00:00:00.000Z'}
-  ],
-  friends: [
-    {id:1,name:'Ally P.',top5:[{"title": "Fleabag", "platform": "Amazon Prime Video"}, {"title": "Schitts Creek", "platform": "Netflix"}, {"title": "The Bear", "platform": "Hulu"}, {"title": "Ted Lasso", "platform": "Apple TV+"}, {"title": "Succession", "platform": "HBO Max"}],room:'coastal',city:'Salt Lake City, UT',color:'#1A7AAE',
-      watching:[{title:'The Bear',platform:'Hulu',rating:0,reactions:[{user:'Tracey',initials:'T',color:'#5C6B3A',text:'Cannot stop watching this!'}],showReact:false},{title:'Severance',platform:'Apple TV+',rating:0,reactions:[],showReact:false}],
-      watchlist:[{title:'Hacks',platform:'HBO Max',reactions:[],showReact:false},{title:'Slow Horses',platform:'Apple TV+',reactions:[],showReact:false}],
-      watched:[{title:'Emily in Paris',platform:'Netflix',rating:0,reactions:[],showReact:false,dnf:true},{title:'Fleabag',platform:'Amazon Prime Video',rating:5,reactions:[],showReact:false},{title:"Schitt's Creek",platform:'Netflix',rating:5,reactions:[],showReact:false},{title:'Ted Lasso',platform:'Apple TV+',rating:4,reactions:[],showReact:false}]},
-    {id:2,name:'Dave E.',top5:[{"title": "Yellowstone", "platform": "Paramount+"}, {"title": "Bosch", "platform": "Amazon Prime Video"}, {"title": "Band of Brothers", "platform": "HBO Max"}, {"title": "Peaky Blinders", "platform": "Netflix"}, {"title": "The Wire", "platform": "HBO Max"}],room:'cabin',city:'Atlanta, GA',color:'#8B4513',
-      watching:[{title:'Landman',platform:'Paramount+',rating:4,reactions:[],showReact:false},{title:'Tulsa King',platform:'Paramount+',rating:3,reactions:[],showReact:false}],
-      watchlist:[{title:'1923',platform:'Paramount+',reactions:[],showReact:false},{title:'Dutton Ranch',platform:'Paramount+',reactions:[],showReact:false}],
-      watched:[{title:'Tulsa King',platform:'Paramount+',rating:5,reactions:[{user:'Dave E.',initials:'DE',color:'#8B4513',text:'Best show on Paramount right now',sentiment:'positive',reactedAt:'2025-01-01T00:00:00.000Z'}],showReact:false},{title:'Bosch',platform:'Amazon Prime Video',rating:5,reactions:[],showReact:false},{title:'Yellowstone',platform:'Paramount+',rating:5,reactions:[],showReact:false}]},
-    {id:3,name:'George L.',top5:[{"title": "Breaking Bad", "platform": "Netflix"}, {"title": "The Last of Us", "platform": "HBO Max"}, {"title": "Andor", "platform": "Disney+"}, {"title": "Succession", "platform": "HBO Max"}, {"title": "Mad Men", "platform": "Netflix"}],room:'modern',city:'Westfield, NJ',color:'#2C3E50',
-      watching:[{title:'Andor',platform:'Disney+',rating:5,reactions:[],showReact:false},{title:'The Morning Show',platform:'Apple TV+',rating:4,reactions:[],showReact:false}],
-      watchlist:[{title:'Foundation',platform:'Apple TV+',reactions:[],showReact:false},{title:'Silo',platform:'Apple TV+',reactions:[],showReact:false}],
-      watched:[{title:'Breaking Bad',platform:'Netflix',rating:5,reactions:[],showReact:false},{title:'Mad Men',platform:'Netflix',rating:4,reactions:[],showReact:false},{title:'The Last of Us',platform:'HBO Max',rating:5,reactions:[],showReact:false}]},
-    {id:4,name:'Jim K.',top5:[{"title": "Game of Thrones", "platform": "HBO Max"}, {"title": "Peaky Blinders", "platform": "Netflix"}, {"title": "Yellowstone", "platform": "Paramount+"}, {"title": "Sopranos", "platform": "HBO Max"}, {"title": "Tulsa King", "platform": "Paramount+"}],room:'tuscany',city:'Atlanta, GA',color:'#C4622D',
-      watching:[{title:'Game of Thrones',platform:'HBO Max',rating:5,reactions:[{user:'Tracey',initials:'T',color:'#C4622D',text:'Right?! So good even the second time'}],showReact:false},{title:'Tulsa King',platform:'Paramount+',rating:4,reactions:[],showReact:false}],
-      watchlist:[{title:'House of the Dragon',platform:'HBO Max',reactions:[],showReact:false}],
-      watched:[{title:'Tulsa King',platform:'Paramount+',rating:4,reactions:[],showReact:false},{title:'Landman',platform:'Paramount+',rating:4,reactions:[],showReact:false},{title:'Peaky Blinders',platform:'Netflix',rating:5,reactions:[],showReact:false},{title:'Yellowstone',platform:'Paramount+',rating:5,reactions:[],showReact:false}]},
-    {id:5,name:'John L.',top5:[{"title": "Succession", "platform": "HBO Max"}, {"title": "The Queens Gambit", "platform": "Netflix"}, {"title": "Abbott Elementary", "platform": "Hulu"}, {"title": "Only Murders in the Building", "platform": "Hulu"}, {"title": "Ted Lasso", "platform": "Apple TV+"}],room:'formal',city:'Hoboken, NJ',color:'#8B1A1A',
-      watching:[{title:'Abbott Elementary',platform:'Hulu',rating:5,reactions:[],showReact:false},{title:'Only Murders in the Building',platform:'Hulu',rating:4,reactions:[],showReact:false}],
-      watchlist:[{title:'Shrinking',platform:'Apple TV+',reactions:[],showReact:false},{title:'The Bear',platform:'Hulu',reactions:[],showReact:false}],
-      watched:[{title:"The Queen's Gambit",platform:'Netflix',rating:5,reactions:[],showReact:false},{title:'Succession',platform:'HBO Max',rating:5,reactions:[],showReact:false}]},
-    {id:6,name:'Katherine E.',top5:[{"title": "Downton Abbey", "platform": "Peacock"}, {"title": "Hacks", "platform": "HBO Max"}, {"title": "Fleabag", "platform": "Amazon Prime Video"}, {"title": "Virgin River", "platform": "Netflix"}, {"title": "The Morning Show", "platform": "Apple TV+"}],room:'coastal',city:'Atlanta, GA',color:'#1A7AAE',
-      watching:[{title:'Hacks',platform:'HBO Max',rating:5,reactions:[],showReact:false},{title:'The Morning Show',platform:'Apple TV+',rating:4,reactions:[],showReact:false}],
-      watchlist:[{title:'Derry Girls',platform:'Netflix',reactions:[],showReact:false},{title:'Fleabag',platform:'Amazon Prime Video',reactions:[{user:'Ally P.',initials:'AP',color:'#1A7AAE',text:'Drop everything and watch this NOW'}],showReact:false}],
-      watched:[{title:'Rings of Power',platform:'Amazon Prime Video',rating:0,reactions:[],showReact:false,dnf:true},{title:'Downton Abbey',platform:'Peacock',rating:4,reactions:[],showReact:false},{title:'Emily in Paris',platform:'Netflix',rating:3,reactions:[],showReact:false},{title:'Virgin River',platform:'Netflix',rating:4,reactions:[],showReact:false}]},
-    {id:7,name:'Laura L.',top5:[{"title": "Succession", "platform": "HBO Max"}, {"title": "Big Little Lies", "platform": "HBO Max"}, {"title": "Mare of Easttown", "platform": "HBO Max"}, {"title": "The White Lotus", "platform": "HBO Max"}, {"title": "Severance", "platform": "Apple TV+"}],room:'tuscany',city:'Westfield, NJ',color:'#C4622D',
-      watching:[{title:'A Man on the Inside',platform:'Netflix',rating:5,reactions:[],showReact:false},{title:'Euphoria',platform:'HBO Max',rating:4,reactions:[],showReact:false}],
-      watchlist:[{title:'Industry',platform:'HBO Max',reactions:[],showReact:false},{title:'The White Lotus',platform:'HBO Max',reactions:[],showReact:false}],
-      watched:[{title:'Big Little Lies',platform:'HBO Max',rating:5,reactions:[],showReact:false},{title:'Mare of Easttown',platform:'HBO Max',rating:5,reactions:[],showReact:false},{title:'Succession',platform:'HBO Max',rating:5,reactions:[],showReact:false}]},
-    {id:8,name:'Lizzy S.',top5:[{"title": "Ozark", "platform": "Netflix"}, {"title": "Only Murders in the Building", "platform": "Hulu"}, {"title": "Bloodline", "platform": "Netflix"}, {"title": "Rooster", "platform": "HBO Max"}, {"title": "Tulsa King", "platform": "Paramount+"}],room:'cabin',city:'Hoboken, NJ',color:'#8B4513',
-      watching:[{title:'Only Murders in the Building',platform:'Hulu',rating:4,reactions:[],showReact:false},{title:'Rooster',platform:'HBO Max',rating:0,reactions:[],showReact:false}],
-      watchlist:[{title:'Tulsa King',platform:'Paramount+',reactions:[],showReact:false},{title:'Yellowstone',platform:'Paramount+',reactions:[],showReact:false}],
-      watched:[{title:'1883',platform:'Paramount+',rating:0,reactions:[],showReact:false,dnf:true},{title:'Bloodline',platform:'Netflix',rating:4,reactions:[],showReact:false},{title:'Ozark',platform:'Netflix',rating:5,reactions:[],showReact:false}]},
-    {id:9,name:'Matt L.',top5:[{"title": "Breaking Bad", "platform": "Netflix"}, {"title": "The Wire", "platform": "HBO Max"}, {"title": "Severance", "platform": "Apple TV+"}, {"title": "Fargo", "platform": "Hulu"}, {"title": "Andor", "platform": "Disney+"}],room:'modern',city:'Salt Lake City, UT',color:'#2C3E50',
-      watching:[{title:'Andor',platform:'Disney+',rating:5,reactions:[],showReact:false},{title:'Severance',platform:'Apple TV+',rating:5,reactions:[{user:'George L.',initials:'GL',color:'#2C3E50',text:'Episode 4 will blow your mind'}],showReact:false}],
-      watchlist:[{title:'Dark',platform:'Netflix',reactions:[],showReact:false},{title:'Silo',platform:'Apple TV+',reactions:[],showReact:false}],
-      watched:[{title:'Breaking Bad',platform:'Netflix',rating:5,reactions:[],showReact:false},{title:'Fargo',platform:'Hulu',rating:4,reactions:[],showReact:false},{title:'The Wire',platform:'HBO Max',rating:5,reactions:[],showReact:false}]},
-    {id:10,name:'Nick K.',top5:[{"title": "Sopranos", "platform": "HBO Max"}, {"title": "Boardwalk Empire", "platform": "HBO Max"}, {"title": "Game of Thrones", "platform": "HBO Max"}, {"title": "Peaky Blinders", "platform": "Netflix"}, {"title": "House of the Dragon", "platform": "HBO Max"}],room:'formal',city:'Athens, GA',color:'#8B1A1A',
-      watching:[{title:'Game of Thrones',platform:'HBO Max',rating:5,reactions:[],showReact:false},{title:'Tulsa King',platform:'Paramount+',rating:4,reactions:[],showReact:false}],
-      watchlist:[{title:'House of the Dragon',platform:'HBO Max',reactions:[],showReact:false},{title:'Peaky Blinders',platform:'Netflix',reactions:[],showReact:false}],
-      watched:[{title:'Tulsa King',platform:'Paramount+',rating:5,reactions:[],showReact:false},{title:'Boardwalk Empire',platform:'HBO Max',rating:4,reactions:[],showReact:false},{title:'Sopranos',platform:'HBO Max',rating:5,reactions:[],showReact:false}]},
-    {id:11,name:'Savannah F.',top5:[{"title": "Virgin River", "platform": "Netflix"}, {"title": "Bridgerton", "platform": "Netflix"}, {"title": "Sweet Magnolias", "platform": "Netflix"}, {"title": "Outer Banks", "platform": "Netflix"}, {"title": "Emily in Paris", "platform": "Netflix"}],room:'coastal',city:'Auburn, AL',color:'#1A7AAE',
-      watching:[{title:'Sweet Magnolias',platform:'Netflix',rating:3,reactions:[],showReact:false},{title:'Virgin River',platform:'Netflix',rating:4,reactions:[],showReact:false}],
-      watchlist:[{title:'Ginny and Georgia',platform:'Netflix',reactions:[],showReact:false},{title:'Outer Banks',platform:'Netflix',reactions:[],showReact:false}],
-      watched:[{title:'Bridgerton',platform:'Netflix',rating:4,reactions:[],showReact:false},{title:'Emily in Paris',platform:'Netflix',rating:3,reactions:[],showReact:false},{title:'Virgin River',platform:'Netflix',rating:5,reactions:[],showReact:false}]}
-  ],
-  nextId: 50
+  watching: [],
+  watchlist: [],
+  watched: [],
+  friends: []
 };
 
 
@@ -1570,25 +1510,7 @@ function renderRoomGrid() {
   }).join('');
 }
 
-function completeOnboard() {
-  var first = document.getElementById('ob-first').value.trim();
-  var last  = document.getElementById('ob-last').value.trim();
-  var age   = document.getElementById('ob-age').value;
-  var gender= document.getElementById('ob-gender').value;
-  var city  = document.getElementById('ob-city').value.trim();
-  var st    = document.getElementById('ob-state').value;
-  var initials = (first.length>0?first[0].toUpperCase():'?')+(last.length>0?last[0].toUpperCase():'');
-  state.user = {
-    first:first,last:last,age:age,gender:gender,city:city,state:st,initials:initials,
-    room:'tuscany',top5:[],income:'',relationshipStatus:'',education:'',howHeard:'',
-    createdAt:new Date().toISOString(),lastActive:new Date().toISOString(),sessionCount:1
-  };
-  document.getElementById('watching-sub').textContent = first.length>0 ? 'Welcome, '+first+'! The couch is warm \u2014 dive back in.' : 'The couch is warm \u2014 dive back in.';
-  document.getElementById('screen-onboard').classList.remove('active');
-  document.getElementById('screen-tellmore').classList.add('active');
-  updateAvatar();
-}
-
+// completeOnboard handled by module script
 function showTab(tab, btn) {
   document.querySelectorAll('.tab-pane').forEach(function(t){ t.style.display='none'; });
   document.querySelectorAll('.nav-tab').forEach(function(t){ t.classList.remove('active'); });
@@ -1599,19 +1521,7 @@ function showTab(tab, btn) {
   if (state.user) state.user.lastActive = new Date().toISOString();
 }
 
-function addShow(list) {
-  var tId = list==='watching'?'w-title':list==='watchlist'?'wl-title':'wd-title';
-  var pId = list==='watching'?'w-platform':list==='watchlist'?'wl-platform':'wd-platform';
-  var tEl = document.getElementById(tId);
-  var pEl = document.getElementById(pId);
-  var title = tEl.value.trim(); var platform = pEl.value;
-  if (!title||!platform){ tEl.style.borderColor='#C4622D'; setTimeout(function(){tEl.style.borderColor='';},900); return; }
-  var src = state.lastViewedFriend ? 'living_room' : 'manual';
-  var inf = state.lastViewedFriend || null;
-  state[list].push({id:state.nextId++,title:title,platform:platform,rating:0,reactions:[],showReact:false,source:src,influencedBy:inf,addedAt:new Date().toISOString()});
-  tEl.value=''; pEl.value='';
-  renderList(list);
-}
+// addShow handled by module script (Supabase version)
 
 function tvIcon() {
   return '<div class="tv-tile"><svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="3" y="5" width="26" height="18" rx="2.5" fill="white" fill-opacity="0.85"/><rect x="5" y="7" width="22" height="14" rx="1.5" fill="#5C6B3A"/><rect x="12" y="24" width="8" height="2" rx="1" fill="white" fill-opacity="0.7"/><rect x="15" y="23" width="2" height="2" fill="white" fill-opacity="0.7"/></svg></div>';
@@ -1741,31 +1651,17 @@ function hideBtn(list, s) {
   return '<button class="btn-hide' + (isHidden ? ' hidden' : '') + '" onclick="toggleHide(\''+list+'\','+s.id+')" title="'+title+'">' + icon + '</button>';
 }
 
-function toggleHide(list, id) {
-  var s = state[list].find(function(x){ return x.id === id; });
-  if (!s) return;
-  s.hidden = !s.hidden;
-  renderList(list);
-}
+// toggleHide handled by module script
 
 function toggleReact(list,id){var s=state[list].find(function(x){return x.id===id;});if(!s)return;s.showReact=!s.showReact;renderList(list);if(s.showReact)setTimeout(function(){var el=document.getElementById('inp-'+list+'-'+id);if(el)el.focus();},50);}
-function submitReact(list,id){var s=state[list].find(function(x){return x.id===id;});var inp=document.getElementById('inp-'+list+'-'+id);if(!s||!inp||!inp.value.trim())return;var u=state.user;var txt=inp.value.trim();s.reactions.push({user:u?u.first+(u.last?' '+u.last:''):'You',initials:u?u.initials:'Y',color:'#C4622D',text:txt,sentiment:detectSentiment(txt),reactedAt:new Date().toISOString()});s.showReact=false;renderList(list);}
-function rate(list,id,n){var s=state[list].find(function(x){return x.id===id;});if(s){s.rating=(s.rating===n)?0:n;renderList(list);}}
+// handled by module script
+// handled by module script
 
-function markDNF(id) {
-  var idx = state.watching.findIndex(function(x){ return x.id === id; });
-  if (idx === -1) return;
-  var show = state.watching.splice(idx, 1)[0];
-  show.dnf = true;
-  show.rating = 0;
-  state.watched.push(show);
-  renderList('watching');
-  renderList('watched');
-}
+// markDNF handled by module script
 
-function markWatched(id){var idx=state.watching.findIndex(function(x){return x.id===id;});if(idx===-1)return;var show=state.watching.splice(idx,1)[0];state.watched.push(show);launchConfetti();renderList('watching');renderList('watched');}
-function moveToWatching(id){var idx=state.watchlist.findIndex(function(x){return x.id===id;});if(idx===-1)return;var show=state.watchlist.splice(idx,1)[0];state.watching.push(show);renderList('watchlist');renderList('watching');}
-function removeShow(list,id){state[list]=state[list].filter(function(x){return x.id!==id;});renderList(list);}
+// handled by module script
+// handled by module script
+// handled by module script
 
 function launchConfetti() {
   var wrap=document.getElementById('confetti-wrap'); wrap.innerHTML='';
@@ -1934,42 +1830,17 @@ function goToProfileTop5() {
   }, 150);
 }
 
-function goToProfile(){
-  if(!state.user)return;
-  document.getElementById('pr-first').value=state.user.first||'';
-  document.getElementById('pr-last').value=state.user.last||'';
-  document.getElementById('pr-city').value=state.user.city||'';
-  document.getElementById('pr-age').value=state.user.age||'';
-  document.getElementById('pr-gender').value=state.user.gender||'';
-  var stSel=document.getElementById('pr-state');
-  for(var i=0;i<stSel.options.length;i++){if(stSel.options[i].value===state.user.state){stSel.selectedIndex=i;break;}}
-  document.querySelectorAll('.screen').forEach(function(s){s.classList.remove('active');});
-  document.getElementById('screen-profile').classList.add('active');
-  renderTop5();
-  var t5p = document.getElementById('top5-platform'); if(t5p && !t5p.options.length || t5p.options.length===1) { PLATFORMS.forEach(function(p){var o=document.createElement('option');o.value=p;o.textContent=p;t5p.appendChild(o);}); }
-}
+// goToProfile handled by module script
 
-function saveProfile(){
-  var first=document.getElementById('pr-first').value.trim();
-  var last=document.getElementById('pr-last').value.trim();
-  state.user.first=first; state.user.last=last;
-  state.user.city=document.getElementById('pr-city').value.trim();
-  state.user.state=document.getElementById('pr-state').value;
-  state.user.age=document.getElementById('pr-age').value;
-  state.user.gender=document.getElementById('pr-gender').value;
-  state.user.initials=(first.length>0?first[0].toUpperCase():'?')+(last.length>0?last[0].toUpperCase():'');
-  state.user.lastActive=new Date().toISOString();
-  updateAvatar();
-  backToApp();
-}
+// saveProfile handled by module script
 
-function backToApp(){document.querySelectorAll('.screen').forEach(function(s){s.classList.remove('active');});document.getElementById('screen-app').classList.add('active');showInviteFAB();}
+// backToApp handled by module script
 
-function goToSettings(){document.querySelectorAll('.screen').forEach(function(s){s.classList.remove('active');});document.getElementById('screen-settings').classList.add('active');renderRoomGrid();}
+// goToSettings handled by module script
 function backFromSettings(){backToApp();}
 
-function goToTellMore(){document.querySelectorAll('.screen').forEach(function(s){s.classList.remove('active');});document.getElementById('screen-tellmore').classList.add('active');}
-function skipTellMore(){document.getElementById('screen-tellmore').classList.remove('active');document.getElementById('screen-app').classList.add('active');renderAll();}
+// goToTellMore handled by module script
+// skipTellMore handled by module script
 
 function togglePill(btn,type){
   var singles=['career','when','frequency'];
@@ -1986,24 +1857,7 @@ function togglePill(btn,type){
   } else {btn.classList.toggle('selected');}
 }
 
-function saveTellMore(){
-  var get=function(id){var b=document.querySelector('#'+id+' .pill-btn.selected');return b?b.textContent.trim():'';};
-  var getMulti=function(id){var btns=document.querySelectorAll('#'+id+' .pill-btn.selected');var vals=[];btns.forEach(function(b){vals.push(b.textContent.trim());});return vals;};
-  var hobbies=[];
-  var skipIds=['career-pills','household-pills','when-pills','frequency-pills','discovery-pills'];
-  document.querySelectorAll('#screen-tellmore .pill-btn.selected').forEach(function(b){
-    var skip=false; skipIds.forEach(function(id){if(b.closest('#'+id))skip=true;}); if(!skip)hobbies.push(b.textContent.trim());
-  });
-  if(state.user){
-    state.user.career=get('career-pills'); state.user.household=get('household-pills');
-    state.user.watchWhen=get('when-pills'); state.user.watchFreq=get('frequency-pills');
-    state.user.discovery=getMulti('discovery-pills'); state.user.hobbies=hobbies;
-  }
-  document.getElementById('screen-tellmore').classList.remove('active');
-  document.getElementById('screen-app').classList.add('active');
-  renderAll();
-}
-
+// saveTellMore handled by module script
 init();
 </script>
 </script>
