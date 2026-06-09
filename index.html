@@ -1344,7 +1344,7 @@ function wireSettingsButtons() {
 init(); // original init() for platform dropdowns
 wireSettingsButtons();
 bootstrap();
-</script>
+
 <script>
 var PLATFORMS = ['Amazon Prime Video','Apple TV+','Disney+','HBO Max','Hulu','Netflix','Paramount+','Peacock','Showtime','Starz','Other'];
 var CONFETTI_COLORS = ['#C4622D','#6B2D4E','#C49A3C','#5C6B3A','#F5EFE6','#D4734E'];
@@ -1613,14 +1613,14 @@ function buildDNFCard(s) {
   var inpId = 'inp-dnf-' + s.id;
   var sid = s.id;
   var reactToggle = s.showReact
-    ? '<div class="inline-react"><input class="react-input" id="'+inpId+'" placeholder="What did you think?" /><button class="btn-send" onclick="submitReact(&quot;watched&quot;,'+sid+')">Send</button><button class="btn-cancel" onclick="toggleReact(&quot;watched&quot;,'+sid+')">Cancel</button></div>'
-    : '<button class="btn-react-toggle" onclick="toggleReact(&quot;watched&quot;,'+sid+')">+ What did you think?</button>';
+    ? '<div class="inline-react"><input class="react-input" id="'+inpId+'" placeholder="What did you think?" /><button class="btn-send" onclick="submitReact(&quot;watched&quot;,&quot;'+sid+'&quot;)">Send</button><button class="btn-cancel" onclick="toggleReact(&quot;watched&quot;,&quot;'+sid+'&quot;)">Cancel</button></div>'
+    : '<button class="btn-react-toggle" onclick="toggleReact(&quot;watched&quot;,&quot;'+sid+'&quot;)">+ What did you think?</button>';
   return '<div class="dnf-card">'
     + '<div class="show-card-top">' + tvIcon()
     + '<div class="show-info"><div class="show-title">' + s.title + '</div>'
     + '<div style="margin-top:3px;"><span class="dnf-badge">DNF</span><span style="font-size:11px;color:var(--muted);margin-left:6px;">' + s.platform + '</span></div>'
     + '</div>'
-    + '<button class="btn-remove" onclick="removeShow(&quot;watched&quot;,' + sid + ')">&#x2715;</button>'
+    + '<button class="btn-remove" onclick="removeShow(&quot;watched&quot;,&quot;' + sid + '&quot;)">&#x2715;</button>'
     + '</div>'
     + '<div class="react-area">' + reactionsHTML(s.reactions) + reactToggle + '</div>'
     + '</div>';
@@ -1629,15 +1629,15 @@ function buildDNFCard(s) {
 function buildCard(s, list) {
   var actions='';
   if(list==='watched') actions=remoteRating(list,s.id,s.rating);
-  if(list==='watchlist') actions='<button class="btn-start" onclick="moveToWatching('+s.id+')">Queue It Up</button>';
+  if(list==='watchlist') actions='<button class="btn-start" onclick="moveToWatching('\''+s.id+'\')">>Queue It Up</button>';
   actions+=hideBtn(list, s);
-  actions+='<button class="btn-remove" onclick="removeShow(\''+list+'\','+s.id+')">&#x2715;</button>';
-  var moveLink=list==='watching'?'<div class="show-move" style="display:flex;align-items:center;gap:0;"><button class="done-watching-btn" onclick="markWatched('+s.id+')">Done Watching &#10003;</button><button class="didnt-finish-btn" onclick="markDNF('+s.id+')">Didn\'t Finish</button></div>':'';
+  actions+='<button class="btn-remove" onclick="removeShow('\''+list+'\',\''+s.id+'\')" >&#x2715;</button>';
+  var moveLink=list==='watching'?'<div class="show-move" style="display:flex;align-items:center;gap:0;"><button class="done-watching-btn" onclick="markWatched('\''+s.id+'\')" >Done Watching &#10003;</button><button class="didnt-finish-btn" onclick="markDNF('\''+s.id+'\')" >Didn&#39;t Finish</button></div>':'';
   var showSpill=list==='watched';
   var inpId='inp-'+list+'-'+s.id;
   var reactToggle=!showSpill?'':s.showReact
     ?'<div class="inline-react"><input class="react-input" id="'+inpId+'" placeholder="What did you think?" /><button class="btn-send" onclick="submitReact(\''+list+'\','+s.id+')">Send</button><button class="btn-cancel" onclick="toggleReact(\''+list+'\','+s.id+')">Cancel</button></div>'
-    :'<button class="btn-react-toggle" onclick="toggleReact(\''+list+'\','+s.id+')">+ What did you think?</button>';
+    :'<button class="btn-react-toggle" onclick="toggleReact('\''+list+'\',\''+s.id+'\')"'>+ What did you think?</button>';
   var hasReact=reactionsHTML(s.reactions)||reactToggle;
   return '<div class="show-card'+(s.hidden?' is-hidden':'')+'"><div class="show-card-top">'+tvIcon()+'<div class="show-info"><div class="show-title">'+s.title+(s.hidden?'<span class="hidden-badge">Hidden from friends</span>':'')+'</div>'+moveLink+'</div><div class="show-actions">'+actions+'</div></div>'+(hasReact?'<div class="react-area">'+reactionsHTML(s.reactions)+reactToggle+'</div>':'')+'</div>';
 }
@@ -1648,7 +1648,7 @@ function hideBtn(list, s) {
   var isHidden = s.hidden ? true : false;
   var icon = isHidden ? '&#128683;' : '&#128065;&#65039;';
   var title = isHidden ? 'Show to friends' : 'Hide from friends';
-  return '<button class="btn-hide' + (isHidden ? ' hidden' : '') + '" onclick="toggleHide(\''+list+'\','+s.id+')" title="'+title+'">' + icon + '</button>';
+  return '<button class="btn-hide' + (isHidden ? ' hidden' : '') + '" onclick="toggleHide('\''+list+'\',\''+s.id+'\')" title="'+title+'">' + icon + '</button>';
 }
 
 // toggleHide handled by module script
