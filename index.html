@@ -635,13 +635,13 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
 </div>
 
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabaseClient.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 // ============================================================
 // SHOWUP — All app code consolidated
 // ============================================================
 
-const { createClient } = window.supabase;
+// Supabase loaded via CDN as window.supabase
 
 // ============================================================
 // SHOWUP — supabaseClient.js
@@ -653,7 +653,7 @@ const { createClient } = window.supabase;
 const SUPABASE_URL = 'https://sgnulweruogjfdddwboe.supabaseClient.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNnbnVsd2VydW9namZkZGR3Ym9lIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkxMzQ0MzMsImV4cCI6MjA5NDcxMDQzM30.bL28eAEx24TjpE8msSmoZHUQOWU5Yj6EfHpMv8V5VrM';
 
-const supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   auth: {
     persistSession: true,
     autoRefreshToken: true,
