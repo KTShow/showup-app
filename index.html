@@ -636,6 +636,20 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
 
 
 <script type="module">
+// State must be defined here so module functions can access it
+// The regular script also defines state - this one wins for module scope
+window.state = {
+  user: null,
+  lastViewedFriend: null,
+  watching: [],
+  watchlist: [],
+  watched: [],
+  friends: []
+};
+
+// Alias for use within module
+const state = window.state;
+
 import {
   supabase,
   sendMagicLink,
@@ -1372,7 +1386,7 @@ var ROOMS = {
   coastal: {name:'Coastal', cls:'room-coastal', color:'#1A7AAE', desc:'Sky Blue & Sand'}
 };
 
-var state = {
+window.state = window.state || {
   user: null,
   lastViewedFriend: null,
   watching: [],
