@@ -635,25 +635,25 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
 </div>
 
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabaseClient.js"></script>
 <script>
 // ============================================================
 // SHOWUP — All app code consolidated
 // ============================================================
 
-const { createClient } = supabase;
+const { createClient } = window.supabase;
 
 // ============================================================
-// SHOWUP — supabase.js
+// SHOWUP — supabaseClient.js
 // All database and auth operations live here.
 // index.html imports this file and calls these functions.
 // ============================================================
 
 
-const SUPABASE_URL = 'https://sgnulweruogjfdddwboe.supabase.co';
+const SUPABASE_URL = 'https://sgnulweruogjfdddwboe.supabaseClient.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNnbnVsd2VydW9namZkZGR3Ym9lIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkxMzQ0MzMsImV4cCI6MjA5NDcxMDQzM30.bL28eAEx24TjpE8msSmoZHUQOWU5Yj6EfHpMv8V5VrM';
 
-const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+const supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   auth: {
     persistSession: true,
     autoRefreshToken: true,
@@ -668,7 +668,7 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 
 // Send magic link to email
 async function sendMagicLink(email) {
-  const { error } = await supabase.auth.signInWithOtp({
+  const { error } = await supabaseClient.auth.signInWithOtp({
     email,
     options: {
       emailRedirectTo: window.location.origin,
@@ -679,19 +679,19 @@ async function sendMagicLink(email) {
 
 // Sign out
 async function signOut() {
-  const { error } = await supabase.auth.signOut();
+  const { error } = await supabaseClient.auth.signOut();
   if (error) throw error;
 }
 
 // Get current session (returns null if not logged in)
 async function getSession() {
-  const { data: { session } } = await supabase.auth.getSession();
+  const { data: { session } } = await supabaseClient.auth.getSession();
   return session;
 }
 
 // Listen for auth state changes (login, logout, token refresh)
 function onAuthStateChange(callback) {
-  return supabase.auth.onAuthStateChange((_event, session) => {
+  return supabaseClient.auth.onAuthStateChange((_event, session) => {
     callback(session);
   });
 }
@@ -714,7 +714,7 @@ function generateUsername(firstName, lastInitial) {
 
 // Check if a user profile exists for the current auth user
 async function getUserProfile() {
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: { user } } = await supabaseClient.auth.getUser();
   if (!user) return null;
 
   const { data, error } = await supabase
@@ -730,7 +730,7 @@ async function getUserProfile() {
 
 // Create a new user profile after onboarding
 async function createUserProfile(profileData) {
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: { user } } = await supabaseClient.auth.getUser();
   if (!user) throw new Error('Not authenticated');
 
   const username = generateUsername(profileData.firstName, profileData.lastInitial);
@@ -757,7 +757,7 @@ async function createUserProfile(profileData) {
   if (error) throw error;
 
   // Create their Living Room
-  await supabase.from('living_rooms').insert({
+  await supabaseClient.from('living_rooms').insert({
     owner_id: user.id,
     name: `${profileData.firstName}'s Living Room`,
     is_public: false,
@@ -771,7 +771,7 @@ async function createUserProfile(profileData) {
 
 // Save psychographic data from Tell Us More screen
 async function saveTellMoreData(psychData) {
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: { user } } = await supabaseClient.auth.getUser();
   if (!user) throw new Error('Not authenticated');
 
   const { error } = await supabase
@@ -791,7 +791,7 @@ async function saveTellMoreData(psychData) {
 
 // Update basic profile (name, city, state, age, gender)
 async function updateUserProfile(profileData) {
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: { user } } = await supabaseClient.auth.getUser();
   if (!user) throw new Error('Not authenticated');
 
   const { data, error } = await supabase
@@ -816,7 +816,7 @@ async function updateUserProfile(profileData) {
 
 // Update room theme only
 async function updateRoom(roomKey) {
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: { user } } = await supabaseClient.auth.getUser();
   if (!user) throw new Error('Not authenticated');
 
   const { error } = await supabase
@@ -829,23 +829,23 @@ async function updateRoom(roomKey) {
 
 // Record a new session (called on every login)
 async function recordSession() {
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: { user } } = await supabaseClient.auth.getUser();
   if (!user) return;
 
-  await supabase.from('sessions').insert({
+  await supabaseClient.from('sessions').insert({
     user_id: user.id,
     device_hint: navigator.userAgent.slice(0, 200),
   });
 
   // Increment session count
-  await supabase.rpc('increment_session_count', { uid: user.id })
+  await supabaseClient.rpc('increment_session_count', { uid: user.id })
     .then(() => {}) // best effort, don't throw
     .catch(() => {});
 }
 
 // Delete all user data (GDPR / user request)
 async function deleteUserData() {
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: { user } } = await supabaseClient.auth.getUser();
   if (!user) throw new Error('Not authenticated');
 
   // Cascade deletes handle related records via foreign keys
@@ -856,7 +856,7 @@ async function deleteUserData() {
 
   if (error) throw error;
 
-  await supabase.auth.signOut();
+  await supabaseClient.auth.signOut();
 }
 
 // ============================================================
@@ -865,7 +865,7 @@ async function deleteUserData() {
 
 // Load all shows for the current user
 async function loadShows() {
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: { user } } = await supabaseClient.auth.getUser();
   if (!user) throw new Error('Not authenticated');
 
   const { data, error } = await supabase
@@ -883,7 +883,7 @@ async function loadShows() {
 
 // Add a new show
 async function addShow(showData) {
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: { user } } = await supabaseClient.auth.getUser();
   if (!user) throw new Error('Not authenticated');
 
   const { data, error } = await supabase
@@ -948,7 +948,7 @@ async function removeShow(showId) {
 // ============================================================
 
 async function addReaction(showId, text, sentiment) {
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: { user } } = await supabaseClient.auth.getUser();
   if (!user) throw new Error('Not authenticated');
 
   const { data, error } = await supabase
@@ -971,7 +971,7 @@ async function addReaction(showId, text, sentiment) {
 // ============================================================
 
 async function loadTop5() {
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: { user } } = await supabaseClient.auth.getUser();
   if (!user) throw new Error('Not authenticated');
 
   const { data, error } = await supabase
@@ -985,11 +985,11 @@ async function loadTop5() {
 }
 
 async function saveTop5(showsArray) {
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: { user } } = await supabaseClient.auth.getUser();
   if (!user) throw new Error('Not authenticated');
 
   // Delete existing and re-insert in rank order
-  await supabase.from('top5_shows').delete().eq('user_id', user.id);
+  await supabaseClient.from('top5_shows').delete().eq('user_id', user.id);
 
   if (!showsArray.length) return;
 
@@ -1000,7 +1000,7 @@ async function saveTop5(showsArray) {
     rank: i + 1,
   }));
 
-  const { error } = await supabase.from('top5_shows').insert(rows);
+  const { error } = await supabaseClient.from('top5_shows').insert(rows);
   if (error) throw error;
 }
 
@@ -1010,7 +1010,7 @@ async function saveTop5(showsArray) {
 
 // Get the current user's Living Room
 async function getMyLivingRoom() {
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: { user } } = await supabaseClient.auth.getUser();
   if (!user) throw new Error('Not authenticated');
 
   const { data, error } = await supabase
@@ -1026,7 +1026,7 @@ async function getMyLivingRoom() {
 
 // Get active friends in the user's Living Room with their shows
 async function getFriendsWithShows() {
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: { user } } = await supabaseClient.auth.getUser();
   if (!user) throw new Error('Not authenticated');
 
   // Get user's living room
@@ -1087,7 +1087,7 @@ async function getFriendsWithShows() {
 
 // Process an invite link — creates a pending member record
 async function processInvite(inviterUsername) {
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: { user } } = await supabaseClient.auth.getUser();
   if (!user) throw new Error('Not authenticated');
 
   // Find inviter by username
@@ -1145,7 +1145,7 @@ async function acceptInvite(memberId) {
 
 // Get pending invites for the current user's room
 async function getPendingInvites() {
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: { user } } = await supabaseClient.auth.getUser();
   if (!user) throw new Error('Not authenticated');
 
   const room = await getMyLivingRoom();
@@ -1197,7 +1197,7 @@ function subscribeToPendingInvites(livingRoomId, callback) {
 
 // Unsubscribe from a channel
 function unsubscribe(channel) {
-  if (channel) supabase.removeChannel(channel);
+  if (channel) supabaseClient.removeChannel(channel);
 }
 
 // ============================================================
@@ -2202,7 +2202,7 @@ function buildDNFCard(s) {
 function buildCard(s, list) {
   var actions='';
   if(list==='watched') actions=remoteRating(list,s.id,s.rating);
-  if(list==='watchlist') actions='<button class="btn-start" onclick="moveToWatching('\''+s.id+'\')">>Queue It Up</button>';
+  if(list==='watchlist') actions='<button class="btn-start" onclick="moveToWatching('\''+s.id+'\')" >Queue It Up</button>';
   actions+=hideBtn(list, s);
   actions+='<button class="btn-remove" onclick="removeShow('\''+list+'\',\''+s.id+'\')" >&#x2715;</button>';
   var moveLink=list==='watching'?'<div class="show-move" style="display:flex;align-items:center;gap:0;"><button class="done-watching-btn" onclick="markWatched('\''+s.id+'\')" >Done Watching &#10003;</button><button class="didnt-finish-btn" onclick="markDNF('\''+s.id+'\')" >Didn&#39;t Finish</button></div>':'';
