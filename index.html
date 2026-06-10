@@ -673,6 +673,9 @@ import {
 // Runs once on page load. Determines which screen to show.
 // ============================================================
 async function bootstrap() {
+  // Give Supabase a moment to process any auth tokens in the URL
+  await new Promise(resolve => setTimeout(resolve, 500));
+  
   const session = await getSession();
 
   if (!session) {
@@ -786,6 +789,7 @@ async function loadUserIntoState(profile, session) {
   checkUrlForInvite();
 
   // Show the main app
+  initPlatforms();
   showScreen('app');
   renderAll();
 }
@@ -1341,7 +1345,17 @@ function wireSettingsButtons() {
 // ============================================================
 // START
 // ============================================================
-init(); // original init() for platform dropdowns
+// Initialize platform dropdowns - called after DOM is ready
+function initPlatforms() {
+  ['w-platform','wl-platform','wd-platform'].forEach(function(id) {
+    var sel = document.getElementById(id);
+    if (!sel) return;
+    if (sel.options.length > 1) return; // already populated
+    const PLAT = ['Amazon Prime Video','Apple TV+','Disney+','HBO Max','Hulu','Netflix','Paramount+','Peacock','Showtime','Starz','Other'];
+    PLAT.forEach(function(p) { var o = document.createElement('option'); o.value = p; o.textContent = p; sel.appendChild(o); });
+  });
+}
+
 wireSettingsButtons();
 bootstrap();
 </script>
