@@ -574,6 +574,123 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
         <div class="ob-private">&#128274; Private &mdash; never visible to others</div>
       </div>
     </div>
+
+    <div style="margin-top:20px;margin-bottom:8px;">
+      <div class="page-title" style="font-family:var(--serif);font-size:18px;">About You</div>
+      <div class="page-sub" style="margin-bottom:0;">All private — never visible to others.</div>
+    </div>
+<div style="background:var(--cream);border:1px solid var(--border);border-radius:14px;padding:20px;margin-bottom:16px;box-shadow:var(--shadow);">
+      <div class="ob-label" style="margin-bottom:12px;">What do you do for work?</div>
+      <div class="pill-grid" id="pr-career-pills">
+        <button class="pill-btn" onclick="togglePill(this,'career')">Arts &amp; Entertainment</button>
+        <button class="pill-btn" onclick="togglePill(this,'career')">Creative &amp; Media</button>
+        <button class="pill-btn" onclick="togglePill(this,'career')">Education</button>
+        <button class="pill-btn" onclick="togglePill(this,'career')">Entrepreneur</button>
+        <button class="pill-btn" onclick="togglePill(this,'career')">Executive &amp; Leadership</button>
+        <button class="pill-btn" onclick="togglePill(this,'career')">Finance &amp; Legal</button>
+        <button class="pill-btn" onclick="togglePill(this,'career')">Government &amp; Military</button>
+        <button class="pill-btn" onclick="togglePill(this,'career')">Healthcare</button>
+        <button class="pill-btn" onclick="togglePill(this,'career')">Hospitality &amp; Tourism</button>
+        <button class="pill-btn" onclick="togglePill(this,'career')">Real Estate</button>
+        <button class="pill-btn" onclick="togglePill(this,'career')">Retired</button>
+        <button class="pill-btn" onclick="togglePill(this,'career')">Sales &amp; Marketing</button>
+        <button class="pill-btn" onclick="togglePill(this,'career')">Social Services</button>
+        <button class="pill-btn" onclick="togglePill(this,'career')">Sports &amp; Athletics</button>
+        <button class="pill-btn" onclick="togglePill(this,'career')">Stay at Home Parent</button>
+        <button class="pill-btn" onclick="togglePill(this,'career')">Student</button>
+        <button class="pill-btn" onclick="togglePill(this,'career')">Technology &amp; Engineering</button>
+        <button class="pill-btn" onclick="togglePill(this,'career')">Trades &amp; Labor</button>
+        <button class="pill-btn" onclick="togglePill(this,'career')">Wellness</button>
+        <button class="pill-btn" onclick="togglePill(this,'career')">Prefer not to say</button>
+      </div>
+    </div>
+
+    <div style="background:var(--cream);border:1px solid var(--border);border-radius:14px;padding:20px;margin-bottom:16px;box-shadow:var(--shadow);">
+      <div class="ob-label" style="margin-bottom:4px;">What are you into? <span style="font-weight:400;text-transform:none;font-size:11px;color:var(--muted);">Pick up to 7</span></div>
+      <div style="font-size:11px;color:var(--muted);margin-bottom:10px;font-style:italic;">Active</div>
+      <div class="pill-grid" style="margin-bottom:14px;">
+        <button class="pill-btn" onclick="togglePill(this,'hobby')">Cycling</button>
+        <button class="pill-btn" onclick="togglePill(this,'hobby')">Golf</button>
+        <button class="pill-btn" onclick="togglePill(this,'hobby')">Hiking</button>
+        <button class="pill-btn" onclick="togglePill(this,'hobby')">Pickleball</button>
+        <button class="pill-btn" onclick="togglePill(this,'hobby')">Running</button>
+        <button class="pill-btn" onclick="togglePill(this,'hobby')">Swimming</button>
+        <button class="pill-btn" onclick="togglePill(this,'hobby')">Weight Lifting</button>
+        <button class="pill-btn" onclick="togglePill(this,'hobby')">Yoga</button>
+      </div>
+      <div style="font-size:11px;color:var(--muted);margin-bottom:10px;font-style:italic;">Social</div>
+      <div class="pill-grid" style="margin-bottom:14px;">
+        <button class="pill-btn" onclick="togglePill(this,'hobby')">Beer</button>
+        <button class="pill-btn" onclick="togglePill(this,'hobby')">Cocktails</button>
+        <button class="pill-btn" onclick="togglePill(this,'hobby')">Dining Out</button>
+        <button class="pill-btn" onclick="togglePill(this,'hobby')">Entertaining</button>
+        <button class="pill-btn" onclick="togglePill(this,'hobby')">Travel</button>
+        <button class="pill-btn" onclick="togglePill(this,'hobby')">Wine</button>
+      </div>
+      <div style="font-size:11px;color:var(--muted);margin-bottom:10px;font-style:italic;">Creative</div>
+      <div class="pill-grid" style="margin-bottom:14px;">
+        <button class="pill-btn" onclick="togglePill(this,'hobby')">Cooking</button>
+        <button class="pill-btn" onclick="togglePill(this,'hobby')">Gardening</button>
+        <button class="pill-btn" onclick="togglePill(this,'hobby')">Music</button>
+        <button class="pill-btn" onclick="togglePill(this,'hobby')">Photography</button>
+        <button class="pill-btn" onclick="togglePill(this,'hobby')">Reading</button>
+        <button class="pill-btn" onclick="togglePill(this,'hobby')">Writing</button>
+      </div>
+      <div style="font-size:11px;color:var(--muted);margin-bottom:10px;font-style:italic;">Entertainment</div>
+      <div class="pill-grid">
+        <button class="pill-btn" onclick="togglePill(this,'hobby')">Concert Goer</button>
+        <button class="pill-btn" onclick="togglePill(this,'hobby')">Gaming</button>
+        <button class="pill-btn" onclick="togglePill(this,'hobby')">Movie Buff</button>
+        <button class="pill-btn" onclick="togglePill(this,'hobby')">Podcasts</button>
+        <button class="pill-btn" onclick="togglePill(this,'hobby')">Sports Fan</button>
+      </div>
+    </div>
+
+    <div style="background:var(--cream);border:1px solid var(--border);border-radius:14px;padding:20px;margin-bottom:16px;box-shadow:var(--shadow);">
+      <div class="ob-label" style="margin-bottom:4px;">Who are you watching with? <span style="font-weight:400;text-transform:none;font-size:11px;color:var(--muted);">Pick all that apply</span></div>
+      <div class="pill-grid" id="pr-household-pills">
+        <button class="pill-btn" onclick="togglePill(this,'household')">Couple</button>
+        <button class="pill-btn" onclick="togglePill(this,'household')">Empty nester</button>
+        <button class="pill-btn" onclick="togglePill(this,'household')">Family with teens</button>
+        <button class="pill-btn" onclick="togglePill(this,'household')">Family with young kids</button>
+        <button class="pill-btn" onclick="togglePill(this,'household')">Friends</button>
+        <button class="pill-btn" onclick="togglePill(this,'household')">Myself</button>
+        <button class="pill-btn" onclick="togglePill(this,'household')">Roommates</button>
+      </div>
+    </div>
+
+    <div style="background:var(--cream);border:1px solid var(--border);border-radius:14px;padding:20px;margin-bottom:16px;box-shadow:var(--shadow);">
+      <div class="ob-label" style="margin-bottom:4px;">How do you watch?</div>
+      <div style="font-size:11px;color:var(--muted);margin-bottom:10px;font-style:italic;">When do you mostly watch?</div>
+      <div class="pill-grid" style="margin-bottom:14px;" id="pr-when-pills">
+        <button class="pill-btn" onclick="togglePill(this,'when')">Weeknights</button>
+        <button class="pill-btn" onclick="togglePill(this,'when')">Weekends</button>
+        <button class="pill-btn" onclick="togglePill(this,'when')">Both equally</button>
+      </div>
+      <div style="font-size:11px;color:var(--muted);margin-bottom:10px;font-style:italic;">How often do you watch?</div>
+      <div class="pill-grid" id="pr-frequency-pills">
+        <button class="pill-btn" onclick="togglePill(this,'frequency')">Daily</button>
+        <button class="pill-btn" onclick="togglePill(this,'frequency')">A few times a week</button>
+        <button class="pill-btn" onclick="togglePill(this,'frequency')">Weekends only</button>
+        <button class="pill-btn" onclick="togglePill(this,'frequency')">A few times a month</button>
+      </div>
+    </div>
+
+    <div style="background:var(--cream);border:1px solid var(--border);border-radius:14px;padding:20px;margin-bottom:24px;box-shadow:var(--shadow);">
+      <div class="ob-label" style="margin-bottom:12px;">How do you discover new shows? <span style="font-weight:400;text-transform:none;font-size:11px;color:var(--muted);">Pick all that apply</span></div>
+      <div class="pill-grid" id="pr-discovery-pills">
+        <button class="pill-btn" onclick="togglePill(this,'discovery')">Critic reviews</button>
+        <button class="pill-btn" onclick="togglePill(this,'discovery')">Fan of cast or creator</button>
+        <button class="pill-btn" onclick="togglePill(this,'discovery')">Friend recommendation</button>
+        <button class="pill-btn" onclick="togglePill(this,'discovery')">Just browsing</button>
+        <button class="pill-btn" onclick="togglePill(this,'discovery')">ShowUp recommendation</button>
+        <button class="pill-btn" onclick="togglePill(this,'discovery')">Social media</button>
+        <button class="pill-btn" onclick="togglePill(this,'discovery')">Streaming service suggestion</button>
+        <button class="pill-btn" onclick="togglePill(this,'discovery')">Trailer</button>
+      </div>
+    </div>
+
+    
     <button class="btn-join" style="margin-top:16px" onclick="saveProfile()">Save Changes</button>
   </div>
 </div>
@@ -1819,6 +1936,57 @@ window.goToProfile = function() {
   for (var i = 0; i < stSel.options.length; i++) {
     if (stSel.options[i].value === state.user.state) { stSel.selectedIndex = i; break; }
   }
+
+  // Pre-select About You pill buttons
+  var u = state.user;
+
+  // Clear all profile pill selections first
+  document.querySelectorAll('#screen-profile .pill-btn').forEach(function(b) { b.classList.remove('selected'); });
+
+  // Pre-select career
+  if (u.career) {
+    document.querySelectorAll('#pr-career-pills .pill-btn').forEach(function(b) {
+      if (b.textContent.trim() === u.career) b.classList.add('selected');
+    });
+  }
+
+  // Pre-select household (array)
+  if (u.household && u.household.length) {
+    document.querySelectorAll('#pr-household-pills .pill-btn').forEach(function(b) {
+      if (u.household.indexOf(b.textContent.trim()) !== -1) b.classList.add('selected');
+    });
+  }
+
+  // Pre-select hobbies (array)
+  if (u.hobbies && u.hobbies.length) {
+    document.querySelectorAll('#screen-profile .pill-btn').forEach(function(b) {
+      var inSkip = b.closest('#pr-career-pills') || b.closest('#pr-household-pills') ||
+                   b.closest('#pr-when-pills') || b.closest('#pr-frequency-pills') || b.closest('#pr-discovery-pills');
+      if (!inSkip && u.hobbies.indexOf(b.textContent.trim()) !== -1) b.classList.add('selected');
+    });
+  }
+
+  // Pre-select watchWhen
+  if (u.watchWhen) {
+    document.querySelectorAll('#pr-when-pills .pill-btn').forEach(function(b) {
+      if (b.textContent.trim() === u.watchWhen) b.classList.add('selected');
+    });
+  }
+
+  // Pre-select watchFreq
+  if (u.watchFreq) {
+    document.querySelectorAll('#pr-frequency-pills .pill-btn').forEach(function(b) {
+      if (b.textContent.trim() === u.watchFreq) b.classList.add('selected');
+    });
+  }
+
+  // Pre-select discovery (array)
+  if (u.discovery && u.discovery.length) {
+    document.querySelectorAll('#pr-discovery-pills .pill-btn').forEach(function(b) {
+      if (u.discovery.indexOf(b.textContent.trim()) !== -1) b.classList.add('selected');
+    });
+  }
+
   showScreen('profile');
   renderTop5();
   var t5p = document.getElementById('top5-platform');
@@ -1835,14 +2003,34 @@ window.saveProfile = async function() {
   var age   = document.getElementById('pr-age').value;
   var gender = document.getElementById('pr-gender').value;
   var btn = document.querySelector('#screen-profile .btn-join');
-  if (btn) { btn.disabled = true; btn.textContent = 'Saving\u2026'; }
+  if (btn) { btn.disabled = true; btn.textContent = 'Saving…'; }
+
+  // Collect About You pill selections
+  var get = function(id) { var b = document.querySelector('#'+id+' .pill-btn.selected'); return b ? b.textContent.trim() : ''; };
+  var getMulti = function(id) { var btns = document.querySelectorAll('#'+id+' .pill-btn.selected'); var vals = []; btns.forEach(function(b) { vals.push(b.textContent.trim()); }); return vals; };
+  var skipIds = ['pr-career-pills','pr-household-pills','pr-when-pills','pr-frequency-pills','pr-discovery-pills'];
+  var hobbies = [];
+  document.querySelectorAll('#screen-profile .pill-btn.selected').forEach(function(b) {
+    var skip = false; skipIds.forEach(function(id) { if (b.closest('#'+id)) skip = true; }); if (!skip) hobbies.push(b.textContent.trim());
+  });
+  var psychData = {
+    career: get('pr-career-pills'),
+    household: getMulti('pr-household-pills'),
+    watchWhen: get('pr-when-pills'),
+    watchFreq: get('pr-frequency-pills'),
+    discovery: getMulti('pr-discovery-pills'),
+    hobbies: hobbies,
+  };
+
   try {
     await updateUserProfile({ firstName: first, lastInitial: last, city: city, state: st, ageRange: age, gender: gender, room: state.user ? state.user.room : 'tuscany' });
+    await saveTellMoreData(psychData);
     if (state.user && state.user.top5) { await saveTop5(state.user.top5); }
     if (state.user) {
       state.user.first = first; state.user.last = last; state.user.city = city;
       state.user.state = st; state.user.age = age; state.user.gender = gender;
       state.user.initials = [(first||'')[0], (last||'')[0]].filter(Boolean).join('').toUpperCase();
+      Object.assign(state.user, psychData);
     }
     updateAvatar();
     showScreen('app');
@@ -1852,7 +2040,6 @@ window.saveProfile = async function() {
     if (btn) { btn.disabled = false; btn.textContent = 'Save Changes'; }
   }
 };
-
 // ============================================================
 // NAVIGATION
 // ============================================================
