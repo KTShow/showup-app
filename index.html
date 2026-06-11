@@ -2040,7 +2040,8 @@ window.saveProfile = async function() {
       Object.assign(state.user, psychData);
     }
     updateAvatar();
-    showScreen('app');
+    showScreen('settings');
+    renderRoomGrid();
   } catch(e) {
     console.error('Save profile error:', e);
     alert('Error saving profile. Please try again.');
