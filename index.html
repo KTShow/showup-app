@@ -247,16 +247,20 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
         <label class="login-label">Enter your email to get started</label>
         <input class="login-input" id="login-email" type="email" placeholder="you@example.com" />
         <button class="btn-magic" id="login-btn" onclick="handleMagicLink()">Pull up a chair &rarr;</button>
-        <div class="login-note">We'll send you a magic link — no password needed.<br>
+        <div class="login-note">We'll send you a 6-digit code — no password needed.<br>
         By joining you agree to our <a href="/privacy.html" target="_blank" style="color:var(--terra);">Privacy Policy</a>.</div>
       </div>
       <div id="login-sent-view" style="display:none;">
         <div class="login-sent">
           <div class="login-sent-icon">&#128140;</div>
           <div class="login-sent-title">Check your inbox</div>
-          <div class="login-sent-sub">We sent a magic link to <strong id="login-sent-email"></strong>.<br>Tap it and you're in — no password needed.</div>
+          <div class="login-sent-sub">We sent a 6-digit code to <strong id="login-sent-email"></strong>.<br>Enter it below to sign in.</div>
         </div>
-        <button class="btn-magic" style="margin-top:16px;" onclick="resetLoginForm()">Use a different email</button>
+        <div class="login-error" id="login-otp-error"></div>
+        <label class="login-label">6-digit code</label>
+        <input class="login-input" id="login-otp" type="text" inputmode="numeric" maxlength="6" placeholder="123456" style="text-align:center;letter-spacing:0.3em;font-size:22px;" />
+        <button class="btn-magic" id="login-verify-btn" onclick="handleVerifyOtp()">Verify &rarr;</button>
+        <button class="btn-magic" style="margin-top:10px;background:none;border:1px solid var(--border);color:var(--muted);font-size:13px;" onclick="resetLoginForm()">Use a different email</button>
       </div>
     </div>
   </div>
@@ -1262,10 +1266,7 @@ const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // ============================================================
 
 async function sendMagicLink(email) {
-  const { error } = await sb.auth.signInWithOtp({
-    email,
-    options: { emailRedirectTo: window.location.origin }
-  });
+  const { error } = await sb.auth.signInWithOtp({ email });
   if (error) throw error;
 }
 
@@ -1677,10 +1678,39 @@ window.handleMagicLink = async function() {
   }
 };
 
+window.handleVerifyOtp = async function() {
+  var email = document.getElementById('login-sent-email').textContent;
+  var token = document.getElementById('login-otp').value.trim();
+  var errEl = document.getElementById('login-otp-error');
+  var btn = document.getElementById('login-verify-btn');
+  errEl.style.display = 'none';
+  if (!token || token.length < 6) {
+    errEl.textContent = 'Please enter the 6-digit code from your email.';
+    errEl.style.display = 'block';
+    return;
+  }
+  btn.disabled = true;
+  btn.textContent = 'Verifying\u2026';
+  try {
+    const { error } = await sb.auth.verifyOtp({ email, token, type: 'email' });
+    if (error) throw error;
+  } catch(e) {
+    errEl.textContent = 'Invalid or expired code. Please try again.';
+    errEl.style.display = 'block';
+    btn.disabled = false;
+    btn.textContent = 'Verify \u2192';
+  }
+};
+
 window.resetLoginForm = function() {
   document.getElementById('login-form-view').style.display = 'block';
   document.getElementById('login-sent-view').style.display = 'none';
   document.getElementById('login-email').value = '';
+  document.getElementById('login-otp').value = '';
+  document.getElementById('login-otp-error').style.display = 'none';
+  var verifyBtn = document.getElementById('login-verify-btn');
+  verifyBtn.disabled = false;
+  verifyBtn.textContent = 'Verify \u2192';
   var btn = document.getElementById('login-btn');
   btn.disabled = false;
   btn.textContent = 'Pull up a chair \u2192';
