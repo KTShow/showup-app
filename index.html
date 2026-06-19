@@ -518,7 +518,7 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
     <div class="nav-logo">ShowUp</div>
     <div style="display:flex;align-items:center;gap:8px;">
       <button onclick="openInviteModal()" style="background:var(--terra);color:white;border:none;border-radius:20px;padding:5px 12px;font-family:var(--sans);font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;">Invite Friends</button>
-      <button class="nav-back" onclick="backToApp()">&#8592; Back</button>
+      <button class="nav-back" onclick="backFromProfile()">&#8592; Back</button>
     </div>
   </div>
   <div class="content" style="padding-top:20px;">
@@ -1793,6 +1793,8 @@ window.skipTellMore = function() { showScreen('app'); renderAll(); };
 
 window.goToProfile = function() {
   if (!state.user) return;
+  var active = document.querySelector('.screen.active');
+  state.profileFrom = active ? active.id.replace('screen-', '') : 'app';
   document.getElementById('pr-first').value = state.user.first || '';
   document.getElementById('pr-last').value = state.user.last || '';
   document.getElementById('pr-city').value = state.user.city || '';
@@ -1842,6 +1844,11 @@ window.saveProfile = async function() {
 // ============================================================
 
 window.backToApp = function() { showScreen('app'); };
+window.backFromProfile = function() {
+  var from = state.profileFrom || 'app';
+  showScreen(from);
+  if (from === 'settings') renderRoomGrid();
+};
 window.goToSettings = function() { showScreen('settings'); renderRoomGrid(); };
 window.backFromSettings = function() { showScreen('app'); };
 window.goToTellMore = function() { showScreen('tellmore'); };
