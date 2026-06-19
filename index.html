@@ -236,7 +236,7 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
 <div class="confetti-wrap" id="confetti-wrap"></div>
 
 <!-- LOGIN SCREEN -->
-<div id="screen-login" class="screen active">
+<div id="screen-login" class="screen">
   <div class="login-wrap">
     <div class="login-card">
       <div id="login-form-view">
@@ -1621,9 +1621,6 @@ async function loadUserIntoState(profile) {
 // ============================================================
 
 async function bootstrap() {
-  // Small delay so Supabase can process any auth tokens in the URL
-  await new Promise(function(resolve) { setTimeout(resolve, 800); });
-
   var session = await getSession();
 
   if (!session) {
