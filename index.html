@@ -1257,7 +1257,7 @@ const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
     persistSession: true,
     autoRefreshToken: true,
     detectSessionInUrl: true,
-    flowType: 'implicit',
+    flowType: 'pkce',
   }
 });
 
@@ -1694,6 +1694,7 @@ window.handleVerifyOtp = async function() {
   try {
     const { error } = await sb.auth.verifyOtp({ email, token, type: 'email' });
     if (error) throw error;
+    btn.textContent = 'Signing you in\u2026';
   } catch(e) {
     errEl.textContent = 'Invalid or expired code. Please try again.';
     errEl.style.display = 'block';
