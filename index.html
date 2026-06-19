@@ -1623,8 +1623,11 @@ async function loadUserIntoState(profile) {
 async function bootstrap() {
   console.log('[bootstrap] START');
   try {
-    var session = await getSession();
-    console.log('[bootstrap] session:', session ? 'FOUND' : 'NULL');
+    var session = await Promise.race([
+      getSession(),
+      new Promise(function(resolve) { setTimeout(function() { resolve(null); }, 4000); })
+    ]);
+    console.log('[bootstrap] session:', session ? 'FOUND' : 'NULL (timeout or no session)');
 
     if (!session) {
       console.log('[bootstrap] → showScreen login');
