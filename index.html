@@ -1621,21 +1621,26 @@ async function loadUserIntoState(profile) {
 // ============================================================
 
 async function bootstrap() {
-  var session = await getSession();
+  try {
+    var session = await getSession();
 
-  if (!session) {
+    if (!session) {
+      showScreen('login');
+      return;
+    }
+
+    var profile = await getUserProfile();
+
+    if (!profile) {
+      showScreen('onboard');
+      return;
+    }
+
+    await loadUserIntoState(profile);
+  } catch(e) {
+    console.error('Bootstrap error:', e);
     showScreen('login');
-    return;
   }
-
-  var profile = await getUserProfile();
-
-  if (!profile) {
-    showScreen('onboard');
-    return;
-  }
-
-  await loadUserIntoState(profile);
 }
 
 // ============================================================
