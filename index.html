@@ -615,8 +615,14 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
       <div class="settings-section-label">Coming Soon</div>
       <div class="settings-card">
         <div class="settings-row" style="cursor:default;opacity:0.5;"><span class="settings-row-icon">&#128276;</span><span class="settings-row-label">Notifications</span><span style="font-size:11px;color:var(--muted);margin-left:auto;">Coming soon</span></div>
-        <div class="settings-row" style="cursor:default;opacity:0.5;"><span class="settings-row-icon">&#128682;</span><span class="settings-row-label">Log Out</span><span style="font-size:11px;color:var(--muted);margin-left:auto;">Coming soon</span></div>
-        <div class="settings-row" style="cursor:default;opacity:0.5;"><span class="settings-row-icon">&#128465;&#65039;</span><span class="settings-row-label">Delete My Data</span><span style="font-size:11px;color:var(--muted);margin-left:auto;">Coming soon</span></div>
+      </div>
+    </div>
+
+    <div class="settings-section">
+      <div class="settings-section-label">Session</div>
+      <div class="settings-card">
+        <button class="settings-row" onclick="handleSignOut()"><span class="settings-row-icon">&#128682;</span><span class="settings-row-label">Log Out</span><span class="settings-row-arrow">&#8250;</span></button>
+        <button class="settings-row" onclick="handleDeleteData()" style="color:#c0392b;"><span class="settings-row-icon">&#128465;&#65039;</span><span class="settings-row-label" style="color:#c0392b;">Delete My Data</span><span class="settings-row-arrow" style="color:#c0392b;">&#8250;</span></button>
       </div>
     </div>
 
