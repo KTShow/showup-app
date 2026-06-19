@@ -954,10 +954,10 @@ function buildDNFCard(s) {
 function buildCard(s, list) {
   var actions='';
   if(list==='watched') actions=remoteRating(list,s.id,s.rating);
-  if(list==='watchlist') actions='<button class="btn-start" onclick="moveToWatching('\''+s.id+'\')" >Queue It Up</button>';
+  if(list==='watchlist') actions='<button class="btn-start" onclick="moveToWatching(\'' + s.id + '\')" >Queue It Up</button>';
   actions+=hideBtn(list, s);
-  actions+='<button class="btn-remove" onclick="removeShow('\''+list+'\',\''+s.id+'\')" >&#x2715;</button>';
-  var moveLink=list==='watching'?'<div class="show-move" style="display:flex;align-items:center;gap:0;"><button class="done-watching-btn" onclick="markWatched('\''+s.id+'\')" >Done Watching &#10003;</button><button class="didnt-finish-btn" onclick="markDNF('\''+s.id+'\')" >Didn&#39;t Finish</button></div>':'';
+  actions+='<button class="btn-remove" onclick="removeShow(\'' + list + '\',\'' + s.id + '\')" >&#x2715;</button>';
+  var moveLink=list==='watching'?'<div class="show-move" style="display:flex;align-items:center;gap:0;"><button class="done-watching-btn" onclick="markWatched(\'' + s.id + '\')" >Done Watching &#10003;</button><button class="didnt-finish-btn" onclick="markDNF(\'' + s.id + '\')" >Didn&#39;t Finish</button></div>':'';
   var showSpill=list==='watched';
   var inpId='inp-'+list+'-'+s.id;
   var reactToggle=!showSpill?'':s.showReact
