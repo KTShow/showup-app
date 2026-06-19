@@ -1515,7 +1515,7 @@ async function getFriendsWithShows() {
     .select('*, reactions(*)').in('user_id', friendIds).eq('hidden', false);
   const { data: top5 } = await sb.from('top5_shows')
     .select('*').in('user_id', friendIds).order('rank', { ascending: true });
-  return members.map(function(m) {
+  return members.filter(function(m) { return m.users !== null; }).map(function(m) {
     var u = m.users;
     var friendShows = (shows || []).filter(function(s) { return s.user_id === u.id; });
     var friendTop5 = (top5 || []).filter(function(t) { return t.user_id === u.id; });
