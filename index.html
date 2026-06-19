@@ -1506,7 +1506,7 @@ async function getFriendsWithShows() {
   const room = await getMyLivingRoom();
   if (!room) return [];
   const { data: members, error: membersError } = await sb.from('living_room_members')
-    .select('user_id, users(id, first_name, last_initial, city, state, room)')
+    .select('user_id, users!user_id(id, first_name, last_initial, city, state, room)')
     .eq('living_room_id', room.id).eq('status', 'active').neq('user_id', user.id);
   if (membersError) throw membersError;
   if (!members || !members.length) return [];
