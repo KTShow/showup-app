@@ -1621,24 +1621,32 @@ async function loadUserIntoState(profile) {
 // ============================================================
 
 async function bootstrap() {
+  console.log('[bootstrap] START');
   try {
     var session = await getSession();
+    console.log('[bootstrap] session:', session ? 'FOUND' : 'NULL');
 
     if (!session) {
+      console.log('[bootstrap] → showScreen login');
       showScreen('login');
       return;
     }
 
     var profile = await getUserProfile();
+    console.log('[bootstrap] profile:', profile ? 'FOUND' : 'NULL');
 
     if (!profile) {
+      console.log('[bootstrap] → showScreen onboard');
       showScreen('onboard');
       return;
     }
 
+    console.log('[bootstrap] → loadUserIntoState');
     await loadUserIntoState(profile);
+    console.log('[bootstrap] DONE');
   } catch(e) {
-    console.error('Bootstrap error:', e);
+    console.error('[bootstrap] CATCH error:', e);
+    console.log('[bootstrap] → showScreen login (fallback)');
     showScreen('login');
   }
 }
