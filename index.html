@@ -1266,7 +1266,7 @@ const SUPABASE_URL = 'https://sgnulweruogjfdddwboe.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNnbnVsd2VydW9namZkZGR3Ym9lIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkxMzQ0MzMsImV4cCI6MjA5NDcxMDQzM30.bL28eAEx24TjpE8msSmoZHUQOWU5Yj6EfHpMv8V5VrM';
 
 // Log all sb-* keys and clean orphaned PKCE verifiers before the client initializes
-(function() {
+try {
   var sbKeys = Object.keys(localStorage).filter(function(k) { return k.startsWith('sb-') || k.startsWith('supabase'); });
   console.log('[init] localStorage sb-* keys:', sbKeys);
   var hasToken = sbKeys.some(function(k) { return k.includes('auth-token'); });
@@ -1274,7 +1274,7 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
     sbKeys.filter(function(k) { return k.includes('code-verifier') || k.includes('pkce'); })
           .forEach(function(k) { console.log('[init] removing stale PKCE key:', k); localStorage.removeItem(k); });
   }
-})();
+} catch(e) { console.warn('[init] localStorage not accessible:', e); }
 
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   auth: {
