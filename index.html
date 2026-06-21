@@ -1265,16 +1265,15 @@ init();
 const SUPABASE_URL = 'https://sgnulweruogjfdddwboe.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNnbnVsd2VydW9namZkZGR3Ym9lIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkxMzQ0MzMsImV4cCI6MjA5NDcxMDQzM30.bL28eAEx24TjpE8msSmoZHUQOWU5Yj6EfHpMv8V5VrM';
 
-// Log all sb-* keys and clean orphaned PKCE verifiers before the client initializes
+// Clean orphaned PKCE verifiers before the client initializes
 try {
   var sbKeys = Object.keys(localStorage).filter(function(k) { return k.startsWith('sb-') || k.startsWith('supabase'); });
-  console.log('[init] localStorage sb-* keys:', sbKeys);
   var hasToken = sbKeys.some(function(k) { return k.includes('auth-token'); });
   if (hasToken) {
     sbKeys.filter(function(k) { return k.includes('code-verifier') || k.includes('pkce'); })
-          .forEach(function(k) { console.log('[init] removing stale PKCE key:', k); localStorage.removeItem(k); });
+          .forEach(function(k) { localStorage.removeItem(k); });
   }
-} catch(e) { console.warn('[init] localStorage not accessible:', e); }
+} catch(e) {}
 
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   auth: {
@@ -1641,7 +1640,6 @@ async function loadUserIntoState(profile) {
 // ============================================================
 
 async function bootstrap() {
-  console.log('[bootstrap] START');
   try {
     // Read session directly from localStorage — never calls getSession() which
     // awaits _initializePromise and deadlocks with supabase-js PKCE flow.
@@ -1655,8 +1653,6 @@ async function bootstrap() {
         return d;
       } catch(e) { return null; }
     })();
-
-    console.log('[bootstrap] stored session:', stored ? 'FOUND' : 'NULL');
 
     if (!stored) {
       showScreen('login');
@@ -1672,15 +1668,12 @@ async function bootstrap() {
     var profileRows = profileRes.ok ? await profileRes.json() : [];
     var profile = profileRows.length > 0 ? profileRows[0] : null;
 
-    console.log('[bootstrap] profile:', profile ? 'FOUND' : 'NULL');
-
     if (!profile) {
       showScreen('onboard');
       return;
     }
 
     await loadUserIntoState(profile);
-    console.log('[bootstrap] DONE');
   } catch(e) {
     console.error('[bootstrap] CATCH error:', e);
     showScreen('login');
@@ -1705,7 +1698,6 @@ onAuthStateChange(function(session) {
     var tellmore = document.getElementById('screen-tellmore');
     if ((onboarding && onboarding.classList.contains('active')) ||
         (tellmore && tellmore.classList.contains('active'))) return;
-    console.log('[authStateChange] session for user:', session.user.id);
     var profile = await fetchProfileById(session.user.id);
     if (!profile) {
       showScreen('onboard');
