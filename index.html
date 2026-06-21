@@ -1628,14 +1628,14 @@ async function bootstrap() {
     var TIMED_OUT = {};
     var session = await Promise.race([
       getSession(),
-      new Promise(function(resolve) { setTimeout(function() { resolve(TIMED_OUT); }, 4000); })
+      new Promise(function(resolve) { setTimeout(function() { resolve(TIMED_OUT); }, 8000); })
     ]);
 
     if (session === TIMED_OUT) {
-      console.log('[bootstrap] getSession timed out — clearing stale auth keys');
-      Object.keys(localStorage)
-        .filter(function(k) { return k.startsWith('sb-'); })
-        .forEach(function(k) { localStorage.removeItem(k); });
+      // Don't clear localStorage here — a slow token refresh (network latency,
+      // Supabase cold start) triggers this too, and clearing would destroy a
+      // valid session. Just fall through to login; the user can reload.
+      console.log('[bootstrap] getSession timed out — showing login');
       session = null;
     }
 
