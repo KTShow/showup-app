@@ -1691,25 +1691,29 @@ async function bootstrap() {
 // AUTH STATE CHANGE — handles magic link callback
 // ============================================================
 
-onAuthStateChange(async function(session) {
+// MUST be a plain (non-async) function. During _initialize(), supabase-js calls
+// _notifyAllSubscribers(broadcast=false) which awaits this callback. Any sb.*
+// call inside the callback (including sb.from()) also awaits _initializePromise,
+// which is still pending — instant deadlock. Making this synchronous and deferring
+// via setTimeout(fn,0) lets _initializePromise resolve first; by the time the
+// setTimeout fires, all sb.* calls work normally.
+onAuthStateChange(function(session) {
   if (!session) return;
-  // Don't interrupt mid-onboarding or tell-us-more
-  var onboarding = document.getElementById('screen-onboard');
-  var tellmore = document.getElementById('screen-tellmore');
-  if ((onboarding && onboarding.classList.contains('active')) ||
-      (tellmore && tellmore.classList.contains('active'))) return;
-
-  // Use fetchProfileById(session.user.id) instead of getUserProfile() here.
-  // getUserProfile() calls sb.auth.getUser() which awaits _initializePromise,
-  // but this callback is itself awaited by _initializePromise (broadcast=false
-  // during init) — calling getUser() here causes a guaranteed deadlock.
-  var profile = await fetchProfileById(session.user.id);
-  if (!profile) {
-    showScreen('onboard');
-  } else {
-    await loadUserIntoState(profile);
-    await recordSession();
-  }
+  setTimeout(async function() {
+    // Don't interrupt mid-onboarding or tell-us-more
+    var onboarding = document.getElementById('screen-onboard');
+    var tellmore = document.getElementById('screen-tellmore');
+    if ((onboarding && onboarding.classList.contains('active')) ||
+        (tellmore && tellmore.classList.contains('active'))) return;
+    console.log('[authStateChange] session for user:', session.user.id);
+    var profile = await fetchProfileById(session.user.id);
+    if (!profile) {
+      showScreen('onboard');
+    } else {
+      await loadUserIntoState(profile);
+      await recordSession();
+    }
+  }, 0);
 });
 
 // ============================================================
