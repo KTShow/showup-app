@@ -311,7 +311,7 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
 
 <!-- TELL US MORE -->
 <div id="screen-tellmore" class="screen">
-  <div class="nav"><div class="nav-logo">ShowUp</div><div style="display:flex;align-items:center;gap:8px;"><button onclick="openInviteModal()" style="background:var(--terra);color:white;border:none;border-radius:20px;padding:5px 12px;font-family:var(--sans);font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;">Invite Friends</button><button class="nav-back" onclick="skipTellMore()">Skip</button></div></div>
+  <div class="nav"><div class="nav-logo">ShowUp</div><div style="display:flex;align-items:center;gap:8px;"><button class="nav-back" onclick="backFromTellMore()">&#8592; Back</button></div></div>
   <div class="content" style="padding-top:20px;padding-bottom:100px;">
     <div class="page-title" style="font-family:var(--serif);">Tell us a little more</div>
     <div class="page-sub">Helps us make ShowUp more personal. All private &mdash; never visible to others.</div>
@@ -951,14 +951,14 @@ function buildDNFCard(s) {
   var inpId = 'inp-dnf-' + s.id;
   var sid = s.id;
   var reactToggle = s.showReact
-    ? '<div class="inline-react"><input class="react-input" id="'+inpId+'" placeholder="What did you think?" /><button class="btn-send" onclick="submitReact(&quot;watched&quot;,'+sid+')">Send</button><button class="btn-cancel" onclick="toggleReact(&quot;watched&quot;,'+sid+')">Cancel</button></div>'
-    : '<button class="btn-react-toggle" onclick="toggleReact(&quot;watched&quot;,'+sid+')">+ What did you think?</button>';
+    ? '<div class="inline-react"><input class="react-input" id="'+inpId+'" placeholder="What did you think?" /><button class="btn-send" onclick="submitReact(&quot;watched&quot;,&quot;'+sid+'&quot;)">Send</button><button class="btn-cancel" onclick="toggleReact(&quot;watched&quot;,&quot;'+sid+'&quot;)">Cancel</button></div>'
+    : '<button class="btn-react-toggle" onclick="toggleReact(&quot;watched&quot;,&quot;'+sid+'&quot;)">+ What did you think?</button>';
   return '<div class="dnf-card">'
     + '<div class="show-card-top">' + tvIcon()
     + '<div class="show-info"><div class="show-title">' + s.title + '</div>'
     + '<div style="margin-top:3px;"><span class="dnf-badge">DNF</span><span style="font-size:11px;color:var(--muted);margin-left:6px;">' + s.platform + '</span></div>'
     + '</div>'
-    + '<button class="btn-remove" onclick="removeShow(&quot;watched&quot;,' + sid + ')">&#x2715;</button>'
+    + '<button class="btn-remove" onclick="removeShow(&quot;watched&quot;,&quot;' + sid + '&quot;)">&#x2715;</button>'
     + '</div>'
     + '<div class="react-area">' + reactionsHTML(s.reactions) + reactToggle + '</div>'
     + '</div>';
@@ -986,7 +986,7 @@ function hideBtn(list, s) {
   var isHidden = s.hidden ? true : false;
   var icon = isHidden ? '&#128683;' : '&#128065;&#65039;';
   var title = isHidden ? 'Show to friends' : 'Hide from friends';
-  return '<button class="btn-hide' + (isHidden ? ' hidden' : '') + '" onclick="toggleHide(\''+list+'\','+s.id+')" title="'+title+'">' + icon + '</button>';
+  return '<button class="btn-hide' + (isHidden ? ' hidden' : '') + '" onclick="toggleHide(\''+list+'\',\''+s.id+'\')" title="'+title+'">' + icon + '</button>';
 }
 
 function toggleHide_OLD(list, id) {
@@ -1030,7 +1030,7 @@ function renderFriends() {
   document.getElementById('friends-grid').innerHTML=sorted.map(function(f){
     var fRoom=f.room||'tuscany'; var fColor=ROOMS[fRoom]?ROOMS[fRoom].color:f.color;
     var fInitials=f.name.split(' ').map(function(x){return x[0];}).join('');
-    return '<div class="friend-card" onclick="showFriend('+f.id+')">'+'<div class="friend-av" style="background:'+fColor+';font-size:16px;font-weight:700;font-family:var(--sans);">'+fInitials+'</div>'+'<div class="friend-name">'+f.name+'</div>'+'<div class="friend-city">'+f.city+'</div>'+'<div class="friend-count">'+f.watching.length+' watching &middot; '+f.watchlist.length+' saved</div>'+'</div>';
+    return '<div class="friend-card" onclick="showFriend(\''+f.id+'\')">'+'<div class="friend-av" style="background:'+fColor+';font-size:16px;font-weight:700;font-family:var(--sans);">'+fInitials+'</div>'+'<div class="friend-name">'+f.name+'</div>'+'<div class="friend-city">'+f.city+'</div>'+'<div class="friend-count">'+f.watching.length+' watching &middot; '+f.watchlist.length+' saved</div>'+'</div>';
   }).join('');
 }
 
@@ -1051,8 +1051,8 @@ function showFriend(id) {
         var rHTML=reactionsHTML(s.reactions);
         var inpId='finp-'+lk+'-'+f.id+'-'+i;
         var reactToggle=s.showReact
-          ?'<div class="inline-react"><input class="react-input" id="'+inpId+'" placeholder="What did you think?" /><button class="btn-send" onclick="submitFR('+f.id+',\''+lk+'\','+i+')">Send</button><button class="btn-cancel" onclick="toggleFR('+f.id+',\''+lk+'\','+i+')">Cancel</button></div>'
-          :'<button class="btn-react-toggle" onclick="toggleFR('+f.id+',\''+lk+'\','+i+')">+ What did you think?</button>';
+          ?'<div class="inline-react"><input class="react-input" id="'+inpId+'" placeholder="What did you think?" /><button class="btn-send" onclick="submitFR(\''+f.id+'\',\''+lk+'\','+i+')">Send</button><button class="btn-cancel" onclick="toggleFR(\''+f.id+'\',\''+lk+'\','+i+')">Cancel</button></div>'
+          :'<button class="btn-react-toggle" onclick="toggleFR(\''+f.id+'\',\''+lk+'\','+i+')">+ What did you think?</button>';
         var actions=(lk==='w'||lk==='wd')?remoteStatic(s.rating):'';
         var watchedBadge=lk==='wd'?'<span style="font-size:11px;color:var(--fig);font-weight:600;">&#10003; Binged</span>':'';
         html+='<div class="show-card"><div class="show-card-top">'+tvIcon()+'<div class="show-info"><div class="show-title">'+s.title+'</div>'+(watchedBadge?'<div style="margin-top:2px;">'+watchedBadge+'</div>':'')+'</div><div class="show-actions">'+actions+'</div></div><div class="react-area">'+rHTML+reactToggle+'</div></div>';
@@ -1583,7 +1583,8 @@ function normalizeShow(s) {
     influencedBy: s.influenced_by || null,
     addedAt: s.added_at,
     reactions: (s.reactions || []).map(function(r) {
-      return { user: r.user_id, initials: '?', color: '#5C6B3A', text: r.text, sentiment: r.sentiment, reactedAt: r.reacted_at };
+      var u = state.user;
+      return { user: u ? (u.first + (u.last ? ' ' + u.last : '')) : 'You', initials: u ? u.initials : 'Y', color: '#C4622D', text: r.text, sentiment: r.sentiment, reactedAt: r.reacted_at };
     }),
     showReact: false,
   };
@@ -1838,6 +1839,7 @@ window.saveTellMore = async function() {
 };
 
 window.skipTellMore = function() { showScreen('app'); renderAll(); };
+window.backFromTellMore = function() { state.user ? showScreen('settings') : showScreen('app'); renderAll(); };
 
 // ============================================================
 // PROFILE
