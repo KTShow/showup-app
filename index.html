@@ -1516,15 +1516,14 @@ async function getFriendsWithShows() {
     .eq('living_room_id', room.id).eq('status', 'active').neq('user_id', user.id);
   if (membersError) throw membersError;
   if (!members || !members.length) return [];
-  var friendIds = members.map(function(m) { return m.user_id; });
-  console.log('[getFriendsWithShows] friendIds:', friendIds);
-  const { data: shows, error: showsError } = await sb.from('shows')
-    .select('*, reactions(*)').in('user_id', friendIds).eq('hidden', false);
-  console.log('[getFriendsWithShows] shows result:', shows, 'error:', showsError);
+  var validMembers = members.filter(function(m) { return m.users !== null; });
+  var friendIds = validMembers.map(function(m) { return m.user_id; });
+  const { data: shows, error: showsError } = await sb.rpc('get_friend_shows', { p_user_id: user.id });
+  if (showsError) throw showsError;
   const { data: top5, error: top5Error } = await sb.from('top5_shows')
     .select('*').in('user_id', friendIds).order('rank', { ascending: true });
-  console.log('[getFriendsWithShows] top5 result:', top5, 'error:', top5Error);
-  return members.filter(function(m) { return m.users !== null; }).map(function(m) {
+  if (top5Error) throw top5Error;
+  return validMembers.map(function(m) {
     var u = m.users;
     var friendShows = (shows || []).filter(function(s) { return s.user_id === u.id; });
     var friendTop5 = (top5 || []).filter(function(t) { return t.user_id === u.id; });
