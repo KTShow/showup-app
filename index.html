@@ -1269,7 +1269,7 @@ const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   auth: {
     persistSession: true,
     autoRefreshToken: true,
-    detectSessionInUrl: true,
+    detectSessionInUrl: false, // we use OTP only, no OAuth redirects — URL detection blocks _initializePromise
     flowType: 'pkce',
   }
 });
@@ -1625,6 +1625,18 @@ async function loadUserIntoState(profile) {
 async function bootstrap() {
   console.log('[bootstrap] START');
   try {
+    // Synchronous pre-check: log stored token expiry before any async call
+    (function() {
+      try {
+        var k = Object.keys(localStorage).find(function(k) { return k.startsWith('sb-') && k.includes('auth-token'); });
+        if (!k) { console.log('[bootstrap] no auth-token key in localStorage'); return; }
+        var d = JSON.parse(localStorage.getItem(k));
+        var exp = d && d.expires_at;
+        var expired = exp ? Date.now() / 1000 > exp : true;
+        console.log('[bootstrap] stored token expires_at:', exp ? new Date(exp * 1000).toISOString() : 'none', expired ? '← EXPIRED (refresh needed)' : '← still valid');
+      } catch(e) { console.log('[bootstrap] could not read stored token:', e); }
+    })();
+
     var TIMED_OUT = {};
     var session = await Promise.race([
       getSession(),
