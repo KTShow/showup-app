@@ -1311,7 +1311,13 @@ function generateUsername(firstName, lastInitial) {
 async function getUserProfile() {
   const { data: { user } } = await sb.auth.getUser();
   if (!user) return null;
-  const { data, error } = await sb.from('users').select('*').eq('id', user.id).single();
+  return await fetchProfileById(user.id);
+}
+
+// Safe to call inside onAuthStateChange — does not call getUser() or getSession(),
+// which would await _initializePromise and deadlock during Supabase initialization.
+async function fetchProfileById(userId) {
+  const { data, error } = await sb.from('users').select('*').eq('id', userId).single();
   if (error && error.code === 'PGRST116') return null;
   if (error) throw error;
   return data;
@@ -1690,7 +1696,11 @@ onAuthStateChange(async function(session) {
   if ((onboarding && onboarding.classList.contains('active')) ||
       (tellmore && tellmore.classList.contains('active'))) return;
 
-  var profile = await getUserProfile();
+  // Use fetchProfileById(session.user.id) instead of getUserProfile() here.
+  // getUserProfile() calls sb.auth.getUser() which awaits _initializePromise,
+  // but this callback is itself awaited by _initializePromise (broadcast=false
+  // during init) — calling getUser() here causes a guaranteed deadlock.
+  var profile = await fetchProfileById(session.user.id);
   if (!profile) {
     showScreen('onboard');
   } else {
