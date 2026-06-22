@@ -1365,34 +1365,8 @@ async function fetchProfileById(userId) {
 
 async function connectViaInvite(inviterUsername) {
   try {
-    var authRes = await sb.auth.getUser();
-    var user = authRes && authRes.data && authRes.data.user;
-    if (!user) { console.error('[connectViaInvite] no auth user'); return; }
-
-    var { data: rows, error: luErr } = await sb.from('users').select('id').eq('username', inviterUsername).limit(1);
-    if (luErr) { console.error('[connectViaInvite] user lookup error:', luErr); return; }
-    if (!rows || !rows.length) { console.error('[connectViaInvite] inviter not found:', inviterUsername); return; }
-    var inviterId = rows[0].id;
-    if (inviterId === user.id) return;
-
-    var { data: theirRoom, error: trErr } = await sb.from('living_rooms').select('id').eq('owner_id', inviterId).single();
-    if (trErr || !theirRoom) { console.error('[connectViaInvite] their room error:', trErr); return; }
-
-    var myRoom = await getMyLivingRoom();
-    if (!myRoom) { console.error('[connectViaInvite] my room not found'); return; }
-
-    // Add new user to inviter's room
-    var { error: e1 } = await sb.from('living_room_members').insert({
-      living_room_id: theirRoom.id, user_id: user.id, status: 'active'
-    });
-    if (e1 && e1.code !== '23505') console.error('[connectViaInvite] insert 1 error:', e1);
-
-    // Add inviter to new user's room (mutual)
-    var { error: e2 } = await sb.from('living_room_members').insert({
-      living_room_id: myRoom.id, user_id: inviterId, status: 'active'
-    });
-    if (e2 && e2.code !== '23505') console.error('[connectViaInvite] insert 2 error:', e2);
-
+    var { error } = await sb.rpc('connect_via_invite', { p_inviter_username: inviterUsername });
+    if (error) console.error('[connectViaInvite] rpc error:', error);
   } catch(e) {
     console.error('[connectViaInvite] exception:', e);
   }
