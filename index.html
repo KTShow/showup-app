@@ -1567,11 +1567,18 @@ async function getFriendsWithShows() {
   const room = await getMyLivingRoom();
   if (!room) return [];
 
-  // Direction 1: people who joined MY room
-  const { data: members, error: membersError } = await sb.from('living_room_members')
-    .select('user_id, users!user_id(id, first_name, last_initial, city, state, room)')
+  // Direction 1: people who joined MY room → fetch their profiles separately
+  const { data: memberRows, error: membersError } = await sb.from('living_room_members')
+    .select('user_id')
     .eq('living_room_id', room.id).eq('status', 'active').neq('user_id', user.id);
   if (membersError) throw membersError;
+  var dir1Ids = (memberRows || []).map(function(m) { return m.user_id; });
+  var dir1Profiles = [];
+  if (dir1Ids.length > 0) {
+    var { data: p1 } = await sb.from('users')
+      .select('id, first_name, last_initial, city, state, room').in('id', dir1Ids);
+    dir1Profiles = p1 || [];
+  }
 
   // Direction 2: rooms I joined (other than my own) → get those owners
   const { data: myMemberships } = await sb.from('living_room_members')
@@ -1585,19 +1592,19 @@ async function getFriendsWithShows() {
       .select('owner_id').in('id', otherRoomIds);
     var ownerIds = (otherRooms || []).map(function(r) { return r.owner_id; }).filter(function(id) { return id !== user.id; });
     if (ownerIds.length > 0) {
-      var { data: profiles } = await sb.from('users')
+      var { data: p2 } = await sb.from('users')
         .select('id, first_name, last_initial, city, state, room').in('id', ownerIds);
-      ownerProfiles = profiles || [];
+      ownerProfiles = p2 || [];
     }
   }
 
   // Merge, deduplicate by user id
   var seenIds = new Set([user.id]);
   var allUsers = [];
-  (members || []).forEach(function(m) {
-    if (m.users && !seenIds.has(m.user_id)) {
-      seenIds.add(m.user_id);
-      allUsers.push(m.users);
+  dir1Profiles.forEach(function(u) {
+    if (!seenIds.has(u.id)) {
+      seenIds.add(u.id);
+      allUsers.push(u);
     }
   });
   ownerProfiles.forEach(function(u) {
