@@ -810,7 +810,7 @@ function renderRoomGrid() {
   grid.innerHTML = Object.keys(ROOMS).map(function(k) {
     var r = ROOMS[k];
     var isSelected = k === currentRoom;
-    return '<button class="room-btn' + (isSelected ? ' selected' : '') + '" onclick="setRoom(\'' + k + '\')" style="border-color:' + (isSelected ? r.color : '') + ';">'
+    return '<button class="room-btn' + (isSelected ? ' selected' : '') + '" onclick="setRoomAndSave(\'' + k + '\')" style="border-color:' + (isSelected ? r.color : '') + ';">'
       + '<div style="width:40px;height:40px;border-radius:50%;background:' + r.color + ';margin:0 auto;display:flex;align-items:center;justify-content:center;font-size:22px;">🛋️</div>'
       + '<div class="room-btn-name">' + r.name + '</div>'
       + '<div class="room-btn-desc">' + r.desc + '</div>'
@@ -1040,6 +1040,7 @@ function showFriend(id) {
   document.getElementById('friends-view').style.display='none';
   var dv=document.getElementById('friend-detail-view'); dv.style.display='block';
   var fRoom=f.room||'tuscany'; var fColor=ROOMS[fRoom]?ROOMS[fRoom].color:f.color;
+  var fInitials=f.name.split(' ').map(function(x){return x[0]||'';}).join('').toUpperCase();
 
   function fGrouped(arr,lk){
     var groups={};
@@ -1073,14 +1074,14 @@ function showFriend(id) {
       + '</div>';
   }
   dv.innerHTML='<button class="back-btn" onclick="backToFriends()">&#8592; Back to Living Room</button>'
-    +'<div class="friend-header"><div class="friend-header-av" style="background:'+fColor+';">&#128771;</div>'
+    +'<div class="friend-header"><div class="friend-header-av" style="background:'+fColor+';font-size:18px;font-weight:700;font-family:var(--sans);">'+fInitials+'</div>'
     +'<div><div style="font-family:Georgia,serif;font-size:20px;font-weight:700">'+f.name+"'s Living Room</div>"
     +'<div style="font-size:13px;color:var(--muted)">'+f.city+'</div></div></div>'
     + top5HTML
-    +'<div class="friend-section-header"><div class="friend-section-line" style="flex:1;height:2px;background:var(--border);"></div><div class="friend-section-title" style="font-family:var(--serif);font-size:14px;font-weight:700;color:white;white-space:nowrap;padding:5px 16px;background:var(--terra);border-radius:20px;">&#128250; On Right Now</div><div class="friend-section-line" style="flex:1;height:2px;background:var(--border);"></div></div>'+fGrouped(f.watching.filter(function(x){return !x.hidden;}),'w')
-    +'<div class="friend-section-header"><div class="friend-section-line" style="flex:1;height:2px;background:var(--border);"></div><div class="friend-section-title" style="font-family:var(--serif);font-size:14px;font-weight:700;color:white;white-space:nowrap;padding:5px 16px;background:var(--olive);border-radius:20px;">&#128771; Saving a Seat</div><div class="friend-section-line" style="flex:1;height:2px;background:var(--border);"></div></div>'+fGrouped(f.watchlist.filter(function(x){return !x.hidden;}),'wl')
+    +'<div style="display:flex;align-items:center;gap:12px;margin:24px 0 10px;"><div style="width:5px;height:28px;background:var(--terra);border-radius:3px;flex-shrink:0;"></div><div style="font-family:var(--serif);font-size:17px;font-weight:700;color:var(--charcoal);">&#128250; On Right Now</div></div>'+fGrouped(f.watching.filter(function(x){return !x.hidden;}),'w')
+    +'<div style="display:flex;align-items:center;gap:12px;margin:24px 0 10px;"><div style="width:5px;height:28px;background:var(--olive);border-radius:3px;flex-shrink:0;"></div><div style="font-family:var(--serif);font-size:17px;font-weight:700;color:var(--charcoal);">&#128771; Saving a Seat</div></div>'+fGrouped(f.watchlist.filter(function(x){return !x.hidden;}),'wl')
   +(f.watched&&f.watched.length
-    ? '<div class="friend-section-header"><div class="friend-section-line" style="flex:1;height:2px;background:var(--border);"></div><div class="friend-section-title" style="font-family:var(--serif);font-size:14px;font-weight:700;color:white;white-space:nowrap;padding:5px 16px;background:var(--fig);border-radius:20px;">&#128252; Already Binged</div><div class="friend-section-line" style="flex:1;height:2px;background:var(--border);"></div></div>'+fGrouped(f.watched.filter(function(x){return !x.dnf&&!x.hidden;}),'wd')
+    ? '<div style="display:flex;align-items:center;gap:12px;margin:24px 0 10px;"><div style="width:5px;height:28px;background:var(--fig);border-radius:3px;flex-shrink:0;"></div><div style="font-family:var(--serif);font-size:17px;font-weight:700;color:var(--charcoal);">&#128252; Already Binged</div></div>'+fGrouped(f.watched.filter(function(x){return !x.dnf&&!x.hidden;}),'wd')
       +(f.watched.filter(function(x){return x.dnf;}).length
         ? '<div class="dnf-section"><div class="dnf-header">&#128683; Didn&#39;t Finish</div>'
           + f.watched.filter(function(x){return x.dnf;}).map(function(s){
@@ -1817,6 +1818,31 @@ window.completeOnboard = async function() {
 // TELL US MORE
 // ============================================================
 
+function prefillTellMore() {
+  if (!state.user) return;
+  var u = state.user;
+  document.querySelectorAll('#screen-tellmore .pill-btn').forEach(function(b) { b.classList.remove('selected'); });
+  var mark = function(containerId, values) {
+    var arr = Array.isArray(values) ? values : (values ? [values] : []);
+    document.querySelectorAll('#' + containerId + ' .pill-btn').forEach(function(b) {
+      if (arr.indexOf(b.textContent.trim()) !== -1) b.classList.add('selected');
+    });
+  };
+  mark('career-pills', u.career);
+  mark('household-pills', u.household);
+  mark('when-pills', u.watchWhen);
+  mark('frequency-pills', u.watchFreq);
+  mark('discovery-pills', u.discovery);
+  // Hobbies span multiple pill grids not covered by the named containers
+  var skipIds = ['career-pills','household-pills','when-pills','frequency-pills','discovery-pills'];
+  if (u.hobbies && u.hobbies.length) {
+    document.querySelectorAll('#screen-tellmore .pill-btn').forEach(function(b) {
+      var skip = skipIds.some(function(id) { return b.closest('#'+id); });
+      if (!skip && u.hobbies.indexOf(b.textContent.trim()) !== -1) b.classList.add('selected');
+    });
+  }
+}
+
 window.saveTellMore = async function() {
   var get = function(id) { var b = document.querySelector('#'+id+' .pill-btn.selected'); return b ? b.textContent.trim() : ''; };
   var getMulti = function(id) { var btns = document.querySelectorAll('#'+id+' .pill-btn.selected'); var vals = []; btns.forEach(function(b) { vals.push(b.textContent.trim()); }); return vals; };
@@ -1834,12 +1860,18 @@ window.saveTellMore = async function() {
     Object.assign(state.user, psychData);
     try { await saveTellMoreData(psychData); } catch(e) { console.error('Tell More error:', e); }
   }
-  showScreen('app');
+  showScreen(state.user ? 'settings' : 'app');
   renderAll();
 };
 
 window.skipTellMore = function() { showScreen('app'); renderAll(); };
 window.backFromTellMore = function() { state.user ? showScreen('settings') : showScreen('app'); renderAll(); };
+window.goToTellMore = function() {
+  showScreen('tellmore');
+  prefillTellMore();
+  var btn = document.querySelector('#screen-tellmore .btn-join');
+  if (btn && state.user) btn.textContent = 'Save Changes';
+};
 
 // ============================================================
 // PROFILE
@@ -1905,7 +1937,6 @@ window.backFromProfile = function() {
 };
 window.goToSettings = function() { showScreen('settings'); renderRoomGrid(); };
 window.backFromSettings = function() { showScreen('app'); };
-window.goToTellMore = function() { showScreen('tellmore'); };
 
 // ============================================================
 // ROOM — override to persist to Supabase
