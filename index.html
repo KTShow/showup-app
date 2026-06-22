@@ -242,6 +242,11 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
   <div class="login-wrap">
     <div class="login-card">
       <div id="login-form-view">
+        <div id="invite-banner" style="display:none;background:var(--fig);color:white;border-radius:12px;padding:14px 18px;margin-bottom:18px;text-align:center;">
+          <div style="font-size:22px;margin-bottom:4px;">🛋️</div>
+          <div id="invite-banner-name" style="font-family:var(--serif);font-size:16px;font-weight:700;margin-bottom:3px;">You've been invited to ShowUp!</div>
+          <div style="font-size:13px;opacity:0.85;line-height:1.5;">Enter your email below to pull up a chair.</div>
+        </div>
         <div class="login-logo">ShowUp</div>
         <div class="login-tag">Good taste lives here.</div>
         <div class="login-sub">Your living room awaits.</div>
@@ -1175,7 +1180,15 @@ function showRankDetail(idx){
 
 function backToRankings(){document.getElementById('rank-detail-panel').style.display='none';document.getElementById('rankings-list').style.display='block';}
 
-function copyInvite(){var btn=document.getElementById('copy-btn');btn.textContent='Copied! \u2713';setTimeout(function(){btn.textContent='Copy invite link';},1800);}
+function copyInvite(){
+  var btn=document.getElementById('copy-btn');
+  var el=document.querySelector('.invite-link');
+  var raw=el?el.textContent.trim():'';
+  var text=raw?(raw.startsWith('http')?raw:'https://'+raw):'';
+  if(text&&navigator.clipboard){navigator.clipboard.writeText(text).catch(function(){});}
+  btn.textContent='Copied! \u2713';
+  setTimeout(function(){btn.textContent='Copy invite link';},1800);
+}
 
 
 function goToProfileTop5() {
@@ -1272,6 +1285,12 @@ init();
 const SUPABASE_URL = 'https://sgnulweruogjfdddwboe.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNnbnVsd2VydW9namZkZGR3Ym9lIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkxMzQ0MzMsImV4cCI6MjA5NDcxMDQzM30.bL28eAEx24TjpE8msSmoZHUQOWU5Yj6EfHpMv8V5VrM';
 
+// Read inviter username from /join/:username URL (set by Vercel rewrite)
+var PENDING_INVITER = (function() {
+  var m = window.location.pathname.match(/^\/join\/([a-z0-9-]+)$/i);
+  return m ? m[1] : null;
+})();
+
 // Clean orphaned PKCE verifiers before the client initializes
 try {
   var sbKeys = Object.keys(localStorage).filter(function(k) { return k.startsWith('sb-') || k.startsWith('supabase'); });
@@ -1339,6 +1358,32 @@ async function fetchProfileById(userId) {
   if (error && error.code === 'PGRST116') return null;
   if (error) throw error;
   return data;
+}
+
+async function connectViaInvite(inviterUsername) {
+  try {
+    var { data: { user } } = await sb.auth.getUser();
+    if (!user) return;
+    var { data: rows } = await sb.from('users').select('id').eq('username', inviterUsername).limit(1);
+    if (!rows || !rows.length) return;
+    var inviterId = rows[0].id;
+    if (inviterId === user.id) return;
+    var { data: theirRoom } = await sb.from('living_rooms').select('id').eq('owner_id', inviterId).single();
+    if (!theirRoom) return;
+    var myRoom = await getMyLivingRoom();
+    if (!myRoom) return;
+    // Add new user to inviter's room AND inviter to new user's room (mutual)
+    await sb.from('living_room_members').upsert(
+      { living_room_id: theirRoom.id, user_id: user.id, status: 'active' },
+      { onConflict: 'living_room_id,user_id' }
+    );
+    await sb.from('living_room_members').upsert(
+      { living_room_id: myRoom.id, user_id: inviterId, status: 'active' },
+      { onConflict: 'living_room_id,user_id' }
+    );
+  } catch(e) {
+    console.error('[connectViaInvite] error:', e);
+  }
 }
 
 async function createUserProfile(profileData) {
@@ -1535,20 +1580,57 @@ async function getFriendsWithShows() {
   if (!user) throw new Error('Not authenticated');
   const room = await getMyLivingRoom();
   if (!room) return [];
+
+  // Direction 1: people who joined MY room
   const { data: members, error: membersError } = await sb.from('living_room_members')
     .select('user_id, users!user_id(id, first_name, last_initial, city, state, room)')
     .eq('living_room_id', room.id).eq('status', 'active').neq('user_id', user.id);
   if (membersError) throw membersError;
-  if (!members || !members.length) return [];
-  var validMembers = members.filter(function(m) { return m.users !== null; });
-  var friendIds = validMembers.map(function(m) { return m.user_id; });
+
+  // Direction 2: rooms I joined (other than my own) → get those owners
+  const { data: myMemberships } = await sb.from('living_room_members')
+    .select('living_room_id').eq('user_id', user.id).eq('status', 'active');
+  var otherRoomIds = (myMemberships || [])
+    .map(function(m) { return m.living_room_id; })
+    .filter(function(id) { return id !== room.id; });
+  var ownerProfiles = [];
+  if (otherRoomIds.length > 0) {
+    var { data: otherRooms } = await sb.from('living_rooms')
+      .select('owner_id').in('id', otherRoomIds);
+    var ownerIds = (otherRooms || []).map(function(r) { return r.owner_id; }).filter(function(id) { return id !== user.id; });
+    if (ownerIds.length > 0) {
+      var { data: profiles } = await sb.from('users')
+        .select('id, first_name, last_initial, city, state, room').in('id', ownerIds);
+      ownerProfiles = profiles || [];
+    }
+  }
+
+  // Merge, deduplicate by user id
+  var seenIds = new Set([user.id]);
+  var allUsers = [];
+  (members || []).forEach(function(m) {
+    if (m.users && !seenIds.has(m.user_id)) {
+      seenIds.add(m.user_id);
+      allUsers.push(m.users);
+    }
+  });
+  ownerProfiles.forEach(function(u) {
+    if (!seenIds.has(u.id)) {
+      seenIds.add(u.id);
+      allUsers.push(u);
+    }
+  });
+
+  if (!allUsers.length) return [];
+  var friendIds = allUsers.map(function(u) { return u.id; });
+
   const { data: shows, error: showsError } = await sb.rpc('get_friend_shows', { p_user_id: user.id });
   if (showsError) throw showsError;
   const { data: top5, error: top5Error } = await sb.from('top5_shows')
     .select('*').in('user_id', friendIds).order('rank', { ascending: true });
   if (top5Error) throw top5Error;
-  return validMembers.map(function(m) {
-    var u = m.users;
+
+  return allUsers.map(function(u) {
     var friendShows = (shows || []).filter(function(s) { return s.user_id === u.id; });
     var friendTop5 = (top5 || []).filter(function(t) { return t.user_id === u.id; });
     return {
@@ -1812,6 +1894,10 @@ window.completeOnboard = async function() {
     };
     updateAvatar();
     updateInviteLinks(profile.username);
+    if (PENDING_INVITER) {
+      await connectViaInvite(PENDING_INVITER);
+      PENDING_INVITER = null;
+    }
     showScreen('tellmore');
   } catch(e) {
     console.error('Onboard error:', e);
@@ -1951,6 +2037,10 @@ window.backFromSettings = function() { showScreen('app'); };
 var _originalSetRoom = null;
 document.addEventListener('DOMContentLoaded', function() {
   _originalSetRoom = window.setRoom;
+  if (PENDING_INVITER) {
+    var banner = document.getElementById('invite-banner');
+    if (banner) banner.style.display = 'block';
+  }
 });
 
 window.setRoomAndSave = async function(roomKey) {
