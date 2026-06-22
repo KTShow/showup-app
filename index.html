@@ -424,6 +424,7 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
         <button class="pill-btn" onclick="togglePill(this,'discovery')">Social media</button>
         <button class="pill-btn" onclick="togglePill(this,'discovery')">Streaming service suggestion</button>
         <button class="pill-btn" onclick="togglePill(this,'discovery')">Trailer</button>
+        <button class="pill-btn" onclick="togglePill(this,'discovery')">Internet research</button>
       </div>
     </div>
 
@@ -968,14 +969,15 @@ function buildCard(s, list) {
   var actions='';
   if(list==='watched') actions=remoteRating(list,s.id,s.rating);
   if(list==='watchlist') actions='<button class="btn-start" onclick="moveToWatching(\'' + s.id + '\')" >Queue It Up</button>';
+  if(list==='watching') actions='<button class="btn-start" onclick="moveToWatchlist(\'' + s.id + '\')" style="background:var(--olive);">&#8592; My List</button>';
   actions+=hideBtn(list, s);
   actions+='<button class="btn-remove" onclick="removeShow(\'' + list + '\',\'' + s.id + '\')" >&#x2715;</button>';
   var moveLink=list==='watching'?'<div class="show-move" style="display:flex;align-items:center;gap:0;"><button class="done-watching-btn" onclick="markWatched(\'' + s.id + '\')" >Done Watching &#10003;</button><button class="didnt-finish-btn" onclick="markDNF(\'' + s.id + '\')" >Didn&#39;t Finish</button></div>':'';
   var showSpill=list==='watched';
   var inpId='inp-'+list+'-'+s.id;
   var reactToggle=!showSpill?'':s.showReact
-    ?'<div class="inline-react"><input class="react-input" id="'+inpId+'" placeholder="What did you think?" /><button class="btn-send" onclick="submitReact(\''+list+'\','+s.id+')">Send</button><button class="btn-cancel" onclick="toggleReact(\''+list+'\','+s.id+')">Cancel</button></div>'
-    :'<button class="btn-react-toggle" onclick="toggleReact(\''+list+'\','+s.id+')">+ What did you think?</button>';
+    ?'<div class="inline-react"><input class="react-input" id="'+inpId+'" placeholder="What did you think?" /><button class="btn-send" onclick="submitReact(\''+list+'\',\''+s.id+'\')">Send</button><button class="btn-cancel" onclick="toggleReact(\''+list+'\',\''+s.id+'\')">Cancel</button></div>'
+    :'<button class="btn-react-toggle" onclick="toggleReact(\''+list+'\',\''+s.id+'\')">+ What did you think?</button>';
   var hasReact=reactionsHTML(s.reactions)||reactToggle;
   return '<div class="show-card'+(s.hidden?' is-hidden':'')+'"><div class="show-card-top">'+tvIcon()+'<div class="show-info"><div class="show-title">'+s.title+(s.hidden?'<span class="hidden-badge">Hidden from friends</span>':'')+'</div>'+moveLink+'</div><div class="show-actions">'+actions+'</div></div>'+(hasReact?'<div class="react-area">'+reactionsHTML(s.reactions)+reactToggle+'</div>':'')+'</div>';
 }
@@ -1017,8 +1019,8 @@ function removeShow_OLD(list,id){state[list]=state[list].filter(function(x){retu
 
 function launchConfetti() {
   var wrap=document.getElementById('confetti-wrap'); wrap.innerHTML='';
-  for(var i=0;i<48;i++){(function(i){var el=document.createElement('div');el.className='confetti-piece';var color=CONFETTI_COLORS[i%CONFETTI_COLORS.length];var size=Math.random()*8+6;var left=Math.random()*100;var delay=Math.random()*0.5;var dur=Math.random()*1.5+1.5;var rot=Math.random()*360;el.style.cssText='position:absolute;left:'+left+'%;top:-20px;width:'+size+'px;height:'+size+'px;background:'+color+';border-radius:'+(i%3===0?'50%':'2px')+';transform:rotate('+rot+'deg);animation:confettiFall '+dur+'s '+delay+'s ease-in forwards;';wrap.appendChild(el);})(i);}
-  setTimeout(function(){wrap.innerHTML='';},3000);
+  for(var i=0;i<32;i++){(function(i){var el=document.createElement('div');var left=Math.random()*100;var delay=Math.random()*0.6;var dur=Math.random()*1.5+1.8;var size=Math.random()*14+18;el.style.cssText='position:absolute;left:'+left+'%;top:-40px;font-size:'+size+'px;animation:confettiFall '+dur+'s '+delay+'s ease-in forwards;user-select:none;';el.textContent='🍿';wrap.appendChild(el);})(i);}
+  setTimeout(function(){wrap.innerHTML='';},3500);
 }
 var styleEl=document.createElement('style');
 styleEl.textContent='@keyframes confettiFall{from{transform:translateY(0) rotate(0deg);opacity:1;}to{transform:translateY(110vh) rotate(720deg);opacity:0;}}';
@@ -2012,6 +2014,15 @@ window.moveToWatching = async function(id) {
   state.watching.push(show);
   renderList('watchlist'); renderList('watching');
   try { await updateShowStatus(id, 'watching'); } catch(e) { console.error('moveToWatching error:', e); }
+};
+
+window.moveToWatchlist = async function(id) {
+  var idx = state.watching.findIndex(function(x) { return x.id === id; });
+  if (idx === -1) return;
+  var show = state.watching.splice(idx, 1)[0];
+  state.watchlist.push(show);
+  renderList('watching'); renderList('watchlist');
+  try { await updateShowStatus(id, 'watchlist'); } catch(e) { console.error('moveToWatchlist error:', e); }
 };
 
 window.rate = async function(list, id, n) {
