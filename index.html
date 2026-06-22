@@ -684,6 +684,9 @@ var state = {
   friends: []
 };
 
+var _firstTimeTellMore = false; // true when completing onboarding for the first time
+var _bootstrapComplete = false; // true once bootstrap has determined the screen to show
+
 
 function openInviteModal() {
   var u = state.user;
@@ -1738,13 +1741,25 @@ async function bootstrap() {
         var k = Object.keys(localStorage).find(function(k) { return k.startsWith('sb-') && k.endsWith('-auth-token'); });
         if (!k) return null;
         var d = JSON.parse(localStorage.getItem(k));
-        if (!d || !d.access_token || !d.user) return null;
-        if (d.expires_at && Date.now() / 1000 > d.expires_at - 60) return null;
+        if (!d || !d.user) return null;
         return d;
       } catch(e) { return null; }
     })();
 
     if (!stored) {
+      _bootstrapComplete = true;
+      showScreen('login');
+      return;
+    }
+
+    var accessExpired = stored.expires_at && Date.now() / 1000 > stored.expires_at - 60;
+    if (accessExpired) {
+      if (stored.refresh_token) {
+        // Refresh token exists — supabase-js will auto-refresh and fire onAuthStateChange.
+        // Show nothing here; onAuthStateChange handles the screen once the token refreshes.
+        return;
+      }
+      _bootstrapComplete = true;
       showScreen('login');
       return;
     }
@@ -1758,6 +1773,8 @@ async function bootstrap() {
     var profileRows = profileRes.ok ? await profileRes.json() : [];
     var profile = profileRows.length > 0 ? profileRows[0] : null;
 
+    _bootstrapComplete = true;
+
     if (!profile) {
       showScreen('onboard');
       return;
@@ -1766,6 +1783,7 @@ async function bootstrap() {
     await loadUserIntoState(profile);
   } catch(e) {
     console.error('[bootstrap] CATCH error:', e);
+    _bootstrapComplete = true;
     showScreen('login');
   }
 }
@@ -1781,13 +1799,18 @@ async function bootstrap() {
 // via setTimeout(fn,0) lets _initializePromise resolve first; by the time the
 // setTimeout fires, all sb.* calls work normally.
 onAuthStateChange(function(session) {
-  if (!session) return;
+  if (!session) {
+    // If bootstrap was waiting for a token refresh that failed, show login now
+    if (!_bootstrapComplete) { _bootstrapComplete = true; showScreen('login'); }
+    return;
+  }
   setTimeout(async function() {
     // Don't interrupt mid-onboarding or tell-us-more
     var onboarding = document.getElementById('screen-onboard');
     var tellmore = document.getElementById('screen-tellmore');
     if ((onboarding && onboarding.classList.contains('active')) ||
         (tellmore && tellmore.classList.contains('active'))) return;
+    _bootstrapComplete = true;
     var profile = await fetchProfileById(session.user.id);
     if (!profile) {
       showScreen('onboard');
@@ -1898,6 +1921,7 @@ window.completeOnboard = async function() {
       await connectViaInvite(PENDING_INVITER);
       PENDING_INVITER = null;
     }
+    _firstTimeTellMore = true;
     showScreen('tellmore');
   } catch(e) {
     console.error('Onboard error:', e);
@@ -1952,8 +1976,17 @@ window.saveTellMore = async function() {
     Object.assign(state.user, psychData);
     try { await saveTellMoreData(psychData); } catch(e) { console.error('Tell More error:', e); }
   }
-  showScreen(state.user ? 'settings' : 'app');
-  renderAll();
+  if (_firstTimeTellMore) {
+    _firstTimeTellMore = false;
+    try { state.friends = await getFriendsWithShows(); } catch(e) { state.friends = []; }
+    showScreen('app');
+    renderAll();
+    var lrBtn = document.getElementById('btab-living-room');
+    if (lrBtn) showTab('living-room', lrBtn);
+  } else {
+    showScreen('settings');
+    renderAll();
+  }
 };
 
 window.skipTellMore = function() { showScreen('app'); renderAll(); };
