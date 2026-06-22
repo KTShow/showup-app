@@ -14,11 +14,13 @@
   --serif:Georgia,'Times New Roman',serif;
   --sans:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,sans-serif;
 }
-body.room-tuscany{--sand:#E8DDD0;--sand-dark:#EDE4D6;--terra:#C4622D;--burnt:#A0522D;--olive:#5C6B3A;--olive-light:#7A8F4E;--charcoal:#3A3A3A;--muted:#6A6A6A;--cream:#FBF7F2;--border:rgba(58,58,58,0.10);--fig:#6B2D4E;--gold:#C49A3C;--shadow:0 2px 14px rgba(100,50,20,0.09);}
-body.room-cabin{--sand:#DDE8D8;--sand-dark:#C8DCC0;--terra:#8B4513;--burnt:#6B3410;--olive:#2D5A1B;--olive-light:#3D7A28;--charcoal:#1A1F18;--muted:#4A5A44;--cream:#F0F5EC;--border:rgba(30,50,20,0.12);--fig:#5C3D1E;--gold:#D4831E;--shadow:0 2px 14px rgba(40,60,20,0.12);}
-body.room-modern{--sand:#E4E8EC;--sand-dark:#D0D8E0;--terra:#2C3E50;--burnt:#1A252F;--olive:#465C6E;--olive-light:#5A7A90;--charcoal:#0D1B2A;--muted:#5A6A78;--cream:#F5F7F9;--border:rgba(20,30,40,0.12);--fig:#1A2535;--gold:#C0A855;--shadow:0 2px 14px rgba(20,30,40,0.10);}
-body.room-formal{--sand:#E8E4D8;--sand-dark:#D8D0C0;--terra:#8B1A1A;--burnt:#6B1212;--olive:#1A3A6B;--olive-light:#2A5298;--charcoal:#0A0A1A;--muted:#4A4A6A;--cream:#FAF8F2;--border:rgba(30,20,20,0.12);--fig:#1B3A6B;--gold:#C49A3C;--shadow:0 2px 14px rgba(30,10,10,0.12);}
+body.room-cabin{--sand:#D4C4A8;--sand-dark:#C4B090;--terra:#9B3820;--burnt:#7A2A16;--olive:#2A4A1A;--olive-light:#3A6228;--charcoal:#14100A;--muted:#5A4030;--cream:#F5EDE0;--border:rgba(30,20,10,0.14);--fig:#5C1E14;--gold:#C47818;--shadow:0 2px 14px rgba(50,25,10,0.14);}
 body.room-coastal{--sand:#D8EEF8;--sand-dark:#C0E0F0;--terra:#1A7AAE;--burnt:#135C88;--olive:#2E9E8A;--olive-light:#3AB8A0;--charcoal:#0A2030;--muted:#3A6878;--cream:#EEF7FC;--border:rgba(10,50,80,0.12);--fig:#0A4A6A;--gold:#E8B84B;--shadow:0 2px 14px rgba(10,60,90,0.12);}
+body.room-formal{--sand:#EDE8D4;--sand-dark:#E0D8BE;--terra:#1C3D7A;--burnt:#142E5E;--olive:#C8A018;--olive-light:#E0B820;--charcoal:#0A1428;--muted:#4A5A78;--cream:#FAF8F0;--border:rgba(28,60,122,0.11);--fig:#0E2450;--gold:#C8A018;--shadow:0 2px 14px rgba(20,30,80,0.10);}
+body.room-mancave{--sand:#D4C8C0;--sand-dark:#C4B8B0;--terra:#C41E1E;--burnt:#9B1515;--olive:#1E6B35;--olive-light:#2D8A48;--charcoal:#0A0808;--muted:#4A3838;--cream:#F5F0EC;--border:rgba(10,5,5,0.14);--fig:#0A1840;--gold:#B8901A;--shadow:0 2px 14px rgba(20,5,5,0.14);}
+body.room-modern{--sand:#E8E8E4;--sand-dark:#D8D8D2;--terra:#2A6040;--burnt:#1E4830;--olive:#8A7A5A;--olive-light:#A89870;--charcoal:#0A0A0A;--muted:#505050;--cream:#F8F8F6;--border:rgba(10,10,10,0.11);--fig:#1A1A1A;--gold:#B8A870;--shadow:0 2px 14px rgba(0,0,0,0.11);}
+body.room-tuscany{--sand:#E8D8B0;--sand-dark:#DECA9C;--terra:#B85428;--burnt:#8C3E1C;--olive:#2D5E1A;--olive-light:#3D7A28;--charcoal:#2A1E10;--muted:#6B5040;--cream:#FCF5E8;--border:rgba(42,30,16,0.11);--fig:#6B2418;--gold:#C49420;--shadow:0 2px 14px rgba(90,40,10,0.12);}
+body.room-worldcup{--sand:#DFF0D0;--sand-dark:#CDDDBC;--terra:#1A8C2C;--burnt:#146A22;--olive:#C49A08;--olive-light:#E0B410;--charcoal:#0A1E08;--muted:#487040;--cream:#F4FAF0;--border:rgba(10,60,10,0.12);--fig:#0A1A40;--gold:#D4A810;--shadow:0 2px 14px rgba(10,60,10,0.10);}
 
 *{box-sizing:border-box;margin:0;padding:0;}
 body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-height:100vh;}
@@ -659,11 +661,13 @@ var PLATFORMS = ['Amazon Prime Video','Apple TV+','Disney+','HBO Max','Hulu','Ne
 var CONFETTI_COLORS = ['#C4622D','#6B2D4E','#C49A3C','#5C6B3A','#F5EFE6','#D4734E'];
 
 var ROOMS = {
-  tuscany: {name:'Tuscany', cls:'room-tuscany', color:'#C4622D', desc:'Terracotta & Olive'},
-  cabin:   {name:'Cabin',   cls:'room-cabin',   color:'#8B4513', desc:'Rust & Forest Green'},
-  modern:  {name:'Modern',  cls:'room-modern',  color:'#2C3E50', desc:'Slate & Charcoal'},
-  formal:  {name:'Formal',  cls:'room-formal',  color:'#8B1A1A', desc:'Burgundy & Navy'},
-  coastal: {name:'Coastal', cls:'room-coastal', color:'#1A7AAE', desc:'Sky Blue & Sand'}
+  cabin:    {name:'Cabin',     cls:'room-cabin',    color:'#9B3820', desc:'Warm Wood & Plaid'},
+  coastal:  {name:'Coastal',   cls:'room-coastal',  color:'#1A7AAE', desc:'Sky Blue & Sea Breeze'},
+  formal:   {name:'Formal',    cls:'room-formal',   color:'#1C3D7A', desc:'Blue Toile & Gold'},
+  mancave:  {name:'Man Cave',  cls:'room-mancave',  color:'#C41E1E', desc:'Pool Table & Darts'},
+  modern:   {name:'Modern',    cls:'room-modern',   color:'#2A6040', desc:'Clean Lines & Greens'},
+  tuscany:  {name:'Tuscany',   cls:'room-tuscany',  color:'#B85428', desc:'Terracotta & Forest'},
+  worldcup: {name:'World Cup', cls:'room-worldcup', color:'#1A8C2C', desc:'The Beautiful Game'},
 };
 
 var state = {
