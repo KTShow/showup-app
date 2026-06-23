@@ -1617,7 +1617,8 @@ async function getFriendsWithShows() {
   if (!allUsers.length) return [];
   var friendIds = allUsers.map(function(u) { return u.id; });
 
-  const { data: shows, error: showsError } = await sb.rpc('get_friend_shows', { p_user_id: user.id });
+  const { data: shows, error: showsError } = await sb.from('shows')
+    .select('*, reactions(*)').in('user_id', friendIds).eq('hidden', false);
   if (showsError) throw showsError;
   const { data: top5, error: top5Error } = await sb.from('top5_shows')
     .select('*').in('user_id', friendIds).order('rank', { ascending: true });
