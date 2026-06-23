@@ -1061,12 +1061,12 @@ function showFriend(id) {
     var svcs=Object.keys(groups).sort(); var html='';
     svcs.forEach(function(svc){
       html+='<div class="service-group"><div class="service-divider"><span class="service-divider-text">'+svc+'</span></div><div class="shows-grid">';
-      groups[svc].sort(function(a,b){return a.title.localeCompare(b.title);}).forEach(function(s,i){
+      groups[svc].sort(function(a,b){return a.title.localeCompare(b.title);}).forEach(function(s){
         var rHTML=reactionsHTML(s.reactions);
-        var inpId='finp-'+lk+'-'+f.id+'-'+i;
+        var inpId='finp-'+lk+'-'+f.id+'-'+s.id;
         var reactToggle=s.showReact
-          ?'<div class="inline-react"><input class="react-input" id="'+inpId+'" placeholder="What did you think?" /><button class="btn-send" onclick="submitFR(\''+f.id+'\',\''+lk+'\','+i+')">Send</button><button class="btn-cancel" onclick="toggleFR(\''+f.id+'\',\''+lk+'\','+i+')">Cancel</button></div>'
-          :'<button class="btn-react-toggle" onclick="toggleFR(\''+f.id+'\',\''+lk+'\','+i+')">+ What did you think?</button>';
+          ?'<div class="inline-react"><input class="react-input" id="'+inpId+'" placeholder="What did you think?" /><button class="btn-send" onclick="submitFR(\''+f.id+'\',\''+lk+'\',\''+s.id+'\')">Send</button><button class="btn-cancel" onclick="toggleFR(\''+f.id+'\',\''+lk+'\',\''+s.id+'\')">Cancel</button></div>'
+          :'<button class="btn-react-toggle" onclick="toggleFR(\''+f.id+'\',\''+lk+'\',\''+s.id+'\')">+ What did you think?</button>';
         var actions=(lk==='w'||lk==='wd')?remoteStatic(s.rating):'';
         var watchedBadge=lk==='wd'?'<span style="font-size:11px;color:var(--fig);font-weight:600;">&#10003; Binged</span>':'';
         html+='<div class="show-card"><div class="show-card-top">'+tvIcon()+'<div class="show-info"><div class="show-title">'+s.title+'</div>'+(watchedBadge?'<div style="margin-top:2px;">'+watchedBadge+'</div>':'')+'</div><div class="show-actions">'+actions+'</div></div><div class="react-area">'+rHTML+reactToggle+'</div></div>';
@@ -1108,8 +1108,8 @@ function showFriend(id) {
     : '');
 }
 
-function toggleFR(fid,lk,idx){var f=state.friends.find(function(x){return x.id===fid;});var arr=lk==='w'?f.watching:lk==='wl'?f.watchlist:f.watched;arr[idx].showReact=!arr[idx].showReact;showFriend(fid);setTimeout(function(){var el=document.getElementById('finp-'+lk+'-'+fid+'-'+idx);if(el)el.focus();},60);}
-async function submitFR(fid,lk,idx){var f=state.friends.find(function(x){return x.id===fid;});var arr=lk==='w'?f.watching:lk==='wl'?f.watchlist:f.watched;var inp=document.getElementById('finp-'+lk+'-'+fid+'-'+idx);if(!inp||!inp.value.trim())return;var u=state.user;if(!arr[idx].reactions)arr[idx].reactions=[];var txt=inp.value.trim();var sentiment=detectSentiment(txt);arr[idx].reactions.push({user:u?u.first+(u.last?' '+u.last:''):'You',initials:u?u.initials:'Y',color:'#C4622D',text:txt,sentiment:sentiment,reactedAt:new Date().toISOString()});arr[idx].showReact=false;showFriend(fid);try{await dbAddReaction(arr[idx].id,txt,sentiment);}catch(e){console.error('reaction save error:',e);}}
+function toggleFR(fid,lk,sid){var f=state.friends.find(function(x){return x.id===fid;});var arr=lk==='w'?f.watching:lk==='wl'?f.watchlist:f.watched;var show=arr.find(function(s){return s.id===sid;});if(!show)return;show.showReact=!show.showReact;showFriend(fid);setTimeout(function(){var el=document.getElementById('finp-'+lk+'-'+fid+'-'+sid);if(el)el.focus();},60);}
+async function submitFR(fid,lk,sid){var f=state.friends.find(function(x){return x.id===fid;});var arr=lk==='w'?f.watching:lk==='wl'?f.watchlist:f.watched;var show=arr.find(function(s){return s.id===sid;});var inp=document.getElementById('finp-'+lk+'-'+fid+'-'+sid);if(!show||!inp||!inp.value.trim())return;var u=state.user;if(!show.reactions)show.reactions=[];var txt=inp.value.trim();var sentiment=detectSentiment(txt);show.reactions.push({user:u?u.first+(u.last?' '+u.last:''):'You',initials:u?u.initials:'Y',color:'#C4622D',text:txt,sentiment:sentiment,reactedAt:new Date().toISOString()});show.showReact=false;showFriend(fid);try{await dbAddReaction(show.id,txt,sentiment);}catch(e){console.error('reaction save error:',e);}}
 function backToFriends(){document.getElementById('friends-view').style.display='block';document.getElementById('friend-detail-view').style.display='none';}
 
 function switchLRView(view){
