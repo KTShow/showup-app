@@ -1617,11 +1617,18 @@ async function getFriendsWithShows() {
   var friendIds = allUsers.map(function(u) { return u.id; });
 
   const { data: shows, error: showsError } = await sb.from('shows')
-    .select('*, reactions(*)').in('user_id', friendIds).eq('hidden', false);
+    .select('*').in('user_id', friendIds).eq('hidden', false);
   if (showsError) throw showsError;
   const { data: top5, error: top5Error } = await sb.from('top5_shows')
     .select('*').in('user_id', friendIds).order('rank', { ascending: true });
   if (top5Error) throw top5Error;
+
+  var allReactions = [];
+  if (shows && shows.length) {
+    var showIds = shows.map(function(s) { return s.id; });
+    var { data: rxData } = await sb.from('reactions').select('*').in('show_id', showIds);
+    allReactions = rxData || [];
+  }
 
   var userLookup = {};
   if (state.user) userLookup[user.id] = { name: state.user.first + (state.user.last ? ' ' + state.user.last : ''), initials: state.user.initials || 'Y', color: '#C4622D' };
@@ -1633,7 +1640,7 @@ async function getFriendsWithShows() {
     var ku = userLookup[r.user_id] || { name: 'Someone', initials: '?', color: '#aaa' };
     return { user: ku.name, initials: ku.initials, color: ku.color, text: r.text, sentiment: r.sentiment, reactedAt: r.reacted_at };
   }
-  function normShow(s) { return Object.assign({}, s, { reactions: (s.reactions||[]).map(normReaction), showReact: false }); }
+  function normShow(s) { var rx = allReactions.filter(function(r){ return r.show_id === s.id; }); return Object.assign({}, s, { reactions: rx.map(normReaction), showReact: false }); }
 
   return allUsers.map(function(u) {
     var friendShows = (shows || []).filter(function(s) { return s.user_id === u.id; });
