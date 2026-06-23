@@ -985,9 +985,8 @@ function buildCard(s, list) {
   actions+=hideBtn(list, s);
   actions+='<button class="btn-remove" onclick="removeShow(\'' + list + '\',\'' + s.id + '\')" >&#x2715;</button>';
   var moveLink=list==='watching'?'<div class="show-move" style="display:flex;align-items:center;gap:0;"><button class="done-watching-btn" onclick="markWatched(\'' + s.id + '\')" >Done Watching &#10003;</button><button class="didnt-finish-btn" onclick="markDNF(\'' + s.id + '\')" >Didn&#39;t Finish</button></div>':'';
-  var showSpill=list==='watched';
   var inpId='inp-'+list+'-'+s.id;
-  var reactToggle=!showSpill?'':s.showReact
+  var reactToggle=s.showReact
     ?'<div class="inline-react"><input class="react-input" id="'+inpId+'" placeholder="What did you think?" /><button class="btn-send" onclick="submitReact(\''+list+'\',\''+s.id+'\')">Send</button><button class="btn-cancel" onclick="toggleReact(\''+list+'\',\''+s.id+'\')">Cancel</button></div>'
     :'<button class="btn-react-toggle" onclick="toggleReact(\''+list+'\',\''+s.id+'\')">+ What did you think?</button>';
   var hasReact=reactionsHTML(s.reactions)||reactToggle;
@@ -1110,7 +1109,7 @@ function showFriend(id) {
 }
 
 function toggleFR(fid,lk,idx){var f=state.friends.find(function(x){return x.id===fid;});var arr=lk==='w'?f.watching:lk==='wl'?f.watchlist:f.watched;arr[idx].showReact=!arr[idx].showReact;showFriend(fid);setTimeout(function(){var el=document.getElementById('finp-'+lk+'-'+fid+'-'+idx);if(el)el.focus();},60);}
-function submitFR(fid,lk,idx){var f=state.friends.find(function(x){return x.id===fid;});var arr=lk==='w'?f.watching:lk==='wl'?f.watchlist:f.watched;var inp=document.getElementById('finp-'+lk+'-'+fid+'-'+idx);if(!inp||!inp.value.trim())return;var u=state.user;if(!arr[idx].reactions)arr[idx].reactions=[];var txt=inp.value.trim();arr[idx].reactions.push({user:u?u.first+(u.last?' '+u.last:''):'You',initials:u?u.initials:'Y',color:'#C4622D',text:txt,sentiment:detectSentiment(txt),reactedAt:new Date().toISOString()});arr[idx].showReact=false;showFriend(fid);}
+async function submitFR(fid,lk,idx){var f=state.friends.find(function(x){return x.id===fid;});var arr=lk==='w'?f.watching:lk==='wl'?f.watchlist:f.watched;var inp=document.getElementById('finp-'+lk+'-'+fid+'-'+idx);if(!inp||!inp.value.trim())return;var u=state.user;if(!arr[idx].reactions)arr[idx].reactions=[];var txt=inp.value.trim();var sentiment=detectSentiment(txt);arr[idx].reactions.push({user:u?u.first+(u.last?' '+u.last:''):'You',initials:u?u.initials:'Y',color:'#C4622D',text:txt,sentiment:sentiment,reactedAt:new Date().toISOString()});arr[idx].showReact=false;showFriend(fid);try{await dbAddReaction(arr[idx].id,txt,sentiment);}catch(e){console.error('reaction save error:',e);}}
 function backToFriends(){document.getElementById('friends-view').style.display='block';document.getElementById('friend-detail-view').style.display='none';}
 
 function switchLRView(view){
@@ -1624,6 +1623,18 @@ async function getFriendsWithShows() {
     .select('*').in('user_id', friendIds).order('rank', { ascending: true });
   if (top5Error) throw top5Error;
 
+  var userLookup = {};
+  if (state.user) userLookup[user.id] = { name: state.user.first + (state.user.last ? ' ' + state.user.last : ''), initials: state.user.initials || 'Y', color: '#C4622D' };
+  allUsers.forEach(function(u) {
+    var c = ROOMS[u.room] && ROOMS[u.room].color ? ROOMS[u.room].color : '#888';
+    userLookup[u.id] = { name: u.first_name + ' ' + u.last_initial + '.', initials: ((u.first_name||'')[0]+(u.last_initial||'')).toUpperCase(), color: c };
+  });
+  function normReaction(r) {
+    var ku = userLookup[r.user_id] || { name: 'Someone', initials: '?', color: '#aaa' };
+    return { user: ku.name, initials: ku.initials, color: ku.color, text: r.text, sentiment: r.sentiment, reactedAt: r.reacted_at };
+  }
+  function normShow(s) { return Object.assign({}, s, { reactions: (s.reactions||[]).map(normReaction), showReact: false }); }
+
   return allUsers.map(function(u) {
     var friendShows = (shows || []).filter(function(s) { return s.user_id === u.id; });
     var friendTop5 = (top5 || []).filter(function(t) { return t.user_id === u.id; });
@@ -1633,9 +1644,9 @@ async function getFriendsWithShows() {
       city: [u.city, u.state].filter(Boolean).join(', '),
       room: u.room || 'tuscany',
       top5: friendTop5.map(function(t) { return { title: t.title, platform: t.platform }; }),
-      watching: friendShows.filter(function(s) { return s.status === 'watching'; }),
-      watchlist: friendShows.filter(function(s) { return s.status === 'watchlist'; }),
-      watched: friendShows.filter(function(s) { return s.status === 'watched' || s.status === 'dnf'; }),
+      watching: friendShows.filter(function(s) { return s.status === 'watching'; }).map(normShow),
+      watchlist: friendShows.filter(function(s) { return s.status === 'watchlist'; }).map(normShow),
+      watched: friendShows.filter(function(s) { return s.status === 'watched' || s.status === 'dnf'; }).map(normShow),
     };
   });
 }
