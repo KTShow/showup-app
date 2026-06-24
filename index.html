@@ -2299,7 +2299,7 @@ window.removeTop5 = async function(idx) {
 // ============================================================
 
 function updateInviteLinks(username) {
-  var link = 'showup-app-zeta.vercel.app/join/' + username;
+  var link = 'https://showup-app-zeta.vercel.app/join/' + username;
   document.querySelectorAll('.invite-link, #invite-modal-link').forEach(function(el) { el.textContent = link; });
 }
 
@@ -2308,7 +2308,7 @@ window.openInviteModal = function() {
   var name = u && u.first ? u.first : 'your friend';
   document.getElementById('invite-modal-sub').textContent = name + ' wants you on the couch. Join their ShowUp Living Room.';
   if (u && u.username) {
-    document.getElementById('invite-modal-link').textContent = 'showup-app-zeta.vercel.app/join/' + u.username;
+    document.getElementById('invite-modal-link').textContent = 'https://showup-app-zeta.vercel.app/join/' + u.username;
   }
   document.getElementById('invite-modal').classList.add('active');
 };
@@ -2369,7 +2369,7 @@ bootstrap();
   <div class="invite-modal">
     <div class="invite-modal-title">Invite to your Living Room</div>
     <div class="invite-modal-sub" id="invite-modal-sub">Share your link and get your friends on the couch.</div>
-    <div class="invite-modal-link" id="invite-modal-link">showup-app-zeta.vercel.app/join/tracey-m-x7k2</div>
+    <div class="invite-modal-link" id="invite-modal-link">https://showup-app-zeta.vercel.app/join/tracey-m-x7k2</div>
     <div class="invite-modal-btns">
       <button class="btn-invite-copy" id="invite-copy-btn" onclick="copyInviteLink()">Copy link</button>
       <button class="btn-invite-close" onclick="closeInviteModal()">Close</button>
