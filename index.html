@@ -452,7 +452,7 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
   <div class="content">
     <div id="tab-watching" class="tab-pane">
       <div class="page-title">&#128250;&nbsp; Currently Watching on My TV</div>
-      <div class="page-sub" id="watching-sub">What's next?</div>
+      <div class="page-sub" id="watching-sub"></div>
       <div class="add-form">
         <div class="form-row">
           <div class="form-group"><label>Show title</label><input id="w-title" placeholder="e.g. The White Lotus" /></div>
@@ -648,7 +648,7 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
         <div style="padding:16px;">
           <div style="font-family:var(--serif);font-size:18px;color:var(--terra);font-weight:700;margin-bottom:6px;">ShowUp</div>
           <div style="font-size:13px;color:var(--muted);line-height:1.6;">Your living room for great TV. Track what you're watching, save what's next, and share it all with your crowd. Good taste lives here.</div>
-          <div style="font-size:11px;color:var(--muted);margin-top:12px;">Version 0.1 Beta &mdash; Built with love and good taste.</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:12px;">Version 0.1 Beta &mdash; Built with good taste.</div>
         </div>
       </div>
     </div>
@@ -923,7 +923,7 @@ function renderAll(){ renderList('watching'); renderList('watchlist'); renderLis
 function renderList(list) {
   var el=document.getElementById(list+'-list');
   var items=state[list];
-  var emptyMsgs={watching:"Nothing on yet. What's next?",watchlist:"Save your next binge.",watched:'No credits have rolled yet. Get watching.'};
+  var emptyMsgs={watching:"Nothing on yet — add a show to get started.",watchlist:"Save your next binge.",watched:'No credits have rolled yet. Get watching.'};
   if(!items.length){el.innerHTML='<div class="empty"><div class="empty-icon">&#127871;</div>'+emptyMsgs[list]+'</div>';return;}
 
   if (list === 'watched') {
@@ -1123,12 +1123,14 @@ function switchLRView(view){
 function buildRankings(){
   var shows={};
   state.friends.forEach(function(f){
+    if(!f||!f.name||!f.watched)return;
     f.watched.forEach(function(s){
-      if(!s.rating||s.rating===0||s.dnf)return;
+      if(!s||!s.title||!s.rating||s.rating===0||s.dnf)return;
       var key=s.title.toLowerCase().trim();
-      if(!shows[key])shows[key]={title:s.title,platform:s.platform,ratings:[],raters:[]};
+      if(!shows[key])shows[key]={title:s.title,platform:s.platform||'',ratings:[],raters:[]};
       shows[key].ratings.push(s.rating);
-      shows[key].raters.push({name:f.name,color:ROOMS[f.room||'tuscany']?ROOMS[f.room||'tuscany'].color:f.color,rating:s.rating,initials:f.name.split(' ').map(function(x){return x[0];}).join('')});
+      var fColor=ROOMS[f.room||'tuscany']?ROOMS[f.room||'tuscany'].color:'#888';
+      shows[key].raters.push({name:f.name,color:fColor,rating:s.rating,initials:f.name.split(' ').map(function(x){return x[0]||'';}).join('')});
     });
   });
   var list=Object.values(shows).map(function(s){var avg=s.ratings.reduce(function(a,b){return a+b;},0)/s.ratings.length;return {title:s.title,platform:s.platform,avg:Math.round(avg*10)/10,count:s.ratings.length,raters:s.raters};});
@@ -1146,21 +1148,11 @@ function renderRankings(){
     for(var n=1;n<=5;n++){var lit=n<=full||(n===full+1&&s.avg-full>=0.5);remotes+='<span style="opacity:'+(lit?'1':'0.18')+';display:inline-block;">'+remoteIcon(12,lit)+'</span>';}
     return '<div class="rank-card" onclick="showRankDetail('+i+')">'
       +'<span class="rank-badge'+(isGold?' gold':'')+'">#'+rank+'</span>'
-      +'<span class="rank-title-text">'+s.title+'</span>'
-      +'<span class="rank-platform">'+s.platform+'</span>'
+      +'<span class="rank-title-text">'+(s.title||'')+'</span>'
+      +'<span class="rank-platform">'+(s.platform||'')+'</span>'
       +'<div class="rank-remotes-inline">'+remotes+'</div>'
-      +'<div style="font-size:10px;color:var(--muted);margin-top:2px;display:none;">Tap to see who rated it</div>'
       +'</div>';
   }).join('');
-
-  // Add hint below each card
-  var cards=document.querySelectorAll('.rank-card');
-  cards.forEach(function(card){
-    var hint=document.createElement('div');
-    hint.style.cssText='font-size:10px;color:var(--muted);padding:0 14px 6px;';
-    hint.textContent='Tap to see who rated it';
-    card.appendChild(hint);
-  });
 }
 
 function showRankDetail(idx){
@@ -2041,15 +2033,27 @@ window.saveProfile = async function() {
   var age   = document.getElementById('pr-age').value;
   var gender = document.getElementById('pr-gender').value;
   var btn = document.querySelector('#screen-profile .btn-join');
+  if (!state.user || !state.user.id) { return; }
   if (btn) { btn.disabled = true; btn.textContent = 'Saving\u2026'; }
   try {
-    await updateUserProfile({ firstName: first, lastInitial: last, city: city, state: st, ageRange: age, gender: gender, room: state.user ? state.user.room : 'tuscany' });
-    if (state.user && state.user.top5) { await saveTop5(state.user.top5); }
-    if (state.user) {
-      state.user.first = first; state.user.last = last; state.user.city = city;
-      state.user.state = st; state.user.age = age; state.user.gender = gender;
-      state.user.initials = [(first||'')[0], (last||'')[0]].filter(Boolean).join('').toUpperCase();
+    var uid = state.user.id;
+    var { error: pe } = await sb.from('users').update({
+      first_name: first, last_initial: last, city: city, state: st,
+      age_range: age, gender: gender, room: state.user.room || 'tuscany',
+      last_active: new Date().toISOString(),
+    }).eq('id', uid);
+    if (pe) throw pe;
+    await sb.from('top5_shows').delete().eq('user_id', uid);
+    if (state.user.top5 && state.user.top5.length) {
+      var rows = state.user.top5.map(function(s, i) {
+        return { user_id: uid, title: s.title, platform: s.platform || '', rank: i + 1 };
+      });
+      var { error: te } = await sb.from('top5_shows').insert(rows);
+      if (te) throw te;
     }
+    state.user.first = first; state.user.last = last; state.user.city = city;
+    state.user.state = st; state.user.age = age; state.user.gender = gender;
+    state.user.initials = [(first||'')[0],(last||'')[0]].filter(Boolean).join('').toUpperCase();
     updateAvatar();
     showScreen('app');
   } catch(e) {
