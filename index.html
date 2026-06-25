@@ -1356,7 +1356,7 @@ async function fetchProfileById(userId) {
 
 async function connectViaInvite(inviterUsername) {
   try {
-    var { error } = await sb.rpc('connect_via_invite', { p_inviter_username: inviterUsername });
+    var { error } = await sb.rpc('connect_to_beta_group', { p_inviter_username: inviterUsername });
     if (error) console.error('[connectViaInvite] rpc error:', error);
   } catch(e) {
     console.error('[connectViaInvite] exception:', e);
@@ -1724,6 +1724,10 @@ async function loadUserIntoState(profile) {
   setRoom(state.user.room);
   updateAvatar();
   updateInviteLinks(state.user.username);
+  if (PENDING_INVITER) {
+    await connectViaInvite(PENDING_INVITER);
+    PENDING_INVITER = null;
+  }
   init();
   showScreen('app');
   renderAll();
@@ -2332,6 +2336,18 @@ window.copyInviteLink = function() {
   }
 };
 
+window.copyInviteMessage = function() {
+  var link = document.getElementById('invite-modal-link').textContent;
+  var btn = document.getElementById('invite-msg-btn');
+  var message = "Hey! I want you to join me on ShowUp \u2014 it\u2019s a new TV tracking app I\u2019m testing with a small group. Come check out my Living Room and see what everyone\u2019s watching: " + link;
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(message).then(function() {
+      btn.textContent = 'Copied! \u2713';
+      setTimeout(function() { btn.textContent = 'Copy ready-to-send message'; }, 1800);
+    });
+  }
+};
+
 window.copyInvite = function() {
   var btn = document.getElementById('copy-btn');
   var link = document.querySelector('.invite-link');
@@ -2376,8 +2392,9 @@ bootstrap();
     <div class="invite-modal-title">Invite to your Living Room</div>
     <div class="invite-modal-sub" id="invite-modal-sub">Share your link and get your friends on the couch.</div>
     <div class="invite-modal-link" id="invite-modal-link">https://showup-app-zeta.vercel.app/join/tracey-m-x7k2</div>
+    <button class="btn-invite-copy" id="invite-msg-btn" onclick="copyInviteMessage()" style="width:100%;margin-bottom:10px;">Copy ready-to-send message</button>
     <div class="invite-modal-btns">
-      <button class="btn-invite-copy" id="invite-copy-btn" onclick="copyInviteLink()">Copy link</button>
+      <button class="btn-invite-copy" id="invite-copy-btn" onclick="copyInviteLink()">Copy link only</button>
       <button class="btn-invite-close" onclick="closeInviteModal()">Close</button>
     </div>
   </div>
