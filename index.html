@@ -205,6 +205,19 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
 .btn-hide.hidden{color:#c0392b;}
 .show-card.is-hidden{opacity:0.45;border-style:dashed;}
 .hidden-badge{font-size:10px;font-weight:700;color:#c0392b;background:#fdecea;padding:1px 7px;border-radius:8px;margin-left:6px;vertical-align:middle;}
+.btn-delete-react{background:none;border:none;color:var(--muted);cursor:pointer;font-size:12px;padding:0 0 0 6px;opacity:0.55;line-height:1;align-self:center;flex-shrink:0;}
+.btn-delete-react:hover{color:#c0392b;opacity:1;}
+.btn-remove-friend{background:none;border:1px solid rgba(192,57,43,0.3);color:#c0392b;border-radius:6px;padding:5px 12px;font-family:var(--sans);font-size:12px;font-weight:600;cursor:pointer;}
+.btn-remove-friend:hover{background:#fdecea;border-color:#c0392b;}
+@media(max-width:479px){
+  .show-card-top{align-items:flex-start;}
+  .show-actions{margin-top:2px;}
+  .show-move{flex-wrap:wrap;gap:5px;margin-top:8px;}
+  .didnt-finish-btn{margin-left:0;}
+  .done-watching-btn{font-size:11px;padding:4px 9px;}
+  .didnt-finish-btn{font-size:11px;padding:4px 9px;}
+  .btn-start{font-size:11px;padding:4px 8px;}
+}
 
 /* SECTION HEADERS in friend profiles - bigger and bolder */
 .friend-section-header{display:flex;align-items:center;gap:10px;margin:24px 0 12px;}
@@ -885,10 +898,15 @@ function remoteStatic(rating) {
   return html+'</div>';
 }
 
-function reactionsHTML(reactions) {
+function reactionsHTML(reactions, list, showId) {
   if(!reactions||!reactions.length) return '';
+  var uid = state.user && state.user.id;
   var html='<div class="react-list">';
-  reactions.forEach(function(r){ html+='<div class="react-item"><div class="react-av" style="background:'+r.color+'">'+r.initials+'</div><div class="react-bubble"><b>'+r.user+'</b>'+r.text+'</div></div>'; });
+  reactions.forEach(function(r){
+    var canDel = uid && r.reactorId === uid && r.id && list && showId;
+    var delBtn = canDel ? '<button class="btn-delete-react" onclick="deleteReact(\''+list+'\',\''+showId+'\',\''+r.id+'\')">&#x2715;</button>' : '';
+    html+='<div class="react-item"><div class="react-av" style="background:'+r.color+'">'+r.initials+'</div><div class="react-bubble"><b>'+r.user+'</b>'+r.text+'</div>'+delBtn+'</div>';
+  });
   return html+'</div>';
 }
 
@@ -942,7 +960,7 @@ function renderList(list) {
 
 
 function buildDNFCard(s) {
-  var inpId = 'inp-dnf-' + s.id;
+  var inpId = 'inp-watched-' + s.id;
   var sid = s.id;
   var reactToggle = s.showReact
     ? '<div class="inline-react"><input class="react-input" id="'+inpId+'" placeholder="What did you think?" /><button class="btn-send" onclick="submitReact(&quot;watched&quot;,&quot;'+sid+'&quot;)">Send</button><button class="btn-cancel" onclick="toggleReact(&quot;watched&quot;,&quot;'+sid+'&quot;)">Cancel</button></div>'
@@ -954,7 +972,7 @@ function buildDNFCard(s) {
     + '</div>'
     + '<button class="btn-remove" onclick="removeShow(&quot;watched&quot;,&quot;' + sid + '&quot;)">&#x2715;</button>'
     + '</div>'
-    + '<div class="react-area">' + reactionsHTML(s.reactions) + reactToggle + '</div>'
+    + '<div class="react-area">' + reactionsHTML(s.reactions, 'watched', s.id) + reactToggle + '</div>'
     + '</div>';
 }
 
@@ -970,8 +988,8 @@ function buildCard(s, list) {
   var reactToggle=s.showReact
     ?'<div class="inline-react"><input class="react-input" id="'+inpId+'" placeholder="What did you think?" /><button class="btn-send" onclick="submitReact(\''+list+'\',\''+s.id+'\')">Send</button><button class="btn-cancel" onclick="toggleReact(\''+list+'\',\''+s.id+'\')">Cancel</button></div>'
     :'<button class="btn-react-toggle" onclick="toggleReact(\''+list+'\',\''+s.id+'\')">+ What did you think?</button>';
-  var hasReact=reactionsHTML(s.reactions)||reactToggle;
-  return '<div class="show-card'+(s.hidden?' is-hidden':'')+'"><div class="show-card-top">'+tvIcon()+'<div class="show-info"><div class="show-title">'+s.title+(s.hidden?'<span class="hidden-badge">Hidden from friends</span>':'')+'</div>'+moveLink+'</div><div class="show-actions">'+actions+'</div></div>'+(hasReact?'<div class="react-area">'+reactionsHTML(s.reactions)+reactToggle+'</div>':'')+'</div>';
+  var hasReact=reactionsHTML(s.reactions,list,s.id)||reactToggle;
+  return '<div class="show-card'+(s.hidden?' is-hidden':'')+'"><div class="show-card-top">'+tvIcon()+'<div class="show-info"><div class="show-title">'+s.title+(s.hidden?'<span class="hidden-badge">Hidden from friends</span>':'')+'</div>'+moveLink+'</div><div class="show-actions">'+actions+'</div></div>'+(hasReact?'<div class="react-area">'+reactionsHTML(s.reactions,list,s.id)+reactToggle+'</div>':'')+'</div>';
 }
 
 
@@ -1067,11 +1085,10 @@ function showFriend(id) {
         }).join('')
       + '</div>';
   }
-  dv.innerHTML='<button class="back-btn" onclick="backToFriends()">&#8592; Back to Living Room</button>'
+  dv.innerHTML='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;"><button class="back-btn" onclick="backToFriends()">&#8592; Back to Living Room</button><button class="btn-remove-friend" onclick="removeFriend(\''+f.id+'\')">Remove from Room</button></div>'
     +'<div class="friend-header"><div class="friend-header-av" style="background:'+fColor+';font-size:18px;font-weight:700;font-family:var(--sans);">'+fInitials+'</div>'
     +'<div><div style="font-family:Georgia,serif;font-size:20px;font-weight:700">'+f.name+"'s Living Room</div>"
     +'<div style="font-size:13px;color:var(--muted)">'+f.city+'</div></div></div>'
-    + top5HTML
     +'<div style="margin:24px 0 12px;background:var(--terra);color:white;padding:10px 18px;border-radius:8px;font-family:var(--serif);font-size:15px;font-weight:700;letter-spacing:0.2px;display:flex;align-items:center;gap:8px;">&#128250; On Right Now</div>'+fGrouped(f.watching.filter(function(x){return !x.hidden;}),'w')
     +'<div style="margin:24px 0 12px;background:var(--terra);color:white;padding:10px 18px;border-radius:8px;font-family:var(--serif);font-size:15px;font-weight:700;letter-spacing:0.2px;display:flex;align-items:center;gap:8px;">🛋️ Saving a Seat</div>'+fGrouped(f.watchlist.filter(function(x){return !x.hidden;}),'wl')
   +(f.watched&&f.watched.length
@@ -1086,7 +1103,8 @@ function showFriend(id) {
                 +'</div></div></div></div>';
             }).join('')+'</div>'
         : '')
-    : '');
+    : '')
+  + top5HTML;
 }
 
 function toggleFR(fid,lk,sid){var f=state.friends.find(function(x){return x.id===fid;});var arr=lk==='w'?f.watching:lk==='wl'?f.watchlist:f.watched;var show=arr.find(function(s){return s.id===sid;});if(!show)return;show.showReact=!show.showReact;showFriend(fid);setTimeout(function(){var el=document.getElementById('finp-'+lk+'-'+fid+'-'+sid);if(el)el.focus();},60);}
@@ -1659,7 +1677,7 @@ function normalizeShow(s) {
     reactions: (s.reactions || []).map(function(r) {
       var u = state.user;
       var isMe = u && r.user_id === u.id;
-      return { reactorId: r.user_id, user: isMe ? (u.first + (u.last ? ' ' + u.last : '')) : 'Someone', initials: isMe ? (u.initials || 'Y') : '?', color: isMe ? '#C4622D' : '#aaa', text: r.text, sentiment: r.sentiment, reactedAt: r.reacted_at };
+      return { id: r.id, reactorId: r.user_id, user: isMe ? (u.first + (u.last ? ' ' + u.last : '')) : 'Someone', initials: isMe ? (u.initials || 'Y') : '?', color: isMe ? '#C4622D' : '#aaa', text: r.text, sentiment: r.sentiment, reactedAt: r.reacted_at };
     }),
     showReact: false,
   };
@@ -2184,10 +2202,51 @@ window.submitReact = async function(list, id) {
   var u = state.user;
   var txt = inp.value.trim();
   var sentiment = detectSentiment(txt);
-  s.reactions.push({ user: u ? (u.first + (u.last ? ' ' + u.last : '')) : 'You', initials: u ? u.initials : 'Y', color: '#C4622D', text: txt, sentiment: sentiment, reactedAt: new Date().toISOString() });
+  var newReact = { id: null, reactorId: u ? u.id : null, user: u ? (u.first + (u.last ? ' ' + u.last : '')) : 'You', initials: u ? u.initials : 'Y', color: '#C4622D', text: txt, sentiment: sentiment, reactedAt: new Date().toISOString() };
+  s.reactions.push(newReact);
   s.showReact = false;
   renderList(list);
-  try { await dbAddReaction(id, txt, sentiment); } catch(e) { console.error('reaction error:', e); }
+  try { var data = await dbAddReaction(id, txt, sentiment); if (data && data.id) newReact.id = data.id; } catch(e) { console.error('reaction error:', e); }
+};
+
+async function dbDeleteReaction(reactId) {
+  const { data: { user } } = await sb.auth.getUser();
+  if (!user) throw new Error('Not authenticated');
+  const { error } = await sb.from('reactions').delete().eq('id', reactId).eq('user_id', user.id);
+  if (error) throw error;
+}
+
+window.deleteReact = async function(list, showId, reactId) {
+  var s = state[list].find(function(x) { return x.id === showId; });
+  if (!s) return;
+  var idx = s.reactions.findIndex(function(r) { return r.id === reactId; });
+  if (idx < 0) return;
+  s.reactions.splice(idx, 1);
+  renderList(list);
+  try { await dbDeleteReaction(reactId); } catch(e) { console.error('deleteReact error:', e); }
+};
+
+async function dbRemoveFriend(friendId) {
+  const { data: { user } } = await sb.auth.getUser();
+  if (!user) throw new Error('Not authenticated');
+  const myRoom = await getMyLivingRoom();
+  if (myRoom) {
+    await sb.from('living_room_members').delete()
+      .eq('living_room_id', myRoom.id).eq('user_id', friendId);
+  }
+  const { data: theirRoom } = await sb.from('living_rooms').select('id').eq('owner_id', friendId).single();
+  if (theirRoom) {
+    await sb.from('living_room_members').delete()
+      .eq('living_room_id', theirRoom.id).eq('user_id', user.id);
+  }
+}
+
+window.removeFriend = async function(friendId) {
+  if (!confirm('Remove this person from your Living Room? You can re-invite them later.')) return;
+  backToFriends();
+  state.friends = state.friends.filter(function(f) { return f.id !== friendId; });
+  renderFriends();
+  try { await dbRemoveFriend(friendId); } catch(e) { console.error('removeFriend error:', e); }
 };
 
 // ============================================================
