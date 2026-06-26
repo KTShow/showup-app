@@ -699,19 +699,6 @@ function closeInviteModal() {
   document.getElementById('invite-modal').classList.remove('active');
 }
 
-function copyInviteLink() {
-  var link = document.getElementById('invite-modal-link').textContent;
-  var btn = document.getElementById('invite-copy-btn');
-  if (navigator.clipboard) {
-    navigator.clipboard.writeText(link).then(function() {
-      btn.textContent = 'Copied! ✓';
-      setTimeout(function() { btn.textContent = 'Copy link'; }, 1800);
-    });
-  } else {
-    btn.textContent = 'Copied! ✓';
-    setTimeout(function() { btn.textContent = 'Copy link'; }, 1800);
-  }
-}
 
 function init() {
   ['w-platform','wl-platform','wd-platform'].forEach(function(id) {
@@ -2325,21 +2312,10 @@ window.openInviteModal = function() {
 
 window.closeInviteModal = function() { document.getElementById('invite-modal').classList.remove('active'); };
 
-window.copyInviteLink = function() {
-  var link = document.getElementById('invite-modal-link').textContent;
-  var btn = document.getElementById('invite-copy-btn');
-  if (navigator.clipboard) {
-    navigator.clipboard.writeText(link).then(function() {
-      btn.textContent = 'Copied! \u2713';
-      setTimeout(function() { btn.textContent = 'Copy link'; }, 1800);
-    });
-  }
-};
-
 window.copyInviteMessage = function() {
   var link = document.getElementById('invite-modal-link').textContent;
   var btn = document.getElementById('invite-msg-btn');
-  var message = "Hey! I want you to join me on ShowUp \u2014 it\u2019s a new TV tracking app I\u2019m testing with a small group. Come check out my Living Room and see what everyone\u2019s watching: " + link;
+  var message = "Welcome to the ShowUp App as the Beta1 Group. We appreciate your help. Follow the link, gain your access code and you\u2019ll be taken directly to a login screen. We will see you in the Living Room. Thank you, Tracey and George\n\n" + link;
   if (navigator.clipboard) {
     navigator.clipboard.writeText(message).then(function() {
       btn.textContent = 'Copied! \u2713';
@@ -2393,10 +2369,7 @@ bootstrap();
     <div class="invite-modal-sub" id="invite-modal-sub">Share your link and get your friends on the couch.</div>
     <div class="invite-modal-link" id="invite-modal-link">https://showup-app-zeta.vercel.app/join/tracey-m-x7k2</div>
     <button class="btn-invite-copy" id="invite-msg-btn" onclick="copyInviteMessage()" style="width:100%;margin-bottom:10px;">Copy ready-to-send message</button>
-    <div class="invite-modal-btns">
-      <button class="btn-invite-copy" id="invite-copy-btn" onclick="copyInviteLink()">Copy link only</button>
-      <button class="btn-invite-close" onclick="closeInviteModal()">Close</button>
-    </div>
+    <button class="btn-invite-close" onclick="closeInviteModal()" style="width:100%;">Close</button>
   </div>
 </div>
 
