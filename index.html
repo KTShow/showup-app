@@ -1703,6 +1703,8 @@ async function loadUserIntoState(profile) {
     state.friends = await getFriendsWithShows();
   } catch(e) { console.error('Error loading friends:', e); state.friends = []; }
 
+  try { await fixupReactionNames(); } catch(e) { console.error('Error fixing reaction names:', e); }
+
   setRoom(state.user.room);
   updateAvatar();
   updateInviteLinks(state.user.username);
@@ -2216,22 +2218,30 @@ window.handleDeleteData = async function() {
 // LIVING ROOM — live refresh
 // ============================================================
 
-function fixupReactionNames() {
+async function fixupReactionNames() {
+  var uniqueIds = [];
+  ['watching','watchlist','watched'].forEach(function(list) {
+    (state[list] || []).forEach(function(show) {
+      (show.reactions || []).forEach(function(r) {
+        if (r.reactorId && r.reactorId !== (state.user && state.user.id) && uniqueIds.indexOf(r.reactorId) < 0) {
+          uniqueIds.push(r.reactorId);
+        }
+      });
+    });
+  });
+  if (!uniqueIds.length) return;
+  var { data: reactors } = await sb.from('users').select('id, first_name, last_initial, room').in('id', uniqueIds);
+  if (!reactors || !reactors.length) return;
   var lookup = {};
-  if (state.user) lookup[state.user.id] = { name: state.user.first + (state.user.last ? ' ' + state.user.last : ''), initials: state.user.initials || 'Y', color: '#C4622D' };
-  state.friends.forEach(function(f) {
-    var initials = f.name.split(' ').map(function(x){return x[0]||'';}).join('').toUpperCase();
-    var color = ROOMS[f.room] && ROOMS[f.room].color ? ROOMS[f.room].color : '#888';
-    lookup[f.id] = { name: f.name, initials: initials, color: color };
+  reactors.forEach(function(u) {
+    var color = ROOMS[u.room] && ROOMS[u.room].color ? ROOMS[u.room].color : '#888';
+    lookup[u.id] = { name: u.first_name + ' ' + u.last_initial + '.', initials: ((u.first_name||'')[0]+(u.last_initial||'')).toUpperCase(), color: color };
   });
   ['watching','watchlist','watched'].forEach(function(list) {
     (state[list] || []).forEach(function(show) {
       (show.reactions || []).forEach(function(r) {
         if (r.reactorId && lookup[r.reactorId]) {
-          var u = lookup[r.reactorId];
-          r.user = u.name;
-          r.initials = u.initials;
-          r.color = u.color;
+          var u = lookup[r.reactorId]; r.user = u.name; r.initials = u.initials; r.color = u.color;
         }
       });
     });
@@ -2241,7 +2251,6 @@ function fixupReactionNames() {
 async function loadAndRenderFriends() {
   try {
     state.friends = await getFriendsWithShows();
-    fixupReactionNames();
     renderFriends();
   } catch(e) {
     console.error('Error loading friends:', e);
