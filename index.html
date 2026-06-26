@@ -1658,7 +1658,8 @@ function normalizeShow(s) {
     addedAt: s.added_at,
     reactions: (s.reactions || []).map(function(r) {
       var u = state.user;
-      return { user: u ? (u.first + (u.last ? ' ' + u.last : '')) : 'You', initials: u ? u.initials : 'Y', color: '#C4622D', text: r.text, sentiment: r.sentiment, reactedAt: r.reacted_at };
+      var isMe = u && r.user_id === u.id;
+      return { reactorId: r.user_id, user: isMe ? (u.first + (u.last ? ' ' + u.last : '')) : 'Someone', initials: isMe ? (u.initials || 'Y') : '?', color: isMe ? '#C4622D' : '#aaa', text: r.text, sentiment: r.sentiment, reactedAt: r.reacted_at };
     }),
     showReact: false,
   };
@@ -2215,9 +2216,32 @@ window.handleDeleteData = async function() {
 // LIVING ROOM — live refresh
 // ============================================================
 
+function fixupReactionNames() {
+  var lookup = {};
+  if (state.user) lookup[state.user.id] = { name: state.user.first + (state.user.last ? ' ' + state.user.last : ''), initials: state.user.initials || 'Y', color: '#C4622D' };
+  state.friends.forEach(function(f) {
+    var initials = f.name.split(' ').map(function(x){return x[0]||'';}).join('').toUpperCase();
+    var color = ROOMS[f.room] && ROOMS[f.room].color ? ROOMS[f.room].color : '#888';
+    lookup[f.id] = { name: f.name, initials: initials, color: color };
+  });
+  ['watching','watchlist','watched'].forEach(function(list) {
+    (state[list] || []).forEach(function(show) {
+      (show.reactions || []).forEach(function(r) {
+        if (r.reactorId && lookup[r.reactorId]) {
+          var u = lookup[r.reactorId];
+          r.user = u.name;
+          r.initials = u.initials;
+          r.color = u.color;
+        }
+      });
+    });
+  });
+}
+
 async function loadAndRenderFriends() {
   try {
     state.friends = await getFriendsWithShows();
+    fixupReactionNames();
     renderFriends();
   } catch(e) {
     console.error('Error loading friends:', e);
