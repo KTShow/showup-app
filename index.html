@@ -501,7 +501,7 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
             <div class="invite-title">Invite friends to your Living Room</div>
             <div class="invite-sub">The more the merrier &mdash; grab a snack and pour a glass.</div>
             <div class="invite-link">showup-app-zeta.vercel.app/join/tracey-m-x7k2</div><br><br>
-            <button class="btn-copy" id="copy-btn" onclick="copyInvite()">Copy invite link</button>
+            <button class="btn-copy" id="copy-btn" onclick="copyInvite()">Copy invite message</button>
           </div>
         </div>
         <div id="lr-picks-view" style="display:none">
@@ -2312,27 +2312,29 @@ window.openInviteModal = function() {
 
 window.closeInviteModal = function() { document.getElementById('invite-modal').classList.remove('active'); };
 
+function copyInviteContent(link, btn, resetLabel) {
+  var html = '<p>Welcome to the ShowUp App as the Beta1 Group. We appreciate your help. Follow the link, gain your access code and you\'ll be taken directly to a login screen. We will see you in the Living Room. Thank you, Tracey and George</p><p><a href="' + link + '">' + link + '</a></p>';
+  var plain = 'Welcome to the ShowUp App as the Beta1 Group. We appreciate your help. Follow the link, gain your access code and you\'ll be taken directly to a login screen. We will see you in the Living Room. Thank you, Tracey and George\n\n' + link;
+  function onCopied() { btn.textContent = 'Copied! \u2713'; setTimeout(function() { btn.textContent = resetLabel; }, 1800); }
+  if (window.ClipboardItem && navigator.clipboard && navigator.clipboard.write) {
+    navigator.clipboard.write([new ClipboardItem({
+      'text/html': new Blob([html], { type: 'text/html' }),
+      'text/plain': new Blob([plain], { type: 'text/plain' })
+    })]).then(onCopied);
+  } else if (navigator.clipboard) {
+    navigator.clipboard.writeText(plain).then(onCopied);
+  }
+}
+
 window.copyInviteMessage = function() {
   var link = document.getElementById('invite-modal-link').textContent;
-  var btn = document.getElementById('invite-msg-btn');
-  var message = "Welcome to the ShowUp App as the Beta1 Group. We appreciate your help. Follow the link, gain your access code and you\u2019ll be taken directly to a login screen. We will see you in the Living Room. Thank you, Tracey and George\n\n" + link;
-  if (navigator.clipboard) {
-    navigator.clipboard.writeText(message).then(function() {
-      btn.textContent = 'Copied! \u2713';
-      setTimeout(function() { btn.textContent = 'Copy ready-to-send message'; }, 1800);
-    });
-  }
+  copyInviteContent(link, document.getElementById('invite-msg-btn'), 'Copy ready-to-send message');
 };
 
 window.copyInvite = function() {
-  var btn = document.getElementById('copy-btn');
-  var link = document.querySelector('.invite-link');
-  if (navigator.clipboard && link) {
-    navigator.clipboard.writeText(link.textContent).then(function() {
-      btn.textContent = 'Copied! \u2713';
-      setTimeout(function() { btn.textContent = 'Copy invite link'; }, 1800);
-    });
-  }
+  var el = document.querySelector('.invite-link');
+  if (!el) return;
+  copyInviteContent(el.textContent.trim(), document.getElementById('copy-btn'), 'Copy invite message');
 };
 
 // ============================================================
