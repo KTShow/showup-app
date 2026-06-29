@@ -504,7 +504,10 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
         <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--muted);margin-bottom:10px;">&#127942; Top 5 Shows of All Time <span style="font-weight:400;text-transform:none;">— Visible to friends in your Living Room</span></div>
         <div id="binged-top5-list" style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px;"></div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;">
-          <input id="binged-top5-input" placeholder="Show title..." style="flex:2;min-width:140px;background:white;border:1px solid var(--border);border-radius:8px;padding:9px 12px;font-family:var(--sans);font-size:14px;color:var(--charcoal);outline:none;" />
+          <div class="form-group" style="position:relative;flex:2;min-width:140px;margin:0;">
+            <input id="binged-top5-input" placeholder="Search for a show..." oninput="tmdbSearch('bt5')" autocomplete="off" style="width:100%;background:white;border:1px solid var(--border);border-radius:8px;padding:9px 12px;font-family:var(--sans);font-size:14px;color:var(--charcoal);outline:none;box-sizing:border-box;" />
+            <div class="tmdb-dropdown" id="bt5-tmdb-dd"></div>
+          </div>
           <select id="binged-top5-platform" style="flex:1;min-width:120px;background:white;border:1px solid var(--border);border-radius:8px;padding:9px 12px;font-family:var(--sans);font-size:14px;color:var(--charcoal);outline:none;"><option value="">Platform...</option></select>
           <button onclick="addBingedTop5()" style="background:var(--terra);color:white;border:none;border-radius:8px;padding:9px 14px;font-family:var(--sans);font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;">+ Add</button>
         </div>
@@ -789,10 +792,15 @@ function renderTop5() {
   list.innerHTML = shows.map(function(s, i) {
     var title = typeof s === 'object' ? s.title : s;
     var platform = typeof s === 'object' && s.platform ? s.platform : '';
+    var poster = typeof s === 'object' && s.poster_path ? s.poster_path : null;
+    var thumb = poster
+      ? '<img src="https://image.tmdb.org/t/p/w92' + poster + '" style="width:32px;height:32px;border-radius:6px;object-fit:cover;flex-shrink:0;" />'
+      : '<div style="width:32px;height:32px;border-radius:6px;background:var(--olive);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:14px;">📺</div>';
     var upVis = i === 0 ? 'visibility:hidden;' : '';
     var downVis = i === shows.length - 1 ? 'visibility:hidden;' : '';
     return '<div style="display:flex;align-items:center;gap:8px;background:var(--sand);border-radius:8px;padding:8px 12px;">'
       + '<span style="font-size:13px;font-weight:800;color:var(--fig);min-width:18px;">' + (i+1) + '</span>'
+      + thumb
       + '<div style="flex:1;min-width:0;">'
       + '<div style="font-size:13px;font-weight:600;color:var(--charcoal);">' + title + '</div>'
       + (platform ? '<div style="font-size:11px;color:var(--muted);">' + platform + '</div>' : '')
@@ -821,10 +829,15 @@ function renderBingedTop5() {
   list.innerHTML = shows.map(function(s, i) {
     var title = typeof s === 'object' ? s.title : s;
     var platform = typeof s === 'object' && s.platform ? s.platform : '';
+    var poster = typeof s === 'object' && s.poster_path ? s.poster_path : null;
+    var thumb = poster
+      ? '<img src="https://image.tmdb.org/t/p/w92' + poster + '" style="width:32px;height:32px;border-radius:6px;object-fit:cover;flex-shrink:0;" />'
+      : '<div style="width:32px;height:32px;border-radius:6px;background:var(--olive);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:14px;">📺</div>';
     var upVis = i === 0 ? 'visibility:hidden;' : '';
     var downVis = i === shows.length - 1 ? 'visibility:hidden;' : '';
     return '<div style="display:flex;align-items:center;gap:8px;background:var(--sand);border-radius:8px;padding:8px 12px;">'
       + '<span style="font-size:13px;font-weight:800;color:var(--fig);min-width:18px;">' + (i+1) + '</span>'
+      + thumb
       + '<div style="flex:1;min-width:0;">'
       + '<div style="font-size:13px;font-weight:600;color:var(--charcoal);">' + title + '</div>'
       + (platform ? '<div style="font-size:11px;color:var(--muted);">' + platform + '</div>' : '')
@@ -1630,7 +1643,7 @@ async function saveTop5(showsArray) {
   await sb.from('top5_shows').delete().eq('user_id', user.id);
   if (!showsArray.length) return;
   var rows = showsArray.map(function(s, i) {
-    return { user_id: user.id, title: s.title, platform: s.platform || '', rank: i + 1 };
+    return { user_id: user.id, title: s.title, platform: s.platform || '', rank: i + 1, poster_path: s.poster_path || null };
   });
   const { error } = await sb.from('top5_shows').insert(rows);
   if (error) throw error;
@@ -1773,6 +1786,7 @@ function normalizeShow(s) {
     source: s.source || 'manual',
     influencedBy: s.influenced_by || null,
     addedAt: s.added_at,
+    poster_path: s.poster_path || null,
     reactions: (s.reactions || []).map(function(r) {
       var u = state.user;
       var isMe = u && r.user_id === u.id;
@@ -1813,7 +1827,7 @@ async function loadUserIntoState(profile) {
 
   try {
     var top5 = await loadTop5();
-    state.user.top5 = top5.map(function(t) { return { title: t.title, platform: t.platform }; });
+    state.user.top5 = top5.map(function(t) { return { title: t.title, platform: t.platform, poster_path: t.poster_path || null }; });
   } catch(e) { console.error('Error loading top5:', e); }
 
   try {
@@ -2497,9 +2511,11 @@ window.addBingedTop5 = async function() {
     setTimeout(function() { inp.style.borderColor = ''; inp.placeholder = 'Show title...'; }, 1500);
     return;
   }
-  state.user.top5.push({ title: inp.value.trim(), platform: plt ? plt.value : '' });
+  var tmdb = _tmdbPending || {};
+  state.user.top5.push({ title: inp.value.trim(), platform: plt ? plt.value : '', poster_path: tmdb.poster_path || null });
   inp.value = '';
   if (plt) plt.value = '';
+  _tmdbPending = {};
   renderBingedTop5();
   renderTop5();
   try { await saveTop5(state.user.top5); } catch(e) { console.error('Error saving top5:', e); }
