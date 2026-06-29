@@ -1094,9 +1094,24 @@ function renderFriends() {
   }).join('');
 }
 
+async function logImpressions(friendId, showIds) {
+  if (!state.user || !state.user.id || !showIds.length) return;
+  var rows = showIds.map(function(sid) {
+    return { viewer_id: state.user.id, show_id: sid, show_owner_id: friendId };
+  });
+  try {
+    await sb.from('show_impressions').upsert(rows, { onConflict: 'viewer_id,show_id', ignoreDuplicates: true });
+  } catch(e) { console.error('Impression log error:', e); }
+}
+
 function showFriend(id) {
   state.lastViewedFriend=id;
   var f=state.friends.find(function(x){return x.id===id;});
+  var visibleIds=[];
+  (f.watching||[]).filter(function(s){return !s.hidden;}).forEach(function(s){visibleIds.push(s.id);});
+  (f.watchlist||[]).filter(function(s){return !s.hidden;}).forEach(function(s){visibleIds.push(s.id);});
+  (f.watched||[]).filter(function(s){return !s.hidden;}).forEach(function(s){visibleIds.push(s.id);});
+  logImpressions(f.id, visibleIds);
   document.getElementById('friends-view').style.display='none';
   var dv=document.getElementById('friend-detail-view'); dv.style.display='block';
   var fRoom=f.room||'tuscany'; var fColor=ROOMS[fRoom]?ROOMS[fRoom].color:f.color;
@@ -2190,7 +2205,7 @@ window.markWatched = async function(id) {
   state.watched.push(show);
   launchConfetti();
   renderList('watching'); renderList('watched');
-  try { await updateShowStatus(id, 'watched'); } catch(e) { console.error('markWatched error:', e); }
+  try { await updateShowStatus(id, 'watched', { moved_to_binged_at: new Date().toISOString() }); } catch(e) { console.error('markWatched error:', e); }
 };
 
 window.markDNF = async function(id) {
