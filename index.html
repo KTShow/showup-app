@@ -490,6 +490,15 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
     <div id="tab-watched" class="tab-pane" style="display:none">
       <div class="page-title">&#128252;&nbsp; Already Binged</div>
       <div class="page-sub">Build your taste profile &mdash; add everything you've loved and hated. Rate each one 1 to 5 remotes.</div>
+      <div style="background:var(--cream);border:1px solid var(--border);border-radius:14px;padding:16px;margin-bottom:16px;box-shadow:var(--shadow);">
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--muted);margin-bottom:10px;">&#127942; Top 5 Shows of All Time <span style="font-weight:400;text-transform:none;">— Visible to friends in your Living Room</span></div>
+        <div id="binged-top5-list" style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px;"></div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <input id="binged-top5-input" placeholder="Show title..." style="flex:2;min-width:140px;background:white;border:1px solid var(--border);border-radius:8px;padding:9px 12px;font-family:var(--sans);font-size:14px;color:var(--charcoal);outline:none;" />
+          <select id="binged-top5-platform" style="flex:1;min-width:120px;background:white;border:1px solid var(--border);border-radius:8px;padding:9px 12px;font-family:var(--sans);font-size:14px;color:var(--charcoal);outline:none;"><option value="">Platform...</option></select>
+          <button onclick="addBingedTop5()" style="background:var(--terra);color:white;border:none;border-radius:8px;padding:9px 14px;font-family:var(--sans);font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;">+ Add</button>
+        </div>
+      </div>
       <div class="add-form">
         <div class="form-row">
           <div class="form-group"><label>Show title</label><input id="wd-title" placeholder="e.g. The Sopranos" /></div>
@@ -771,6 +780,32 @@ function renderTop5() {
   }).join('');
 }
 
+function renderBingedTop5() {
+  var list = document.getElementById('binged-top5-list');
+  if (!list) return;
+  var t5p = document.getElementById('binged-top5-platform');
+  if (t5p && t5p.options.length <= 1) {
+    PLATFORMS.forEach(function(p) { var o = document.createElement('option'); o.value = p; o.textContent = p; t5p.appendChild(o); });
+  }
+  var shows = state.user && state.user.top5 ? state.user.top5 : [];
+  if (!shows.length) {
+    list.innerHTML = '<div style="font-size:13px;color:var(--muted);font-style:italic;">None added yet — add up to 5</div>';
+    return;
+  }
+  list.innerHTML = shows.map(function(s, i) {
+    var title = typeof s === 'object' ? s.title : s;
+    var platform = typeof s === 'object' && s.platform ? s.platform : '';
+    return '<div style="display:flex;align-items:center;gap:10px;background:var(--sand);border-radius:8px;padding:8px 12px;">'
+      + '<span style="font-size:13px;font-weight:800;color:var(--fig);min-width:18px;">' + (i+1) + '</span>'
+      + '<div style="flex:1;min-width:0;">'
+      + '<div style="font-size:13px;font-weight:600;color:var(--charcoal);">' + title + '</div>'
+      + (platform ? '<div style="font-size:11px;color:var(--muted);">' + platform + '</div>' : '')
+      + '</div>'
+      + '<button onclick="removeBingedTop5(' + i + ')" style="background:none;border:none;color:#c0392b;cursor:pointer;font-size:14px;">&#x2715;</button>'
+      + '</div>';
+  }).join('');
+}
+
 function addTop5() {
   var inp = document.getElementById('top5-input');
   var plt = document.getElementById('top5-platform');
@@ -850,6 +885,7 @@ function showTab(tab, btn) {
   document.getElementById('tab-'+tab).style.display='block';
   btn.classList.add('active');
   if (tab==='living-room') { renderFriends(); if (typeof loadAndRenderFriends === 'function') loadAndRenderFriends(); }
+  if (tab==='watched') renderBingedTop5();
   if (tab!=='living-room') state.lastViewedFriend = null;
   if (state.user) state.user.lastActive = new Date().toISOString();
 }
@@ -1134,7 +1170,7 @@ function buildRankings(){
   });
   var list=Object.values(shows).map(function(s){var avg=s.ratings.reduce(function(a,b){return a+b;},0)/s.ratings.length;return {title:s.title,platform:s.platform,avg:Math.round(avg*10)/10,count:s.ratings.length,raters:s.raters};});
   list.sort(function(a,b){return b.avg-a.avg||b.count-a.count;});
-  return list;
+  return list.slice(0, 10);
 }
 
 function renderRankings(){
@@ -1165,7 +1201,7 @@ function showRankDetail(idx){
   panel.style.display='block';
   panel.innerHTML='<button class="rank-close" onclick="backToRankings()">\u2190 Back to rankings</button>'
     +'<div class="rank-detail"><div class="rank-detail-title">'+s.title+'</div>'
-    +'<div class="rank-detail-sub">Avg '+s.avg+' remotes &mdash; rated by '+s.count+' in your crowd</div>'
+    +'<div class="rank-detail-sub">Avg '+s.avg.toFixed(1)+' remotes &mdash; rated by '+s.count+' in your crowd</div>'
     +'<div style="display:flex;gap:2px;margin-bottom:14px;">'+remotes+'</div>'+rows+'</div>';
   document.getElementById('rankings-list').style.display='none';
   panel.scrollIntoView({behavior:'smooth'});
@@ -2367,12 +2403,41 @@ window.addTop5 = async function() {
   inp.value = '';
   if (plt) plt.value = '';
   renderTop5();
+  renderBingedTop5();
   try { await saveTop5(state.user.top5); } catch(e) { console.error('Error saving top5:', e); }
 };
 
 window.removeTop5 = async function(idx) {
   if (!state.user || !state.user.top5) return;
   state.user.top5.splice(idx, 1);
+  renderTop5();
+  renderBingedTop5();
+  try { await saveTop5(state.user.top5); } catch(e) { console.error('Error saving top5:', e); }
+};
+
+window.addBingedTop5 = async function() {
+  var inp = document.getElementById('binged-top5-input');
+  var plt = document.getElementById('binged-top5-platform');
+  if (!inp || !inp.value.trim()) return;
+  if (!state.user.top5) state.user.top5 = [];
+  if (state.user.top5.length >= 5) {
+    inp.style.borderColor = '#C4622D';
+    inp.placeholder = 'Max 5 shows reached';
+    setTimeout(function() { inp.style.borderColor = ''; inp.placeholder = 'Show title...'; }, 1500);
+    return;
+  }
+  state.user.top5.push({ title: inp.value.trim(), platform: plt ? plt.value : '' });
+  inp.value = '';
+  if (plt) plt.value = '';
+  renderBingedTop5();
+  renderTop5();
+  try { await saveTop5(state.user.top5); } catch(e) { console.error('Error saving top5:', e); }
+};
+
+window.removeBingedTop5 = async function(idx) {
+  if (!state.user || !state.user.top5) return;
+  state.user.top5.splice(idx, 1);
+  renderBingedTop5();
   renderTop5();
   try { await saveTop5(state.user.top5); } catch(e) { console.error('Error saving top5:', e); }
 };
