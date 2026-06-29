@@ -769,11 +769,17 @@ function renderTop5() {
   list.innerHTML = shows.map(function(s, i) {
     var title = typeof s === 'object' ? s.title : s;
     var platform = typeof s === 'object' && s.platform ? s.platform : '';
-    return '<div style="display:flex;align-items:center;gap:10px;background:var(--sand);border-radius:8px;padding:8px 12px;">'
+    var upVis = i === 0 ? 'visibility:hidden;' : '';
+    var downVis = i === shows.length - 1 ? 'visibility:hidden;' : '';
+    return '<div style="display:flex;align-items:center;gap:8px;background:var(--sand);border-radius:8px;padding:8px 12px;">'
       + '<span style="font-size:13px;font-weight:800;color:var(--fig);min-width:18px;">' + (i+1) + '</span>'
       + '<div style="flex:1;min-width:0;">'
       + '<div style="font-size:13px;font-weight:600;color:var(--charcoal);">' + title + '</div>'
       + (platform ? '<div style="font-size:11px;color:var(--muted);">' + platform + '</div>' : '')
+      + '</div>'
+      + '<div style="display:flex;flex-direction:column;gap:1px;">'
+      + '<button onclick="moveTop5Up(' + i + ')" style="background:none;border:none;color:var(--fig);cursor:pointer;font-size:11px;line-height:1;padding:1px 4px;' + upVis + '">▲</button>'
+      + '<button onclick="moveTop5Down(' + i + ')" style="background:none;border:none;color:var(--fig);cursor:pointer;font-size:11px;line-height:1;padding:1px 4px;' + downVis + '">▼</button>'
       + '</div>'
       + '<button onclick="removeTop5(' + i + ')" style="background:none;border:none;color:#c0392b;cursor:pointer;font-size:14px;">&#x2715;</button>'
       + '</div>';
@@ -795,11 +801,17 @@ function renderBingedTop5() {
   list.innerHTML = shows.map(function(s, i) {
     var title = typeof s === 'object' ? s.title : s;
     var platform = typeof s === 'object' && s.platform ? s.platform : '';
-    return '<div style="display:flex;align-items:center;gap:10px;background:var(--sand);border-radius:8px;padding:8px 12px;">'
+    var upVis = i === 0 ? 'visibility:hidden;' : '';
+    var downVis = i === shows.length - 1 ? 'visibility:hidden;' : '';
+    return '<div style="display:flex;align-items:center;gap:8px;background:var(--sand);border-radius:8px;padding:8px 12px;">'
       + '<span style="font-size:13px;font-weight:800;color:var(--fig);min-width:18px;">' + (i+1) + '</span>'
       + '<div style="flex:1;min-width:0;">'
       + '<div style="font-size:13px;font-weight:600;color:var(--charcoal);">' + title + '</div>'
       + (platform ? '<div style="font-size:11px;color:var(--muted);">' + platform + '</div>' : '')
+      + '</div>'
+      + '<div style="display:flex;flex-direction:column;gap:1px;">'
+      + '<button onclick="moveTop5Up(' + i + ')" style="background:none;border:none;color:var(--fig);cursor:pointer;font-size:11px;line-height:1;padding:1px 4px;' + upVis + '">▲</button>'
+      + '<button onclick="moveTop5Down(' + i + ')" style="background:none;border:none;color:var(--fig);cursor:pointer;font-size:11px;line-height:1;padding:1px 4px;' + downVis + '">▼</button>'
       + '</div>'
       + '<button onclick="removeBingedTop5(' + i + ')" style="background:none;border:none;color:#c0392b;cursor:pointer;font-size:14px;">&#x2715;</button>'
       + '</div>';
@@ -2439,6 +2451,26 @@ window.removeBingedTop5 = async function(idx) {
   state.user.top5.splice(idx, 1);
   renderBingedTop5();
   renderTop5();
+  try { await saveTop5(state.user.top5); } catch(e) { console.error('Error saving top5:', e); }
+};
+
+window.moveTop5Up = async function(idx) {
+  if (!state.user || !state.user.top5 || idx <= 0) return;
+  var temp = state.user.top5[idx];
+  state.user.top5[idx] = state.user.top5[idx - 1];
+  state.user.top5[idx - 1] = temp;
+  renderTop5();
+  renderBingedTop5();
+  try { await saveTop5(state.user.top5); } catch(e) { console.error('Error saving top5:', e); }
+};
+
+window.moveTop5Down = async function(idx) {
+  if (!state.user || !state.user.top5 || idx >= state.user.top5.length - 1) return;
+  var temp = state.user.top5[idx];
+  state.user.top5[idx] = state.user.top5[idx + 1];
+  state.user.top5[idx + 1] = temp;
+  renderTop5();
+  renderBingedTop5();
   try { await saveTop5(state.user.top5); } catch(e) { console.error('Error saving top5:', e); }
 };
 
