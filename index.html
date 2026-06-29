@@ -224,6 +224,15 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
 .friend-section-header-line{flex:1;height:2px;background:var(--border);}
 .friend-section-title{font-family:var(--serif);font-size:16px;font-weight:700;color:var(--fig);white-space:nowrap;padding:4px 14px;background:var(--fig);color:white;border-radius:20px;}
 .friend-section-count{font-size:11px;color:var(--muted);white-space:nowrap;}
+.tmdb-dropdown{position:absolute;top:100%;left:0;right:0;background:white;border:1px solid var(--border);border-radius:10px;box-shadow:0 6px 24px rgba(0,0,0,0.12);z-index:300;max-height:300px;overflow-y:auto;display:none;margin-top:3px;}
+.tmdb-dropdown.open{display:block;}
+.tmdb-result{display:flex;align-items:center;gap:10px;padding:8px 12px;cursor:pointer;border-bottom:1px solid var(--border);}
+.tmdb-result:last-child{border-bottom:none;}
+.tmdb-result:hover{background:var(--sand);}
+.tmdb-poster{width:30px;height:45px;border-radius:4px;object-fit:cover;flex-shrink:0;}
+.tmdb-poster-empty{width:30px;height:45px;border-radius:4px;background:var(--sand);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:14px;}
+.tmdb-result-title{font-size:13px;font-weight:600;color:var(--charcoal);line-height:1.3;}
+.tmdb-result-year{font-size:11px;color:var(--muted);margin-top:1px;}
 </style>
 <style>
 /* LOGIN SCREEN */
@@ -468,7 +477,7 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
       <div class="page-sub" id="watching-sub"></div>
       <div class="add-form">
         <div class="form-row">
-          <div class="form-group"><label>Show title</label><input id="w-title" placeholder="e.g. The White Lotus" /></div>
+          <div class="form-group" style="position:relative;"><label>Show title</label><input id="w-title" placeholder="Search for a show..." oninput="tmdbSearch('w')" autocomplete="off" /><div class="tmdb-dropdown" id="w-tmdb-dd"></div></div>
           <div class="form-group" style="max-width:170px"><label>Streaming on</label><select id="w-platform"><option value="">Platform...</option></select></div>
           <button class="btn-add" onclick="addShow('watching')">+ Add</button>
         </div>
@@ -480,7 +489,7 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
       <div class="page-sub">Save your next binge.</div>
       <div class="add-form">
         <div class="form-row">
-          <div class="form-group"><label>Show title</label><input id="wl-title" placeholder="e.g. Severance" /></div>
+          <div class="form-group" style="position:relative;"><label>Show title</label><input id="wl-title" placeholder="Search for a show..." oninput="tmdbSearch('wl')" autocomplete="off" /><div class="tmdb-dropdown" id="wl-tmdb-dd"></div></div>
           <div class="form-group" style="max-width:170px"><label>Streaming on</label><select id="wl-platform"><option value="">Platform...</option></select></div>
           <button class="btn-add" onclick="addShow('watchlist')">+ Add</button>
         </div>
@@ -501,7 +510,7 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
       </div>
       <div class="add-form">
         <div class="form-row">
-          <div class="form-group"><label>Show title</label><input id="wd-title" placeholder="e.g. The Sopranos" /></div>
+          <div class="form-group" style="position:relative;"><label>Show title</label><input id="wd-title" placeholder="Search for a show..." oninput="tmdbSearch('wd')" autocomplete="off" /><div class="tmdb-dropdown" id="wd-tmdb-dd"></div></div>
           <div class="form-group" style="max-width:170px"><label>Streaming on</label><select id="wd-platform"><option value="">Platform...</option></select></div>
           <button class="btn-add" onclick="addShow('watched')">+ Add</button>
         </div>
@@ -1532,6 +1541,15 @@ async function dbAddShow(showData) {
     status: showData.status,
     source: showData.source || 'manual',
     influenced_by: showData.influencedBy || null,
+    tmdb_id: showData.tmdb_id || null,
+    poster_path: showData.poster_path || null,
+    genre: showData.genre || null,
+    original_network: showData.original_network || null,
+    first_air_year: showData.first_air_year || null,
+    number_of_seasons: showData.number_of_seasons || null,
+    show_status: showData.show_status || null,
+    overview: showData.overview || null,
+    vote_average: showData.vote_average || null,
   }).select().single();
   if (error) throw error;
   return data;
@@ -2186,10 +2204,18 @@ window.addShow = async function(list) {
   var src = state.lastViewedFriend ? 'living_room' : 'manual';
   var inf = state.lastViewedFriend || null;
   var statusMap = { watching: 'watching', watchlist: 'watchlist', watched: 'watched' };
+  var tmdb = _tmdbPending || {};
   try {
-    var show = await dbAddShow({ title: title, platform: platform, status: statusMap[list], source: src, influencedBy: inf });
-    state[list].push({ id: show.id, title: title, platform: platform, rating: 0, hidden: false, dnf: false, source: src, influencedBy: inf, addedAt: show.added_at, reactions: [], showReact: false });
+    var show = await dbAddShow({ title: title, platform: platform, status: statusMap[list], source: src, influencedBy: inf,
+      tmdb_id: tmdb.tmdb_id, poster_path: tmdb.poster_path, genre: tmdb.genre,
+      original_network: tmdb.original_network, first_air_year: tmdb.first_air_year,
+      number_of_seasons: tmdb.number_of_seasons, show_status: tmdb.show_status,
+      overview: tmdb.overview, vote_average: tmdb.vote_average });
+    state[list].push({ id: show.id, title: title, platform: platform, rating: 0, hidden: false, dnf: false,
+      source: src, influencedBy: inf, addedAt: show.added_at, reactions: [], showReact: false,
+      poster_path: tmdb.poster_path || null });
     tEl.value = ''; pEl.value = '';
+    _tmdbPending = {};
     renderList(list);
   } catch(e) {
     console.error('Error adding show:', e);
@@ -2488,6 +2514,78 @@ window.moveTop5Down = async function(idx) {
   renderBingedTop5();
   try { await saveTop5(state.user.top5); } catch(e) { console.error('Error saving top5:', e); }
 };
+
+// ============================================================
+// TMDB SEARCH
+// ============================================================
+
+var TMDB_KEY = 'b1fd269e9a38591e0e4ded8a1b269d12';
+var TMDB_IMG = 'https://image.tmdb.org/t/p/w92';
+var _tmdbPending = {};
+var _tmdbResults = {};
+var _tmdbTimers = {};
+
+window.tmdbSearch = function(prefix) {
+  var inp = document.getElementById(prefix + '-title');
+  var dd = document.getElementById(prefix + '-tmdb-dd');
+  var q = inp ? inp.value.trim() : '';
+  _tmdbPending = {};
+  if (_tmdbTimers[prefix]) clearTimeout(_tmdbTimers[prefix]);
+  if (q.length < 2) { if (dd) { dd.innerHTML = ''; dd.classList.remove('open'); } return; }
+  _tmdbTimers[prefix] = setTimeout(async function() {
+    try {
+      var res = await fetch('https://api.themoviedb.org/3/search/tv?query=' + encodeURIComponent(q) + '&api_key=' + TMDB_KEY + '&language=en-US&page=1');
+      var data = await res.json();
+      var results = (data.results || []).filter(function(r) { return r.name; }).slice(0, 6);
+      _tmdbResults[prefix] = results;
+      if (!results.length) {
+        dd.innerHTML = '<div style="padding:10px 12px;font-size:13px;color:var(--muted);">No results found</div>';
+        dd.classList.add('open'); return;
+      }
+      dd.innerHTML = results.map(function(r, i) {
+        var year = r.first_air_date ? r.first_air_date.substring(0, 4) : '';
+        var img = r.poster_path
+          ? '<img class="tmdb-poster" src="' + TMDB_IMG + r.poster_path + '" />'
+          : '<div class="tmdb-poster-empty">📺</div>';
+        return '<div class="tmdb-result" onclick="tmdbSelect(\'' + prefix + '\',' + i + ')">'
+          + img + '<div><div class="tmdb-result-title">' + r.name + '</div>'
+          + (year ? '<div class="tmdb-result-year">' + year + '</div>' : '')
+          + '</div></div>';
+      }).join('');
+      dd.classList.add('open');
+    } catch(e) { console.error('TMDB search error:', e); }
+  }, 400);
+};
+
+window.tmdbSelect = async function(prefix, idx) {
+  var show = (_tmdbResults[prefix] || [])[idx];
+  if (!show) return;
+  var inp = document.getElementById(prefix + '-title');
+  var dd = document.getElementById(prefix + '-tmdb-dd');
+  if (inp) inp.value = show.name;
+  if (dd) { dd.innerHTML = ''; dd.classList.remove('open'); }
+  _tmdbPending = {
+    tmdb_id: show.id,
+    poster_path: show.poster_path || null,
+    first_air_year: show.first_air_date ? parseInt(show.first_air_date.substring(0, 4)) : null,
+    overview: show.overview || null,
+    vote_average: show.vote_average || null
+  };
+  try {
+    var res = await fetch('https://api.themoviedb.org/3/tv/' + show.id + '?api_key=' + TMDB_KEY + '&language=en-US');
+    var d = await res.json();
+    _tmdbPending.genre = d.genres && d.genres.length ? d.genres[0].name : null;
+    _tmdbPending.original_network = d.networks && d.networks.length ? d.networks[0].name : null;
+    _tmdbPending.number_of_seasons = d.number_of_seasons || null;
+    _tmdbPending.show_status = d.status || null;
+  } catch(e) { console.error('TMDB detail error:', e); }
+};
+
+document.addEventListener('click', function(e) {
+  if (!e.target.closest('.tmdb-dropdown') && !e.target.closest('.form-group')) {
+    document.querySelectorAll('.tmdb-dropdown').forEach(function(d) { d.classList.remove('open'); });
+  }
+});
 
 // ============================================================
 // INVITE LINKS
