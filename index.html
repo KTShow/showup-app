@@ -64,6 +64,7 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
 .show-card-top{display:flex;align-items:center;gap:12px;}
 .tv-tile{width:38px;height:38px;border-radius:9px;background:var(--olive);display:flex;align-items:center;justify-content:center;flex-shrink:0;}
 .tv-tile svg{width:24px;height:24px;}
+.show-poster{width:38px;height:38px;border-radius:9px;object-fit:cover;flex-shrink:0;}
 .show-info{flex:1;}
 .show-title{font-size:14px;font-weight:600;color:var(--charcoal);}
 .show-move{margin-top:6px;}
@@ -929,6 +930,13 @@ function tvIcon() {
   return '<div class="tv-tile"><svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="3" y="5" width="26" height="18" rx="2.5" fill="white" fill-opacity="0.85"/><rect x="5" y="7" width="22" height="14" rx="1.5" fill="#5C6B3A"/><rect x="12" y="24" width="8" height="2" rx="1" fill="white" fill-opacity="0.7"/><rect x="15" y="23" width="2" height="2" fill="white" fill-opacity="0.7"/></svg></div>';
 }
 
+function showTile(s) {
+  if (s && s.poster_path) {
+    return '<img class="show-poster" src="https://image.tmdb.org/t/p/w92' + s.poster_path + '" />';
+  }
+  return tvIcon();
+}
+
 function remoteIcon(size, lit) {
   var w=size||16; var h=Math.round(w*1.75);
   var body=lit?'#C49A3C':'#2C2C2C'; var panel=lit?'#D4AE55':'#484848'; var dot=lit?'#FBE9A0':'#888'; var btn=lit?'#E8C96A':'#666';
@@ -1023,7 +1031,7 @@ function buildDNFCard(s) {
     ? '<div class="inline-react"><input class="react-input" id="'+inpId+'" placeholder="What did you think?" /><button class="btn-send" onclick="submitReact(&quot;watched&quot;,&quot;'+sid+'&quot;)">Send</button><button class="btn-cancel" onclick="toggleReact(&quot;watched&quot;,&quot;'+sid+'&quot;)">Cancel</button></div>'
     : '<button class="btn-react-toggle" onclick="toggleReact(&quot;watched&quot;,&quot;'+sid+'&quot;)">+ What did you think?</button>';
   return '<div class="dnf-card">'
-    + '<div class="show-card-top">' + tvIcon()
+    + '<div class="show-card-top">' + showTile(s)
     + '<div class="show-info"><div class="show-title">' + s.title + '</div>'
     + '<div style="margin-top:3px;"><span class="dnf-badge">DNF</span><span style="font-size:11px;color:var(--muted);margin-left:6px;">' + s.platform + '</span></div>'
     + '</div>'
@@ -1046,7 +1054,7 @@ function buildCard(s, list) {
     ?'<div class="inline-react"><input class="react-input" id="'+inpId+'" placeholder="What did you think?" /><button class="btn-send" onclick="submitReact(\''+list+'\',\''+s.id+'\')">Send</button><button class="btn-cancel" onclick="toggleReact(\''+list+'\',\''+s.id+'\')">Cancel</button></div>'
     :'<button class="btn-react-toggle" onclick="toggleReact(\''+list+'\',\''+s.id+'\')">+ What did you think?</button>';
   var hasReact=reactionsHTML(s.reactions,list,s.id)||reactToggle;
-  return '<div class="show-card'+(s.hidden?' is-hidden':'')+'"><div class="show-card-top">'+tvIcon()+'<div class="show-info"><div class="show-title">'+s.title+(s.hidden?'<span class="hidden-badge">Hidden from friends</span>':'')+'</div>'+moveLink+'</div><div class="show-actions">'+actions+'</div></div>'+(hasReact?'<div class="react-area">'+reactionsHTML(s.reactions,list,s.id)+reactToggle+'</div>':'')+'</div>';
+  return '<div class="show-card'+(s.hidden?' is-hidden':'')+'"><div class="show-card-top">'+showTile(s)+'<div class="show-info"><div class="show-title">'+s.title+(s.hidden?'<span class="hidden-badge">Hidden from friends</span>':'')+'</div>'+moveLink+'</div><div class="show-actions">'+actions+'</div></div>'+(hasReact?'<div class="react-area">'+reactionsHTML(s.reactions,list,s.id)+reactToggle+'</div>':'')+'</div>';
 }
 
 
@@ -1140,7 +1148,7 @@ function showFriend(id) {
           :'<button class="btn-react-toggle" onclick="toggleFR(\''+f.id+'\',\''+lk+'\',\''+s.id+'\')">+ What did you think?</button>';
         var actions=(lk==='w'||lk==='wd')?remoteStatic(s.rating):'';
         var watchedBadge=lk==='wd'?'<span style="font-size:11px;color:var(--fig);font-weight:600;">&#10003; Binged</span>':'';
-        html+='<div class="show-card"><div class="show-card-top">'+tvIcon()+'<div class="show-info"><div class="show-title">'+s.title+'</div>'+(watchedBadge?'<div style="margin-top:2px;">'+watchedBadge+'</div>':'')+'</div><div class="show-actions">'+actions+'</div></div><div class="react-area">'+rHTML+reactToggle+'</div></div>';
+        html+='<div class="show-card"><div class="show-card-top">'+showTile(s)+'<div class="show-info"><div class="show-title">'+s.title+'</div>'+(watchedBadge?'<div style="margin-top:2px;">'+watchedBadge+'</div>':'')+'</div><div class="show-actions">'+actions+'</div></div><div class="react-area">'+rHTML+reactToggle+'</div></div>';
       });
       html+='</div></div>';
     });
