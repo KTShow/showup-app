@@ -505,7 +505,7 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
         <div id="binged-top5-list" style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px;"></div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;">
           <div class="form-group" style="position:relative;flex:2;min-width:140px;margin:0;">
-            <input id="binged-top5-input" placeholder="Search for a show..." oninput="tmdbSearch('bt5')" autocomplete="off" style="width:100%;background:white;border:1px solid var(--border);border-radius:8px;padding:9px 12px;font-family:var(--sans);font-size:14px;color:var(--charcoal);outline:none;box-sizing:border-box;" />
+            <input id="bt5-title" placeholder="Search for a show..." oninput="tmdbSearch('bt5')" autocomplete="off" style="width:100%;background:white;border:1px solid var(--border);border-radius:8px;padding:9px 12px;font-family:var(--sans);font-size:14px;color:var(--charcoal);outline:none;box-sizing:border-box;" />
             <div class="tmdb-dropdown" id="bt5-tmdb-dd"></div>
           </div>
           <select id="binged-top5-platform" style="flex:1;min-width:120px;background:white;border:1px solid var(--border);border-radius:8px;padding:9px 12px;font-family:var(--sans);font-size:14px;color:var(--charcoal);outline:none;"><option value="">Platform...</option></select>
@@ -2501,7 +2501,7 @@ window.removeTop5 = async function(idx) {
 };
 
 window.addBingedTop5 = async function() {
-  var inp = document.getElementById('binged-top5-input');
+  var inp = document.getElementById('bt5-title');
   var plt = document.getElementById('binged-top5-platform');
   if (!inp || !inp.value.trim()) return;
   if (!state.user.top5) state.user.top5 = [];
