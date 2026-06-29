@@ -1572,6 +1572,7 @@ async function dbAddShow(showData) {
     status: showData.status,
     source: showData.source || 'manual',
     influenced_by: showData.influencedBy || null,
+    rating: showData.rating || 0,
     tmdb_id: showData.tmdb_id || null,
     poster_path: showData.poster_path || null,
     genre: showData.genre || null,
@@ -2525,19 +2526,16 @@ window.addBingedTop5 = async function() {
   // Auto-add to Binged with 5 remotes
   var existing = state.watched.find(function(s) { return s.title.toLowerCase() === title.toLowerCase() && !s.dnf; });
   if (existing) {
-    if (existing.rating !== 5) {
-      existing.rating = 5;
-      try { await updateShowRating(existing.id, 5); } catch(e) { console.error('Error updating rating:', e); }
-      renderList('watched');
-    }
+    existing.rating = 5;
+    try { await updateShowRating(existing.id, 5); } catch(e) { console.error('Error updating rating:', e); }
+    renderList('watched');
   } else {
     try {
-      var show = await dbAddShow({ title: title, platform: platform, status: 'watched',
+      var show = await dbAddShow({ title: title, platform: platform, status: 'watched', rating: 5,
         tmdb_id: tmdb.tmdb_id || null, poster_path: tmdb.poster_path || null,
         genre: tmdb.genre || null, original_network: tmdb.original_network || null,
         first_air_year: tmdb.first_air_year || null, number_of_seasons: tmdb.number_of_seasons || null,
         show_status: tmdb.show_status || null, overview: tmdb.overview || null, vote_average: tmdb.vote_average || null });
-      await updateShowRating(show.id, 5);
       var normalized = normalizeShow(show);
       normalized.rating = 5;
       state.watched.push(normalized);
