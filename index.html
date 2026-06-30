@@ -2000,24 +2000,16 @@ window.handleVerifyOtp = async function() {
   btn.disabled = true;
   btn.textContent = 'Verifying\u2026';
   try {
-    const { error } = await sb.auth.verifyOtp({ email, token, type: 'email' });
+    const { data, error } = await sb.auth.verifyOtp({ email, token, type: 'email' });
     if (error) throw error;
     btn.textContent = 'Signing you in\u2026';
-    // Fallback: if onAuthStateChange doesn't fire within 2s, load manually
-    setTimeout(function() {
-      try {
-        var loginScreen = document.getElementById('screen-login');
-        if (!loginScreen || !loginScreen.classList.contains('active')) return;
-        var k = Object.keys(localStorage).find(function(key) { return key.startsWith('sb-') && key.endsWith('-auth-token'); });
-        if (!k) return;
-        var d = JSON.parse(localStorage.getItem(k));
-        if (!d || !d.user) return;
-        fetchProfileById(d.user.id).then(function(profile) {
-          if (!profile) { showScreen('onboard'); }
-          else { loadUserIntoState(profile).then(function() { recordSession(); }).catch(function(e) { console.error('fallback load error:', e); }); }
-        }).catch(function(e) { console.error('fallback profile error:', e); });
-      } catch(e) { console.error('fallback auth error:', e); }
-    }, 2000);
+    // Use the user returned directly from verifyOtp \u2014 don't wait for onAuthStateChange
+    var uid = data && data.user && data.user.id;
+    if (uid) {
+      var profile = await fetchProfileById(uid);
+      if (!profile) { showScreen('onboard'); }
+      else { await loadUserIntoState(profile); await recordSession(); }
+    }
   } catch(e) {
     errEl.textContent = 'Invalid or expired code. Please try again.';
     errEl.style.display = 'block';
