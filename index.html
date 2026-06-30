@@ -1071,7 +1071,7 @@ function buildDNFCard(s) {
   return '<div class="dnf-card">'
     + '<div class="show-card-top">' + showTile(s)
     + '<div class="show-info"><div class="show-title">' + s.title + '</div>'
-    + '<div style="margin-top:3px;"><span class="dnf-badge">Didn't Finish</span><span style="font-size:11px;color:var(--muted);margin-left:6px;">' + s.platform + '</span></div>'
+    + '<div style="margin-top:3px;"><span class="dnf-badge">Didn&#39;t Finish</span><span style="font-size:11px;color:var(--muted);margin-left:6px;">' + s.platform + '</span></div>'
     + '</div>'
     + '<button class="btn-remove" onclick="removeShow(&quot;watched&quot;,&quot;' + sid + '&quot;)">&#x2715;</button>'
     + '</div>'
@@ -1216,7 +1216,7 @@ function showFriend(id) {
           + f.watched.filter(function(x){return x.dnf;}).map(function(s){
               return '<div class="dnf-card"><div class="show-card-top">'+tvIcon()
                 +'<div class="show-info"><div class="show-title">'+s.title+'</div>'
-                +'<div style="margin-top:3px;"><span class="dnf-badge">Didn't Finish</span>'
+                +'<div style="margin-top:3px;"><span class="dnf-badge">Didn&#39;t Finish</span>'
                 +'<span style="font-size:11px;color:var(--muted);margin-left:6px;">'+s.platform+'</span>'
                 +'</div></div></div></div>';
             }).join('')+'</div>'
@@ -1921,10 +1921,6 @@ async function bootstrap() {
     console.error('[bootstrap] CATCH error:', e);
     _bootstrapComplete = true;
     showScreen('login');
-    var dbg = document.createElement('div');
-    dbg.style.cssText = 'position:fixed;bottom:0;left:0;right:0;background:#c0392b;color:white;padding:12px;font-size:12px;z-index:9999;word-break:break-all;';
-    dbg.textContent = 'DEBUG: ' + (e && e.message ? e.message : String(e));
-    document.body.appendChild(dbg);
   }
 }
 
