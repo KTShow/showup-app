@@ -2003,6 +2003,7 @@ window.handleVerifyOtp = async function() {
     const { error } = await sb.auth.verifyOtp({ email, token, type: 'email' });
     if (error) throw error;
     btn.textContent = 'Signing you in\u2026';
+    setTimeout(function() { window.location.reload(); }, 800);
   } catch(e) {
     errEl.textContent = 'Invalid or expired code. Please try again.';
     errEl.style.display = 'block';
