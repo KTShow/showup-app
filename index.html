@@ -877,11 +877,11 @@ function addTop5() {
     setTimeout(function() { inp.style.borderColor = ''; inp.placeholder = 'Search for a show...'; }, 1500);
     return;
   }
-  var tmdb = _tmdbPending || {};
+  var tmdb = (typeof window._tmdbPending !== 'undefined' ? window._tmdbPending : null) || {};
   state.user.top5.push({title: inp.value.trim(), platform: plt ? plt.value : '', poster_path: tmdb.poster_path || null});
   inp.value = '';
   if (plt) plt.value = '';
-  _tmdbPending = {};
+  if (typeof window._tmdbPending !== 'undefined') window._tmdbPending = {};
   renderTop5();
 }
 
