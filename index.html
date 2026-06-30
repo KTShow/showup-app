@@ -2000,17 +2000,9 @@ window.handleVerifyOtp = async function() {
   btn.disabled = true;
   btn.textContent = 'Verifying\u2026';
   try {
-    const { data, error } = await sb.auth.verifyOtp({ email, token, type: 'email' });
+    const { error } = await sb.auth.verifyOtp({ email, token, type: 'email' });
     if (error) throw error;
     btn.textContent = 'Signing you in\u2026';
-    var uid = data && data.user && data.user.id;
-    if (uid) {
-      try {
-        var profile = await fetchProfileById(uid);
-        if (!profile) { showScreen('onboard'); }
-        else { await loadUserIntoState(profile); await recordSession(); }
-      } catch(e2) { console.error('profile load error:', e2); }
-    }
   } catch(e) {
     errEl.textContent = 'Invalid or expired code. Please try again.';
     errEl.style.display = 'block';
