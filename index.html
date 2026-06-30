@@ -36,7 +36,7 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
 
 .bottom-nav{position:fixed;bottom:0;left:0;right:0;background:#EDE8DC;border-top:1px solid var(--border);display:flex;justify-content:space-around;align-items:center;height:60px;z-index:100;padding-bottom:env(safe-area-inset-bottom);}
 .nav-tab{background:none;border:none;display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 10px;font-family:var(--sans);font-size:10px;color:var(--muted);cursor:pointer;transition:all 0.2s;flex:1;}
-.nav-tab.active{color:var(--terra);}
+.nav-tab.active{color:var(--terra);background:rgba(196,98,45,0.08);border-radius:10px;}
 .nav-tab:hover{color:var(--fig);}
 .nav-tab-icon{font-size:20px;line-height:1;}
 .nav-tab-label{font-size:10px;font-weight:600;letter-spacing:0.02em;white-space:nowrap;}
@@ -62,12 +62,12 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
 .show-card{background:var(--cream);border:1px solid var(--border);border-radius:10px;padding:9px 12px;box-shadow:var(--shadow);transition:box-shadow 0.2s;}
 .show-card:hover{box-shadow:0 4px 20px rgba(100,50,20,0.14);}
 .show-card-top{display:flex;align-items:center;gap:12px;}
-.tv-tile{width:38px;height:38px;border-radius:9px;background:var(--olive);display:flex;align-items:center;justify-content:center;flex-shrink:0;}
-.tv-tile svg{width:24px;height:24px;}
-.show-poster{width:38px;height:38px;border-radius:9px;object-fit:cover;flex-shrink:0;}
+.tv-tile{width:46px;height:46px;border-radius:9px;background:var(--olive);display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.tv-tile svg{width:28px;height:28px;}
+.show-poster{width:46px;height:46px;border-radius:9px;object-fit:cover;flex-shrink:0;}
 .show-info{flex:1;}
 .show-title{font-size:14px;font-weight:600;color:var(--charcoal);}
-.show-move{margin-top:6px;}
+.show-move{margin-top:8px;display:flex;gap:6px;}
 .done-watching-btn{background:var(--olive);color:white;border:none;border-radius:6px;padding:5px 12px;font-family:var(--sans);font-size:12px;font-weight:600;cursor:pointer;}
 .done-watching-btn:hover{background:var(--olive-light);}
 .show-actions{display:flex;gap:6px;align-items:center;flex-shrink:0;}
@@ -213,8 +213,6 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
 @media(max-width:479px){
   .show-card-top{align-items:flex-start;}
   .show-actions{margin-top:2px;}
-  .show-move{flex-wrap:wrap;gap:5px;margin-top:8px;}
-  .didnt-finish-btn{margin-left:0;}
   .done-watching-btn{font-size:11px;padding:4px 9px;}
   .didnt-finish-btn{font-size:11px;padding:4px 9px;}
   .btn-start{font-size:11px;padding:4px 8px;}
@@ -259,6 +257,20 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
 </head>
 <body>
 <div class="confetti-wrap" id="confetti-wrap"></div>
+
+<!-- DONE WATCHING MODAL -->
+<div id="dwm-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:600;align-items:center;justify-content:center;padding:20px;box-sizing:border-box;">
+  <div style="background:white;border-radius:20px;padding:28px 24px;max-width:360px;width:100%;text-align:center;box-shadow:0 12px 48px rgba(0,0,0,0.2);">
+    <div style="font-size:36px;margin-bottom:6px;">🍿</div>
+    <div style="font-family:var(--serif);font-size:21px;font-weight:700;color:var(--terra);margin-bottom:4px;">You binged it!</div>
+    <div id="dwm-title" style="font-size:14px;color:var(--muted);margin-bottom:22px;"></div>
+    <div style="font-size:13px;font-weight:700;color:var(--charcoal);margin-bottom:12px;">How many remotes?</div>
+    <div id="dwm-remotes" style="display:flex;justify-content:center;gap:10px;margin-bottom:22px;"></div>
+    <input id="dwm-comment" placeholder="Leave a comment for friends... (optional)" style="width:100%;box-sizing:border-box;border:1px solid var(--border);border-radius:10px;padding:11px 14px;font-family:var(--sans);font-size:13px;color:var(--charcoal);outline:none;margin-bottom:16px;" />
+    <button onclick="submitDoneWatching()" style="background:var(--terra);color:white;border:none;border-radius:10px;padding:13px;font-family:var(--sans);font-size:14px;font-weight:700;cursor:pointer;width:100%;margin-bottom:8px;">Save</button>
+    <button onclick="skipDoneWatching()" style="background:none;border:none;color:var(--muted);font-family:var(--sans);font-size:13px;cursor:pointer;width:100%;">Skip rating</button>
+  </div>
+</div>
 
 <!-- LOGIN SCREEN -->
 <div id="screen-login" class="screen">
@@ -986,13 +998,16 @@ function remoteStatic(rating) {
   return html+'</div>';
 }
 
-function reactionsHTML(reactions, list, showId) {
+function reactionsHTML(reactions, list, showId, friendId) {
   if(!reactions||!reactions.length) return '';
   var uid = state.user && state.user.id;
   var html='<div class="react-list">';
   reactions.forEach(function(r){
     var canDel = uid && r.reactorId === uid && r.id && list && showId;
-    var delBtn = canDel ? '<button class="btn-delete-react" onclick="deleteReact(\''+list+'\',\''+showId+'\',\''+r.id+'\')">&#x2715;</button>' : '';
+    var delCall = friendId
+      ? 'deleteFriendReact(\''+friendId+'\',\''+list+'\',\''+showId+'\',\''+r.id+'\')'
+      : 'deleteReact(\''+list+'\',\''+showId+'\',\''+r.id+'\')';
+    var delBtn = canDel ? '<button class="btn-delete-react" onclick="'+delCall+'">&#x2715;</button>' : '';
     html+='<div class="react-item"><div class="react-av" style="background:'+r.color+'">'+r.initials+'</div><div class="react-bubble"><b>'+r.user+'</b>'+r.text+'</div>'+delBtn+'</div>';
   });
   return html+'</div>';
@@ -1056,7 +1071,7 @@ function buildDNFCard(s) {
   return '<div class="dnf-card">'
     + '<div class="show-card-top">' + showTile(s)
     + '<div class="show-info"><div class="show-title">' + s.title + '</div>'
-    + '<div style="margin-top:3px;"><span class="dnf-badge">DNF</span><span style="font-size:11px;color:var(--muted);margin-left:6px;">' + s.platform + '</span></div>'
+    + '<div style="margin-top:3px;"><span class="dnf-badge">Didn't Finish</span><span style="font-size:11px;color:var(--muted);margin-left:6px;">' + s.platform + '</span></div>'
     + '</div>'
     + '<button class="btn-remove" onclick="removeShow(&quot;watched&quot;,&quot;' + sid + '&quot;)">&#x2715;</button>'
     + '</div>'
@@ -1071,13 +1086,13 @@ function buildCard(s, list) {
   if(list==='watching') actions='<button class="btn-start" onclick="moveToWatchlist(\'' + s.id + '\')" style="background:var(--olive);">&#8592; My List</button>';
   actions+=hideBtn(list, s);
   actions+='<button class="btn-remove" onclick="removeShow(\'' + list + '\',\'' + s.id + '\')" >&#x2715;</button>';
-  var moveLink=list==='watching'?'<div class="show-move" style="display:flex;align-items:center;gap:0;"><button class="done-watching-btn" onclick="markWatched(\'' + s.id + '\')" >Done Watching &#10003;</button><button class="didnt-finish-btn" onclick="markDNF(\'' + s.id + '\')" >Didn&#39;t Finish</button></div>':'';
+  var moveLink=list==='watching'?'<div class="show-move"><button class="done-watching-btn" onclick="markWatched(\'' + s.id + '\')" >Done Watching &#10003;</button><button class="didnt-finish-btn" onclick="markDNF(\'' + s.id + '\')" >Didn&#39;t Finish</button></div>':'';
   var inpId='inp-'+list+'-'+s.id;
   var reactToggle=s.showReact
     ?'<div class="inline-react"><input class="react-input" id="'+inpId+'" placeholder="What did you think?" /><button class="btn-send" onclick="submitReact(\''+list+'\',\''+s.id+'\')">Send</button><button class="btn-cancel" onclick="toggleReact(\''+list+'\',\''+s.id+'\')">Cancel</button></div>'
     :'<button class="btn-react-toggle" onclick="toggleReact(\''+list+'\',\''+s.id+'\')">+ What did you think?</button>';
   var hasReact=reactionsHTML(s.reactions,list,s.id)||reactToggle;
-  return '<div class="show-card'+(s.hidden?' is-hidden':'')+'"><div class="show-card-top">'+showTile(s)+'<div class="show-info"><div class="show-title">'+s.title+(s.hidden?'<span class="hidden-badge">Hidden from friends</span>':'')+'</div>'+moveLink+'</div><div class="show-actions">'+actions+'</div></div>'+(hasReact?'<div class="react-area">'+reactionsHTML(s.reactions,list,s.id)+reactToggle+'</div>':'')+'</div>';
+  return '<div class="show-card'+(s.hidden?' is-hidden':'')+'"><div class="show-card-top">'+showTile(s)+'<div class="show-info"><div class="show-title">'+s.title+(s.hidden?'<span class="hidden-badge">Hidden from friends</span>':'')+'</div></div><div class="show-actions">'+actions+'</div></div>'+moveLink+(hasReact?'<div class="react-area">'+reactionsHTML(s.reactions,list,s.id)+reactToggle+'</div>':'')+'</div>';
 }
 
 
@@ -1164,7 +1179,7 @@ function showFriend(id) {
     svcs.forEach(function(svc){
       html+='<div class="service-group"><div class="service-divider"><span class="service-divider-text">'+svc+'</span></div><div class="shows-grid">';
       groups[svc].sort(function(a,b){return a.title.localeCompare(b.title);}).forEach(function(s){
-        var rHTML=reactionsHTML(s.reactions);
+        var rHTML=reactionsHTML(s.reactions, lk, s.id, f.id);
         var inpId='finp-'+lk+'-'+f.id+'-'+s.id;
         var reactToggle=s.showReact
           ?'<div class="inline-react"><input class="react-input" id="'+inpId+'" placeholder="What did you think?" /><button class="btn-send" onclick="submitFR(\''+f.id+'\',\''+lk+'\',\''+s.id+'\')">Send</button><button class="btn-cancel" onclick="toggleFR(\''+f.id+'\',\''+lk+'\',\''+s.id+'\')">Cancel</button></div>'
@@ -1201,7 +1216,7 @@ function showFriend(id) {
           + f.watched.filter(function(x){return x.dnf;}).map(function(s){
               return '<div class="dnf-card"><div class="show-card-top">'+tvIcon()
                 +'<div class="show-info"><div class="show-title">'+s.title+'</div>'
-                +'<div style="margin-top:3px;"><span class="dnf-badge">DNF</span>'
+                +'<div style="margin-top:3px;"><span class="dnf-badge">Didn't Finish</span>'
                 +'<span style="font-size:11px;color:var(--muted);margin-left:6px;">'+s.platform+'</span>'
                 +'</div></div></div></div>';
             }).join('')+'</div>'
@@ -1742,7 +1757,7 @@ async function getFriendsWithShows() {
   });
   function normReaction(r) {
     var ku = userLookup[r.user_id] || { name: 'Someone', initials: '?', color: '#aaa' };
-    return { user: ku.name, initials: ku.initials, color: ku.color, text: r.text, sentiment: r.sentiment, reactedAt: r.reacted_at };
+    return { id: r.id, reactorId: r.user_id, user: ku.name, initials: ku.initials, color: ku.color, text: r.text, sentiment: r.sentiment, reactedAt: r.reacted_at };
   }
   function normShow(s) { var rx = allReactions.filter(function(r){ return r.show_id === s.id; }); return Object.assign({}, s, { reactions: rx.map(normReaction), showReact: false }); }
 
@@ -2256,6 +2271,9 @@ window.addShow = async function(list) {
   }
 };
 
+var _dwmPending = null;
+var _dwmRating = 0;
+
 window.markWatched = async function(id) {
   var idx = state.watching.findIndex(function(x) { return x.id === id; });
   if (idx === -1) return;
@@ -2265,6 +2283,62 @@ window.markWatched = async function(id) {
   launchConfetti();
   renderList('watching'); renderList('watched');
   try { await updateShowStatus(id, 'watched', { moved_to_binged_at: new Date().toISOString() }); } catch(e) { console.error('markWatched error:', e); }
+  _dwmPending = show;
+  _dwmRating = 0;
+  document.getElementById('dwm-title').textContent = show.title;
+  document.getElementById('dwm-comment').value = '';
+  renderDWMRemotes();
+  var ov = document.getElementById('dwm-overlay');
+  ov.style.display = 'flex';
+};
+
+function renderDWMRemotes() {
+  var el = document.getElementById('dwm-remotes');
+  if (!el) return;
+  var html = '';
+  for (var n = 1; n <= 5; n++) {
+    var lit = n <= _dwmRating;
+    html += '<button onclick="dwmRate(' + n + ')" style="background:none;border:none;cursor:pointer;opacity:' + (lit ? '1' : '0.22') + ';">' + remoteIcon(22, lit) + '</button>';
+  }
+  el.innerHTML = html;
+}
+
+window.dwmRate = function(n) {
+  _dwmRating = (_dwmRating === n) ? 0 : n;
+  renderDWMRemotes();
+};
+
+window.submitDoneWatching = async function() {
+  if (!_dwmPending) return;
+  var show = _dwmPending;
+  var comment = document.getElementById('dwm-comment').value.trim();
+  document.getElementById('dwm-overlay').style.display = 'none';
+  if (_dwmRating > 0) {
+    show.rating = _dwmRating;
+    try { await updateShowRating(show.id, _dwmRating); } catch(e) { console.error('dwm rating error:', e); }
+    renderList('watched');
+  }
+  if (comment) {
+    var u = state.user;
+    var txt = comment;
+    var sentiment = detectSentiment(txt);
+    var newReact = { id: null, reactorId: u ? u.id : null, user: u ? (u.first + (u.last ? ' ' + u.last : '')) : 'You', initials: u ? u.initials : 'Y', color: '#C4622D', text: txt, sentiment: sentiment, reactedAt: new Date().toISOString() };
+    show.reactions = show.reactions || [];
+    show.reactions.push(newReact);
+    renderList('watched');
+    try {
+      var saved = await dbAddReaction(show.id, txt, sentiment);
+      if (saved && saved.id) newReact.id = saved.id;
+    } catch(e) { console.error('dwm comment error:', e); }
+  }
+  _dwmPending = null;
+  _dwmRating = 0;
+};
+
+window.skipDoneWatching = function() {
+  document.getElementById('dwm-overlay').style.display = 'none';
+  _dwmPending = null;
+  _dwmRating = 0;
 };
 
 window.markDNF = async function(id) {
@@ -2346,6 +2420,17 @@ window.deleteReact = async function(list, showId, reactId) {
   s.reactions.splice(idx, 1);
   renderList(list);
   try { await dbDeleteReaction(reactId); } catch(e) { console.error('deleteReact error:', e); }
+};
+
+window.deleteFriendReact = async function(friendId, lk, showId, reactId) {
+  var f = state.friends.find(function(x) { return x.id === friendId; });
+  if (!f) return;
+  var arr = lk === 'w' ? f.watching : lk === 'wl' ? f.watchlist : f.watched;
+  var show = arr && arr.find(function(s) { return s.id === showId; });
+  if (!show) return;
+  show.reactions = show.reactions.filter(function(r) { return r.id !== reactId; });
+  showFriend(friendId);
+  try { await dbDeleteReaction(reactId); } catch(e) { console.error('deleteFriendReact error:', e); }
 };
 
 async function dbRemoveFriend(friendId) {
