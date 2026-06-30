@@ -866,24 +866,7 @@ function renderBingedTop5() {
   }).join('');
 }
 
-function addTop5() {
-  var inp = document.getElementById('t5p-title');
-  var plt = document.getElementById('top5-platform');
-  if (!inp || !inp.value.trim()) return;
-  if (!state.user.top5) state.user.top5 = [];
-  if (state.user.top5.length >= 5) {
-    inp.style.borderColor = '#C4622D';
-    inp.placeholder = 'Max 5 shows reached';
-    setTimeout(function() { inp.style.borderColor = ''; inp.placeholder = 'Search for a show...'; }, 1500);
-    return;
-  }
-  var tmdb = (typeof window._tmdbPending !== 'undefined' ? window._tmdbPending : null) || {};
-  state.user.top5.push({title: inp.value.trim(), platform: plt ? plt.value : '', poster_path: tmdb.poster_path || null});
-  inp.value = '';
-  if (plt) plt.value = '';
-  if (typeof window._tmdbPending !== 'undefined') window._tmdbPending = {};
-  renderTop5();
-}
+function addTop5() { /* defined in script block 2 as window.addTop5 */ }
 
 function removeTop5(idx) {
   if (!state.user || !state.user.top5) return;
@@ -2195,7 +2178,7 @@ window.saveProfile = async function() {
     await sb.from('top5_shows').delete().eq('user_id', uid);
     if (state.user.top5 && state.user.top5.length) {
       var rows = state.user.top5.map(function(s, i) {
-        return { user_id: uid, title: s.title, platform: s.platform || '', rank: i + 1 };
+        return { user_id: uid, title: s.title, platform: s.platform || '', rank: i + 1, poster_path: s.poster_path || null };
       });
       var { error: te } = await sb.from('top5_shows').insert(rows);
       if (te) throw te;
@@ -2642,6 +2625,26 @@ window.addBingedTop5 = async function() {
       renderList('watched');
     } catch(e) { console.error('Error auto-adding to Binged:', e); }
   }
+};
+
+window.addTop5 = async function() {
+  var inp = document.getElementById('t5p-title');
+  var plt = document.getElementById('top5-platform');
+  if (!inp || !inp.value.trim()) return;
+  if (!state.user.top5) state.user.top5 = [];
+  if (state.user.top5.length >= 5) {
+    inp.style.borderColor = '#C4622D';
+    inp.placeholder = 'Max 5 shows reached';
+    setTimeout(function() { inp.style.borderColor = ''; inp.placeholder = 'Search for a show...'; }, 1500);
+    return;
+  }
+  var tmdb = _tmdbPending || {};
+  state.user.top5.push({ title: inp.value.trim(), platform: plt ? plt.value : '', poster_path: tmdb.poster_path || null });
+  inp.value = '';
+  if (plt) plt.value = '';
+  _tmdbPending = {};
+  renderTop5();
+  try { await saveTop5(state.user.top5); } catch(e) { console.error('Error saving top5:', e); }
 };
 
 window.removeBingedTop5 = async function(idx) {
