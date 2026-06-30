@@ -2003,12 +2003,13 @@ window.handleVerifyOtp = async function() {
     const { data, error } = await sb.auth.verifyOtp({ email, token, type: 'email' });
     if (error) throw error;
     btn.textContent = 'Signing you in\u2026';
-    // Use the user returned directly from verifyOtp \u2014 don't wait for onAuthStateChange
     var uid = data && data.user && data.user.id;
     if (uid) {
-      var profile = await fetchProfileById(uid);
-      if (!profile) { showScreen('onboard'); }
-      else { await loadUserIntoState(profile); await recordSession(); }
+      try {
+        var profile = await fetchProfileById(uid);
+        if (!profile) { showScreen('onboard'); }
+        else { await loadUserIntoState(profile); await recordSession(); }
+      } catch(e2) { console.error('profile load error:', e2); }
     }
   } catch(e) {
     errEl.textContent = 'Invalid or expired code. Please try again.';
