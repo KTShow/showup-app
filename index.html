@@ -537,6 +537,7 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
       <div id="friends-view">
         <div class="page-title">&#127968;&nbsp; The Living Room</div>
         <div class="page-sub">Your Crowd &mdash; see what everyone's watching</div>
+        <div id="lr-theme-banner" style="margin-bottom:16px;"></div>
         <div class="lr-toggle">
           <button class="lr-toggle-btn active" id="toggle-crew" onclick="switchLRView('crew')"><span class="toggle-icon">🛋️</span>Your Crowd</button>
           <button class="lr-toggle-btn" id="toggle-picks" onclick="switchLRView('picks')"><span class="toggle-icon">&#127942;</span>Friends Favorites</button>
@@ -720,13 +721,13 @@ var PLATFORMS = ['Amazon Prime Video','Apple TV+','Disney+','HBO Max','Hulu','Ne
 var CONFETTI_COLORS = ['#C4622D','#6B2D4E','#C49A3C','#5C6B3A','#F5EFE6','#D4734E'];
 
 var ROOMS = {
-  cabin:    {name:'Cabin',     cls:'room-cabin',    color:'#9B3820', desc:'Warm Wood & Plaid'},
-  coastal:  {name:'Coastal',   cls:'room-coastal',  color:'#1A7AAE', desc:'Sky Blue & Sea Breeze'},
-  formal:   {name:'Formal',    cls:'room-formal',   color:'#1C3D7A', desc:'Blue Toile & Gold'},
-  mancave:  {name:'Man Cave',  cls:'room-mancave',  color:'#C41E1E', desc:'Pool Table & Darts'},
-  modern:   {name:'Modern',    cls:'room-modern',   color:'#2A6040', desc:'Clean Lines & Greens'},
-  tuscany:  {name:'Tuscany',   cls:'room-tuscany',  color:'#B85428', desc:'Terracotta & Forest'},
-  worldcup: {name:'World Cup', cls:'room-worldcup', color:'#1A8C2C', desc:'The Beautiful Game'},
+  cabin:    {name:'Cabin',     cls:'room-cabin',    color:'#9B3820', desc:'Warm Wood & Plaid',       emoji:'🪵🔥', tagline:'Wood-burning, slow-burning. Perfect for a long binge.'},
+  coastal:  {name:'Coastal',   cls:'room-coastal',  color:'#1A7AAE', desc:'Sky Blue & Sea Breeze',   emoji:'🌊⚓', tagline:'Salt air and streaming. Life is good.'},
+  formal:   {name:'Formal',    cls:'room-formal',   color:'#1C3D7A', desc:'Blue Toile & Gold',       emoji:'🥂🎭', tagline:'Elevated taste. Premium viewing. No spoilers at the table.'},
+  mancave:  {name:'Man Cave',  cls:'room-mancave',  color:'#C41E1E', desc:'Pool Table & Darts',      emoji:'🎮🏈', tagline:'Your space. Your rules. Your remote.'},
+  modern:   {name:'Modern',    cls:'room-modern',   color:'#2A6040', desc:'Clean Lines & Greens',    emoji:'🌿☕', tagline:'Clean lines. Good taste. Great picks.'},
+  tuscany:  {name:'Tuscany',   cls:'room-tuscany',  color:'#B85428', desc:'Terracotta & Forest',     emoji:'🍷🫒', tagline:'La dolce vita starts with a great show.'},
+  worldcup: {name:'World Cup', cls:'room-worldcup', color:'#1A8C2C', desc:'The Beautiful Game',      emoji:'⚽🏆', tagline:'Every night is match night.'},
 };
 
 var state = {
@@ -781,6 +782,20 @@ function setRoom(roomKey) {
   }
   updateAvatar();
   renderRoomGrid();
+  renderThemeBanner();
+}
+
+function renderThemeBanner() {
+  var el = document.getElementById('lr-theme-banner');
+  if (!el) return;
+  var roomKey = state.user && state.user.room ? state.user.room : 'tuscany';
+  var r = ROOMS[roomKey];
+  if (!r) { el.innerHTML = ''; return; }
+  el.innerHTML = '<div style="background:linear-gradient(135deg,var(--terra),var(--fig));border-radius:16px;padding:20px 24px;text-align:center;box-shadow:var(--shadow);">'
+    + '<div style="font-size:38px;margin-bottom:8px;line-height:1;">' + r.emoji + '</div>'
+    + '<div style="font-family:var(--serif);font-size:20px;font-weight:700;color:white;letter-spacing:0.03em;margin-bottom:5px;">The ' + r.name + ' Living Room</div>'
+    + '<div style="font-size:13px;color:rgba(255,255,255,0.82);line-height:1.5;">' + r.tagline + '</div>'
+    + '</div>';
 }
 
 function updateAvatar() {
@@ -929,7 +944,7 @@ function showTab(tab, btn) {
   document.querySelectorAll('.nav-tab').forEach(function(t){ t.classList.remove('active'); });
   document.getElementById('tab-'+tab).style.display='block';
   btn.classList.add('active');
-  if (tab==='living-room') { renderFriends(); if (typeof loadAndRenderFriends === 'function') loadAndRenderFriends(); }
+  if (tab==='living-room') { renderThemeBanner(); renderFriends(); if (typeof loadAndRenderFriends === 'function') loadAndRenderFriends(); }
   if (tab==='watched') renderBingedTop5();
   if (tab!=='living-room') state.lastViewedFriend = null;
   if (state.user) state.user.lastActive = new Date().toISOString();
