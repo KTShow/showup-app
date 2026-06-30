@@ -2012,7 +2012,7 @@ window.handleVerifyOtp = async function() {
         var rows = res.ok ? await res.json() : [];
         var profile = rows.length > 0 ? rows[0] : null;
         if (!profile) { showScreen('onboard'); }
-        else { await loadUserIntoState(profile); await recordSession(); }
+        else { setTimeout(async function() { await loadUserIntoState(profile); await recordSession(); }, 0); }
       } catch(e2) { console.error('post-OTP load error:', e2); }
     }
   } catch(e) {
