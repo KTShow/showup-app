@@ -1921,6 +1921,10 @@ async function bootstrap() {
     console.error('[bootstrap] CATCH error:', e);
     _bootstrapComplete = true;
     showScreen('login');
+    var dbg = document.createElement('div');
+    dbg.style.cssText = 'position:fixed;bottom:0;left:0;right:0;background:#c0392b;color:white;padding:12px;font-size:12px;z-index:9999;word-break:break-all;';
+    dbg.textContent = 'DEBUG: ' + (e && e.message ? e.message : String(e));
+    document.body.appendChild(dbg);
   }
 }
 
