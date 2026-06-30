@@ -2000,21 +2000,16 @@ window.handleVerifyOtp = async function() {
   btn.disabled = true;
   btn.textContent = 'Verifying\u2026';
   try {
-    const { data, error } = await sb.auth.verifyOtp({ email, token, type: 'email' });
+    const { error } = await sb.auth.verifyOtp({ email, token, type: 'email' });
     if (error) throw error;
     btn.textContent = 'Signing you in\u2026';
-    if (data && data.session && data.user) {
-      try {
-        var res = await fetch(
-          SUPABASE_URL + '/rest/v1/users?id=eq.' + data.user.id + '&select=*&limit=1',
-          { headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + data.session.access_token } }
-        );
-        var rows = res.ok ? await res.json() : [];
-        var profile = rows.length > 0 ? rows[0] : null;
-        if (!profile) { showScreen('onboard'); }
-        else { setTimeout(async function() { await loadUserIntoState(profile); await recordSession(); }, 0); }
-      } catch(e2) { console.error('post-OTP load error:', e2); }
-    }
+    setTimeout(function() {
+      var appScreen = document.getElementById('screen-app');
+      if (appScreen && appScreen.classList.contains('active')) return;
+      btn.textContent = 'Taking too long? Tap here';
+      btn.disabled = false;
+      btn.onclick = function() { window.location.reload(); };
+    }, 4000);
   } catch(e) {
     errEl.textContent = 'Invalid or expired code. Please try again.';
     errEl.style.display = 'block';
