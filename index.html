@@ -724,9 +724,7 @@ var ROOMS = {
   coastal:  {name:'Coastal',   cls:'room-coastal',  color:'#1A7AAE', desc:'Sky Blue & Sea Breeze',   emoji:'🌊⚓', tagline:'Salt air and streaming. Life is good.'},
   formal:   {name:'Formal',    cls:'room-formal',   color:'#1C3D7A', desc:'Blue Toile & Gold',       emoji:'🥂🎭', tagline:'Elevated taste. Premium viewing. No spoilers at the table.'},
   mancave:  {name:'Man Cave',  cls:'room-mancave',  color:'#C41E1E', desc:'Pool Table & Darts',      emoji:'🎮🏈', tagline:'Your space. Your rules. Your remote.'},
-  modern:   {name:'Modern',    cls:'room-modern',   color:'#2A6040', desc:'Clean Lines & Greens',    emoji:'🌿☕', tagline:'Clean lines. Good taste. Great picks.'},
   tuscany:  {name:'Tuscany',   cls:'room-tuscany',  color:'#B85428', desc:'Terracotta & Forest',     emoji:'🍷🫒', tagline:'La dolce vita starts with a great show.'},
-  worldcup: {name:'World Cup', cls:'room-worldcup', color:'#1A8C2C', desc:'The Beautiful Game',      emoji:'⚽🏆', tagline:'Every night is match night.'},
 };
 
 var state = {
@@ -900,7 +898,6 @@ function renderRoomGrid() {
     return '<button class="room-btn' + (isSelected ? ' selected' : '') + '" onclick="setRoomAndSave(\'' + k + '\')" style="border-color:' + (isSelected ? r.color : '') + ';">'
       + '<div style="width:40px;height:40px;border-radius:50%;background:' + r.color + ';margin:0 auto;display:flex;align-items:center;justify-content:center;font-size:22px;">🛋️</div>'
       + '<div class="room-btn-name">' + r.name + '</div>'
-      + '<div class="room-btn-desc">' + r.desc + '</div>'
       + '</button>';
   }).join('');
 }
