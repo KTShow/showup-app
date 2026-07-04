@@ -268,8 +268,8 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
 <!-- DONE WATCHING MODAL -->
 <div id="dwm-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:600;align-items:center;justify-content:center;padding:20px;box-sizing:border-box;">
   <div style="background:white;border-radius:20px;padding:28px 24px;max-width:360px;width:100%;text-align:center;box-shadow:0 12px 48px rgba(0,0,0,0.2);">
-    <div style="font-size:36px;margin-bottom:6px;">🍿</div>
-    <div style="font-family:var(--serif);font-size:21px;font-weight:700;color:var(--terra);margin-bottom:4px;">You binged it!</div>
+    <div id="dwm-emoji" style="font-size:36px;margin-bottom:6px;">🍿</div>
+    <div id="dwm-heading" style="font-family:var(--serif);font-size:21px;font-weight:700;color:var(--terra);margin-bottom:4px;">You binged it!</div>
     <div id="dwm-title" style="font-size:14px;color:var(--muted);margin-bottom:22px;"></div>
     <div style="font-size:13px;font-weight:700;color:var(--charcoal);margin-bottom:12px;">How many remotes?</div>
     <div id="dwm-remotes" style="display:flex;justify-content:center;gap:10px;margin-bottom:22px;"></div>
@@ -1065,6 +1065,7 @@ function buildDNFCard(s) {
     + '<div class="show-info"><div class="show-title">' + s.title + '</div>'
     + '<div style="margin-top:3px;"><span class="dnf-badge">Didn&#39;t Finish</span><span style="font-size:11px;color:var(--muted);margin-left:6px;">' + s.platform + '</span></div>'
     + '</div>'
+    + '<div class="show-actions">' + remoteRating('watched', s.id, s.rating) + '</div>'
     + '<button class="btn-remove" onclick="removeShow(&quot;watched&quot;,&quot;' + sid + '&quot;)">&#x2715;</button>'
     + '</div>'
     + '<div class="react-area">' + reactionsHTML(s.reactions, 'watched', s.id) + reactToggle + '</div>'
@@ -1210,7 +1211,8 @@ function showFriend(id) {
                 +'<div class="show-info"><div class="show-title">'+s.title+'</div>'
                 +'<div style="margin-top:3px;"><span class="dnf-badge">Didn&#39;t Finish</span>'
                 +'<span style="font-size:11px;color:var(--muted);margin-left:6px;">'+s.platform+'</span>'
-                +'</div></div></div></div>';
+                +'</div>'+(s.rating?'<div style="margin-top:5px;">'+remoteStatic(s.rating)+'</div>':'')
+                +'</div></div></div>';
             }).join('')+'</div>'
         : '')
     : '')
@@ -1234,7 +1236,7 @@ function buildRankings(){
   state.friends.forEach(function(f){
     if(!f||!f.name||!f.watched)return;
     f.watched.forEach(function(s){
-      if(!s||!s.title||!s.rating||s.rating===0||s.dnf)return;
+      if(!s||!s.title||!s.rating||s.rating===0)return;
       var key=s.title.toLowerCase().trim();
       if(!shows[key])shows[key]={title:s.title,platform:s.platform||'',ratings:[],raters:[]};
       shows[key].ratings.push(s.rating);
@@ -1244,7 +1246,7 @@ function buildRankings(){
   });
   var list=Object.values(shows).map(function(s){var avg=s.ratings.reduce(function(a,b){return a+b;},0)/s.ratings.length;return {title:s.title,platform:s.platform,avg:Math.round(avg*10)/10,count:s.ratings.length,raters:s.raters};});
   list.sort(function(a,b){return b.avg-a.avg||b.count-a.count;});
-  return list.slice(0, 10);
+  return list.slice(0, 25);
 }
 
 function renderRankings(){
@@ -2261,12 +2263,14 @@ window.addShow = async function(list) {
       original_network: tmdb.original_network, first_air_year: tmdb.first_air_year,
       number_of_seasons: tmdb.number_of_seasons, show_status: tmdb.show_status,
       overview: tmdb.overview, vote_average: tmdb.vote_average });
-    state[list].push({ id: show.id, title: title, platform: platform, rating: 0, hidden: false, dnf: false,
+    var newShow = { id: show.id, title: title, platform: platform, rating: 0, hidden: false, dnf: false,
       source: src, influencedBy: inf, addedAt: show.added_at, reactions: [], showReact: false,
-      poster_path: tmdb.poster_path || null });
+      poster_path: tmdb.poster_path || null };
+    state[list].push(newShow);
     tEl.value = ''; pEl.value = '';
     _tmdbPending = {};
     renderList(list);
+    if (list === 'watched') openDWM(newShow);
   } catch(e) {
     console.error('Error adding show:', e);
     alert('Error adding show. Please try again.');
@@ -2275,6 +2279,17 @@ window.addShow = async function(list) {
 
 var _dwmPending = null;
 var _dwmRating = 0;
+
+function openDWM(show, heading, emoji) {
+  _dwmPending = show;
+  _dwmRating = 0;
+  document.getElementById('dwm-emoji').textContent = emoji || '🍿';
+  document.getElementById('dwm-heading').textContent = heading || 'You binged it!';
+  document.getElementById('dwm-title').textContent = show.title;
+  document.getElementById('dwm-comment').value = '';
+  renderDWMRemotes();
+  document.getElementById('dwm-overlay').style.display = 'flex';
+}
 
 window.markWatched = async function(id) {
   var idx = state.watching.findIndex(function(x) { return x.id === id; });
@@ -2285,13 +2300,7 @@ window.markWatched = async function(id) {
   launchConfetti();
   renderList('watching'); renderList('watched');
   try { await updateShowStatus(id, 'watched', { moved_to_binged_at: new Date().toISOString() }); } catch(e) { console.error('markWatched error:', e); }
-  _dwmPending = show;
-  _dwmRating = 0;
-  document.getElementById('dwm-title').textContent = show.title;
-  document.getElementById('dwm-comment').value = '';
-  renderDWMRemotes();
-  var ov = document.getElementById('dwm-overlay');
-  ov.style.display = 'flex';
+  openDWM(show);
 };
 
 function renderDWMRemotes() {
@@ -2347,10 +2356,11 @@ window.markDNF = async function(id) {
   var idx = state.watching.findIndex(function(x) { return x.id === id; });
   if (idx === -1) return;
   var show = state.watching.splice(idx, 1)[0];
-  show.dnf = true; show.rating = 0;
+  show.dnf = true;
   state.watched.push(show);
   renderList('watching'); renderList('watched');
-  try { await updateShowStatus(id, 'dnf', { dnf: true, rating: 0 }); } catch(e) { console.error('markDNF error:', e); }
+  try { await updateShowStatus(id, 'dnf', { dnf: true }); } catch(e) { console.error('markDNF error:', e); }
+  openDWM(show, "Didn't finish? Rate it anyway", '🎬');
 };
 
 window.moveToWatching = async function(id) {
