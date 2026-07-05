@@ -1,18 +1,21 @@
--- STEP 2: DELETE — only run this after reviewing STEP 1's results and
--- confirming those are exactly the test accounts you want removed from
--- everyone's Living Room mesh. This does NOT delete the user accounts
--- themselves — only their connections/memberships in the beta mesh.
+-- STEP 2: DELETE — targets these 3 specific confirmed test accounts only:
+--   tracey-k-2yqw  (5cd5752b-4c02-4044-a155-f1d130f921c3)
+--   tracey-k-5nfz  (5c3c930e-f9be-4937-9d6e-61a36ee85086)
+--   show-u-96ez    (baa32ebf-3ac6-41c9-bb33-294c20550060)
+-- Your real account (tracey-k-b6tt) is intentionally NOT in this list.
 --
--- This removes each matched test account from every Living Room they're
--- in, AND removes everyone else from that test account's own Living Room —
--- a full, symmetric cleanup regardless of who they got connected to.
+-- This removes each of these 3 accounts from every Living Room they're in,
+-- AND removes everyone else from these accounts' own Living Rooms — a full,
+-- symmetric cleanup. It does not delete the accounts themselves, only their
+-- mesh connections.
 
 with test_users as (
   select id from users
-  where username ilike 'tracey%'
-     or username ilike 'showup%'
-     or first_name ilike 'tracey%'
-     or first_name ilike 'showup%'
+  where id in (
+    '5cd5752b-4c02-4044-a155-f1d130f921c3',
+    '5c3c930e-f9be-4937-9d6e-61a36ee85086',
+    'baa32ebf-3ac6-41c9-bb33-294c20550060'
+  )
 ),
 test_rooms as (
   select id from living_rooms where owner_id in (select id from test_users)
