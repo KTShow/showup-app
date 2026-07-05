@@ -398,7 +398,7 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
     </div>
 
     <div style="background:var(--cream);border:1px solid var(--border);border-radius:14px;padding:20px;margin-bottom:16px;box-shadow:var(--shadow);">
-      <div class="ob-label" style="margin-bottom:4px;">What are you into? <span style="font-weight:400;text-transform:none;font-size:11px;color:var(--muted);">Pick up to 7</span></div>
+      <div class="ob-label" style="margin-bottom:4px;">What are you into? <span style="font-weight:400;text-transform:none;font-size:11px;color:var(--muted);">Pick up to 7</span> <span id="hobby-limit-msg" style="display:none;font-weight:600;text-transform:none;font-size:11px;color:#C4622D;">You've picked 7 — remove one to swap it out</span></div>
       <div style="font-size:11px;color:var(--muted);margin-bottom:10px;font-style:italic;">Active</div>
       <div class="pill-grid" style="margin-bottom:14px;">
         <button class="pill-btn" onclick="togglePill(this,'hobby')">Cycling</button>
@@ -1396,7 +1396,12 @@ function togglePill(btn,type){
     var hobbySelected=document.querySelectorAll('#screen-tellmore .pill-btn.selected');
     var hobbyCount=0;
     hobbySelected.forEach(function(b){if(!b.closest('#career-pills')&&!b.closest('#household-pills')&&!b.closest('#when-pills')&&!b.closest('#frequency-pills')&&!b.closest('#discovery-pills'))hobbyCount++;});
-    if(!btn.classList.contains('selected')&&hobbyCount>=7){btn.style.borderColor='#C4622D';setTimeout(function(){btn.style.borderColor='';},800);return;}
+    if(!btn.classList.contains('selected')&&hobbyCount>=7){
+      btn.style.borderColor='#C4622D';setTimeout(function(){btn.style.borderColor='';},800);
+      var msg=document.getElementById('hobby-limit-msg');
+      if(msg){msg.style.display='inline';clearTimeout(window._hobbyMsgTimeout);window._hobbyMsgTimeout=setTimeout(function(){msg.style.display='none';},2200);}
+      return;
+    }
     btn.classList.toggle('selected');
   } else {btn.classList.toggle('selected');}
 }
