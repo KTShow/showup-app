@@ -51,8 +51,7 @@ Screens: login → onboard → tellmore → app → profile → settings
 5. **Existing user**: invite banner shows on DOMContentLoaded, BUT `connectViaInvite` is NOT called — this is a known gap to fix
 
 ## Known Issues / In Progress
-- **Invite flow for existing users**: When an already-logged-in user visits a `/join/` link, the banner shows but the connection is never created. Need to call `connectViaInvite(PENDING_INVITER)` inside `loadUserIntoState` when `PENDING_INVITER` is set.
-- **Living Room + invite flow for beta**: Active discussion — the next session's focus
+- None currently open. The invite-mesh flow (beta1 launch) is live and verified working for both new and existing users.
 
 ## Critical Code Notes
 - `bootstrap()` reads localStorage directly (never calls `getSession()`) — avoids Supabase PKCE init deadlock
