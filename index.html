@@ -123,6 +123,7 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
 .rank-title-text{font-size:14px;font-weight:600;color:var(--charcoal);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .rank-platform{font-size:10px;font-weight:700;color:white;background:var(--olive);padding:3px 8px;border-radius:10px;white-space:nowrap;flex-shrink:0;margin-right:10px;margin-left:8px;}
 .rank-remotes-inline{display:flex;gap:3px;align-items:center;flex-shrink:0;}
+.rank-avg-inline{font-family:var(--serif);font-size:13px;font-weight:700;color:var(--terra);margin-right:8px;flex-shrink:0;}
 .rank-detail{background:var(--cream);border:1px solid var(--border);border-radius:var(--radius);padding:18px;margin-top:16px;box-shadow:var(--shadow);}
 .rank-detail-title{font-family:var(--serif);font-size:18px;font-weight:700;color:var(--charcoal);margin-bottom:4px;}
 .rank-detail-sub{font-size:12px;color:var(--muted);margin-bottom:14px;}
@@ -1297,6 +1298,7 @@ function renderRankings(){
       +'<span class="rank-badge'+(isGold?' gold':'')+'">#'+rank+'</span>'
       +'<span class="rank-title-text">'+(s.title||'')+'</span>'
       +'<span class="rank-platform">'+(s.platform||'')+'</span>'
+      +'<span class="rank-avg-inline">'+s.avg.toFixed(1)+'</span>'
       +'<div class="rank-remotes-inline">'+remotes+'</div>'
       +'</div>';
   }).join('');
@@ -1533,11 +1535,12 @@ async function createUserProfile(profileData) {
     last_active: new Date().toISOString(),
   }).select().single();
   if (error) throw error;
-  await sb.from('living_rooms').insert({
+  const { error: roomError } = await sb.from('living_rooms').insert({
     owner_id: user.id,
     name: profileData.firstName + "'s Living Room",
     is_public: false,
   });
+  if (roomError) throw roomError;
   await recordSession();
   return data;
 }
