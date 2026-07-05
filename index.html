@@ -126,6 +126,7 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
 .rank-detail{background:var(--cream);border:1px solid var(--border);border-radius:var(--radius);padding:18px;margin-top:16px;box-shadow:var(--shadow);}
 .rank-detail-title{font-family:var(--serif);font-size:18px;font-weight:700;color:var(--charcoal);margin-bottom:4px;}
 .rank-detail-sub{font-size:12px;color:var(--muted);margin-bottom:14px;}
+.rank-detail-avg{font-family:var(--serif);font-size:26px;font-weight:700;color:var(--terra);}
 .rank-detail-row{display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--border);}
 .rank-detail-row:last-child{border-bottom:none;}
 .rank-detail-av{width:28px;height:28px;border-radius:50%;color:white;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
@@ -210,6 +211,10 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
 
 .btn-hide{background:none;border:none;cursor:pointer;padding:2px 6px;font-size:14px;color:var(--muted);border-radius:4px;transition:all 0.2s;}
 .btn-hide:hover{color:var(--fig);}
+.btn-platform-edit{background:none;border:none;cursor:pointer;padding:2px 6px;font-size:14px;color:var(--muted);border-radius:4px;transition:all 0.2s;}
+.btn-platform-edit:hover{color:var(--fig);}
+.platform-edit-row{margin-top:6px;}
+.platform-edit-row select{width:100%;box-sizing:border-box;border:1px solid var(--border);border-radius:8px;padding:6px 8px;font-family:var(--sans);font-size:12px;color:var(--charcoal);background:var(--cream);}
 .btn-hide.hidden{color:#c0392b;}
 .show-card.is-hidden{opacity:0.45;border-style:dashed;}
 .hidden-badge{font-size:10px;font-weight:700;color:#c0392b;background:#fdecea;padding:1px 7px;border-radius:8px;margin-left:6px;vertical-align:middle;}
@@ -546,7 +551,7 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
         <div class="page-sub">Your Crowd &mdash; see what everyone's watching</div>
         <div class="lr-toggle">
           <button class="lr-toggle-btn active" id="toggle-crew" onclick="switchLRView('crew')"><span class="toggle-icon">🛋️</span>Your Crowd</button>
-          <button class="lr-toggle-btn" id="toggle-picks" onclick="switchLRView('picks')"><span class="toggle-icon">&#127942;</span>Friends Favorites</button>
+          <button class="lr-toggle-btn" id="toggle-picks" onclick="switchLRView('picks')"><span class="toggle-icon">&#127942;</span>Friends' Favorites</button>
         </div>
         <div id="lr-crew-view">
           <div id="top5-banner-wrap"></div>
@@ -1060,12 +1065,14 @@ function buildDNFCard(s) {
   var reactToggle = s.showReact
     ? '<div class="inline-react"><input class="react-input" id="'+inpId+'" placeholder="What did you think?" /><button class="btn-send" onclick="submitReact(&quot;watched&quot;,&quot;'+sid+'&quot;)">Send</button><button class="btn-cancel" onclick="toggleReact(&quot;watched&quot;,&quot;'+sid+'&quot;)">Cancel</button></div>'
     : '<button class="btn-react-toggle" onclick="toggleReact(&quot;watched&quot;,&quot;'+sid+'&quot;)">+ What did you think?</button>';
+  var platformRow = s.editingPlatform ? platformSelect('watched', s.id, s.platform) : '';
   return '<div class="dnf-card">'
     + '<div class="show-card-top">' + showTile(s)
     + '<div class="show-info"><div class="show-title">' + s.title + '</div>'
     + '<div style="margin-top:3px;"><span class="dnf-badge">Didn&#39;t Finish</span><span style="font-size:11px;color:var(--muted);margin-left:6px;">' + s.platform + '</span></div>'
+    + platformRow
     + '</div>'
-    + '<div class="show-actions">' + remoteRating('watched', s.id, s.rating) + '</div>'
+    + '<div class="show-actions">' + remoteRating('watched', s.id, s.rating) + platformEditBtn('watched', s) + '</div>'
     + '<button class="btn-remove" onclick="removeShow(&quot;watched&quot;,&quot;' + sid + '&quot;)">&#x2715;</button>'
     + '</div>'
     + '<div class="react-area">' + reactionsHTML(s.reactions, 'watched', s.id) + reactToggle + '</div>'
@@ -1078,6 +1085,7 @@ function buildCard(s, list) {
   if(list==='watchlist') actions='<button class="btn-start" onclick="moveToWatching(\'' + s.id + '\')" >Queue It Up</button>';
   if(list==='watching') actions='<button class="btn-start" onclick="moveToWatchlist(\'' + s.id + '\')" style="background:var(--olive);">&#8592; My List</button>';
   actions+=hideBtn(list, s);
+  actions+=platformEditBtn(list, s);
   actions+='<button class="btn-remove" onclick="removeShow(\'' + list + '\',\'' + s.id + '\')" >&#x2715;</button>';
   var moveLink=list==='watching'?'<div class="show-move"><button class="done-watching-btn" onclick="markWatched(\'' + s.id + '\')" >Done Watching &#10003;</button><button class="didnt-finish-btn" onclick="markDNF(\'' + s.id + '\')" >Didn&#39;t Finish</button></div>':'';
   var inpId='inp-'+list+'-'+s.id;
@@ -1085,7 +1093,8 @@ function buildCard(s, list) {
     ?'<div class="inline-react"><input class="react-input" id="'+inpId+'" placeholder="What did you think?" /><button class="btn-send" onclick="submitReact(\''+list+'\',\''+s.id+'\')">Send</button><button class="btn-cancel" onclick="toggleReact(\''+list+'\',\''+s.id+'\')">Cancel</button></div>'
     :'<button class="btn-react-toggle" onclick="toggleReact(\''+list+'\',\''+s.id+'\')">+ What did you think?</button>';
   var hasReact=reactionsHTML(s.reactions,list,s.id)||reactToggle;
-  return '<div class="show-card'+(s.hidden?' is-hidden':'')+'"><div class="show-card-top">'+showTile(s)+'<div class="show-info"><div class="show-title">'+s.title+(s.hidden?'<span class="hidden-badge">Hidden from friends</span>':'')+'</div></div><div class="show-actions">'+actions+'</div></div>'+moveLink+(hasReact?'<div class="react-area">'+reactionsHTML(s.reactions,list,s.id)+reactToggle+'</div>':'')+'</div>';
+  var platformRow=s.editingPlatform?platformSelect(list,s.id,s.platform):'';
+  return '<div class="show-card'+(s.hidden?' is-hidden':'')+'"><div class="show-card-top">'+showTile(s)+'<div class="show-info"><div class="show-title">'+s.title+(s.hidden?'<span class="hidden-badge">Hidden from friends</span>':'')+'</div>'+platformRow+'</div><div class="show-actions">'+actions+'</div></div>'+moveLink+(hasReact?'<div class="react-area">'+reactionsHTML(s.reactions,list,s.id)+reactToggle+'</div>':'')+'</div>';
 }
 
 
@@ -1096,6 +1105,33 @@ function hideBtn(list, s) {
   var title = isHidden ? 'Show to friends' : 'Hide from friends';
   return '<button class="btn-hide' + (isHidden ? ' hidden' : '') + '" onclick="toggleHide(\''+list+'\',\''+s.id+'\')" title="'+title+'">' + icon + '</button>';
 }
+
+function platformEditBtn(list, s) {
+  return '<button class="btn-platform-edit" onclick="togglePlatEdit(\''+list+'\',\''+s.id+'\')" title="Change streaming service">&#9998;</button>';
+}
+
+function platformSelect(list, id, current) {
+  var opts = PLATFORMS.map(function(p){
+    return '<option value="'+p+'"'+(p===current?' selected':'')+'>'+p+'</option>';
+  }).join('');
+  return '<div class="platform-edit-row"><select onchange="changePlatform(\''+list+'\',\''+id+'\',this.value)">'+opts+'</select></div>';
+}
+
+function togglePlatEdit(list, id) {
+  var s = state[list].find(function(x){ return x.id === id; });
+  if (!s) return;
+  s.editingPlatform = !s.editingPlatform;
+  renderList(list);
+}
+
+window.changePlatform = async function(list, id, val) {
+  var s = state[list].find(function(x){ return x.id === id; });
+  if (!s) return;
+  s.platform = val;
+  s.editingPlatform = false;
+  renderList(list);
+  try { await updateShowPlatform(id, val); } catch(e) { console.error('changePlatform error:', e); }
+};
 
 function toggleHide_OLD(list, id) {
   var s = state[list].find(function(x){ return x.id === id; });
@@ -1277,8 +1313,12 @@ function showRankDetail(idx){
   panel.style.display='block';
   panel.innerHTML='<button class="rank-close" onclick="backToRankings()">\u2190 Back to rankings</button>'
     +'<div class="rank-detail"><div class="rank-detail-title">'+s.title+'</div>'
-    +'<div class="rank-detail-sub">Avg '+s.avg.toFixed(1)+' remotes &mdash; rated by '+s.count+' in your crowd</div>'
-    +'<div style="display:flex;gap:2px;margin-bottom:14px;">'+remotes+'</div>'+rows+'</div>';
+    +'<div style="display:flex;align-items:baseline;gap:10px;margin-bottom:4px;">'
+    +'<span class="rank-detail-avg">'+s.avg.toFixed(1)+'</span>'
+    +'<div style="display:flex;gap:2px;">'+remotes+'</div>'
+    +'</div>'
+    +'<div class="rank-detail-sub">rated by '+s.count+' in your crowd</div>'
+    +rows+'</div>';
   document.getElementById('rankings-list').style.display='none';
   panel.scrollIntoView({behavior:'smooth'});
 }
@@ -1604,6 +1644,11 @@ async function updateShowStatus(showId, status, extra) {
 
 async function updateShowRating(showId, rating) {
   const { error } = await sb.from('shows').update({ rating: rating }).eq('id', showId);
+  if (error) throw error;
+}
+
+async function updateShowPlatform(showId, platform) {
+  const { error } = await sb.from('shows').update({ platform: platform }).eq('id', showId);
   if (error) throw error;
 }
 
