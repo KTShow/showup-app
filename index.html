@@ -2583,6 +2583,7 @@ async function loadAndRenderFriends() {
   try {
     state.friends = await getFriendsWithShows();
     renderFriends();
+    renderRankings();
   } catch(e) {
     console.error('Error loading friends:', e);
     var grid = document.getElementById('friends-grid');
