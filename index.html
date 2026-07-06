@@ -372,7 +372,7 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
     <div class="page-sub">Helps us make ShowUp more personal. All private &mdash; never visible to others.</div>
 
     <div style="background:var(--cream);border:1px solid var(--border);border-radius:14px;padding:20px;margin-bottom:16px;box-shadow:var(--shadow);">
-      <div class="ob-label" style="margin-bottom:12px;">What do you do for work?</div>
+      <div class="ob-label" style="margin-bottom:12px;">What do you do for work? <span style="font-weight:400;text-transform:none;font-size:11px;color:var(--muted);">Pick 1</span></div>
       <div class="pill-grid" id="career-pills">
         <button class="pill-btn" onclick="togglePill(this,'career')">Arts &amp; Entertainment</button>
         <button class="pill-btn" onclick="togglePill(this,'career')">Creative &amp; Media</button>
@@ -398,7 +398,7 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
     </div>
 
     <div style="background:var(--cream);border:1px solid var(--border);border-radius:14px;padding:20px;margin-bottom:16px;box-shadow:var(--shadow);">
-      <div class="ob-label" style="margin-bottom:4px;">What are you into? <span style="font-weight:400;text-transform:none;font-size:11px;color:var(--muted);">Pick up to 7</span> <span id="hobby-limit-msg" style="display:none;font-weight:600;text-transform:none;font-size:11px;color:#C4622D;">You've picked 7 — remove one to swap it out</span></div>
+      <div class="ob-label" style="margin-bottom:4px;">What are your hobbies? <span style="font-weight:400;text-transform:none;font-size:11px;color:var(--muted);">Pick up to 7</span> <span id="hobby-limit-msg" style="display:none;font-weight:600;text-transform:none;font-size:11px;color:#C4622D;">You've picked 7 — remove one to swap it out</span></div>
       <div style="font-size:11px;color:var(--muted);margin-bottom:10px;font-style:italic;">Active</div>
       <div class="pill-grid" style="margin-bottom:14px;">
         <button class="pill-btn" onclick="togglePill(this,'hobby')">Cycling</button>
@@ -452,14 +452,14 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
     </div>
 
     <div style="background:var(--cream);border:1px solid var(--border);border-radius:14px;padding:20px;margin-bottom:16px;box-shadow:var(--shadow);">
-      <div class="ob-label" style="margin-bottom:4px;">How do you watch?</div>
+      <div class="ob-label" style="margin-bottom:4px;">How do you watch? <span style="font-weight:400;text-transform:none;font-size:11px;color:var(--muted);">Pick 1</span></div>
       <div style="font-size:11px;color:var(--muted);margin-bottom:10px;font-style:italic;">When do you mostly watch?</div>
       <div class="pill-grid" style="margin-bottom:14px;" id="when-pills">
         <button class="pill-btn" onclick="togglePill(this,'when')">Weeknights</button>
         <button class="pill-btn" onclick="togglePill(this,'when')">Weekends</button>
         <button class="pill-btn" onclick="togglePill(this,'when')">Both equally</button>
       </div>
-      <div style="font-size:11px;color:var(--muted);margin-bottom:10px;font-style:italic;">How often do you watch?</div>
+      <div style="font-size:11px;color:var(--muted);margin-bottom:10px;font-style:italic;">How often do you watch? <span style="font-weight:400;">Pick 1</span></div>
       <div class="pill-grid" id="frequency-pills">
         <button class="pill-btn" onclick="togglePill(this,'frequency')">Daily</button>
         <button class="pill-btn" onclick="togglePill(this,'frequency')">A few times a week</button>
@@ -2090,11 +2090,11 @@ window.resetLoginForm = function() {
 // ============================================================
 
 window.completeOnboard = async function() {
-  var first = document.getElementById('ob-first').value.trim();
-  var last  = document.getElementById('ob-last').value.trim();
+  var first = capFirst(document.getElementById('ob-first').value.trim());
+  var last  = document.getElementById('ob-last').value.trim().slice(0, 1).toUpperCase();
   var age   = document.getElementById('ob-age').value;
   var gender = document.getElementById('ob-gender').value;
-  var city  = document.getElementById('ob-city').value.trim();
+  var city  = capFirst(document.getElementById('ob-city').value.trim());
   var st    = document.getElementById('ob-state').value;
   if (!first) {
     document.getElementById('ob-first').style.borderColor = '#C4622D';
@@ -2223,9 +2223,9 @@ window.goToProfile = function() {
 };
 
 window.saveProfile = async function() {
-  var first = document.getElementById('pr-first').value.trim();
-  var last  = document.getElementById('pr-last').value.trim();
-  var city  = document.getElementById('pr-city').value.trim();
+  var first = capFirst(document.getElementById('pr-first').value.trim());
+  var last  = document.getElementById('pr-last').value.trim().slice(0, 1).toUpperCase();
+  var city  = capFirst(document.getElementById('pr-city').value.trim());
   var st    = document.getElementById('pr-state').value;
   var age   = document.getElementById('pr-age').value;
   var gender = document.getElementById('pr-gender').value;
@@ -2287,7 +2287,31 @@ document.addEventListener('DOMContentLoaded', function() {
     var banner = document.getElementById('invite-banner');
     if (banner) banner.style.display = 'block';
   }
+  setupNameFieldFormatting();
 });
+
+// Live-formats name/city fields as you type: capitalizes the first letter, and
+// truncates "last initial" fields to a single uppercase character. Also guards
+// against mobile autofill inserting a full last name past the 1-char limit,
+// since maxlength alone doesn't always stop autofill/paste on every browser.
+function setupNameFieldFormatting() {
+  function watch(id, mode) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    el.addEventListener('input', function() {
+      var v = el.value;
+      var formatted = mode === 'initial' ? v.slice(0, 1).toUpperCase() : capFirst(v);
+      if (formatted !== v) el.value = formatted;
+    });
+  }
+  ['ob-first', 'pr-first'].forEach(function(id) { watch(id, 'capitalize'); });
+  ['ob-last', 'pr-last'].forEach(function(id) { watch(id, 'initial'); });
+  ['ob-city', 'pr-city'].forEach(function(id) { watch(id, 'capitalize'); });
+}
+
+function capFirst(str) {
+  return str ? str.charAt(0).toUpperCase() + str.slice(1) : str;
+}
 
 window.setRoomAndSave = async function(roomKey) {
   if (typeof setRoom === 'function') setRoom(roomKey);
