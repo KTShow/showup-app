@@ -1308,6 +1308,12 @@ function showRankDetail(idx){
   var list=buildRankings(); var s=list[idx];
   var panel=document.getElementById('rank-detail-panel');
   var remotes=''; for(var n=1;n<=5;n++){var lit=n<=Math.floor(s.avg);remotes+='<span style="opacity:'+(lit?'1':'0.18')+';display:inline-block;">'+remoteIcon(16,lit)+'</span>';}
+  var myShow=(state.watched||[]).find(function(w){return w.title && w.title.toLowerCase().trim()===s.title.toLowerCase().trim() && w.rating>0;});
+  var myRow='';
+  if(myShow){
+    var mR=''; for(var n=1;n<=5;n++){mR+='<span style="opacity:'+(n<=myShow.rating?'1':'0.18')+';display:inline-block;">'+remoteIcon(13,n<=myShow.rating)+'</span>';}
+    myRow='<div class="rank-detail-row"><div class="rank-detail-av" style="background:#C4622D">'+(state.user&&state.user.initials?state.user.initials:'Y')+'</div><div class="rank-detail-name">You</div><div style="display:flex;gap:2px;">'+mR+'</div></div>';
+  }
   var rows=s.raters.slice().sort(function(a,b){return b.rating-a.rating;}).map(function(r){
     var rR=''; for(var n=1;n<=5;n++){rR+='<span style="opacity:'+(n<=r.rating?'1':'0.18')+';display:inline-block;">'+remoteIcon(13,n<=r.rating)+'</span>';}
     return '<div class="rank-detail-row"><div class="rank-detail-av" style="background:'+r.color+'">'+r.initials+'</div><div class="rank-detail-name">'+r.name+'</div><div style="display:flex;gap:2px;">'+rR+'</div></div>';
@@ -1320,7 +1326,7 @@ function showRankDetail(idx){
     +'<div style="display:flex;gap:2px;">'+remotes+'</div>'
     +'</div>'
     +'<div class="rank-detail-sub">rated by '+s.count+' in your crowd</div>'
-    +rows+'</div>';
+    +myRow+rows+'</div>';
   document.getElementById('rankings-list').style.display='none';
   panel.scrollIntoView({behavior:'smooth'});
 }
