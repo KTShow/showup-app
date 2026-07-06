@@ -2625,25 +2625,6 @@ function renderAboutYou() {
 // TOP 5 — Supabase-backed add / remove
 // ============================================================
 
-window.addTop5 = async function() {
-  var inp = document.getElementById('top5-input');
-  var plt = document.getElementById('top5-platform');
-  if (!inp || !inp.value.trim()) return;
-  if (!state.user.top5) state.user.top5 = [];
-  if (state.user.top5.length >= 5) {
-    inp.style.borderColor = '#C4622D';
-    inp.placeholder = 'Max 5 shows reached';
-    setTimeout(function() { inp.style.borderColor = ''; inp.placeholder = 'Show title...'; }, 1500);
-    return;
-  }
-  state.user.top5.push({ title: inp.value.trim(), platform: plt ? plt.value : '' });
-  inp.value = '';
-  if (plt) plt.value = '';
-  renderTop5();
-  renderBingedTop5();
-  try { await saveTop5(state.user.top5); } catch(e) { console.error('Error saving top5:', e); }
-};
-
 window.removeTop5 = async function(idx) {
   if (!state.user || !state.user.top5) return;
   state.user.top5.splice(idx, 1);
@@ -2651,6 +2632,29 @@ window.removeTop5 = async function(idx) {
   renderBingedTop5();
   try { await saveTop5(state.user.top5); } catch(e) { console.error('Error saving top5:', e); }
 };
+
+// Adding a show to Top 5 always auto-adds/updates it in Binged with a 5-remote rating,
+// since a Top 5 pick has no separate star rating of its own.
+async function autoAddTop5ToBinged(title, platform, tmdb) {
+  var existing = state.watched.find(function(s) { return s.title.toLowerCase() === title.toLowerCase() && !s.dnf; });
+  if (existing) {
+    existing.rating = 5;
+    try { await updateShowRating(existing.id, 5); } catch(e) { console.error('Error updating rating:', e); }
+    renderList('watched');
+  } else {
+    try {
+      var show = await dbAddShow({ title: title, platform: platform, status: 'watched', rating: 5,
+        tmdb_id: tmdb.tmdb_id || null, poster_path: tmdb.poster_path || null,
+        genre: tmdb.genre || null, original_network: tmdb.original_network || null,
+        first_air_year: tmdb.first_air_year || null, number_of_seasons: tmdb.number_of_seasons || null,
+        show_status: tmdb.show_status || null, overview: tmdb.overview || null, vote_average: tmdb.vote_average || null });
+      var normalized = normalizeShow(show);
+      normalized.rating = 5;
+      state.watched.push(normalized);
+      renderList('watched');
+    } catch(e) { console.error('Error auto-adding to Binged:', e); }
+  }
+}
 
 window.addBingedTop5 = async function() {
   var inp = document.getElementById('bt5-title');
@@ -2673,26 +2677,7 @@ window.addBingedTop5 = async function() {
   renderBingedTop5();
   renderTop5();
   try { await saveTop5(state.user.top5); } catch(e) { console.error('Error saving top5:', e); }
-
-  // Auto-add to Binged with 5 remotes
-  var existing = state.watched.find(function(s) { return s.title.toLowerCase() === title.toLowerCase() && !s.dnf; });
-  if (existing) {
-    existing.rating = 5;
-    try { await updateShowRating(existing.id, 5); } catch(e) { console.error('Error updating rating:', e); }
-    renderList('watched');
-  } else {
-    try {
-      var show = await dbAddShow({ title: title, platform: platform, status: 'watched', rating: 5,
-        tmdb_id: tmdb.tmdb_id || null, poster_path: tmdb.poster_path || null,
-        genre: tmdb.genre || null, original_network: tmdb.original_network || null,
-        first_air_year: tmdb.first_air_year || null, number_of_seasons: tmdb.number_of_seasons || null,
-        show_status: tmdb.show_status || null, overview: tmdb.overview || null, vote_average: tmdb.vote_average || null });
-      var normalized = normalizeShow(show);
-      normalized.rating = 5;
-      state.watched.push(normalized);
-      renderList('watched');
-    } catch(e) { console.error('Error auto-adding to Binged:', e); }
-  }
+  await autoAddTop5ToBinged(title, platform, tmdb);
 };
 
 window.addTop5 = async function() {
@@ -2707,12 +2692,15 @@ window.addTop5 = async function() {
     return;
   }
   var tmdb = _tmdbPending || {};
-  state.user.top5.push({ title: inp.value.trim(), platform: plt ? plt.value : '', poster_path: tmdb.poster_path || null });
+  var title = inp.value.trim();
+  var platform = plt ? plt.value : '';
+  state.user.top5.push({ title: title, platform: platform, poster_path: tmdb.poster_path || null });
   inp.value = '';
   if (plt) plt.value = '';
   _tmdbPending = {};
   renderTop5();
   try { await saveTop5(state.user.top5); } catch(e) { console.error('Error saving top5:', e); }
+  await autoAddTop5ToBinged(title, platform || 'Other', tmdb);
 };
 
 window.removeBingedTop5 = async function(idx) {
