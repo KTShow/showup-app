@@ -1269,18 +1269,31 @@ function switchLRView(view){
 }
 
 function buildRankings(){
+  // Pools every room member's ratings, including your own, so the ranking is the
+  // same shared "group favorites" list for everyone in the room — not a personalized
+  // view that excludes whoever happens to be looking at it.
   var shows={};
+  function addRating(name,color,initials,title,platform,rating,isMe){
+    var key=title.toLowerCase().trim();
+    if(!shows[key])shows[key]={title:title,platform:platform||'',ratings:[],raters:[]};
+    shows[key].ratings.push(rating);
+    shows[key].raters.push({name:name,color:color,rating:rating,initials:initials,isMe:!!isMe});
+  }
   state.friends.forEach(function(f){
     if(!f||!f.name||!f.watched)return;
+    var fColor=ROOMS[f.room||'tuscany']?ROOMS[f.room||'tuscany'].color:'#888';
     f.watched.forEach(function(s){
       if(!s||!s.title||!s.rating||s.rating===0)return;
-      var key=s.title.toLowerCase().trim();
-      if(!shows[key])shows[key]={title:s.title,platform:s.platform||'',ratings:[],raters:[]};
-      shows[key].ratings.push(s.rating);
-      var fColor=ROOMS[f.room||'tuscany']?ROOMS[f.room||'tuscany'].color:'#888';
-      shows[key].raters.push({name:f.name,color:fColor,rating:s.rating,initials:f.name.split(' ').map(function(x){return x[0]||'';}).join('')});
+      addRating(f.name,fColor,f.name.split(' ').map(function(x){return x[0]||'';}).join(''),s.title,s.platform,s.rating,false);
     });
   });
+  if(state.user){
+    var myColor=ROOMS[state.user.room||'tuscany']?ROOMS[state.user.room||'tuscany'].color:'#C4622D';
+    (state.watched||[]).forEach(function(s){
+      if(!s||!s.title||!s.rating||s.rating===0)return;
+      addRating('You',myColor,state.user.initials||'Y',s.title,s.platform,s.rating,true);
+    });
+  }
   var list=Object.values(shows).map(function(s){var avg=s.ratings.reduce(function(a,b){return a+b;},0)/s.ratings.length;return {title:s.title,platform:s.platform,avg:Math.round(avg*10)/10,count:s.ratings.length,raters:s.raters};});
   list.sort(function(a,b){return b.avg-a.avg||b.count-a.count;});
   return list.slice(0, 25);
@@ -1289,7 +1302,7 @@ function buildRankings(){
 function renderRankings(){
   var list=buildRankings(); var el=document.getElementById('rankings-list');
   document.getElementById('rank-detail-panel').style.display='none';
-  if(!list.length){el.innerHTML='<div class="empty"><div class="empty-icon">&#128252;</div>No ratings yet from your crowd.</div>';return;}
+  if(!list.length){el.innerHTML='<div class="empty"><div class="empty-icon">&#128252;</div>No ratings yet from the room.</div>';return;}
   el.innerHTML=list.map(function(s,i){
     var rank=i+1; var isGold=rank<=3;
     var remotes=''; var full=Math.floor(s.avg);
@@ -1308,15 +1321,9 @@ function showRankDetail(idx){
   var list=buildRankings(); var s=list[idx];
   var panel=document.getElementById('rank-detail-panel');
   var remotes=''; for(var n=1;n<=5;n++){var lit=n<=Math.floor(s.avg);remotes+='<span style="opacity:'+(lit?'1':'0.18')+';display:inline-block;">'+remoteIcon(16,lit)+'</span>';}
-  var myShow=(state.watched||[]).find(function(w){return w.title && w.title.toLowerCase().trim()===s.title.toLowerCase().trim() && w.rating>0;});
-  var myRow='';
-  if(myShow){
-    var mR=''; for(var n=1;n<=5;n++){mR+='<span style="opacity:'+(n<=myShow.rating?'1':'0.18')+';display:inline-block;">'+remoteIcon(13,n<=myShow.rating)+'</span>';}
-    myRow='<div class="rank-detail-row"><div class="rank-detail-av" style="background:#C4622D">'+(state.user&&state.user.initials?state.user.initials:'Y')+'</div><div class="rank-detail-name">You</div><div style="display:flex;gap:2px;">'+mR+'</div></div>';
-  }
-  var rows=s.raters.slice().sort(function(a,b){return b.rating-a.rating;}).map(function(r){
+  var rows=s.raters.slice().sort(function(a,b){return (b.isMe?1:0)-(a.isMe?1:0)||b.rating-a.rating;}).map(function(r){
     var rR=''; for(var n=1;n<=5;n++){rR+='<span style="opacity:'+(n<=r.rating?'1':'0.18')+';display:inline-block;">'+remoteIcon(13,n<=r.rating)+'</span>';}
-    return '<div class="rank-detail-row"><div class="rank-detail-av" style="background:'+r.color+'">'+r.initials+'</div><div class="rank-detail-name">'+r.name+'</div><div style="display:flex;gap:2px;">'+rR+'</div></div>';
+    return '<div class="rank-detail-row"><div class="rank-detail-av" style="background:'+r.color+'">'+r.initials+'</div><div class="rank-detail-name">'+(r.isMe?'You':r.name)+'</div><div style="display:flex;gap:2px;">'+rR+'</div></div>';
   }).join('');
   panel.style.display='block';
   panel.innerHTML='<button class="rank-close" onclick="backToRankings()">\u2190 Back to rankings</button>'
@@ -1325,8 +1332,8 @@ function showRankDetail(idx){
     +'<span class="rank-detail-avg">'+s.avg.toFixed(1)+'</span>'
     +'<div style="display:flex;gap:2px;">'+remotes+'</div>'
     +'</div>'
-    +'<div class="rank-detail-sub">rated by '+s.count+' in your crowd</div>'
-    +myRow+rows+'</div>';
+    +'<div class="rank-detail-sub">rated by '+s.count+' in the room</div>'
+    +rows+'</div>';
   document.getElementById('rankings-list').style.display='none';
   panel.scrollIntoView({behavior:'smooth'});
 }
