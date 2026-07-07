@@ -221,6 +221,8 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
 .hidden-badge{font-size:10px;font-weight:700;color:#c0392b;background:#fdecea;padding:1px 7px;border-radius:8px;margin-left:6px;vertical-align:middle;}
 .btn-delete-react{background:none;border:none;color:var(--muted);cursor:pointer;font-size:12px;padding:0 0 0 6px;opacity:0.55;line-height:1;align-self:center;flex-shrink:0;}
 .btn-delete-react:hover{color:#c0392b;opacity:1;}
+.btn-edit-react{background:none;border:none;color:var(--muted);cursor:pointer;font-size:12px;padding:0 0 0 6px;opacity:0.55;line-height:1;align-self:center;flex-shrink:0;}
+.btn-edit-react:hover{color:var(--terra);opacity:1;}
 .btn-remove-friend{background:none;border:1px solid rgba(192,57,43,0.3);color:#c0392b;border-radius:6px;padding:5px 12px;font-family:var(--sans);font-size:12px;font-weight:600;cursor:pointer;}
 .btn-remove-friend:hover{background:#fdecea;border-color:#c0392b;}
 @media(max-width:479px){
@@ -996,17 +998,39 @@ function remoteStatic(rating) {
   return html+'</div>';
 }
 
+function escAttr(str) {
+  return (str || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
 function reactionsHTML(reactions, list, showId, friendId) {
   if(!reactions||!reactions.length) return '';
   var uid = state.user && state.user.id;
   var html='<div class="react-list">';
   reactions.forEach(function(r){
-    var canDel = uid && r.reactorId === uid && r.id && list && showId;
+    var canEdit = uid && r.reactorId === uid && r.id && list && showId;
+    if (canEdit && r.editing) {
+      var editInpId = (friendId ? 'edit-finp-' : 'edit-inp-') + list + '-' + (friendId ? friendId + '-' : '') + showId + '-' + r.id;
+      var saveCall = friendId
+        ? 'submitEditFriendReact(\''+friendId+'\',\''+list+'\',\''+showId+'\',\''+r.id+'\')'
+        : 'submitEditReact(\''+list+'\',\''+showId+'\',\''+r.id+'\')';
+      var cancelCall = friendId
+        ? 'toggleEditFriendReact(\''+friendId+'\',\''+list+'\',\''+showId+'\',\''+r.id+'\')'
+        : 'toggleEditReact(\''+list+'\',\''+showId+'\',\''+r.id+'\')';
+      html+='<div class="react-item"><div class="react-av" style="background:'+r.color+'">'+r.initials+'</div>'
+        + '<div class="inline-react" style="flex:1;"><input class="react-input" id="'+editInpId+'" value="'+escAttr(r.text)+'" />'
+        + '<button class="btn-send" onclick="'+saveCall+'">Save</button>'
+        + '<button class="btn-cancel" onclick="'+cancelCall+'">Cancel</button></div></div>';
+      return;
+    }
     var delCall = friendId
       ? 'deleteFriendReact(\''+friendId+'\',\''+list+'\',\''+showId+'\',\''+r.id+'\')'
       : 'deleteReact(\''+list+'\',\''+showId+'\',\''+r.id+'\')';
-    var delBtn = canDel ? '<button class="btn-delete-react" onclick="'+delCall+'">&#x2715;</button>' : '';
-    html+='<div class="react-item"><div class="react-av" style="background:'+r.color+'">'+r.initials+'</div><div class="react-bubble"><b>'+r.user+'</b>'+r.text+'</div>'+delBtn+'</div>';
+    var editCall = friendId
+      ? 'toggleEditFriendReact(\''+friendId+'\',\''+list+'\',\''+showId+'\',\''+r.id+'\')'
+      : 'toggleEditReact(\''+list+'\',\''+showId+'\',\''+r.id+'\')';
+    var editBtn = canEdit ? '<button class="btn-edit-react" onclick="'+editCall+'">&#9998;</button>' : '';
+    var delBtn = canEdit ? '<button class="btn-delete-react" onclick="'+delCall+'">&#x2715;</button>' : '';
+    html+='<div class="react-item"><div class="react-av" style="background:'+r.color+'">'+r.initials+'</div><div class="react-bubble"><b>'+r.user+'</b>'+r.text+'</div>'+editBtn+delBtn+'</div>';
   });
   return html+'</div>';
 }
@@ -2514,6 +2538,13 @@ async function dbDeleteReaction(reactId) {
   if (error) throw error;
 }
 
+async function dbUpdateReaction(reactId, text, sentiment) {
+  const { data: { user } } = await sb.auth.getUser();
+  if (!user) throw new Error('Not authenticated');
+  const { error } = await sb.from('reactions').update({ text: text, sentiment: sentiment }).eq('id', reactId).eq('user_id', user.id);
+  if (error) throw error;
+}
+
 window.deleteReact = async function(list, showId, reactId) {
   var s = state[list].find(function(x) { return x.id === showId; });
   if (!s) return;
@@ -2533,6 +2564,62 @@ window.deleteFriendReact = async function(friendId, lk, showId, reactId) {
   show.reactions = show.reactions.filter(function(r) { return r.id !== reactId; });
   showFriend(friendId);
   try { await dbDeleteReaction(reactId); } catch(e) { console.error('deleteFriendReact error:', e); }
+};
+
+window.toggleEditReact = function(list, showId, reactId) {
+  var s = state[list].find(function(x) { return x.id === showId; });
+  if (!s) return;
+  var r = (s.reactions || []).find(function(x) { return x.id === reactId; });
+  if (!r) return;
+  r.editing = !r.editing;
+  renderList(list);
+  if (r.editing) setTimeout(function() {
+    var el = document.getElementById('edit-inp-' + list + '-' + showId + '-' + reactId);
+    if (el) { el.focus(); el.setSelectionRange(el.value.length, el.value.length); }
+  }, 50);
+};
+
+window.submitEditReact = async function(list, showId, reactId) {
+  var s = state[list].find(function(x) { return x.id === showId; });
+  if (!s) return;
+  var r = (s.reactions || []).find(function(x) { return x.id === reactId; });
+  var inp = document.getElementById('edit-inp-' + list + '-' + showId + '-' + reactId);
+  if (!r || !inp || !inp.value.trim()) return;
+  var txt = inp.value.trim();
+  var sentiment = detectSentiment(txt);
+  r.text = txt; r.sentiment = sentiment; r.editing = false;
+  renderList(list);
+  try { await dbUpdateReaction(reactId, txt, sentiment); } catch(e) { console.error('submitEditReact error:', e); }
+};
+
+window.toggleEditFriendReact = function(friendId, lk, showId, reactId) {
+  var f = state.friends.find(function(x) { return x.id === friendId; });
+  if (!f) return;
+  var arr = lk === 'w' ? f.watching : lk === 'wl' ? f.watchlist : f.watched;
+  var show = arr && arr.find(function(s) { return s.id === showId; });
+  var r = show && (show.reactions || []).find(function(x) { return x.id === reactId; });
+  if (!r) return;
+  r.editing = !r.editing;
+  showFriend(friendId);
+  if (r.editing) setTimeout(function() {
+    var el = document.getElementById('edit-finp-' + lk + '-' + friendId + '-' + showId + '-' + reactId);
+    if (el) { el.focus(); el.setSelectionRange(el.value.length, el.value.length); }
+  }, 50);
+};
+
+window.submitEditFriendReact = async function(friendId, lk, showId, reactId) {
+  var f = state.friends.find(function(x) { return x.id === friendId; });
+  if (!f) return;
+  var arr = lk === 'w' ? f.watching : lk === 'wl' ? f.watchlist : f.watched;
+  var show = arr && arr.find(function(s) { return s.id === showId; });
+  var r = show && (show.reactions || []).find(function(x) { return x.id === reactId; });
+  var inp = document.getElementById('edit-finp-' + lk + '-' + friendId + '-' + showId + '-' + reactId);
+  if (!r || !inp || !inp.value.trim()) return;
+  var txt = inp.value.trim();
+  var sentiment = detectSentiment(txt);
+  r.text = txt; r.sentiment = sentiment; r.editing = false;
+  showFriend(friendId);
+  try { await dbUpdateReaction(reactId, txt, sentiment); } catch(e) { console.error('submitEditFriendReact error:', e); }
 };
 
 async function dbRemoveFriend(friendId) {
