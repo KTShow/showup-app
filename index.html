@@ -2935,6 +2935,57 @@ var _tmdbPending = {};
 var _tmdbResults = {};
 var _tmdbTimers = {};
 
+var PLATFORM_SELECT_ID = { w:'w-platform', wl:'wl-platform', wd:'wd-platform', dnf:'dnf-platform', bt5:'binged-top5-platform', t5p:'top5-platform' };
+
+// Maps TMDB/JustWatch US watch-provider names (which vary/rebrand over time,
+// e.g. "HBO Max" -> "Max") to this app's fixed PLATFORMS dropdown values.
+var PROVIDER_NAME_MAP = {
+  'netflix': 'Netflix',
+  'hulu': 'Hulu',
+  'disney plus': 'Disney+',
+  'amazon prime video': 'Amazon Prime',
+  'amazon video': 'Amazon Prime',
+  'apple tv plus': 'Apple TV+',
+  'apple tv': 'Apple TV+',
+  'max': 'HBO Max',
+  'hbo max': 'HBO Max',
+  'paramount plus': 'Paramount+',
+  'paramount plus with showtime': 'Paramount+',
+  'peacock': 'Peacock',
+  'peacock premium': 'Peacock',
+  'peacock premium plus': 'Peacock',
+  'espn plus': 'ESPN+',
+  'discovery plus': 'Discovery+',
+  'showtime': 'Showtime',
+  'showtime apple tv channel': 'Showtime',
+  'starz': 'Starz',
+  'starz apple tv channel': 'Starz',
+  'pbs': 'PBS Passport',
+  'pbs documentaries': 'PBS Passport',
+  'pbs masterpiece': 'PBS Passport',
+};
+
+function mapProviderToPlatform(name) {
+  if (!name) return null;
+  var key = name.toLowerCase().replace(/\+/g, ' plus').replace(/\s+/g, ' ').trim();
+  return PROVIDER_NAME_MAP[key] || null;
+}
+
+async function fetchAutoPlatform(tmdbId) {
+  try {
+    var res = await fetch('https://api.themoviedb.org/3/tv/' + tmdbId + '/watch/providers?api_key=' + TMDB_KEY);
+    var d = await res.json();
+    var us = d.results && d.results.US;
+    if (!us) return null;
+    var candidates = (us.flatrate || []).concat(us.free || []).concat(us.ads || []);
+    for (var i = 0; i < candidates.length; i++) {
+      var mapped = mapProviderToPlatform(candidates[i].provider_name);
+      if (mapped) return mapped;
+    }
+    return null;
+  } catch(e) { console.error('TMDB watch providers error:', e); return null; }
+}
+
 window.tmdbSearch = function(prefix) {
   var inp = document.getElementById(prefix + '-title');
   var dd = document.getElementById(prefix + '-tmdb-dd');
@@ -2989,6 +3040,16 @@ window.tmdbSelect = async function(prefix, idx) {
     _tmdbPending.number_of_seasons = d.number_of_seasons || null;
     _tmdbPending.show_status = d.status || null;
   } catch(e) { console.error('TMDB detail error:', e); }
+
+  var platformSelId = PLATFORM_SELECT_ID[prefix];
+  var platformSel = platformSelId ? document.getElementById(platformSelId) : null;
+  if (platformSel && !platformSel.value) {
+    var auto = await fetchAutoPlatform(show.id);
+    if (auto && !platformSel.value) {
+      var hasOption = Array.prototype.some.call(platformSel.options, function(o) { return o.value === auto; });
+      if (hasOption) platformSel.value = auto;
+    }
+  }
 };
 
 document.addEventListener('click', function(e) {
