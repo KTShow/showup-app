@@ -561,6 +561,14 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
           <button class="btn-add" onclick="addShow('watched')">+ Add</button>
         </div>
       </div>
+      <div class="add-form" style="border-left:3px solid #c0392b;">
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:#c0392b;margin-bottom:8px;">&#128683; Didn't finish something?</div>
+        <div class="form-row">
+          <div class="form-group" style="position:relative;"><label>Show title</label><input id="dnf-title" placeholder="Search for a show..." oninput="tmdbSearch('dnf')" autocomplete="off" /><div class="tmdb-dropdown" id="dnf-tmdb-dd"></div></div>
+          <div class="form-group" style="max-width:170px"><label>Streaming on</label><select id="dnf-platform"><option value="">Platform...</option></select></div>
+          <button class="btn-add" onclick="addDirectDNF()">+ Add</button>
+        </div>
+      </div>
       <div id="watched-list"></div>
     </div>
     <div id="tab-living-room" class="tab-pane" style="display:none">
@@ -746,7 +754,7 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
 
 <script>
 
-var PLATFORMS = ['Amazon Prime Video','Apple TV+','Disney+','HBO Max','Hulu','Netflix','Paramount+','Peacock','Showtime','Starz','Other'];
+var PLATFORMS = ['Amazon Prime','Apple TV+','Discovery+','Disney+','ESPN+','HBO Max','Hulu','Netflix','Paramount+','PBS Passport','Peacock','Showtime','Starz','Other'];
 var CONFETTI_COLORS = ['#C4622D','#6B2D4E','#C49A3C','#5C6B3A','#F5EFE6','#D4734E'];
 
 var ROOMS = {
@@ -783,9 +791,9 @@ function closeInviteModal() {
 
 
 function init() {
-  ['w-platform','wl-platform','wd-platform'].forEach(function(id) {
+  ['w-platform','wl-platform','wd-platform','dnf-platform'].forEach(function(id) {
     var sel = document.getElementById(id);
-    if (!sel) return;
+    if (!sel || sel.options.length > 1) return;
     PLATFORMS.forEach(function(p) { var o = document.createElement('option'); o.value = p; o.textContent = p; sel.appendChild(o); });
   });
 }
@@ -1127,7 +1135,7 @@ function buildDNFCard(s) {
 function buildCard(s, list) {
   var actions='';
   if(list==='watched') actions=remoteRating(list,s.id,s.rating);
-  if(list==='watchlist') actions='<button class="btn-start" onclick="moveToWatching(\'' + s.id + '\')" >Queue It Up</button>';
+  if(list==='watchlist') actions='<button class="btn-start" onclick="moveToWatching(\'' + s.id + '\')" >Watch Now</button>';
   if(list==='watching') actions='<button class="btn-start" onclick="moveToWatchlist(\'' + s.id + '\')" style="background:var(--olive);">&#8592; My List</button>';
   actions+=hideBtn(list, s);
   actions+=platformEditBtn(list, s);
@@ -1288,12 +1296,19 @@ function showFriend(id) {
       +(f.watched.filter(function(x){return x.dnf;}).length
         ? '<div class="dnf-section"><div class="dnf-header">&#128683; Didn&#39;t Finish</div>'
           + f.watched.filter(function(x){return x.dnf;}).map(function(s){
-              return '<div class="dnf-card"><div class="show-card-top">'+tvIcon()
+              var rHTML=reactionsHTML(s.reactions,'wd',s.id,f.id);
+              var inpId='finp-wd-'+f.id+'-'+s.id;
+              var reactToggle=s.showReact
+                ?'<div class="inline-react"><input class="react-input" id="'+inpId+'" placeholder="What did you think?" /><button class="btn-send" onclick="submitFR(\''+f.id+'\',\'wd\',\''+s.id+'\')">Send</button><button class="btn-cancel" onclick="toggleFR(\''+f.id+'\',\'wd\',\''+s.id+'\')">Cancel</button></div>'
+                :'<button class="btn-react-toggle" onclick="toggleFR(\''+f.id+'\',\'wd\',\''+s.id+'\')">+ What did you think?</button>';
+              return '<div class="dnf-card"><div class="show-card-top">'+showTile(s)
                 +'<div class="show-info"><div class="show-title">'+s.title+'</div>'
                 +'<div style="margin-top:3px;"><span class="dnf-badge">Didn&#39;t Finish</span>'
                 +'<span style="font-size:11px;color:var(--muted);margin-left:6px;">'+s.platform+'</span>'
                 +'</div>'+(s.rating?'<div style="margin-top:5px;">'+remoteStatic(s.rating)+'</div>':'')
-                +'</div></div></div>';
+                +'</div></div>'
+                +'<div class="react-area">'+rHTML+reactToggle+'</div>'
+                +'</div>';
             }).join('')+'</div>'
         : '')
     : '')
@@ -1687,6 +1702,7 @@ async function dbAddShow(showData) {
     source: showData.source || 'manual',
     influenced_by: showData.influencedBy || null,
     rating: showData.rating || 0,
+    dnf: showData.dnf || false,
     tmdb_id: showData.tmdb_id || null,
     poster_path: showData.poster_path || null,
     genre: showData.genre || null,
@@ -2408,6 +2424,39 @@ window.addShow = async function(list) {
     if (list === 'watched') openDWM(newShow);
   } catch(e) {
     console.error('Error adding show:', e);
+    alert('Error adding show. Please try again.');
+  }
+};
+
+window.addDirectDNF = async function() {
+  var tEl = document.getElementById('dnf-title');
+  var pEl = document.getElementById('dnf-platform');
+  var title = tEl.value.trim();
+  var platform = pEl.value;
+  if (!title || !platform) {
+    tEl.style.borderColor = '#C4622D';
+    setTimeout(function() { tEl.style.borderColor = ''; }, 900);
+    return;
+  }
+  var src = state.lastViewedFriend ? 'living_room' : 'manual';
+  var inf = state.lastViewedFriend || null;
+  var tmdb = _tmdbPending || {};
+  try {
+    var show = await dbAddShow({ title: title, platform: platform, status: 'dnf', dnf: true, source: src, influencedBy: inf,
+      tmdb_id: tmdb.tmdb_id, poster_path: tmdb.poster_path, genre: tmdb.genre,
+      original_network: tmdb.original_network, first_air_year: tmdb.first_air_year,
+      number_of_seasons: tmdb.number_of_seasons, show_status: tmdb.show_status,
+      overview: tmdb.overview, vote_average: tmdb.vote_average });
+    var newShow = { id: show.id, title: title, platform: platform, rating: 0, hidden: false, dnf: true,
+      source: src, influencedBy: inf, addedAt: show.added_at, reactions: [], showReact: false,
+      poster_path: tmdb.poster_path || null, tmdb_id: tmdb.tmdb_id || null };
+    state.watched.push(newShow);
+    tEl.value = ''; pEl.value = '';
+    _tmdbPending = {};
+    renderList('watched');
+    openDWM(newShow, "Didn't finish? Rate it anyway", '🎬');
+  } catch(e) {
+    console.error('Error adding DNF show:', e);
     alert('Error adding show. Please try again.');
   }
 };
