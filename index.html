@@ -1907,6 +1907,7 @@ function normalizeShow(s) {
     influencedBy: s.influenced_by || null,
     addedAt: s.added_at,
     poster_path: s.poster_path || null,
+    tmdb_id: s.tmdb_id || null,
     reactions: (s.reactions || []).map(function(r) {
       var u = state.user;
       var isMe = u && r.user_id === u.id;
@@ -2294,7 +2295,7 @@ window.saveProfile = async function() {
     await sb.from('top5_shows').delete().eq('user_id', uid);
     if (state.user.top5 && state.user.top5.length) {
       var rows = state.user.top5.map(function(s, i) {
-        return { user_id: uid, title: s.title, platform: s.platform || '', rank: i + 1, poster_path: s.poster_path || null };
+        return { user_id: uid, title: s.title, platform: s.platform || '', rank: i + 1, poster_path: s.poster_path || null, tmdb_id: s.tmdb_id || null };
       });
       var { error: te } = await sb.from('top5_shows').insert(rows);
       if (te) throw te;
@@ -2399,7 +2400,7 @@ window.addShow = async function(list) {
       overview: tmdb.overview, vote_average: tmdb.vote_average });
     var newShow = { id: show.id, title: title, platform: platform, rating: 0, hidden: false, dnf: false,
       source: src, influencedBy: inf, addedAt: show.added_at, reactions: [], showReact: false,
-      poster_path: tmdb.poster_path || null };
+      poster_path: tmdb.poster_path || null, tmdb_id: tmdb.tmdb_id || null };
     state[list].push(newShow);
     tEl.value = ''; pEl.value = '';
     _tmdbPending = {};
