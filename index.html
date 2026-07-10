@@ -71,7 +71,7 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
 .show-card-top{display:flex;align-items:center;gap:12px;}
 .tv-tile{width:46px;height:46px;border-radius:9px;background:var(--olive);display:flex;align-items:center;justify-content:center;flex-shrink:0;}
 .tv-tile svg{width:28px;height:28px;}
-.show-poster{width:46px;height:46px;border-radius:9px;object-fit:cover;flex-shrink:0;}
+.show-poster{width:51px;height:51px;border-radius:9px;object-fit:cover;flex-shrink:0;}
 .poster-clickable{cursor:pointer;}
 .cast-scroll{display:flex;gap:10px;overflow-x:auto;padding-bottom:4px;}
 .cast-card{flex-shrink:0;width:70px;text-align:center;}
@@ -1116,7 +1116,7 @@ function buildDNFCard(s) {
   var inpId = 'inp-watched-' + s.id;
   var sid = s.id;
   var reactToggle = s.showReact
-    ? '<div class="inline-react"><input class="react-input" id="'+inpId+'" placeholder="What did you think?" /><button class="btn-send" onclick="submitReact(&quot;watched&quot;,&quot;'+sid+'&quot;)">Send</button><button class="btn-cancel" onclick="toggleReact(&quot;watched&quot;,&quot;'+sid+'&quot;)">Cancel</button></div>'
+    ? '<div class="inline-react"><input class="react-input" id="'+inpId+'" placeholder="What did you think? 😊" /><button class="btn-send" onclick="submitReact(&quot;watched&quot;,&quot;'+sid+'&quot;)">Send</button><button class="btn-cancel" onclick="toggleReact(&quot;watched&quot;,&quot;'+sid+'&quot;)">Cancel</button></div>'
     : '<button class="btn-react-toggle" onclick="toggleReact(&quot;watched&quot;,&quot;'+sid+'&quot;)">+ What did you think?</button>';
   var platformRow = s.editingPlatform ? platformSelect('watched', s.id, s.platform) : '';
   return '<div class="dnf-card">'
@@ -1143,7 +1143,7 @@ function buildCard(s, list) {
   var moveLink=list==='watching'?'<div class="show-move"><button class="done-watching-btn" onclick="markWatched(\'' + s.id + '\')" >Done Watching &#10003;</button><button class="didnt-finish-btn" onclick="markDNF(\'' + s.id + '\')" >Didn&#39;t Finish</button></div>':'';
   var inpId='inp-'+list+'-'+s.id;
   var reactToggle=s.showReact
-    ?'<div class="inline-react"><input class="react-input" id="'+inpId+'" placeholder="What did you think?" /><button class="btn-send" onclick="submitReact(\''+list+'\',\''+s.id+'\')">Send</button><button class="btn-cancel" onclick="toggleReact(\''+list+'\',\''+s.id+'\')">Cancel</button></div>'
+    ?'<div class="inline-react"><input class="react-input" id="'+inpId+'" placeholder="What did you think? 😊" /><button class="btn-send" onclick="submitReact(\''+list+'\',\''+s.id+'\')">Send</button><button class="btn-cancel" onclick="toggleReact(\''+list+'\',\''+s.id+'\')">Cancel</button></div>'
     :'<button class="btn-react-toggle" onclick="toggleReact(\''+list+'\',\''+s.id+'\')">+ What did you think?</button>';
   var hasReact=reactionsHTML(s.reactions,list,s.id)||reactToggle;
   var platformRow=s.editingPlatform?platformSelect(list,s.id,s.platform):'';
@@ -1264,7 +1264,7 @@ function showFriend(id) {
         var rHTML=reactionsHTML(s.reactions, lk, s.id, f.id);
         var inpId='finp-'+lk+'-'+f.id+'-'+s.id;
         var reactToggle=s.showReact
-          ?'<div class="inline-react"><input class="react-input" id="'+inpId+'" placeholder="What did you think?" /><button class="btn-send" onclick="submitFR(\''+f.id+'\',\''+lk+'\',\''+s.id+'\')">Send</button><button class="btn-cancel" onclick="toggleFR(\''+f.id+'\',\''+lk+'\',\''+s.id+'\')">Cancel</button></div>'
+          ?'<div class="inline-react"><input class="react-input" id="'+inpId+'" placeholder="What did you think? 😊" /><button class="btn-send" onclick="submitFR(\''+f.id+'\',\''+lk+'\',\''+s.id+'\')">Send</button><button class="btn-cancel" onclick="toggleFR(\''+f.id+'\',\''+lk+'\',\''+s.id+'\')">Cancel</button></div>'
           :'<button class="btn-react-toggle" onclick="toggleFR(\''+f.id+'\',\''+lk+'\',\''+s.id+'\')">+ What did you think?</button>';
         var actions=(lk==='w'||lk==='wd')?remoteStatic(s.rating):'';
         var watchedBadge=lk==='wd'?'<span style="font-size:11px;color:var(--fig);font-weight:600;">&#10003; Binged</span>':'';
@@ -1299,7 +1299,7 @@ function showFriend(id) {
               var rHTML=reactionsHTML(s.reactions,'wd',s.id,f.id);
               var inpId='finp-wd-'+f.id+'-'+s.id;
               var reactToggle=s.showReact
-                ?'<div class="inline-react"><input class="react-input" id="'+inpId+'" placeholder="What did you think?" /><button class="btn-send" onclick="submitFR(\''+f.id+'\',\'wd\',\''+s.id+'\')">Send</button><button class="btn-cancel" onclick="toggleFR(\''+f.id+'\',\'wd\',\''+s.id+'\')">Cancel</button></div>'
+                ?'<div class="inline-react"><input class="react-input" id="'+inpId+'" placeholder="What did you think? 😊" /><button class="btn-send" onclick="submitFR(\''+f.id+'\',\'wd\',\''+s.id+'\')">Send</button><button class="btn-cancel" onclick="toggleFR(\''+f.id+'\',\'wd\',\''+s.id+'\')">Cancel</button></div>'
                 :'<button class="btn-react-toggle" onclick="toggleFR(\''+f.id+'\',\'wd\',\''+s.id+'\')">+ What did you think?</button>';
               return '<div class="dnf-card"><div class="show-card-top">'+showTile(s)
                 +'<div class="show-info"><div class="show-title">'+s.title+'</div>'
@@ -1312,7 +1312,8 @@ function showFriend(id) {
             }).join('')+'</div>'
         : '')
     : '')
-  + top5HTML;
+  + top5HTML
+  + '<div style="margin-top:24px;text-align:center;"><button class="back-btn" onclick="backToFriends()">&#8592; Back to Living Room</button></div>';
 }
 
 function toggleFR(fid,lk,sid){var f=state.friends.find(function(x){return x.id===fid;});var arr=lk==='w'?f.watching:lk==='wl'?f.watchlist:f.watched;var show=arr.find(function(s){return s.id===sid;});if(!show)return;show.showReact=!show.showReact;showFriend(fid);setTimeout(function(){var el=document.getElementById('finp-'+lk+'-'+fid+'-'+sid);if(el)el.focus();},60);}
