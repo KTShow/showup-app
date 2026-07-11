@@ -105,6 +105,9 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
 .btn-send{background:var(--terra);color:white;border:none;border-radius:20px;padding:6px 14px;font-size:12px;cursor:pointer;}
 .btn-cancel{background:none;border:1px solid var(--border);border-radius:20px;padding:6px 10px;font-size:11px;color:var(--muted);cursor:pointer;font-family:var(--sans);}
 .btn-react-toggle{background:none;border:none;font-size:12px;color:var(--fig);cursor:pointer;font-family:var(--sans);}
+.quick-react-row{display:inline-flex;gap:2px;margin-left:6px;}
+.quick-react-btn{background:none;border:none;font-size:15px;cursor:pointer;padding:2px 3px;line-height:1;border-radius:6px;transition:background 0.15s;}
+.quick-react-btn:hover{background:var(--border);}
 
 .section-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);margin:18px 0 10px;}
 .friends-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:12px;margin-bottom:24px;}
@@ -1068,6 +1071,13 @@ function reactionsHTML(reactions, list, showId, friendId) {
   return html+'</div>';
 }
 
+function quickReactRow(fnName, argsJS) {
+  var opts = [['🔥','positive'],['😍','positive'],['😴','negative']];
+  return '<span class="quick-react-row">' + opts.map(function(o) {
+    return '<button class="quick-react-btn" onclick="'+fnName+'('+argsJS+',\''+o[0]+'\',\''+o[1]+'\')">'+o[0]+'</button>';
+  }).join('') + '</span>';
+}
+
 function groupByService(items) {
   var groups={};
   items.forEach(function(s){ if(!groups[s.platform]) groups[s.platform]=[]; groups[s.platform].push(s); });
@@ -1120,9 +1130,10 @@ function renderList(list) {
 function buildDNFCard(s) {
   var inpId = 'inp-watched-' + s.id;
   var sid = s.id;
-  var reactToggle = s.showReact
+  var reactToggle = (s.showReact
     ? '<div class="inline-react"><input class="react-input" id="'+inpId+'" placeholder="What did you think? 😊" /><button class="btn-send" onclick="submitReact(&quot;watched&quot;,&quot;'+sid+'&quot;)">Send</button><button class="btn-cancel" onclick="toggleReact(&quot;watched&quot;,&quot;'+sid+'&quot;)">Cancel</button></div>'
-    : '<button class="btn-react-toggle" onclick="toggleReact(&quot;watched&quot;,&quot;'+sid+'&quot;)">+ What did you think?</button>';
+    : '<button class="btn-react-toggle" onclick="toggleReact(&quot;watched&quot;,&quot;'+sid+'&quot;)">+ What did you think?</button>')
+    + quickReactRow('quickReact', "'watched','"+sid+"'");
   var platformRow = s.editingPlatform ? platformSelect('watched', s.id, s.platform) : '';
   return '<div class="dnf-card">'
     + '<div class="show-card-top">' + showTile(s)
@@ -1147,9 +1158,10 @@ function buildCard(s, list) {
   actions+='<button class="btn-remove" onclick="removeShow(\'' + list + '\',\'' + s.id + '\')" >&#x2715;</button>';
   var moveLink=list==='watching'?'<div class="show-move"><button class="done-watching-btn" onclick="markWatched(\'' + s.id + '\')" >Done Watching &#10003;</button><button class="didnt-finish-btn" onclick="markDNF(\'' + s.id + '\')" >Didn&#39;t Finish</button></div>':'';
   var inpId='inp-'+list+'-'+s.id;
-  var reactToggle=s.showReact
+  var reactToggle=(s.showReact
     ?'<div class="inline-react"><input class="react-input" id="'+inpId+'" placeholder="What did you think? 😊" /><button class="btn-send" onclick="submitReact(\''+list+'\',\''+s.id+'\')">Send</button><button class="btn-cancel" onclick="toggleReact(\''+list+'\',\''+s.id+'\')">Cancel</button></div>'
-    :'<button class="btn-react-toggle" onclick="toggleReact(\''+list+'\',\''+s.id+'\')">+ What did you think?</button>';
+    :'<button class="btn-react-toggle" onclick="toggleReact(\''+list+'\',\''+s.id+'\')">+ What did you think?</button>')
+    + quickReactRow('quickReact', "'"+list+"','"+s.id+"'");
   var hasReact=reactionsHTML(s.reactions,list,s.id)||reactToggle;
   var platformRow=s.editingPlatform?platformSelect(list,s.id,s.platform):'';
   return '<div class="show-card'+(s.hidden?' is-hidden':'')+'"><div class="show-card-top">'+showTile(s)+'<div class="show-info"><div class="show-title">'+s.title+(s.hidden?'<span class="hidden-badge">Hidden from friends</span>':'')+'</div>'+platformRow+'</div><div class="show-actions">'+actions+'</div></div>'+moveLink+(hasReact?'<div class="react-area">'+reactionsHTML(s.reactions,list,s.id)+reactToggle+'</div>':'')+'</div>';
@@ -1351,9 +1363,10 @@ function showFriend(id) {
       groups[svc].sort(function(a,b){return a.title.localeCompare(b.title);}).forEach(function(s){
         var rHTML=reactionsHTML(s.reactions, lk, s.id, f.id);
         var inpId='finp-'+lk+'-'+f.id+'-'+s.id;
-        var reactToggle=s.showReact
+        var reactToggle=(s.showReact
           ?'<div class="inline-react"><input class="react-input" id="'+inpId+'" placeholder="What did you think? 😊" /><button class="btn-send" onclick="submitFR(\''+f.id+'\',\''+lk+'\',\''+s.id+'\')">Send</button><button class="btn-cancel" onclick="toggleFR(\''+f.id+'\',\''+lk+'\',\''+s.id+'\')">Cancel</button></div>'
-          :'<button class="btn-react-toggle" onclick="toggleFR(\''+f.id+'\',\''+lk+'\',\''+s.id+'\')">+ What did you think?</button>';
+          :'<button class="btn-react-toggle" onclick="toggleFR(\''+f.id+'\',\''+lk+'\',\''+s.id+'\')">+ What did you think?</button>')
+          + quickReactRow('quickReactFR', "'"+f.id+"','"+lk+"','"+s.id+"'");
         var actions=(lk==='w'||lk==='wd')?remoteStatic(s.rating):'';
         var watchedBadge=lk==='wd'?'<span style="font-size:11px;color:var(--fig);font-weight:600;">&#10003; Binged</span>':'';
         html+='<div class="show-card"><div class="show-card-top">'+showTile(s)+'<div class="show-info"><div class="show-title">'+s.title+'</div>'+(watchedBadge?'<div style="margin-top:2px;">'+watchedBadge+'</div>':'')+'</div><div class="show-actions">'+actions+'</div></div><div class="react-area">'+rHTML+reactToggle+'</div></div>';
@@ -1386,9 +1399,10 @@ function showFriend(id) {
           + f.watched.filter(function(x){return x.dnf;}).map(function(s){
               var rHTML=reactionsHTML(s.reactions,'wd',s.id,f.id);
               var inpId='finp-wd-'+f.id+'-'+s.id;
-              var reactToggle=s.showReact
+              var reactToggle=(s.showReact
                 ?'<div class="inline-react"><input class="react-input" id="'+inpId+'" placeholder="What did you think? 😊" /><button class="btn-send" onclick="submitFR(\''+f.id+'\',\'wd\',\''+s.id+'\')">Send</button><button class="btn-cancel" onclick="toggleFR(\''+f.id+'\',\'wd\',\''+s.id+'\')">Cancel</button></div>'
-                :'<button class="btn-react-toggle" onclick="toggleFR(\''+f.id+'\',\'wd\',\''+s.id+'\')">+ What did you think?</button>';
+                :'<button class="btn-react-toggle" onclick="toggleFR(\''+f.id+'\',\'wd\',\''+s.id+'\')">+ What did you think?</button>')
+                + quickReactRow('quickReactFR', "'"+f.id+"','wd','"+s.id+"'");
               return '<div class="dnf-card"><div class="show-card-top">'+showTile(s)
                 +'<div class="show-info"><div class="show-title">'+s.title+'</div>'
                 +'<div style="margin-top:3px;"><span class="dnf-badge">Didn&#39;t Finish</span>'
@@ -1406,6 +1420,7 @@ function showFriend(id) {
 
 function toggleFR(fid,lk,sid){var f=state.friends.find(function(x){return x.id===fid;});var arr=lk==='w'?f.watching:lk==='wl'?f.watchlist:f.watched;var show=arr.find(function(s){return s.id===sid;});if(!show)return;show.showReact=!show.showReact;showFriend(fid);setTimeout(function(){var el=document.getElementById('finp-'+lk+'-'+fid+'-'+sid);if(el)el.focus();},60);}
 async function submitFR(fid,lk,sid){var f=state.friends.find(function(x){return x.id===fid;});var arr=lk==='w'?f.watching:lk==='wl'?f.watchlist:f.watched;var show=arr.find(function(s){return s.id===sid;});var inp=document.getElementById('finp-'+lk+'-'+fid+'-'+sid);if(!show||!inp||!inp.value.trim())return;var u=state.user;if(!show.reactions)show.reactions=[];var txt=inp.value.trim();var sentiment=detectSentiment(txt);show.reactions.push({user:u?u.first+(u.last?' '+u.last:''):'You',initials:u?u.initials:'Y',color:'#C4622D',text:txt,sentiment:sentiment,reactedAt:new Date().toISOString()});show.showReact=false;showFriend(fid);try{await dbAddReaction(show.id,txt,sentiment);}catch(e){console.error('reaction save error:',e);}}
+async function quickReactFR(fid,lk,sid,emoji,sentiment){var f=state.friends.find(function(x){return x.id===fid;});if(!f)return;var arr=lk==='w'?f.watching:lk==='wl'?f.watchlist:f.watched;var show=arr.find(function(s){return s.id===sid;});if(!show)return;var u=state.user;if(!show.reactions)show.reactions=[];show.reactions.push({user:u?u.first+(u.last?' '+u.last:''):'You',initials:u?u.initials:'Y',color:'#C4622D',text:emoji,sentiment:sentiment,reactedAt:new Date().toISOString()});showFriend(fid);try{await dbAddReaction(show.id,emoji,sentiment);}catch(e){console.error('quick reaction save error:',e);}}
 function backToFriends(){document.getElementById('friends-view').style.display='block';document.getElementById('friend-detail-view').style.display='none';}
 
 function switchLRView(view){
@@ -2706,6 +2721,17 @@ window.submitReact = async function(list, id) {
   s.showReact = false;
   renderList(list);
   try { var data = await dbAddReaction(id, txt, sentiment); if (data && data.id) newReact.id = data.id; } catch(e) { console.error('reaction error:', e); }
+};
+
+window.quickReact = async function(list, id, emoji, sentiment) {
+  var s = state[list].find(function(x) { return x.id === id; });
+  if (!s) return;
+  var u = state.user;
+  var newReact = { id: null, reactorId: u ? u.id : null, user: u ? (u.first + (u.last ? ' ' + u.last : '')) : 'You', initials: u ? u.initials : 'Y', color: '#C4622D', text: emoji, sentiment: sentiment, reactedAt: new Date().toISOString() };
+  s.reactions = s.reactions || [];
+  s.reactions.push(newReact);
+  renderList(list);
+  try { var data = await dbAddReaction(id, emoji, sentiment); if (data && data.id) newReact.id = data.id; } catch(e) { console.error('quick reaction error:', e); }
 };
 
 async function dbDeleteReaction(reactId) {
