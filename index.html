@@ -108,7 +108,8 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
 
 .section-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);margin:18px 0 10px;}
 .friends-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:12px;margin-bottom:24px;}
-.friend-card{background:var(--cream);border:1px solid var(--border);border-radius:var(--radius);padding:16px;text-align:center;cursor:pointer;transition:all 0.2s;box-shadow:var(--shadow);}
+.friend-card{position:relative;background:var(--cream);border:1px solid var(--border);border-radius:var(--radius);padding:16px;text-align:center;cursor:pointer;transition:all 0.2s;box-shadow:var(--shadow);}
+.friend-new-badge{position:absolute;top:8px;right:8px;background:var(--terra);color:#fff;font-size:9px;font-weight:700;letter-spacing:0.04em;padding:2px 6px;border-radius:10px;}
 .friend-card:hover{border-color:var(--terra);transform:translateY(-2px);}
 .friend-av{width:52px;height:52px;border-radius:50%;margin:0 auto 10px;display:flex;align-items:center;justify-content:center;font-size:22px;color:white;}
 .friend-name{font-size:14px;font-weight:600;}
@@ -771,7 +772,8 @@ var state = {
   watching: [],
   watchlist: [],
   watched: [],
-  friends: []
+  friends: [],
+  lastVisitAt: null
 };
 
 var _firstTimeTellMore = false; // true when completing onboarding for the first time
@@ -1221,13 +1223,32 @@ var styleEl=document.createElement('style');
 styleEl.textContent='@keyframes confettiFall{from{transform:translateY(0) rotate(0deg);opacity:1;}to{transform:translateY(110vh) rotate(720deg);opacity:0;}}';
 document.head.appendChild(styleEl);
 
+function friendHasNewActivity(f) {
+  if (!state.lastVisitAt) return false;
+  var cutoff = new Date(state.lastVisitAt).getTime();
+  var lists = [f.watching, f.watchlist, f.watched];
+  for (var i=0; i<lists.length; i++) {
+    var arr = lists[i];
+    for (var j=0; j<arr.length; j++) {
+      var s = arr[j];
+      if (s.added_at && new Date(s.added_at).getTime() > cutoff) return true;
+      var rx = s.reactions || [];
+      for (var k=0; k<rx.length; k++) {
+        if (rx[k].reactedAt && new Date(rx[k].reactedAt).getTime() > cutoff) return true;
+      }
+    }
+  }
+  return false;
+}
+
 function renderFriends() {
   renderTop5Banner();
   var sorted=state.friends.slice().sort(function(a,b){return a.name.localeCompare(b.name);});
   document.getElementById('friends-grid').innerHTML=sorted.map(function(f){
     var fRoom=f.room||'tuscany'; var fColor=ROOMS[fRoom]?ROOMS[fRoom].color:f.color;
     var fInitials=f.name.split(' ').map(function(x){return x[0];}).join('');
-    return '<div class="friend-card" onclick="showFriend(\''+f.id+'\')">'+'<div class="friend-av" style="background:'+fColor+';font-size:16px;font-weight:700;font-family:var(--sans);">'+fInitials+'</div>'+'<div class="friend-name">'+f.name+'</div>'+'<div class="friend-city">'+f.city+'</div>'+'<div class="friend-count">'+f.watching.length+' watching &middot; '+f.watchlist.length+' on my list</div>'+'</div>';
+    var badge=friendHasNewActivity(f)?'<div class="friend-new-badge">NEW</div>':'';
+    return '<div class="friend-card" onclick="showFriend(\''+f.id+'\')">'+badge+'<div class="friend-av" style="background:'+fColor+';font-size:16px;font-weight:700;font-family:var(--sans);">'+fInitials+'</div>'+'<div class="friend-name">'+f.name+'</div>'+'<div class="friend-city">'+f.city+'</div>'+'<div class="friend-count">'+f.watching.length+' watching &middot; '+f.watchlist.length+' on my list</div>'+'</div>';
   }).join('');
 }
 
@@ -1669,6 +1690,20 @@ async function recordSession() {
   }).then(function(){}).catch(function(){});
 }
 
+// Reads the most recent session BEFORE this visit's row is inserted (recordSession()
+// runs after loadUserIntoState in every login path), so this is genuinely "last time
+// they were here" — used to badge friends' activity that happened since then.
+async function getLastVisitTime() {
+  const { data: { user } } = await sb.auth.getUser();
+  if (!user) return null;
+  const { data } = await sb.from('sessions')
+    .select('created_at')
+    .eq('user_id', user.id)
+    .order('created_at', { ascending: false })
+    .limit(1);
+  return (data && data[0]) ? data[0].created_at : null;
+}
+
 async function deleteUserData() {
   const { data: { user } } = await sb.auth.getUser();
   if (!user) throw new Error('Not authenticated');
@@ -1967,6 +2002,10 @@ async function loadUserIntoState(profile) {
     var top5 = await loadTop5();
     state.user.top5 = top5.map(function(t) { return { title: t.title, platform: t.platform, poster_path: t.poster_path || null, tmdb_id: t.tmdb_id || null }; });
   } catch(e) { console.error('Error loading top5:', e); }
+
+  try {
+    state.lastVisitAt = await getLastVisitTime();
+  } catch(e) { console.error('Error loading last visit time:', e); state.lastVisitAt = null; }
 
   try {
     state.friends = await getFriendsWithShows();
@@ -2723,7 +2762,7 @@ window.removeFriend = async function(friendId) {
 window.handleSignOut = async function() {
   try {
     await signOut();
-    state.user = null; state.watching = []; state.watchlist = []; state.watched = []; state.friends = [];
+    state.user = null; state.watching = []; state.watchlist = []; state.watched = []; state.friends = []; state.lastVisitAt = null;
     showScreen('login');
   } catch(e) { console.error('Sign out error:', e); }
 };
