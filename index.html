@@ -110,6 +110,7 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
 .friends-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:12px;margin-bottom:24px;}
 .friend-card{position:relative;background:var(--cream);border:1px solid var(--border);border-radius:var(--radius);padding:16px;text-align:center;cursor:pointer;transition:all 0.2s;box-shadow:var(--shadow);}
 .friend-new-badge{position:absolute;top:8px;right:8px;background:var(--terra);color:#fff;font-size:9px;font-weight:700;letter-spacing:0.04em;padding:2px 6px;border-radius:10px;}
+.friend-new-detail{font-size:10px;color:var(--terra);font-weight:600;margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .friend-card:hover{border-color:var(--terra);transform:translateY(-2px);}
 .friend-av{width:52px;height:52px;border-radius:50%;margin:0 auto 10px;display:flex;align-items:center;justify-content:center;font-size:22px;color:white;}
 .friend-name{font-size:14px;font-weight:600;}
@@ -1223,22 +1224,40 @@ var styleEl=document.createElement('style');
 styleEl.textContent='@keyframes confettiFall{from{transform:translateY(0) rotate(0deg);opacity:1;}to{transform:translateY(110vh) rotate(720deg);opacity:0;}}';
 document.head.appendChild(styleEl);
 
-function friendHasNewActivity(f) {
-  if (!state.lastVisitAt) return false;
+function escHtml(str) {
+  return String(str==null?'':str).replace(/[&<>"']/g, function(c) {
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
+  });
+}
+
+function getNewestActivity(f) {
+  if (!state.lastVisitAt) return null;
   var cutoff = new Date(state.lastVisitAt).getTime();
-  var lists = [f.watching, f.watchlist, f.watched];
-  for (var i=0; i<lists.length; i++) {
-    var arr = lists[i];
-    for (var j=0; j<arr.length; j++) {
-      var s = arr[j];
-      if (s.added_at && new Date(s.added_at).getTime() > cutoff) return true;
-      var rx = s.reactions || [];
-      for (var k=0; k<rx.length; k++) {
-        if (rx[k].reactedAt && new Date(rx[k].reactedAt).getTime() > cutoff) return true;
+  var lists = [
+    { arr: f.watching, label: 'Watching' },
+    { arr: f.watchlist, label: 'My List' },
+    { arr: f.watched, label: 'Binged' }
+  ];
+  var newest = null;
+  lists.forEach(function(l) {
+    l.arr.forEach(function(s) {
+      if (s.added_at) {
+        var t = new Date(s.added_at).getTime();
+        if (t > cutoff && (!newest || t > newest.at)) {
+          newest = { kind: 'show', title: s.title, listLabel: l.label, at: t };
+        }
       }
-    }
-  }
-  return false;
+      (s.reactions || []).forEach(function(r) {
+        if (r.reactedAt) {
+          var rt = new Date(r.reactedAt).getTime();
+          if (rt > cutoff && (!newest || rt > newest.at)) {
+            newest = { kind: 'comment', title: s.title, at: rt };
+          }
+        }
+      });
+    });
+  });
+  return newest;
 }
 
 function renderFriends() {
@@ -1247,8 +1266,10 @@ function renderFriends() {
   document.getElementById('friends-grid').innerHTML=sorted.map(function(f){
     var fRoom=f.room||'tuscany'; var fColor=ROOMS[fRoom]?ROOMS[fRoom].color:f.color;
     var fInitials=f.name.split(' ').map(function(x){return x[0];}).join('');
-    var badge=friendHasNewActivity(f)?'<div class="friend-new-badge">NEW</div>':'';
-    return '<div class="friend-card" onclick="showFriend(\''+f.id+'\')">'+badge+'<div class="friend-av" style="background:'+fColor+';font-size:16px;font-weight:700;font-family:var(--sans);">'+fInitials+'</div>'+'<div class="friend-name">'+f.name+'</div>'+'<div class="friend-city">'+f.city+'</div>'+'<div class="friend-count">'+f.watching.length+' watching &middot; '+f.watchlist.length+' on my list</div>'+'</div>';
+    var newest=getNewestActivity(f);
+    var badge=newest?'<div class="friend-new-badge">NEW</div>':'';
+    var detail=newest?'<div class="friend-new-detail">'+(newest.kind==='comment'?'New comment on '+escHtml(newest.title):'New: '+escHtml(newest.title)+' ('+newest.listLabel+')')+'</div>':'';
+    return '<div class="friend-card" onclick="showFriend(\''+f.id+'\')">'+badge+'<div class="friend-av" style="background:'+fColor+';font-size:16px;font-weight:700;font-family:var(--sans);">'+fInitials+'</div>'+'<div class="friend-name">'+f.name+'</div>'+'<div class="friend-city">'+f.city+'</div>'+detail+'<div class="friend-count">'+f.watching.length+' watching &middot; '+f.watchlist.length+' on my list</div>'+'</div>';
   }).join('');
 }
 
