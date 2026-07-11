@@ -1457,7 +1457,8 @@ function buildRankings(){
       addRating('You',myColor,state.user.initials||'Y',s.title,s.platform,s.rating,true);
     });
   }
-  var list=Object.values(shows).map(function(s){var avg=s.ratings.reduce(function(a,b){return a+b;},0)/s.ratings.length;return {title:s.title,platform:s.platform,avg:Math.round(avg*10)/10,count:s.ratings.length,raters:s.raters};});
+  var MIN_RATERS=2; // a single 5-star rating shouldn't outrank a show several people agree on
+  var list=Object.values(shows).filter(function(s){return s.ratings.length>=MIN_RATERS;}).map(function(s){var avg=s.ratings.reduce(function(a,b){return a+b;},0)/s.ratings.length;return {title:s.title,platform:s.platform,avg:Math.round(avg*10)/10,count:s.ratings.length,raters:s.raters};});
   list.sort(function(a,b){return b.avg-a.avg||b.count-a.count;});
   return list.slice(0, 25);
 }
