@@ -111,6 +111,7 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
 .friend-card{position:relative;background:var(--cream);border:1px solid var(--border);border-radius:var(--radius);padding:16px;text-align:center;cursor:pointer;transition:all 0.2s;box-shadow:var(--shadow);}
 .friend-new-badge{position:absolute;top:8px;right:8px;background:var(--terra);color:#fff;font-size:9px;font-weight:700;letter-spacing:0.04em;padding:2px 6px;border-radius:10px;}
 .friend-new-detail{font-size:10px;color:var(--terra);font-weight:600;margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.room-ticker{background:var(--cream);border:1px solid var(--border);border-radius:var(--radius);padding:10px 14px;margin-bottom:16px;font-size:13px;font-weight:600;color:var(--terra);text-align:center;}
 .friend-card:hover{border-color:var(--terra);transform:translateY(-2px);}
 .friend-av{width:52px;height:52px;border-radius:50%;margin:0 auto 10px;display:flex;align-items:center;justify-content:center;font-size:22px;color:white;}
 .friend-name{font-size:14px;font-weight:600;}
@@ -582,6 +583,7 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
           <button class="lr-toggle-btn" id="toggle-picks" onclick="switchLRView('picks')"><span class="toggle-icon">&#127942;</span>Friends' Favorites</button>
         </div>
         <div id="lr-crew-view">
+          <div id="room-ticker" class="room-ticker" style="display:none"></div>
           <div id="top5-banner-wrap"></div>
           <div class="friends-grid" id="friends-grid"></div>
         </div>
@@ -1260,8 +1262,52 @@ function getNewestActivity(f) {
   return newest;
 }
 
+var _tickerTimer = null;
+function buildRoomTickerMessages() {
+  var cutoff = Date.now() - 7*24*60*60*1000;
+  var newShows = 0, newComments = 0, activeFriends = {};
+  state.friends.forEach(function(f) {
+    [f.watching, f.watchlist, f.watched].forEach(function(arr) {
+      arr.forEach(function(s) {
+        if (s.added_at && new Date(s.added_at).getTime() > cutoff) {
+          newShows++; activeFriends[f.id] = true;
+        }
+        (s.reactions || []).forEach(function(r) {
+          if (r.reactedAt && new Date(r.reactedAt).getTime() > cutoff) {
+            newComments++; activeFriends[f.id] = true;
+          }
+        });
+      });
+    });
+  });
+  var activeCount = Object.keys(activeFriends).length;
+  var msgs = [];
+  if (newShows > 0) msgs.push('&#127871; ' + newShows + ' new show' + (newShows===1?'':'s') + ' added to the room this week');
+  if (newComments > 0) msgs.push('&#128172; ' + newComments + ' new comment' + (newComments===1?'':'s') + ' this week');
+  if (activeCount > 0) msgs.push('&#128075; ' + activeCount + ' friend' + (activeCount===1?'':'s') + ' active in the room this week');
+  return msgs;
+}
+
+function renderRoomTicker() {
+  var el = document.getElementById('room-ticker');
+  if (!el) return;
+  if (_tickerTimer) { clearInterval(_tickerTimer); _tickerTimer = null; }
+  var msgs = buildRoomTickerMessages();
+  if (!msgs.length) { el.style.display = 'none'; el.innerHTML = ''; return; }
+  el.style.display = 'block';
+  var idx = 0;
+  el.innerHTML = msgs[0];
+  if (msgs.length > 1) {
+    _tickerTimer = setInterval(function() {
+      idx = (idx + 1) % msgs.length;
+      el.innerHTML = msgs[idx];
+    }, 4500);
+  }
+}
+
 function renderFriends() {
   renderTop5Banner();
+  renderRoomTicker();
   var sorted=state.friends.slice().sort(function(a,b){return a.name.localeCompare(b.name);});
   document.getElementById('friends-grid').innerHTML=sorted.map(function(f){
     var fRoom=f.room||'tuscany'; var fColor=ROOMS[fRoom]?ROOMS[fRoom].color:f.color;
