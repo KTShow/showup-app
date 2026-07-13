@@ -115,6 +115,9 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
 .friend-new-badge{position:absolute;top:8px;right:8px;background:var(--terra);color:#fff;font-size:9px;font-weight:700;letter-spacing:0.04em;padding:2px 6px;border-radius:10px;}
 .friend-new-detail{font-size:10px;color:var(--terra);font-weight:600;margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .room-ticker{background:var(--cream);border:1px solid var(--border);border-radius:var(--radius);padding:10px 14px;margin-bottom:16px;font-size:13px;font-weight:600;color:var(--terra);text-align:center;}
+.ticker-toggle{display:flex;gap:6px;justify-content:center;margin-bottom:6px;}
+.ticker-toggle-btn{background:transparent;border:1px solid var(--border);border-radius:20px;padding:3px 10px;font-family:var(--sans);font-size:10px;font-weight:700;color:var(--muted);cursor:pointer;text-transform:uppercase;letter-spacing:0.3px;}
+.ticker-toggle-btn.active{background:var(--terra);color:white;border-color:var(--terra);}
 .friend-card:hover{border-color:var(--terra);transform:translateY(-2px);}
 .friend-av{width:52px;height:52px;border-radius:50%;margin:0 auto 10px;display:flex;align-items:center;justify-content:center;font-size:22px;color:white;}
 .friend-name{font-size:14px;font-weight:600;}
@@ -586,6 +589,10 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
           <button class="lr-toggle-btn" id="toggle-picks" onclick="switchLRView('picks')"><span class="toggle-icon">&#127942;</span>Friends' Favorites</button>
         </div>
         <div id="lr-crew-view">
+          <div class="ticker-toggle" id="ticker-toggle" style="display:none">
+            <button class="ticker-toggle-btn active" id="ticker-toggle-total" onclick="setTickerView('total')">To Date</button>
+            <button class="ticker-toggle-btn" id="ticker-toggle-daily" onclick="setTickerView('daily')">Yesterday</button>
+          </div>
           <div id="room-ticker" class="room-ticker" style="display:none"></div>
           <div id="top5-banner-wrap"></div>
           <div class="friends-grid" id="friends-grid"></div>
@@ -1275,36 +1282,64 @@ function getNewestActivity(f) {
 }
 
 var _tickerTimer = null;
-function buildRoomTickerMessages() {
-  var cutoff = Date.now() - 7*24*60*60*1000;
-  var newShows = 0, newComments = 0, activeFriends = {};
+var BETA1_LAUNCH_MS = Date.UTC(2026, 6, 5, 0, 0, 0); // beta1 official launch, July 5 2026
+
+function computeRoomStats(startMs, endMs) {
+  var showKeys = {}, commentCount = 0, activeFriends = {};
+  function inRange(iso) {
+    if (!iso) return false;
+    var t = new Date(iso).getTime();
+    return t >= startMs && t < endMs;
+  }
   state.friends.forEach(function(f) {
     [f.watching, f.watchlist, f.watched].forEach(function(arr) {
-      arr.forEach(function(s) {
-        if (s.added_at && new Date(s.added_at).getTime() > cutoff) {
-          newShows++; activeFriends[f.id] = true;
+      (arr || []).forEach(function(s) {
+        if (inRange(s.added_at)) {
+          var key = (s.title || '').toLowerCase().trim();
+          if (key) showKeys[key] = true;
+          activeFriends[f.id] = true;
         }
         (s.reactions || []).forEach(function(r) {
-          if (r.reactedAt && new Date(r.reactedAt).getTime() > cutoff) {
-            newComments++; activeFriends[f.id] = true;
+          if (inRange(r.reactedAt)) {
+            commentCount++; activeFriends[f.id] = true;
           }
         });
       });
     });
   });
-  var activeCount = Object.keys(activeFriends).length;
+  return { showCount: Object.keys(showKeys).length, commentCount: commentCount, activeCount: Object.keys(activeFriends).length };
+}
+
+function buildRoomTickerMessages(view) {
+  var startMs, endMs, suffix;
+  if (view === 'daily') {
+    var today0 = Math.floor(Date.now() / 86400000) * 86400000;
+    startMs = today0 - 86400000; endMs = today0; suffix = 'yesterday';
+  } else {
+    startMs = BETA1_LAUNCH_MS; endMs = Date.now() + 1; suffix = 'to date';
+  }
+  var stats = computeRoomStats(startMs, endMs);
   var msgs = [];
-  if (newShows > 0) msgs.push('&#127871; ' + newShows + ' new show' + (newShows===1?'':'s') + ' added to the room this week');
-  if (newComments > 0) msgs.push('&#128172; ' + newComments + ' new comment' + (newComments===1?'':'s') + ' this week');
-  if (activeCount > 0) msgs.push('&#128075; ' + activeCount + ' friend' + (activeCount===1?'':'s') + ' active in the room this week');
+  if (stats.showCount > 0) msgs.push('&#127871; ' + stats.showCount + ' show' + (stats.showCount===1?'':'s') + ' added to the room ' + suffix);
+  if (stats.commentCount > 0) msgs.push('&#128172; ' + stats.commentCount + ' comment' + (stats.commentCount===1?'':'s') + ' ' + suffix);
+  if (stats.activeCount > 0) msgs.push('&#128075; ' + stats.activeCount + ' friend' + (stats.activeCount===1?'':'s') + ' active in the room ' + suffix);
   return msgs;
+}
+
+function setTickerView(view) {
+  state.tickerView = view;
+  document.getElementById('ticker-toggle-total').classList.toggle('active', view === 'total');
+  document.getElementById('ticker-toggle-daily').classList.toggle('active', view === 'daily');
+  renderRoomTicker();
 }
 
 function renderRoomTicker() {
   var el = document.getElementById('room-ticker');
+  var toggleEl = document.getElementById('ticker-toggle');
   if (!el) return;
   if (_tickerTimer) { clearInterval(_tickerTimer); _tickerTimer = null; }
-  var msgs = buildRoomTickerMessages();
+  if (toggleEl) toggleEl.style.display = (state.friends && state.friends.length) ? 'flex' : 'none';
+  var msgs = buildRoomTickerMessages(state.tickerView || 'total');
   if (!msgs.length) { el.style.display = 'none'; el.innerHTML = ''; return; }
   el.style.display = 'block';
   var idx = 0;
