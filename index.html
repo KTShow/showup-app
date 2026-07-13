@@ -110,8 +110,8 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
 .quick-react-btn:hover{background:var(--border);}
 
 .section-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);margin:18px 0 10px;}
-.friends-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:12px;margin-bottom:24px;}
-.friend-card{position:relative;background:var(--cream);border:1px solid var(--border);border-radius:var(--radius);padding:16px;text-align:center;cursor:pointer;transition:all 0.2s;box-shadow:var(--shadow);}
+.friends-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(98px,1fr));gap:9px;margin-bottom:24px;}
+.friend-card{position:relative;background:var(--cream);border:1px solid var(--border);border-radius:var(--radius);padding:11px;text-align:left;cursor:pointer;transition:all 0.2s;box-shadow:var(--shadow);}
 .friend-new-badge{position:absolute;top:8px;right:8px;background:var(--terra);color:#fff;font-size:9px;font-weight:700;letter-spacing:0.04em;padding:2px 6px;border-radius:10px;}
 .friend-new-detail{font-size:10px;color:var(--terra);font-weight:600;margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .room-ticker{background:var(--cream);border:1px solid var(--border);border-radius:var(--radius);padding:10px 14px;margin-bottom:16px;font-size:13px;font-weight:600;color:var(--terra);text-align:center;}
@@ -119,10 +119,11 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
 .ticker-toggle-btn{background:transparent;border:1px solid var(--border);border-radius:20px;padding:3px 10px;font-family:var(--sans);font-size:10px;font-weight:700;color:var(--muted);cursor:pointer;text-transform:uppercase;letter-spacing:0.3px;}
 .ticker-toggle-btn.active{background:var(--terra);color:white;border-color:var(--terra);}
 .friend-card:hover{border-color:var(--terra);transform:translateY(-2px);}
-.friend-av{width:52px;height:52px;border-radius:50%;margin:0 auto 10px;display:flex;align-items:center;justify-content:center;font-size:22px;color:white;}
-.friend-name{font-size:14px;font-weight:600;}
-.friend-city{font-size:11px;color:var(--muted);margin-top:2px;}
-.friend-count{margin-top:6px;font-size:11px;color:var(--terra);font-weight:600;}
+.friend-top-row{display:flex;align-items:center;gap:6px;margin-bottom:5px;}
+.friend-av{width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;color:white;flex-shrink:0;}
+.friend-name{font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.friend-city{font-size:10px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.friend-count{margin-top:5px;font-size:10px;color:var(--terra);font-weight:600;}
 .back-btn{background:none;border:none;color:var(--fig);font-family:var(--sans);font-size:14px;cursor:pointer;padding:0;margin-bottom:16px;display:flex;align-items:center;gap:6px;}
 .friend-header{display:flex;align-items:center;gap:14px;margin-bottom:20px;}
 .friend-header-av{width:54px;height:54px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:22px;color:white;}
@@ -1359,10 +1360,15 @@ function renderFriends() {
   document.getElementById('friends-grid').innerHTML=sorted.map(function(f){
     var fRoom=f.room||'tuscany'; var fColor=ROOMS[fRoom]?ROOMS[fRoom].color:f.color;
     var fInitials=f.name.split(' ').map(function(x){return x[0];}).join('');
+    var fFirst=f.name.split(' ')[0];
     var newest=getNewestActivity(f);
     var badge=newest?'<div class="friend-new-badge">NEW</div>':'';
     var detail=newest?'<div class="friend-new-detail">'+(newest.kind==='comment'?'New comment on '+escHtml(newest.title):'New: '+escHtml(newest.title)+' ('+newest.listLabel+')')+'</div>':'';
-    return '<div class="friend-card" onclick="showFriend(\''+f.id+'\')">'+badge+'<div class="friend-av" style="background:'+fColor+';font-size:16px;font-weight:700;font-family:var(--sans);">'+fInitials+'</div>'+'<div class="friend-name">'+f.name+'</div>'+'<div class="friend-city">'+f.city+'</div>'+detail+'<div class="friend-count">'+f.watching.length+' watching &middot; '+f.watchlist.length+' on my list</div>'+'</div>';
+    return '<div class="friend-card" onclick="showFriend(\''+f.id+'\')">'+badge
+      +'<div class="friend-top-row"><div class="friend-av" style="background:'+fColor+';font-weight:700;font-family:var(--sans);">'+fInitials+'</div><div class="friend-name">'+fFirst+'</div></div>'
+      +'<div class="friend-city">'+f.city+'</div>'+detail
+      +'<div class="friend-count">'+f.watching.length+' watching &middot; '+f.watchlist.length+' list &middot; '+f.watched.length+' binged</div>'
+      +'</div>';
   }).join('');
 }
 
