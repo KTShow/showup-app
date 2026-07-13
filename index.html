@@ -1356,8 +1356,16 @@ function renderRoomTicker() {
 function renderFriends() {
   renderTop5Banner();
   renderRoomTicker();
+  var selfTile='';
+  if(state.user){
+    var myColor=ROOMS[state.user.room||'tuscany']?ROOMS[state.user.room||'tuscany'].color:'#C4622D';
+    selfTile='<div class="friend-card" onclick="showFriend(\''+state.user.id+'\')">'
+      +'<div class="friend-top-row"><div class="friend-av" style="background:'+myColor+';font-weight:700;font-family:var(--sans);">'+(state.user.initials||'Y')+'</div><div class="friend-name">YOU</div></div>'
+      +'<div class="friend-count">'+state.watching.length+' watching &middot; '+state.watchlist.length+' list &middot; '+state.watched.length+' binged</div>'
+      +'</div>';
+  }
   var sorted=state.friends.slice().sort(function(a,b){return a.name.localeCompare(b.name);});
-  document.getElementById('friends-grid').innerHTML=sorted.map(function(f){
+  document.getElementById('friends-grid').innerHTML=selfTile+sorted.map(function(f){
     var fRoom=f.room||'tuscany'; var fColor=ROOMS[fRoom]?ROOMS[fRoom].color:f.color;
     var fInitials=f.name.split(' ').map(function(x){return x[0];}).join('');
     var fFirst=f.name.split(' ')[0];
@@ -1384,16 +1392,22 @@ async function logImpressions(friendId, showIds) {
 
 function showFriend(id) {
   state.lastViewedFriend=id;
-  var f=state.friends.find(function(x){return x.id===id;});
-  var visibleIds=[];
-  (f.watching||[]).filter(function(s){return !s.hidden;}).forEach(function(s){visibleIds.push(s.id);});
-  (f.watchlist||[]).filter(function(s){return !s.hidden;}).forEach(function(s){visibleIds.push(s.id);});
-  (f.watched||[]).filter(function(s){return !s.hidden;}).forEach(function(s){visibleIds.push(s.id);});
-  logImpressions(f.id, visibleIds);
+  var isSelf = !!(state.user && id === state.user.id);
+  var f = isSelf
+    ? { id: state.user.id, name: 'You', city: state.user.city, room: state.user.room, watching: state.watching, watchlist: state.watchlist, watched: state.watched, top5: state.user.top5 }
+    : state.friends.find(function(x){return x.id===id;});
+  if (!f) return;
+  if (!isSelf) {
+    var visibleIds=[];
+    (f.watching||[]).filter(function(s){return !s.hidden;}).forEach(function(s){visibleIds.push(s.id);});
+    (f.watchlist||[]).filter(function(s){return !s.hidden;}).forEach(function(s){visibleIds.push(s.id);});
+    (f.watched||[]).filter(function(s){return !s.hidden;}).forEach(function(s){visibleIds.push(s.id);});
+    logImpressions(f.id, visibleIds);
+  }
   document.getElementById('friends-view').style.display='none';
   var dv=document.getElementById('friend-detail-view'); dv.style.display='block';
   var fRoom=f.room||'tuscany'; var fColor=ROOMS[fRoom]?ROOMS[fRoom].color:f.color;
-  var fInitials=f.name.split(' ').map(function(x){return x[0]||'';}).join('').toUpperCase();
+  var fInitials=isSelf?(state.user.initials||'Y'):f.name.split(' ').map(function(x){return x[0]||'';}).join('').toUpperCase();
 
   function fGrouped(arr,lk){
     var groups={};
@@ -1404,10 +1418,10 @@ function showFriend(id) {
       groups[svc].sort(function(a,b){return a.title.localeCompare(b.title);}).forEach(function(s){
         var rHTML=reactionsHTML(s.reactions, lk, s.id, f.id);
         var inpId='finp-'+lk+'-'+f.id+'-'+s.id;
-        var reactToggle=(s.showReact
+        var reactToggle=isSelf?'':((s.showReact
           ?'<div class="inline-react"><input class="react-input" id="'+inpId+'" placeholder="What did you think? 😊" /><button class="btn-send" onclick="submitFR(\''+f.id+'\',\''+lk+'\',\''+s.id+'\')">Send</button><button class="btn-cancel" onclick="toggleFR(\''+f.id+'\',\''+lk+'\',\''+s.id+'\')">Cancel</button></div>'
           :'<button class="btn-react-toggle" onclick="toggleFR(\''+f.id+'\',\''+lk+'\',\''+s.id+'\')">+ What did you think?</button>')
-          + quickReactRow('quickReactFR', "'"+f.id+"','"+lk+"','"+s.id+"'");
+          + quickReactRow('quickReactFR', "'"+f.id+"','"+lk+"','"+s.id+"'"));
         var actions=(lk==='w'||lk==='wd')?remoteStatic(s.rating):'';
         var watchedBadge=lk==='wd'?'<span style="font-size:11px;color:var(--fig);font-weight:600;">&#10003; Binged</span>':'';
         html+='<div class="show-card"><div class="show-card-top">'+showTile(s)+'<div class="show-info"><div class="show-title">'+s.title+'</div>'+(watchedBadge?'<div style="margin-top:2px;">'+watchedBadge+'</div>':'')+'</div><div class="show-actions">'+actions+'</div></div><div class="react-area">'+rHTML+reactToggle+'</div></div>';
@@ -1427,10 +1441,13 @@ function showFriend(id) {
         }).join('')
       + '</div>';
   }
-  dv.innerHTML='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;"><button class="back-btn" onclick="backToFriends()">&#8592; Back to Living Room</button><button class="btn-remove-friend" onclick="removeFriend(\''+f.id+'\')">Remove from Room</button></div>'
+  var removeBtn=isSelf?'':'<button class="btn-remove-friend" onclick="removeFriend(\''+f.id+'\')">Remove from Room</button>';
+  var roomTitle=isSelf?'Your Living Room':f.name+"'s Living Room";
+  var cityLine=isSelf?'':'<div style="font-size:13px;color:var(--muted)">'+f.city+'</div>';
+  dv.innerHTML='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;"><button class="back-btn" onclick="backToFriends()">&#8592; Back to Living Room</button>'+removeBtn+'</div>'
     +'<div class="friend-header"><div class="friend-header-av" style="background:'+fColor+';font-size:18px;font-weight:700;font-family:var(--sans);">'+fInitials+'</div>'
-    +'<div><div style="font-family:Georgia,serif;font-size:20px;font-weight:700">'+f.name+"'s Living Room</div>"
-    +'<div style="font-size:13px;color:var(--muted)">'+f.city+'</div></div></div>'
+    +'<div><div style="font-family:Georgia,serif;font-size:20px;font-weight:700">'+roomTitle+'</div>'
+    +cityLine+'</div></div>'
     +'<div style="margin:24px 0 12px;background:var(--terra);color:white;padding:10px 18px;border-radius:8px;font-family:var(--serif);font-size:15px;font-weight:700;letter-spacing:0.2px;display:flex;align-items:center;gap:8px;">&#128250; On Right Now</div>'+fGrouped(f.watching.filter(function(x){return !x.hidden;}),'w')
     +'<div style="margin:24px 0 12px;background:var(--terra);color:white;padding:10px 18px;border-radius:8px;font-family:var(--serif);font-size:15px;font-weight:700;letter-spacing:0.2px;display:flex;align-items:center;gap:8px;">🛋️ Saving a Seat</div>'+fGrouped(f.watchlist.filter(function(x){return !x.hidden;}),'wl')
   +(f.watched&&f.watched.length
@@ -1440,10 +1457,10 @@ function showFriend(id) {
           + f.watched.filter(function(x){return x.dnf;}).map(function(s){
               var rHTML=reactionsHTML(s.reactions,'wd',s.id,f.id);
               var inpId='finp-wd-'+f.id+'-'+s.id;
-              var reactToggle=(s.showReact
+              var reactToggle=isSelf?'':((s.showReact
                 ?'<div class="inline-react"><input class="react-input" id="'+inpId+'" placeholder="What did you think? 😊" /><button class="btn-send" onclick="submitFR(\''+f.id+'\',\'wd\',\''+s.id+'\')">Send</button><button class="btn-cancel" onclick="toggleFR(\''+f.id+'\',\'wd\',\''+s.id+'\')">Cancel</button></div>'
                 :'<button class="btn-react-toggle" onclick="toggleFR(\''+f.id+'\',\'wd\',\''+s.id+'\')">+ What did you think?</button>')
-                + quickReactRow('quickReactFR', "'"+f.id+"','wd','"+s.id+"'");
+                + quickReactRow('quickReactFR', "'"+f.id+"','wd','"+s.id+"'"));
               return '<div class="dnf-card"><div class="show-card-top">'+showTile(s)
                 +'<div class="show-info"><div class="show-title">'+s.title+'</div>'
                 +'<div style="margin-top:3px;"><span class="dnf-badge">Didn&#39;t Finish</span>'
