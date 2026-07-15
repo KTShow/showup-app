@@ -1494,9 +1494,11 @@ function buildRankings(){
   // same shared "group favorites" list for everyone in the room — not a personalized
   // view that excludes whoever happens to be looking at it.
   var shows={};
-  function addRating(name,color,initials,title,platform,rating,isMe){
+  function addRating(name,color,initials,title,platform,rating,isMe,posterPath,tmdbId){
     var key=title.toLowerCase().trim();
-    if(!shows[key])shows[key]={title:title,platform:platform||'',ratings:[],raters:[]};
+    if(!shows[key])shows[key]={title:title,platform:platform||'',ratings:[],raters:[],poster_path:null,tmdb_id:null};
+    if(!shows[key].poster_path&&posterPath)shows[key].poster_path=posterPath;
+    if(!shows[key].tmdb_id&&tmdbId)shows[key].tmdb_id=tmdbId;
     shows[key].ratings.push(rating);
     shows[key].raters.push({name:name,color:color,rating:rating,initials:initials,isMe:!!isMe});
   }
@@ -1505,18 +1507,18 @@ function buildRankings(){
     var fColor=ROOMS[f.room||'tuscany']?ROOMS[f.room||'tuscany'].color:'#888';
     f.watched.forEach(function(s){
       if(!s||!s.title||!s.rating||s.rating===0)return;
-      addRating(f.name,fColor,f.name.split(' ').map(function(x){return x[0]||'';}).join(''),s.title,s.platform,s.rating,false);
+      addRating(f.name,fColor,f.name.split(' ').map(function(x){return x[0]||'';}).join(''),s.title,s.platform,s.rating,false,s.poster_path,s.tmdb_id);
     });
   });
   if(state.user){
     var myColor=ROOMS[state.user.room||'tuscany']?ROOMS[state.user.room||'tuscany'].color:'#C4622D';
     (state.watched||[]).forEach(function(s){
       if(!s||!s.title||!s.rating||s.rating===0)return;
-      addRating('You',myColor,state.user.initials||'Y',s.title,s.platform,s.rating,true);
+      addRating('You',myColor,state.user.initials||'Y',s.title,s.platform,s.rating,true,s.poster_path,s.tmdb_id);
     });
   }
   var MIN_RATERS=2; // a single 5-star rating shouldn't outrank a show several people agree on
-  var list=Object.values(shows).filter(function(s){return s.ratings.length>=MIN_RATERS;}).map(function(s){var avg=s.ratings.reduce(function(a,b){return a+b;},0)/s.ratings.length;return {title:s.title,platform:s.platform,avg:Math.round(avg*10)/10,count:s.ratings.length,raters:s.raters};});
+  var list=Object.values(shows).filter(function(s){return s.ratings.length>=MIN_RATERS;}).map(function(s){var avg=s.ratings.reduce(function(a,b){return a+b;},0)/s.ratings.length;return {title:s.title,platform:s.platform,avg:Math.round(avg*10)/10,count:s.ratings.length,raters:s.raters,poster_path:s.poster_path,tmdb_id:s.tmdb_id};});
   list.sort(function(a,b){return b.avg-a.avg||b.count-a.count;});
   return list.slice(0, 25);
 }
@@ -1529,8 +1531,12 @@ function renderRankings(){
     var rank=i+1; var isGold=rank<=3;
     var remotes=''; var full=Math.floor(s.avg);
     for(var n=1;n<=5;n++){var lit=n<=full||(n===full+1&&s.avg-full>=0.5);remotes+='<span style="opacity:'+(lit?'1':'0.18')+';display:inline-block;">'+remoteIcon(12,lit)+'</span>';}
+    var thumb=s.poster_path
+      ? '<img src="'+TMDB_IMG+s.poster_path+'" style="width:32px;height:32px;border-radius:6px;object-fit:cover;flex-shrink:0;margin-right:10px;" />'
+      : '<div style="width:32px;height:32px;border-radius:6px;background:var(--olive);flex-shrink:0;margin-right:10px;display:flex;align-items:center;justify-content:center;font-size:14px;">&#128252;</div>';
     return '<div class="rank-card" onclick="showRankDetail('+i+')">'
       +'<span class="rank-badge'+(isGold?' gold':'')+'">#'+rank+'</span>'
+      +thumb
       +'<span class="rank-title-text">'+(s.title||'')+'</span>'
       +'<span class="rank-platform">'+(s.platform||'')+'</span>'
       +'<span class="rank-avg-inline">'+s.avg.toFixed(1)+'</span>'
@@ -1547,9 +1553,20 @@ function showRankDetail(idx){
     var rR=''; for(var n=1;n<=5;n++){rR+='<span style="opacity:'+(n<=r.rating?'1':'0.18')+';display:inline-block;">'+remoteIcon(13,n<=r.rating)+'</span>';}
     return '<div class="rank-detail-row"><div class="rank-detail-av" style="background:'+r.color+'">'+r.initials+'</div><div class="rank-detail-name">'+(r.isMe?'You':r.name)+'</div><div style="display:flex;gap:2px;">'+rR+'</div></div>';
   }).join('');
+  var clickAttr=s.tmdb_id?' onclick="openShowDetails('+s.tmdb_id+')"':'';
+  var cursor=s.tmdb_id?'cursor:pointer;':'';
+  var thumb=s.poster_path
+    ? '<img src="'+TMDB_IMG+s.poster_path+'"'+clickAttr+' style="width:60px;height:60px;border-radius:8px;object-fit:cover;flex-shrink:0;'+cursor+'" />'
+    : '<div'+clickAttr+' style="width:60px;height:60px;border-radius:8px;background:var(--olive);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:22px;'+cursor+'">&#128252;</div>';
   panel.style.display='block';
   panel.innerHTML='<button class="rank-close" onclick="backToRankings()">\u2190 Back to rankings</button>'
-    +'<div class="rank-detail"><div class="rank-detail-title">'+s.title+'</div>'
+    +'<div class="rank-detail">'
+    +'<div style="display:flex;gap:12px;align-items:flex-start;margin-bottom:4px;">'
+    +thumb
+    +'<div style="flex:1;min-width:0;">'
+    +'<div class="rank-detail-title">'+s.title+'</div>'
+    +(s.platform?'<span class="rank-platform" style="margin:0 0 6px 0;display:inline-block;">'+s.platform+'</span>':'')
+    +'</div></div>'
     +'<div style="display:flex;align-items:baseline;gap:10px;margin-bottom:4px;">'
     +'<span class="rank-detail-avg">'+s.avg.toFixed(1)+'</span>'
     +'<div style="display:flex;gap:2px;">'+remotes+'</div>'
