@@ -90,8 +90,8 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
 .remote-btn:hover{transform:scale(1.18);}
 .btn-start{background:var(--terra);color:white;border:none;border-radius:6px;padding:5px 10px;font-family:var(--sans);font-size:12px;cursor:pointer;}
 .btn-start:hover{background:var(--burnt);}
-.btn-remove{background:none;border:none;color:#c0392b;cursor:pointer;font-size:14px;padding:2px 6px;border-radius:4px;}
-.btn-remove:hover{background:#fdecea;}
+.btn-remove{background:var(--sand);border:none;color:#c0392b;cursor:pointer;font-size:15px;padding:6px 9px;border-radius:7px;line-height:1;}
+.btn-remove:hover{background:#c0392b;color:white;}
 
 .react-area{margin-top:8px;padding-top:8px;border-top:1px solid var(--border);}
 .react-list{display:flex;flex-direction:column;gap:5px;margin-bottom:6px;}
@@ -115,9 +115,6 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
 .friend-new-badge{position:absolute;top:8px;right:8px;background:var(--terra);color:#fff;font-size:9px;font-weight:700;letter-spacing:0.04em;padding:2px 6px;border-radius:10px;}
 .friend-new-detail{font-size:10px;color:var(--terra);font-weight:600;margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .room-ticker{background:var(--cream);border:1px solid var(--border);border-radius:var(--radius);padding:10px 14px;margin-bottom:16px;font-size:13px;font-weight:600;color:var(--terra);text-align:center;}
-.ticker-toggle{display:flex;gap:6px;justify-content:center;margin-bottom:6px;}
-.ticker-toggle-btn{background:transparent;border:1px solid var(--border);border-radius:20px;padding:3px 10px;font-family:var(--sans);font-size:10px;font-weight:700;color:var(--muted);cursor:pointer;text-transform:uppercase;letter-spacing:0.3px;}
-.ticker-toggle-btn.active{background:var(--terra);color:white;border-color:var(--terra);}
 .friend-card:hover{border-color:var(--terra);transform:translateY(-2px);}
 .friend-top-row{display:flex;align-items:center;gap:6px;margin-bottom:5px;}
 .friend-av{width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;color:white;flex-shrink:0;}
@@ -140,7 +137,8 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
 .rank-title-text{font-size:14px;font-weight:600;color:var(--charcoal);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .rank-platform{font-size:10px;font-weight:700;color:white;background:var(--olive);padding:3px 8px;border-radius:10px;white-space:nowrap;flex-shrink:0;margin-right:10px;margin-left:8px;}
 .rank-remotes-inline{display:flex;gap:3px;align-items:center;flex-shrink:0;}
-.rank-avg-inline{font-family:var(--serif);font-size:13px;font-weight:700;color:var(--terra);margin-right:8px;flex-shrink:0;}
+.rank-avg-inline{font-family:var(--serif);font-size:13px;font-weight:700;color:var(--terra);margin-right:6px;flex-shrink:0;}
+.rank-count-inline{font-size:11px;color:var(--muted);flex-shrink:0;white-space:nowrap;}
 .rank-detail{background:var(--cream);border:1px solid var(--border);border-radius:var(--radius);padding:18px;margin-top:16px;box-shadow:var(--shadow);}
 .rank-detail-title{font-family:var(--serif);font-size:18px;font-weight:700;color:var(--charcoal);margin-bottom:4px;}
 .rank-detail-sub{font-size:12px;color:var(--muted);margin-bottom:14px;}
@@ -227,10 +225,10 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
 .didnt-finish-btn{background:none;border:1px solid rgba(192,57,43,0.3);color:#c0392b;border-radius:6px;padding:4px 10px;font-family:var(--sans);font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap;margin-left:6px;}
 .didnt-finish-btn:hover{background:#fdecea;}
 
-.btn-hide{background:none;border:none;cursor:pointer;padding:2px 6px;font-size:14px;color:var(--muted);border-radius:4px;transition:all 0.2s;}
-.btn-hide:hover{color:var(--fig);}
-.btn-platform-edit{background:none;border:none;cursor:pointer;padding:2px 6px;font-size:14px;color:var(--muted);border-radius:4px;transition:all 0.2s;}
-.btn-platform-edit:hover{color:var(--fig);}
+.btn-hide{background:var(--sand);border:none;cursor:pointer;padding:6px 9px;font-size:15px;color:var(--charcoal);border-radius:7px;line-height:1;transition:all 0.2s;}
+.btn-hide:hover{background:var(--fig);color:white;}
+.btn-platform-edit{background:var(--sand);border:none;cursor:pointer;padding:6px 9px;font-size:15px;color:var(--charcoal);border-radius:7px;line-height:1;transition:all 0.2s;}
+.btn-platform-edit:hover{background:var(--fig);color:white;}
 .platform-edit-row{margin-top:6px;}
 .platform-edit-row select{width:100%;box-sizing:border-box;border:1px solid var(--border);border-radius:8px;padding:6px 8px;font-family:var(--sans);font-size:12px;color:var(--charcoal);background:var(--cream);}
 .btn-hide.hidden{color:#c0392b;}
@@ -590,10 +588,6 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
           <button class="lr-toggle-btn" id="toggle-picks" onclick="switchLRView('picks')"><span class="toggle-icon">&#127942;</span>Friends' Favorites</button>
         </div>
         <div id="lr-crew-view">
-          <div class="ticker-toggle" id="ticker-toggle" style="display:none">
-            <button class="ticker-toggle-btn active" id="ticker-toggle-total" onclick="setTickerView('total')">To Date</button>
-            <button class="ticker-toggle-btn" id="ticker-toggle-daily" onclick="setTickerView('daily')">Yesterday</button>
-          </div>
           <div id="room-ticker" class="room-ticker" style="display:none"></div>
           <div id="top5-banner-wrap"></div>
           <div class="friends-grid" id="friends-grid"></div>
@@ -1279,64 +1273,36 @@ function getNewestActivity(f) {
 }
 
 var _tickerTimer = null;
-var BETA1_LAUNCH_MS = Date.UTC(2026, 6, 5, 0, 0, 0); // beta1 official launch, July 5 2026
-
-function computeRoomStats(startMs, endMs) {
-  var showKeys = {}, commentCount = 0, activeFriends = {};
-  function inRange(iso) {
-    if (!iso) return false;
-    var t = new Date(iso).getTime();
-    return t >= startMs && t < endMs;
-  }
+function buildRoomTickerMessages() {
+  var cutoff = Date.now() - 7*24*60*60*1000;
+  var newShows = 0, newComments = 0, activeFriends = {};
   state.friends.forEach(function(f) {
     [f.watching, f.watchlist, f.watched].forEach(function(arr) {
-      (arr || []).forEach(function(s) {
-        if (inRange(s.added_at)) {
-          var key = (s.title || '').toLowerCase().trim();
-          if (key) showKeys[key] = true;
-          activeFriends[f.id] = true;
+      arr.forEach(function(s) {
+        if (s.added_at && new Date(s.added_at).getTime() > cutoff) {
+          newShows++; activeFriends[f.id] = true;
         }
         (s.reactions || []).forEach(function(r) {
-          if (inRange(r.reactedAt)) {
-            commentCount++; activeFriends[f.id] = true;
+          if (r.reactedAt && new Date(r.reactedAt).getTime() > cutoff) {
+            newComments++; activeFriends[f.id] = true;
           }
         });
       });
     });
   });
-  return { showCount: Object.keys(showKeys).length, commentCount: commentCount, activeCount: Object.keys(activeFriends).length };
-}
-
-function buildRoomTickerMessages(view) {
-  var startMs, endMs, suffix;
-  if (view === 'daily') {
-    var today0 = Math.floor(Date.now() / 86400000) * 86400000;
-    startMs = today0 - 86400000; endMs = today0; suffix = 'yesterday';
-  } else {
-    startMs = BETA1_LAUNCH_MS; endMs = Date.now() + 1; suffix = 'to date';
-  }
-  var stats = computeRoomStats(startMs, endMs);
+  var activeCount = Object.keys(activeFriends).length;
   var msgs = [];
-  if (stats.showCount > 0) msgs.push('&#127871; ' + stats.showCount + ' show' + (stats.showCount===1?'':'s') + ' added to the room ' + suffix);
-  if (stats.commentCount > 0) msgs.push('&#128172; ' + stats.commentCount + ' comment' + (stats.commentCount===1?'':'s') + ' ' + suffix);
-  if (stats.activeCount > 0) msgs.push('&#128075; ' + stats.activeCount + ' friend' + (stats.activeCount===1?'':'s') + ' active in the room ' + suffix);
+  if (newShows > 0) msgs.push('&#127871; ' + newShows + ' new show' + (newShows===1?'':'s') + ' added to the room this week');
+  if (newComments > 0) msgs.push('&#128172; ' + newComments + ' new comment' + (newComments===1?'':'s') + ' this week');
+  if (activeCount > 0) msgs.push('&#128075; ' + activeCount + ' friend' + (activeCount===1?'':'s') + ' active in the room this week');
   return msgs;
-}
-
-function setTickerView(view) {
-  state.tickerView = view;
-  document.getElementById('ticker-toggle-total').classList.toggle('active', view === 'total');
-  document.getElementById('ticker-toggle-daily').classList.toggle('active', view === 'daily');
-  renderRoomTicker();
 }
 
 function renderRoomTicker() {
   var el = document.getElementById('room-ticker');
-  var toggleEl = document.getElementById('ticker-toggle');
   if (!el) return;
   if (_tickerTimer) { clearInterval(_tickerTimer); _tickerTimer = null; }
-  if (toggleEl) toggleEl.style.display = (state.friends && state.friends.length) ? 'flex' : 'none';
-  var msgs = buildRoomTickerMessages(state.tickerView || 'total');
+  var msgs = buildRoomTickerMessages();
   if (!msgs.length) { el.style.display = 'none'; el.innerHTML = ''; return; }
   el.style.display = 'block';
   var idx = 0;
@@ -1521,8 +1487,6 @@ function renderRankings(){
   if(!list.length){el.innerHTML='<div class="empty"><div class="empty-icon">&#128252;</div>No ratings yet from the room.</div>';return;}
   el.innerHTML=list.map(function(s,i){
     var rank=i+1; var isGold=rank<=3;
-    var remotes=''; var full=Math.floor(s.avg);
-    for(var n=1;n<=5;n++){var lit=n<=full||(n===full+1&&s.avg-full>=0.5);remotes+='<span style="opacity:'+(lit?'1':'0.18')+';display:inline-block;">'+remoteIcon(12,lit)+'</span>';}
     var thumb=s.poster_path
       ? '<img src="'+TMDB_IMG+s.poster_path+'" style="width:32px;height:32px;border-radius:6px;object-fit:cover;flex-shrink:0;margin-right:10px;" />'
       : '<div style="width:32px;height:32px;border-radius:6px;background:var(--olive);flex-shrink:0;margin-right:10px;display:flex;align-items:center;justify-content:center;font-size:14px;">&#128252;</div>';
@@ -1532,12 +1496,14 @@ function renderRankings(){
       +'<span class="rank-title-text">'+(s.title||'')+'</span>'
       +'<span class="rank-platform">'+(s.platform||'')+'</span>'
       +'<span class="rank-avg-inline">'+s.avg.toFixed(1)+'</span>'
-      +'<div class="rank-remotes-inline">'+remotes+'</div>'
+      +'<span class="rank-count-inline">'+s.count+' rated</span>'
       +'</div>';
   }).join('');
 }
 
+var _rankScrollY = 0;
 function showRankDetail(idx){
+  _rankScrollY = window.scrollY;
   var list=buildRankings(); var s=list[idx];
   var panel=document.getElementById('rank-detail-panel');
   var remotes=''; for(var n=1;n<=5;n++){var lit=n<=Math.floor(s.avg);remotes+='<span style="opacity:'+(lit?'1':'0.18')+';display:inline-block;">'+remoteIcon(16,lit)+'</span>';}
@@ -1569,7 +1535,7 @@ function showRankDetail(idx){
   panel.scrollIntoView({behavior:'smooth'});
 }
 
-function backToRankings(){document.getElementById('rank-detail-panel').style.display='none';document.getElementById('rankings-list').style.display='block';}
+function backToRankings(){document.getElementById('rank-detail-panel').style.display='none';document.getElementById('rankings-list').style.display='block';window.scrollTo(0,_rankScrollY);}
 
 function copyInvite(){
   var btn=document.getElementById('copy-btn');
@@ -2582,7 +2548,10 @@ window.setRoomAndSave = async function(roomKey) {
 // SHOWS — Supabase versions
 // ============================================================
 
-window.addShow = async function(list) {
+var _addConfirmPending = null;
+var ADD_LIST_LABELS = { watching: 'Currently Watching', watchlist: 'My List', watched: 'Already Binged' };
+
+window.addShow = function(list) {
   var tId = list==='watching'?'w-title':list==='watchlist'?'wl-title':'wd-title';
   var pId = list==='watching'?'w-platform':list==='watchlist'?'wl-platform':'wd-platform';
   var tEl = document.getElementById(tId);
@@ -2594,31 +2563,18 @@ window.addShow = async function(list) {
     setTimeout(function() { tEl.style.borderColor = ''; }, 900);
     return;
   }
-  var src = state.lastViewedFriend ? 'living_room' : 'manual';
-  var inf = state.lastViewedFriend || null;
-  var statusMap = { watching: 'watching', watchlist: 'watchlist', watched: 'watched' };
-  var tmdb = _tmdbPending || {};
-  try {
-    var show = await dbAddShow({ title: title, platform: platform, status: statusMap[list], source: src, influencedBy: inf,
-      tmdb_id: tmdb.tmdb_id, poster_path: tmdb.poster_path, genre: tmdb.genre,
-      original_network: tmdb.original_network, first_air_year: tmdb.first_air_year,
-      number_of_seasons: tmdb.number_of_seasons, show_status: tmdb.show_status,
-      overview: tmdb.overview, vote_average: tmdb.vote_average });
-    var newShow = { id: show.id, title: title, platform: platform, rating: 0, hidden: false, dnf: false,
-      source: src, influencedBy: inf, addedAt: show.added_at, reactions: [], showReact: false,
-      poster_path: tmdb.poster_path || null, tmdb_id: tmdb.tmdb_id || null };
-    state[list].push(newShow);
-    tEl.value = ''; pEl.value = '';
-    _tmdbPending = {};
-    renderList(list);
-    if (list === 'watched') openDWM(newShow);
-  } catch(e) {
-    console.error('Error adding show:', e);
-    alert('Error adding show. Please try again.');
-  }
+  _addConfirmPending = { list: list, title: title, platform: platform, tId: tId, pId: pId };
+  document.getElementById('add-confirm-title').textContent = title;
+  document.getElementById('add-confirm-sub').textContent = 'Add to ' + ADD_LIST_LABELS[list] + ' — ' + platform + '?';
+  document.getElementById('add-confirm-modal').classList.add('active');
 };
 
-window.addDirectDNF = async function() {
+window.cancelAddShow = function() {
+  _addConfirmPending = null;
+  document.getElementById('add-confirm-modal').classList.remove('active');
+};
+
+window.addDirectDNF = function() {
   var tEl = document.getElementById('dnf-title');
   var pEl = document.getElementById('dnf-platform');
   var title = tEl.value.trim();
@@ -2628,25 +2584,42 @@ window.addDirectDNF = async function() {
     setTimeout(function() { tEl.style.borderColor = ''; }, 900);
     return;
   }
+  _addConfirmPending = { list: 'dnf', title: title, platform: platform, tId: 'dnf-title', pId: 'dnf-platform' };
+  document.getElementById('add-confirm-title').textContent = title;
+  document.getElementById('add-confirm-sub').textContent = "Add to Didn't Finish — " + platform + '?';
+  document.getElementById('add-confirm-modal').classList.add('active');
+};
+
+window.confirmAddShow = async function() {
+  var pending = _addConfirmPending;
+  if (!pending) return;
+  document.getElementById('add-confirm-modal').classList.remove('active');
+  var list = pending.list, title = pending.title, platform = pending.platform;
+  var tEl = document.getElementById(pending.tId);
+  var pEl = document.getElementById(pending.pId);
   var src = state.lastViewedFriend ? 'living_room' : 'manual';
   var inf = state.lastViewedFriend || null;
+  var isDnf = list === 'dnf';
+  var statusMap = { watching: 'watching', watchlist: 'watchlist', watched: 'watched' };
   var tmdb = _tmdbPending || {};
   try {
-    var show = await dbAddShow({ title: title, platform: platform, status: 'dnf', dnf: true, source: src, influencedBy: inf,
+    var show = await dbAddShow({ title: title, platform: platform, status: isDnf ? 'dnf' : statusMap[list], dnf: isDnf, source: src, influencedBy: inf,
       tmdb_id: tmdb.tmdb_id, poster_path: tmdb.poster_path, genre: tmdb.genre,
       original_network: tmdb.original_network, first_air_year: tmdb.first_air_year,
       number_of_seasons: tmdb.number_of_seasons, show_status: tmdb.show_status,
       overview: tmdb.overview, vote_average: tmdb.vote_average });
-    var newShow = { id: show.id, title: title, platform: platform, rating: 0, hidden: false, dnf: true,
+    var newShow = { id: show.id, title: title, platform: platform, rating: 0, hidden: false, dnf: isDnf,
       source: src, influencedBy: inf, addedAt: show.added_at, reactions: [], showReact: false,
       poster_path: tmdb.poster_path || null, tmdb_id: tmdb.tmdb_id || null };
-    state.watched.push(newShow);
-    tEl.value = ''; pEl.value = '';
+    state[isDnf ? 'watched' : list].push(newShow);
+    if (tEl) tEl.value = ''; if (pEl) pEl.value = '';
     _tmdbPending = {};
-    renderList('watched');
-    openDWM(newShow, "Didn't finish? Rate it anyway", '🎬');
+    _addConfirmPending = null;
+    renderList(isDnf ? 'watched' : list);
+    if (isDnf) openDWM(newShow, "Didn't finish? Rate it anyway", '🎬');
+    else if (list === 'watched') openDWM(newShow);
   } catch(e) {
-    console.error('Error adding DNF show:', e);
+    console.error('Error adding show:', e);
     alert('Error adding show. Please try again.');
   }
 };
@@ -3403,6 +3376,17 @@ bootstrap();
   </div>
 </div>
 
+<!-- ADD-SHOW CONFIRM MODAL -->
+<div class="invite-modal-overlay" id="add-confirm-modal">
+  <div class="invite-modal">
+    <div class="invite-modal-title" id="add-confirm-title">Show Title</div>
+    <div class="invite-modal-sub" id="add-confirm-sub">Add this show?</div>
+    <div style="display:flex;gap:10px;">
+      <button class="btn-invite-copy" onclick="confirmAddShow()" style="flex:1;">Add</button>
+      <button class="btn-invite-close" onclick="cancelAddShow()" style="flex:1;">Cancel</button>
+    </div>
+  </div>
+</div>
 
 </body>
 </html>
