@@ -92,6 +92,10 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
 .btn-start:hover{background:var(--burnt);}
 .btn-remove{background:#fdecea;border:none;color:#c0392b;cursor:pointer;font-size:16px;font-weight:800;padding:6px 9px;border-radius:7px;line-height:1;}
 .btn-remove:hover{background:#c0392b;color:white;}
+.icon-hint-banner{display:flex;align-items:center;justify-content:space-between;gap:10px;background:var(--sand);border:1px solid var(--border);border-radius:10px;padding:10px 14px;margin-bottom:16px;font-size:12px;color:var(--charcoal);}
+.icon-hint-text{line-height:1.5;}
+.icon-hint-close{background:none;border:none;color:var(--muted);cursor:pointer;font-size:13px;padding:2px 4px;flex-shrink:0;}
+.icon-hint-close:hover{color:var(--fig);}
 
 .react-area{margin-top:8px;padding-top:8px;border-top:1px solid var(--border);}
 .react-list{display:flex;flex-direction:column;gap:5px;margin-bottom:6px;}
@@ -586,6 +590,10 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
           <button class="btn-add" onclick="addDirectDNF()">+ Add</button>
         </div>
       </div>
+      <div class="icon-hint-banner" id="icon-hint-banner" style="display:none;">
+        <span class="icon-hint-text"><b>&#9998;</b> changes the streaming service &nbsp;&middot;&nbsp; <b>&#8987;</b> marks it waiting for a new season</span>
+        <button class="icon-hint-close" onclick="dismissIconHint()" aria-label="Dismiss">&#10005;</button>
+      </div>
       <div id="watched-list"></div>
     </div>
     <div id="tab-living-room" class="tab-pane" style="display:none">
@@ -988,10 +996,22 @@ function showTab(tab, btn) {
   document.getElementById('tab-'+tab).style.display='block';
   btn.classList.add('active');
   if (tab==='living-room') { renderFriends(); if (typeof loadAndRenderFriends === 'function') loadAndRenderFriends(); }
-  if (tab==='watched') renderBingedTop5();
+  if (tab==='watched') { renderBingedTop5(); maybeShowIconHint(); }
   if (tab!=='living-room') state.lastViewedFriend = null;
   if (state.user) state.user.lastActive = new Date().toISOString();
 }
+
+var ICON_HINT_KEY = 'sw_icon_hint_dismissed';
+function maybeShowIconHint() {
+  var el = document.getElementById('icon-hint-banner');
+  if (!el) return;
+  el.style.display = localStorage.getItem(ICON_HINT_KEY) ? 'none' : 'flex';
+}
+window.dismissIconHint = function() {
+  localStorage.setItem(ICON_HINT_KEY, '1');
+  var el = document.getElementById('icon-hint-banner');
+  if (el) el.style.display = 'none';
+};
 
 function addShow_OLD(list) {
   var tId = list==='watching'?'w-title':list==='watchlist'?'wl-title':'wd-title';
