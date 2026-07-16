@@ -234,6 +234,8 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
 .btn-hide:hover{background:var(--fig);color:white;}
 .btn-platform-edit{background:var(--sand);border:none;cursor:pointer;padding:6px 9px;font-size:15px;color:var(--charcoal);border-radius:7px;line-height:1;transition:all 0.2s;}
 .btn-platform-edit:hover{background:var(--fig);color:white;}
+.btn-waiting{background:var(--sand);border:none;cursor:pointer;padding:6px 9px;font-size:15px;color:var(--fig);border-radius:7px;line-height:1;transition:all 0.2s;}
+.btn-waiting:hover{background:var(--fig);color:white;}
 .platform-edit-row{margin-top:6px;}
 .platform-edit-row select{width:100%;box-sizing:border-box;border:1px solid var(--border);border-radius:8px;padding:6px 8px;font-family:var(--sans);font-size:12px;color:var(--charcoal);background:var(--cream);}
 .btn-hide.hidden{color:#c0392b;}
@@ -1169,7 +1171,7 @@ function buildDNFCard(s) {
     + '<div style="margin-top:3px;"><span class="dnf-badge">Didn&#39;t Finish</span><span style="font-size:11px;color:var(--muted);margin-left:6px;">' + s.platform + '</span></div>'
     + platformRow
     + '</div>'
-    + '<div class="show-actions">' + remoteRating('watched', s.id, s.rating) + platformEditBtn('watched', s) + '</div>'
+    + '<div class="show-actions">' + remoteRating('watched', s.id, s.rating) + waitingBtn('watched', s) + platformEditBtn('watched', s) + '</div>'
     + '<button class="btn-remove" onclick="removeShow(&quot;watched&quot;,&quot;' + sid + '&quot;)">&#x2715;</button>'
     + '</div>'
     + '<div class="react-area">' + reactionsHTML(s.reactions, 'watched', s.id) + reactToggle + '</div>'
@@ -1181,6 +1183,7 @@ function buildCard(s, list) {
   if(list==='watched') actions=remoteRating(list,s.id,s.rating);
   if(list==='watchlist') actions='<button class="btn-start" onclick="moveToWatching(\'' + s.id + '\')" >Watch Now</button>';
   if(list==='watching') actions='<button class="btn-start" onclick="moveToWatchlist(\'' + s.id + '\')" style="background:var(--olive);">&#8592; My List</button>';
+  if(list==='watched'||list==='watchlist') actions+=waitingBtn(list, s);
   actions+=hideBtn(list, s);
   actions+=platformEditBtn(list, s);
   actions+='<button class="btn-remove" onclick="removeShow(\'' + list + '\',\'' + s.id + '\')" >&#x2715;</button>';
@@ -1208,6 +1211,10 @@ function hideBtn(list, s) {
 
 function platformEditBtn(list, s) {
   return '<button class="btn-platform-edit" onclick="togglePlatEdit(\''+list+'\',\''+s.id+'\')" title="Change streaming service">&#9998;</button>';
+}
+
+function waitingBtn(list, s) {
+  return '<button class="btn-waiting" onclick="moveToWaiting(\''+list+'\',\''+s.id+'\')" title="Waiting for New Season">&#8987;</button>';
 }
 
 function platformSelect(list, id, current) {
@@ -2755,6 +2762,19 @@ window.resumeWatching = function(id) {
   var s = state.watching.find(function(x) { return x.id === id; });
   if (!s) return;
   s.waitingForSeason = false;
+  renderList('watching');
+};
+
+// Shortcut from Binged/DNF/My List straight into the Waiting section,
+// skipping the "move to Watching, then mark waiting" two-step.
+window.moveToWaiting = function(list, id) {
+  var s = state[list].find(function(x) { return x.id === id; });
+  if (!s) return;
+  state[list] = state[list].filter(function(x) { return x.id !== id; });
+  s.waitingForSeason = true;
+  s.dnf = false;
+  state.watching.push(s);
+  renderList(list);
   renderList('watching');
 };
 
