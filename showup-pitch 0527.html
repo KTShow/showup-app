@@ -111,10 +111,10 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);}
   <div class="section">
     <div class="section-label">Where We Are</div>
     <div class="section-title">Built from concept in March 2026 to a live app with real Supabase accounts, real data and a real beta group using it today.</div>
-    <div class="section-body" style="font-style:italic;">Updated July 2026 (v0.2): Supabase is fully connected — real accounts, real data, real friend connections. 20 real beta invites sent, 11 actively connected. TMDb show search and poster art shipped. Rate-in-the-moment popup added for Done Watching, DNF and direct-to-Binged. Friends' Favorites is now one shared ranking the whole room sees identically, instead of a personalized view.</div>
+    <div class="section-body" style="font-style:italic;">Updated July 2026 (v0.3): Supabase is fully connected — real accounts, real data, real friend connections. 25 real beta invites sent, 24 actively connected. TMDb show search and poster art shipped. Rate-in-the-moment popup added for Done Watching, DNF and direct-to-Binged. Friends' Favorites is now one shared ranking the whole room sees identically, instead of a personalized view.</div>
     <div class="stats-row">
       <div class="stat-card"><div class="stat-number">4</div><div class="stat-label">Core screens</div></div>
-      <div class="stat-card"><div class="stat-number">11/20</div><div class="stat-label">Beta users joined</div></div>
+      <div class="stat-card"><div class="stat-number">24/25</div><div class="stat-label">Beta users joined</div></div>
       <div class="stat-card"><div class="stat-number">25+</div><div class="stat-label">Data points collected</div></div>
       <div class="stat-card"><div class="stat-number">Live</div><div class="stat-label">Hosted on Vercel</div></div>
     </div>
@@ -141,7 +141,7 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);}
       </div>
       <div class="feature-item fig">
         <div class="feature-name">&#10003; Invite Friends system</div>
-        <div class="feature-desc">Persistent Invite Friends button in the top nav on every screen. Opens a modal with a personal invite link and one-tap copy. Branded invite landing page live at /invite.html. Functional invite flow — real account creation and Living Room joining — built in Supabase, proven with 11 real beta users connected today.</div>
+        <div class="feature-desc">Persistent Invite Friends button in the top nav on every screen. Opens a modal with a personal invite link and one-tap copy. Branded invite landing page live at /invite.html. Functional invite flow — real account creation and Living Room joining — built in Supabase, proven with 24 real beta users connected today.</div>
       </div>
       <div class="feature-item olive">
         <div class="feature-name">&#10003; Invisible data infrastructure</div>
@@ -153,7 +153,7 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);}
       </div>
       <div class="feature-item fig">
         <div class="feature-name">&#10003; Real accounts on Supabase <span class="badge badge-new">NEW</span></div>
-        <div class="feature-desc">Email OTP login, no password. Data saves permanently between sessions. Every user has their own profile, their own lists, their own Living Room. 20 real beta invites sent, 11 actively connected in a live, working friend mesh.</div>
+        <div class="feature-desc">Email OTP login, no password. Data saves permanently between sessions. Every user has their own profile, their own lists, their own Living Room. 25 real beta invites sent, 24 actively connected in a live, working friend mesh.</div>
       </div>
       <div class="feature-item olive">
         <div class="feature-name">&#10003; TMDb show search + poster art <span class="badge badge-new">NEW</span></div>
@@ -170,6 +170,42 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);}
       <div class="feature-item">
         <div class="feature-name">&#10003; Live on the internet</div>
         <div class="feature-desc">Hosted on Vercel, version controlled on GitHub. Real URL, opens on any phone or laptop, auto-deploys when updated. Three pages live: the app, privacy policy and invite landing page.</div>
+      </div>
+      <div class="feature-item fig">
+        <div class="feature-name">&#10003; Show details popup <span class="badge badge-new">NEW</span></div>
+        <div class="feature-desc">Tap any poster — yours or a friend's — to open a quick detail card with synopsis, cast and TMDb rating, right from wherever you're browsing.</div>
+      </div>
+      <div class="feature-item olive">
+        <div class="feature-name">&#10003; Edit your own comments <span class="badge badge-new">NEW</span></div>
+        <div class="feature-desc">Fix a typo or change your mind — edit any comment you've left, on your own shows or a friend's, anywhere it appears in the app.</div>
+      </div>
+      <div class="feature-item gold">
+        <div class="feature-name">&#10003; One-tap emoji reactions <span class="badge badge-new">NEW</span></div>
+        <div class="feature-desc">&#128293; &#128525; &#128564; sit right next to the comment box for a lower-friction way to react to a friend's show without typing anything.</div>
+      </div>
+      <div class="feature-item">
+        <div class="feature-name">&#10003; Streaming platform auto-fills <span class="badge badge-new">NEW</span></div>
+        <div class="feature-desc">Adding a show now pulls its real US streaming availability straight from TMDb — no more manually picking the platform for every title.</div>
+      </div>
+      <div class="feature-item fig">
+        <div class="feature-name">&#10003; See what's new with your friends <span class="badge badge-new">NEW</span></div>
+        <div class="feature-desc">A NEW badge appears on a friend's tile the moment they add a show or leave a comment since you last checked in — with a one-line preview of what changed.</div>
+      </div>
+      <div class="feature-item olive">
+        <div class="feature-name">&#10003; Living Room activity ticker <span class="badge badge-new">NEW</span></div>
+        <div class="feature-desc">A rotating ticker above the friend grid surfaces recent room activity at a glance — who's watching what, who just commented.</div>
+      </div>
+      <div class="feature-item gold">
+        <div class="feature-name">&#10003; Rate and comment on Didn't Finish shows <span class="badge badge-new">NEW</span></div>
+        <div class="feature-desc">Didn't Finish is no longer a dead end — those shows can be rated and commented on too, so a show you dropped still feeds the influence graph and Friends' Favorites.</div>
+      </div>
+      <div class="feature-item">
+        <div class="feature-name">&#10003; Smarter Friends' Favorites &amp; Living Room counter <span class="badge badge-updated">UPDATED</span></div>
+        <div class="feature-desc">Rankings now require at least two friends to have rated a show before it's eligible, preventing a single 5-star rating from skewing the list. The Living Room activity counter also dedupes shows and shows both cumulative and daily views.</div>
+      </div>
+      <div class="feature-item fig">
+        <div class="feature-name">&#10003; Ongoing visual polish</div>
+        <div class="feature-desc">Bigger, tappable poster thumbnails, a pinned self-tile at the top of the Living Room, and comment boxes that stay open by default — steady refinement based on real beta usage.</div>
       </div>
     </div>
   </div>
@@ -367,7 +403,7 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);}
         <div class="timeline-line"></div>
         <div class="timeline-content">
           <div class="timeline-title">Now &mdash; Beta Launch</div>
-          <div class="timeline-sub">Supabase connected, real accounts live. 20 real beta invites sent, 11 actively connected in a working Living Room mesh. Several rounds of beta-driven fixes shipped.</div>
+          <div class="timeline-sub">Supabase connected, real accounts live. 25 real beta invites sent, 24 actively connected in a working Living Room mesh. Several rounds of beta-driven fixes shipped.</div>
           <span class="timeline-tag" style="background:var(--olive);">Done</span>
         </div>
       </div>
@@ -490,7 +526,7 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);}
     <a href="/" class="footer-link" style="margin-right:20px;">Open the app &rarr;</a>
     <a href="/privacy.html" class="footer-link">Privacy Policy</a>
   </div>
-  <div style="margin-top:20px;font-size:11px;color:rgba(255,255,255,0.3);">ShowUp Beta &mdash; Version 0.2 &mdash; July 2026</div>
+  <div style="margin-top:20px;font-size:11px;color:rgba(255,255,255,0.3);">ShowUp Beta &mdash; Version 0.3 &mdash; July 2026</div>
 </div>
 
 </body>
