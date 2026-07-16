@@ -223,6 +223,11 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
 .dnf-card{background:var(--cream);border:1px solid rgba(192,57,43,0.2);border-left:4px solid #c0392b;border-radius:var(--radius);padding:9px 12px;box-shadow:var(--shadow);margin-bottom:7px;opacity:0.85;}
 .dnf-card .show-title{color:var(--muted);}
 .didnt-finish-btn{background:none;border:1px solid rgba(192,57,43,0.3);color:#c0392b;border-radius:6px;padding:4px 10px;font-family:var(--sans);font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap;margin-left:6px;}
+.waiting-season-btn{background:none;border:1px solid rgba(107,45,78,0.3);color:var(--fig);border-radius:6px;padding:4px 10px;font-family:var(--sans);font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap;margin-left:6px;}
+.waiting-season-btn:hover{background:rgba(107,45,78,0.08);}
+.resume-watching-btn{background:var(--fig);color:white;border:none;border-radius:6px;padding:5px 12px;font-family:var(--sans);font-size:12px;font-weight:600;cursor:pointer;}
+.waiting-section{margin-top:28px;}
+.waiting-header{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--fig);margin-bottom:10px;display:flex;align-items:center;gap:6px;}
 .didnt-finish-btn:hover{background:#fdecea;}
 
 .btn-hide{background:var(--sand);border:none;cursor:pointer;padding:6px 9px;font-size:15px;color:var(--charcoal);border-radius:7px;line-height:1;transition:all 0.2s;}
@@ -245,6 +250,8 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
   .show-actions{margin-top:2px;}
   .done-watching-btn{font-size:11px;padding:4px 9px;}
   .didnt-finish-btn{font-size:11px;padding:4px 9px;}
+  .waiting-season-btn{font-size:11px;padding:4px 9px;}
+  .resume-watching-btn{font-size:11px;padding:4px 9px;}
   .btn-start{font-size:11px;padding:4px 8px;}
 }
 
@@ -1119,6 +1126,27 @@ function renderList(list) {
     return;
   }
 
+  if (list === 'watching') {
+    var active = items.filter(function(s){ return !s.waitingForSeason; });
+    var waiting = items.filter(function(s){ return s.waitingForSeason; });
+    var html = '';
+    if (active.length) {
+      var groups=groupByService(active); var services=Object.keys(groups).sort();
+      services.forEach(function(svc){
+        html+='<div class="service-group"><div class="service-divider"><span class="service-divider-text">'+svc+'</span></div><div class="shows-grid">';
+        groups[svc].forEach(function(s){ html+=buildCard(s,list); });
+        html+='</div></div>';
+      });
+    }
+    if (waiting.length) {
+      html+='<div class="waiting-section"><div class="waiting-header">&#8987; Waiting for New Season</div><div class="shows-grid">';
+      waiting.forEach(function(s){ html+=buildCard(s,list); });
+      html+='</div></div>';
+    }
+    el.innerHTML=html;
+    return;
+  }
+
   var groups=groupByService(items); var services=Object.keys(groups).sort(); var html='';
   services.forEach(function(svc){
     html+='<div class="service-group"><div class="service-divider"><span class="service-divider-text">'+svc+'</span></div><div class="shows-grid">';
@@ -1156,7 +1184,11 @@ function buildCard(s, list) {
   actions+=hideBtn(list, s);
   actions+=platformEditBtn(list, s);
   actions+='<button class="btn-remove" onclick="removeShow(\'' + list + '\',\'' + s.id + '\')" >&#x2715;</button>';
-  var moveLink=list==='watching'?'<div class="show-move"><button class="done-watching-btn" onclick="markWatched(\'' + s.id + '\')" >Done Watching &#10003;</button><button class="didnt-finish-btn" onclick="markDNF(\'' + s.id + '\')" >Didn&#39;t Finish</button></div>':'';
+  var moveLink=list==='watching'
+    ?(s.waitingForSeason
+      ?'<div class="show-move"><button class="resume-watching-btn" onclick="resumeWatching(\'' + s.id + '\')" >Resume Watching &#9654;</button></div>'
+      :'<div class="show-move"><button class="done-watching-btn" onclick="markWatched(\'' + s.id + '\')" >Done Watching &#10003;</button><button class="didnt-finish-btn" onclick="markDNF(\'' + s.id + '\')" >Didn&#39;t Finish</button><button class="waiting-season-btn" onclick="markWaiting(\'' + s.id + '\')" >Waiting for New Season</button></div>')
+    :'';
   var inpId='inp-'+list+'-'+s.id;
   var reactToggle='<div class="inline-react"><input class="react-input" id="'+inpId+'" placeholder="What did you think? 😊" /><button class="btn-send" onclick="submitReact(\''+list+'\',\''+s.id+'\')">Send</button><button class="btn-cancel" onclick="document.getElementById(\''+inpId+'\').value=\'\'">Cancel</button></div>'
     + quickReactRow('quickReact', "'"+list+"','"+s.id+"'");
@@ -2708,6 +2740,22 @@ window.markDNF = async function(id) {
   renderList('watching'); renderList('watched');
   try { await updateShowStatus(id, 'dnf', { dnf: true }); } catch(e) { console.error('markDNF error:', e); }
   openDWM(show, "Didn't finish? Rate it anyway", '🎬');
+};
+
+// Prototype for visual review — client-side only, no waiting_for_season
+// column yet, so this won't survive a page reload until that's added.
+window.markWaiting = function(id) {
+  var s = state.watching.find(function(x) { return x.id === id; });
+  if (!s) return;
+  s.waitingForSeason = true;
+  renderList('watching');
+};
+
+window.resumeWatching = function(id) {
+  var s = state.watching.find(function(x) { return x.id === id; });
+  if (!s) return;
+  s.waitingForSeason = false;
+  renderList('watching');
 };
 
 window.moveToWatching = async function(id) {
