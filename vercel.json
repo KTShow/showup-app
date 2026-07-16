@@ -1,5 +1,6 @@
 {
   "rewrites": [
-    { "source": "/join/:username", "destination": "/index.html" }
+    { "source": "/join/:username", "destination": "/index.html" },
+    { "source": "/pitch", "destination": "/showup-pitch%200527.html" }
   ]
 }
