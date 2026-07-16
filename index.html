@@ -1138,9 +1138,7 @@ function renderList(list) {
 function buildDNFCard(s) {
   var inpId = 'inp-watched-' + s.id;
   var sid = s.id;
-  var reactToggle = (s.showReact
-    ? '<div class="inline-react"><input class="react-input" id="'+inpId+'" placeholder="What did you think? 😊" /><button class="btn-send" onclick="submitReact(&quot;watched&quot;,&quot;'+sid+'&quot;)">Send</button><button class="btn-cancel" onclick="toggleReact(&quot;watched&quot;,&quot;'+sid+'&quot;)">Cancel</button></div>'
-    : '<button class="btn-react-toggle" onclick="toggleReact(&quot;watched&quot;,&quot;'+sid+'&quot;)">+ What did you think?</button>')
+  var reactToggle = '<div class="inline-react"><input class="react-input" id="'+inpId+'" placeholder="What did you think? 😊" /><button class="btn-send" onclick="submitReact(&quot;watched&quot;,&quot;'+sid+'&quot;)">Send</button><button class="btn-cancel" onclick="document.getElementById(&quot;'+inpId+'&quot;).value=\'\'">Cancel</button></div>'
     + quickReactRow('quickReact', "'watched','"+sid+"'");
   var platformRow = s.editingPlatform ? platformSelect('watched', s.id, s.platform) : '';
   return '<div class="dnf-card">'
@@ -1166,9 +1164,7 @@ function buildCard(s, list) {
   actions+='<button class="btn-remove" onclick="removeShow(\'' + list + '\',\'' + s.id + '\')" >&#x2715;</button>';
   var moveLink=list==='watching'?'<div class="show-move"><button class="done-watching-btn" onclick="markWatched(\'' + s.id + '\')" >Done Watching &#10003;</button><button class="didnt-finish-btn" onclick="markDNF(\'' + s.id + '\')" >Didn&#39;t Finish</button></div>':'';
   var inpId='inp-'+list+'-'+s.id;
-  var reactToggle=(s.showReact
-    ?'<div class="inline-react"><input class="react-input" id="'+inpId+'" placeholder="What did you think? 😊" /><button class="btn-send" onclick="submitReact(\''+list+'\',\''+s.id+'\')">Send</button><button class="btn-cancel" onclick="toggleReact(\''+list+'\',\''+s.id+'\')">Cancel</button></div>'
-    :'<button class="btn-react-toggle" onclick="toggleReact(\''+list+'\',\''+s.id+'\')">+ What did you think?</button>')
+  var reactToggle='<div class="inline-react"><input class="react-input" id="'+inpId+'" placeholder="What did you think? 😊" /><button class="btn-send" onclick="submitReact(\''+list+'\',\''+s.id+'\')">Send</button><button class="btn-cancel" onclick="document.getElementById(\''+inpId+'\').value=\'\'">Cancel</button></div>'
     + quickReactRow('quickReact', "'"+list+"','"+s.id+"'");
   var hasReact=reactionsHTML(s.reactions,list,s.id)||reactToggle;
   var platformRow=s.editingPlatform?platformSelect(list,s.id,s.platform):'';
@@ -1418,9 +1414,7 @@ function showFriend(id) {
       groups[svc].sort(function(a,b){return a.title.localeCompare(b.title);}).forEach(function(s){
         var rHTML=reactionsHTML(s.reactions, lk, s.id, f.id);
         var inpId='finp-'+lk+'-'+f.id+'-'+s.id;
-        var reactToggle=isSelf?'':((s.showReact
-          ?'<div class="inline-react"><input class="react-input" id="'+inpId+'" placeholder="What did you think? 😊" /><button class="btn-send" onclick="submitFR(\''+f.id+'\',\''+lk+'\',\''+s.id+'\')">Send</button><button class="btn-cancel" onclick="toggleFR(\''+f.id+'\',\''+lk+'\',\''+s.id+'\')">Cancel</button></div>'
-          :'<button class="btn-react-toggle" onclick="toggleFR(\''+f.id+'\',\''+lk+'\',\''+s.id+'\')">+ What did you think?</button>')
+        var reactToggle=isSelf?'':('<div class="inline-react"><input class="react-input" id="'+inpId+'" placeholder="What did you think? 😊" /><button class="btn-send" onclick="submitFR(\''+f.id+'\',\''+lk+'\',\''+s.id+'\')">Send</button><button class="btn-cancel" onclick="document.getElementById(\''+inpId+'\').value=\'\'">Cancel</button></div>'
           + quickReactRow('quickReactFR', "'"+f.id+"','"+lk+"','"+s.id+"'"));
         var actions=(lk==='w'||lk==='wd')?remoteStatic(s.rating):'';
         var watchedBadge=lk==='wd'?'<span style="font-size:11px;color:var(--fig);font-weight:600;">&#10003; Binged</span>':'';
@@ -1457,9 +1451,7 @@ function showFriend(id) {
           + f.watched.filter(function(x){return x.dnf;}).map(function(s){
               var rHTML=reactionsHTML(s.reactions,'wd',s.id,f.id);
               var inpId='finp-wd-'+f.id+'-'+s.id;
-              var reactToggle=isSelf?'':((s.showReact
-                ?'<div class="inline-react"><input class="react-input" id="'+inpId+'" placeholder="What did you think? 😊" /><button class="btn-send" onclick="submitFR(\''+f.id+'\',\'wd\',\''+s.id+'\')">Send</button><button class="btn-cancel" onclick="toggleFR(\''+f.id+'\',\'wd\',\''+s.id+'\')">Cancel</button></div>'
-                :'<button class="btn-react-toggle" onclick="toggleFR(\''+f.id+'\',\'wd\',\''+s.id+'\')">+ What did you think?</button>')
+              var reactToggle=isSelf?'':('<div class="inline-react"><input class="react-input" id="'+inpId+'" placeholder="What did you think? 😊" /><button class="btn-send" onclick="submitFR(\''+f.id+'\',\'wd\',\''+s.id+'\')">Send</button><button class="btn-cancel" onclick="document.getElementById(\''+inpId+'\').value=\'\'">Cancel</button></div>'
                 + quickReactRow('quickReactFR', "'"+f.id+"','wd','"+s.id+"'"));
               return '<div class="dnf-card"><div class="show-card-top">'+showTile(s)
                 +'<div class="show-info"><div class="show-title">'+s.title+'</div>'
