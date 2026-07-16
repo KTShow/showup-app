@@ -2608,8 +2608,11 @@ window.addShow = function(list) {
   document.getElementById('add-confirm-modal').classList.add('active');
 };
 
+var _moveWaitingPending = null;
+
 window.cancelAddShow = function() {
   _addConfirmPending = null;
+  _moveWaitingPending = null;
   document.getElementById('add-confirm-modal').classList.remove('active');
 };
 
@@ -2630,6 +2633,13 @@ window.addDirectDNF = function() {
 };
 
 window.confirmAddShow = async function() {
+  if (_moveWaitingPending) {
+    var mw = _moveWaitingPending;
+    _moveWaitingPending = null;
+    document.getElementById('add-confirm-modal').classList.remove('active');
+    _doMoveToWaiting(mw.list, mw.id);
+    return;
+  }
   var pending = _addConfirmPending;
   if (!pending) return;
   document.getElementById('add-confirm-modal').classList.remove('active');
@@ -2766,8 +2776,21 @@ window.resumeWatching = function(id) {
 };
 
 // Shortcut from Binged/DNF/My List straight into the Waiting section,
-// skipping the "move to Watching, then mark waiting" two-step.
+// skipping the "move to Watching, then mark waiting" two-step. Confirms
+// first since it's an icon-only action that silently changes tabs, and
+// unlike the Watching-tab button, a misclick has no direct way back to
+// the show's original list (Resume Watching only returns it to active
+// Watching).
 window.moveToWaiting = function(list, id) {
+  var s = state[list].find(function(x) { return x.id === id; });
+  if (!s) return;
+  _moveWaitingPending = { list: list, id: id };
+  document.getElementById('add-confirm-title').textContent = s.title;
+  document.getElementById('add-confirm-sub').textContent = 'Move to Waiting for New Season?';
+  document.getElementById('add-confirm-modal').classList.add('active');
+};
+
+function _doMoveToWaiting(list, id) {
   var s = state[list].find(function(x) { return x.id === id; });
   if (!s) return;
   state[list] = state[list].filter(function(x) { return x.id !== id; });
@@ -2776,7 +2799,7 @@ window.moveToWaiting = function(list, id) {
   state.watching.push(s);
   renderList(list);
   renderList('watching');
-};
+}
 
 window.moveToWatching = async function(id) {
   var idx = state.watchlist.findIndex(function(x) { return x.id === id; });
