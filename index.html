@@ -2130,6 +2130,7 @@ function normalizeShow(s) {
     rating: s.rating || 0,
     hidden: s.hidden || false,
     dnf: s.dnf || false,
+    waitingForSeason: s.waiting_for_season || false,
     source: s.source || 'manual',
     influencedBy: s.influenced_by || null,
     addedAt: s.added_at,
@@ -2779,20 +2780,20 @@ window.markDNF = async function(id) {
   openDWM(show, "Didn't finish? Rate it anyway", '🎬');
 };
 
-// Prototype for visual review — client-side only, no waiting_for_season
-// column yet, so this won't survive a page reload until that's added.
-window.markWaiting = function(id) {
+window.markWaiting = async function(id) {
   var s = state.watching.find(function(x) { return x.id === id; });
   if (!s) return;
   s.waitingForSeason = true;
   renderList('watching');
+  try { await updateShowStatus(id, 'watching', { waiting_for_season: true }); } catch(e) { console.error('markWaiting error:', e); }
 };
 
-window.resumeWatching = function(id) {
+window.resumeWatching = async function(id) {
   var s = state.watching.find(function(x) { return x.id === id; });
   if (!s) return;
   s.waitingForSeason = false;
   renderList('watching');
+  try { await updateShowStatus(id, 'watching', { waiting_for_season: false }); } catch(e) { console.error('resumeWatching error:', e); }
 };
 
 // Shortcut from Binged/DNF/My List straight into the Waiting section,
@@ -2810,7 +2811,7 @@ window.moveToWaiting = function(list, id) {
   document.getElementById('add-confirm-modal').classList.add('active');
 };
 
-function _doMoveToWaiting(list, id) {
+async function _doMoveToWaiting(list, id) {
   var s = state[list].find(function(x) { return x.id === id; });
   if (!s) return;
   state[list] = state[list].filter(function(x) { return x.id !== id; });
@@ -2819,6 +2820,7 @@ function _doMoveToWaiting(list, id) {
   state.watching.push(s);
   renderList(list);
   renderList('watching');
+  try { await updateShowStatus(id, 'watching', { waiting_for_season: true, dnf: false }); } catch(e) { console.error('moveToWaiting error:', e); }
 }
 
 window.moveToWatching = async function(id) {
@@ -2834,9 +2836,10 @@ window.moveToWatchlist = async function(id) {
   var idx = state.watching.findIndex(function(x) { return x.id === id; });
   if (idx === -1) return;
   var show = state.watching.splice(idx, 1)[0];
+  show.waitingForSeason = false;
   state.watchlist.push(show);
   renderList('watching'); renderList('watchlist');
-  try { await updateShowStatus(id, 'watchlist'); } catch(e) { console.error('moveToWatchlist error:', e); }
+  try { await updateShowStatus(id, 'watchlist', { waiting_for_season: false }); } catch(e) { console.error('moveToWatchlist error:', e); }
 };
 
 window.rate = async function(list, id, n) {
