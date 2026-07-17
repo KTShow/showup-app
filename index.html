@@ -210,6 +210,9 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
 .btn-invite-copy{flex:1;background:var(--terra);color:white;border:none;border-radius:10px;padding:12px;font-family:var(--sans);font-size:14px;font-weight:700;cursor:pointer;}
 .btn-invite-copy:hover{background:var(--burnt);}
 .btn-invite-close{background:none;border:1px solid var(--border);border-radius:10px;padding:12px 16px;font-family:var(--sans);font-size:14px;color:var(--muted);cursor:pointer;}
+.picker-option-btn{display:flex;align-items:center;gap:10px;width:100%;background:var(--sand);border:1px solid var(--border);border-radius:10px;padding:12px 14px;font-family:var(--sans);font-size:14px;font-weight:600;color:var(--charcoal);cursor:pointer;text-align:left;box-sizing:border-box;transition:all 0.15s;}
+.picker-option-btn:hover{background:var(--terra);color:white;border-color:var(--terra);}
+#add-picker-modal{z-index:700;}
 .btn-invite-close:hover{border-color:var(--terra);color:var(--terra);}
 
 
@@ -320,6 +323,23 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
   <div style="background:white;border-radius:20px;padding:24px;max-width:420px;width:100%;max-height:85vh;overflow-y:auto;box-shadow:0 12px 48px rgba(0,0,0,0.2);position:relative;">
     <button onclick="closeShowDetails()" style="position:absolute;top:14px;right:14px;background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer;line-height:1;">&#x2715;</button>
     <div id="sd-body" style="text-align:center;padding:30px 0;color:var(--muted);font-size:14px;">Loading...</div>
+    <button id="sd-add-btn" onclick="openAddPicker()" style="display:none;width:100%;margin-top:18px;background:var(--terra);color:white;border:none;border-radius:10px;padding:12px;font-family:var(--sans);font-size:14px;font-weight:700;cursor:pointer;">+ Add to My Lists</button>
+  </div>
+</div>
+
+<!-- ADD-DESTINATION PICKER -->
+<div class="invite-modal-overlay" id="add-picker-modal">
+  <div class="invite-modal">
+    <div class="invite-modal-title" id="add-picker-title">Add Show</div>
+    <div class="invite-modal-sub">Where does it go?</div>
+    <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px;">
+      <button class="picker-option-btn" onclick="chooseAddDestination('watching')">&#128250; Currently Watching</button>
+      <button class="picker-option-btn" onclick="chooseAddDestination('waiting')">&#9203; Waiting for New Season</button>
+      <button class="picker-option-btn" onclick="chooseAddDestination('watchlist')">&#127871; My List</button>
+      <button class="picker-option-btn" onclick="chooseAddDestination('dnf')">&#128683; Didn&#39;t Finish</button>
+      <button class="picker-option-btn" onclick="chooseAddDestination('watched')">&#128252; Already Binged</button>
+    </div>
+    <button class="btn-invite-close" onclick="closeAddPicker()" style="width:100%;">Cancel</button>
   </div>
 </div>
 
@@ -2735,15 +2755,22 @@ window.dwmRate = function(n) {
   renderDWMRemotes();
 };
 
+function _dwmShowList(show) {
+  if (state.watching.indexOf(show) !== -1) return 'watching';
+  if (state.watchlist.indexOf(show) !== -1) return 'watchlist';
+  return 'watched';
+}
+
 window.submitDoneWatching = async function() {
   if (!_dwmPending) return;
   var show = _dwmPending;
+  var list = _dwmShowList(show);
   var comment = document.getElementById('dwm-comment').value.trim();
   document.getElementById('dwm-overlay').style.display = 'none';
   if (_dwmRating > 0) {
     show.rating = _dwmRating;
     try { await updateShowRating(show.id, _dwmRating); } catch(e) { console.error('dwm rating error:', e); }
-    renderList('watched');
+    renderList(list);
   }
   if (comment) {
     var u = state.user;
@@ -2752,7 +2779,7 @@ window.submitDoneWatching = async function() {
     var newReact = { id: null, reactorId: u ? u.id : null, user: u ? (u.first + (u.last ? ' ' + u.last : '')) : 'You', initials: u ? u.initials : 'Y', color: '#C4622D', text: txt, sentiment: sentiment, reactedAt: new Date().toISOString() };
     show.reactions = show.reactions || [];
     show.reactions.push(newReact);
-    renderList('watched');
+    renderList(list);
     try {
       var saved = await dbAddReaction(show.id, txt, sentiment);
       if (saved && saved.id) newReact.id = saved.id;
@@ -3352,12 +3379,17 @@ document.addEventListener('click', function(e) {
 var TMDB_POSTER_LG = 'https://image.tmdb.org/t/p/w342';
 var TMDB_CAST_IMG = 'https://image.tmdb.org/t/p/w185';
 
+var _currentShowDetails = null;
+
 window.openShowDetails = async function(tmdbId) {
   if (!tmdbId) return;
   var overlay = document.getElementById('sd-overlay');
   var body = document.getElementById('sd-body');
+  var addBtn = document.getElementById('sd-add-btn');
   if (!overlay || !body) return;
   body.innerHTML = '<div style="padding:30px 0;color:var(--muted);font-size:14px;">Loading...</div>';
+  if (addBtn) addBtn.style.display = 'none';
+  _currentShowDetails = null;
   overlay.style.display = 'flex';
   try {
     var res = await fetch('https://api.themoviedb.org/3/tv/' + tmdbId + '?api_key=' + TMDB_KEY + '&language=en-US&append_to_response=credits');
@@ -3394,6 +3426,15 @@ window.openShowDetails = async function(tmdbId) {
       + (d.overview ? '<div style="font-size:13px;color:var(--charcoal);line-height:1.5;">' + d.overview + '</div>' : '')
       + '</div></div>'
       + castHTML;
+    _currentShowDetails = {
+      tmdb_id: tmdbId, title: d.name || '', poster_path: d.poster_path || null,
+      genre: (d.genres && d.genres[0]) ? d.genres[0].name : null,
+      original_network: (d.networks && d.networks[0]) ? d.networks[0].name : null,
+      first_air_year: year ? parseInt(year, 10) : null,
+      number_of_seasons: d.number_of_seasons || null, show_status: d.status || null,
+      overview: d.overview || null, vote_average: d.vote_average || null,
+    };
+    if (addBtn && _currentShowDetails.title) addBtn.style.display = 'block';
   } catch(e) {
     console.error('TMDB details error:', e);
     body.innerHTML = '<div style="padding:30px 0;color:var(--muted);font-size:14px;">Couldn\'t load show details.</div>';
@@ -3403,6 +3444,101 @@ window.openShowDetails = async function(tmdbId) {
 window.closeShowDetails = function() {
   var overlay = document.getElementById('sd-overlay');
   if (overlay) overlay.style.display = 'none';
+  closeAddPicker();
+  _currentShowDetails = null;
+};
+
+// ============================================================
+// ADD-DESTINATION PICKER (from show details, own shows or a
+// friend's/ranking's) — single entry point for "add this show
+// somewhere," reused across Living Room, Friends' Favorites, etc.
+// ============================================================
+
+window.openAddPicker = function() {
+  if (!_currentShowDetails) return;
+  document.getElementById('add-picker-title').textContent = _currentShowDetails.title;
+  document.getElementById('add-picker-modal').classList.add('active');
+};
+
+window.closeAddPicker = function() {
+  var el = document.getElementById('add-picker-modal');
+  if (el) el.classList.remove('active');
+};
+
+// Case-insensitive title match against your own three lists, so
+// "add" from a friend's/ranking's show never creates a duplicate row.
+function findMyShowByTitle(title) {
+  var key = (title || '').toLowerCase().trim();
+  if (!key) return null;
+  var lists = ['watching', 'watchlist', 'watched'];
+  for (var i = 0; i < lists.length; i++) {
+    var arr = state[lists[i]] || [];
+    for (var j = 0; j < arr.length; j++) {
+      if ((arr[j].title || '').toLowerCase().trim() === key) return { list: lists[i], show: arr[j] };
+    }
+  }
+  return null;
+}
+
+var ADD_DEST_STATUS = { watching: 'watching', waiting: 'watching', watchlist: 'watchlist', dnf: 'watched', watched: 'watched' };
+var ADD_DEST_LIST = { watching: 'watching', waiting: 'watching', watchlist: 'watchlist', dnf: 'watched', watched: 'watched' };
+var ADD_DEST_RATES = { waiting: true, dnf: true, watched: true };
+
+window.chooseAddDestination = async function(destKey) {
+  var info = _currentShowDetails;
+  if (!info) return;
+  closeAddPicker();
+  closeShowDetails();
+
+  var status = ADD_DEST_STATUS[destKey];
+  var destList = ADD_DEST_LIST[destKey];
+  var isDnf = destKey === 'dnf';
+  var isWaiting = destKey === 'waiting';
+  var existing = findMyShowByTitle(info.title);
+  var resultShow;
+
+  if (existing) {
+    var srcList = existing.list;
+    var s = existing.show;
+    state[srcList] = state[srcList].filter(function(x) { return x.id !== s.id; });
+    s.dnf = isDnf;
+    s.waitingForSeason = isWaiting;
+    state[destList].push(s);
+    renderList(srcList);
+    renderList(destList);
+    resultShow = s;
+    try { await updateShowStatus(s.id, status, { dnf: isDnf, waiting_for_season: isWaiting }); } catch(e) { console.error('chooseAddDestination move error:', e); }
+  } else {
+    var src = state.lastViewedFriend ? 'living_room' : 'manual';
+    var inf = state.lastViewedFriend || null;
+    try {
+      var row = await dbAddShow({
+        title: info.title, platform: 'None', status: status, dnf: isDnf, source: src, influencedBy: inf,
+        tmdb_id: info.tmdb_id, poster_path: info.poster_path, genre: info.genre,
+        original_network: info.original_network, first_air_year: info.first_air_year,
+        number_of_seasons: info.number_of_seasons, show_status: info.show_status,
+        overview: info.overview, vote_average: info.vote_average,
+      });
+      if (isWaiting) { try { await updateShowStatus(row.id, 'watching', { waiting_for_season: true }); } catch(e) { console.error('chooseAddDestination waiting flag error:', e); } }
+      resultShow = {
+        id: row.id, title: info.title, platform: 'None', rating: 0, hidden: false, dnf: isDnf, waitingForSeason: isWaiting,
+        source: src, influencedBy: inf, addedAt: row.added_at, reactions: [], showReact: false,
+        poster_path: info.poster_path || null, tmdb_id: info.tmdb_id || null,
+      };
+      state[destList].push(resultShow);
+      renderList(destList);
+    } catch(e) {
+      console.error('chooseAddDestination add error:', e);
+      alert('Error adding show. Please try again.');
+      return;
+    }
+  }
+
+  if (ADD_DEST_RATES[destKey]) {
+    var heading = isDnf ? "Didn't finish? Rate it anyway" : (isWaiting ? 'Rate it so far' : 'You binged it!');
+    var emoji = isDnf ? '🎬' : (isWaiting ? '⏳' : '🍿');
+    openDWM(resultShow, heading, emoji);
+  }
 };
 
 // ============================================================
