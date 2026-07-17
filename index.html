@@ -1202,7 +1202,7 @@ function buildCard(s, list) {
   var actions='';
   if(list==='watched') actions=remoteRating(list,s.id,s.rating);
   if(list==='watchlist') actions='<button class="btn-start" onclick="moveToWatching(\'' + s.id + '\')" >Watch Now</button>';
-  if(list==='watching') actions='<button class="btn-start" onclick="moveToWatchlist(\'' + s.id + '\')" style="background:var(--olive);">&#8592; My List</button>';
+  if(list==='watching') actions=(s.waitingForSeason?remoteRating(list,s.id,s.rating):'')+'<button class="btn-start" onclick="moveToWatchlist(\'' + s.id + '\')" style="background:var(--olive);">&#8592; My List</button>';
   if(list==='watched'||list==='watchlist') actions+=waitingBtn(list, s);
   actions+=hideBtn(list, s);
   actions+=platformEditBtn(list, s);
@@ -1522,14 +1522,16 @@ function buildRankings(){
   state.friends.forEach(function(f){
     if(!f||!f.name||!f.watched)return;
     var fColor=ROOMS[f.room||'tuscany']?ROOMS[f.room||'tuscany'].color:'#888';
-    f.watched.forEach(function(s){
+    // Includes watching (covers shows Waiting for New Season) so a rating
+    // doesn't stop counting just because a show isn't sitting in Binged.
+    (f.watched||[]).concat(f.watching||[]).forEach(function(s){
       if(!s||!s.title||!s.rating||s.rating===0)return;
       addRating(f.name,fColor,f.name.split(' ').map(function(x){return x[0]||'';}).join(''),s.title,s.platform,s.rating,false,s.poster_path,s.tmdb_id);
     });
   });
   if(state.user){
     var myColor=ROOMS[state.user.room||'tuscany']?ROOMS[state.user.room||'tuscany'].color:'#C4622D';
-    (state.watched||[]).forEach(function(s){
+    (state.watched||[]).concat(state.watching||[]).forEach(function(s){
       if(!s||!s.title||!s.rating||s.rating===0)return;
       addRating('You',myColor,state.user.initials||'Y',s.title,s.platform,s.rating,true,s.poster_path,s.tmdb_id);
     });
