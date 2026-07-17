@@ -1467,10 +1467,10 @@ function showFriend(id) {
     +'<div class="friend-header"><div class="friend-header-av" style="background:'+fColor+';font-size:18px;font-weight:700;font-family:var(--sans);">'+fInitials+'</div>'
     +'<div><div style="font-family:Georgia,serif;font-size:20px;font-weight:700">'+roomTitle+'</div>'
     +cityLine+'</div></div>'
-    +'<div style="margin:24px 0 12px;background:var(--terra);color:white;padding:10px 18px;border-radius:8px;font-family:var(--serif);font-size:15px;font-weight:700;letter-spacing:0.2px;display:flex;align-items:center;gap:8px;">&#128250; On Right Now</div>'+fGrouped(f.watching.filter(function(x){return !x.hidden;}),'w')
-    +'<div style="margin:24px 0 12px;background:var(--terra);color:white;padding:10px 18px;border-radius:8px;font-family:var(--serif);font-size:15px;font-weight:700;letter-spacing:0.2px;display:flex;align-items:center;gap:8px;">🛋️ Saving a Seat</div>'+fGrouped(f.watchlist.filter(function(x){return !x.hidden;}),'wl')
+    +'<div style="margin:24px 0 12px;background:var(--fig);color:white;padding:10px 18px;border-radius:8px;font-family:var(--serif);font-size:15px;font-weight:700;letter-spacing:0.2px;display:flex;align-items:center;gap:8px;">&#128250; On Right Now</div>'+fGrouped(f.watching.filter(function(x){return !x.hidden;}),'w')
+    +'<div style="margin:24px 0 12px;background:var(--fig);color:white;padding:10px 18px;border-radius:8px;font-family:var(--serif);font-size:15px;font-weight:700;letter-spacing:0.2px;display:flex;align-items:center;gap:8px;">🛋️ Saving a Seat</div>'+fGrouped(f.watchlist.filter(function(x){return !x.hidden;}),'wl')
   +(f.watched&&f.watched.length
-    ? '<div style="margin:24px 0 12px;background:var(--terra);color:white;padding:10px 18px;border-radius:8px;font-family:var(--serif);font-size:15px;font-weight:700;letter-spacing:0.2px;display:flex;align-items:center;gap:8px;">&#128252; Already Binged</div>'+fGrouped(f.watched.filter(function(x){return !x.dnf&&!x.hidden;}),'wd')
+    ? '<div style="margin:24px 0 12px;background:var(--fig);color:white;padding:10px 18px;border-radius:8px;font-family:var(--serif);font-size:15px;font-weight:700;letter-spacing:0.2px;display:flex;align-items:center;gap:8px;">&#128252; Already Binged</div>'+fGrouped(f.watched.filter(function(x){return !x.dnf&&!x.hidden;}),'wd')
       +(f.watched.filter(function(x){return x.dnf;}).length
         ? '<div class="dnf-section"><div class="dnf-header">&#128683; Didn&#39;t Finish</div>'
           + f.watched.filter(function(x){return x.dnf;}).map(function(s){
