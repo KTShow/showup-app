@@ -82,8 +82,8 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
 .show-info{flex:1;}
 .show-title{font-size:14px;font-weight:600;color:var(--charcoal);}
 .show-move{margin-top:8px;display:flex;gap:6px;}
-.done-watching-btn{background:var(--olive);color:white;border:none;border-radius:6px;padding:5px 12px;font-family:var(--sans);font-size:12px;font-weight:600;cursor:pointer;}
-.done-watching-btn:hover{background:var(--olive-light);}
+.done-watching-btn{background:none;border:1px solid rgba(92,107,58,0.35);color:var(--olive);border-radius:6px;padding:4px 10px;font-family:var(--sans);font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap;}
+.done-watching-btn:hover{background:rgba(92,107,58,0.08);}
 .show-actions{display:flex;gap:6px;align-items:center;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;row-gap:6px;}
 .remote-row{display:flex;gap:4px;align-items:center;}
 .remote-btn{background:none;border:none;cursor:pointer;padding:0;display:flex;align-items:center;transition:transform 0.1s;}
@@ -1210,7 +1210,7 @@ function buildCard(s, list) {
   var moveLink=list==='watching'
     ?(s.waitingForSeason
       ?'<div class="show-move"><button class="resume-watching-btn" onclick="resumeWatching(\'' + s.id + '\')" >Resume Watching &#9654;</button></div>'
-      :'<div class="show-move"><button class="done-watching-btn" onclick="markWatched(\'' + s.id + '\')" >Done Watching &#10003;</button><button class="didnt-finish-btn" onclick="markDNF(\'' + s.id + '\')" >Didn&#39;t Finish</button><button class="waiting-season-btn" onclick="markWaiting(\'' + s.id + '\')" >Waiting for New Season</button></div>')
+      :'<div class="show-move"><button class="done-watching-btn" onclick="markWatched(\'' + s.id + '\')" >Done Watching</button><button class="waiting-season-btn" onclick="markWaiting(\'' + s.id + '\')" >Waiting for New Season</button><button class="didnt-finish-btn" onclick="markDNF(\'' + s.id + '\')" >Didn&#39;t Finish</button></div>')
     :'';
   var inpId='inp-'+list+'-'+s.id;
   var reactToggle='<div class="inline-react"><input class="react-input" id="'+inpId+'" placeholder="What did you think? 😊" /><button class="btn-send" onclick="submitReact(\''+list+'\',\''+s.id+'\')">Send</button><button class="btn-cancel" onclick="document.getElementById(\''+inpId+'\').value=\'\'">Cancel</button></div>'
