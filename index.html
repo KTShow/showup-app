@@ -1390,12 +1390,9 @@ function renderFriends() {
     var fRoom=f.room||'tuscany'; var fColor=ROOMS[fRoom]?ROOMS[fRoom].color:f.color;
     var fInitials=f.name.split(' ').map(function(x){return x[0];}).join('');
     var fFirst=f.name.split(' ')[0];
-    var newest=getNewestActivity(f);
-    var badge=newest?'<div class="friend-new-badge">NEW</div>':'';
-    var detail=newest?'<div class="friend-new-detail">'+(newest.kind==='comment'?'New comment on '+escHtml(newest.title):'New: '+escHtml(newest.title)+' ('+newest.listLabel+')')+'</div>':'';
-    return '<div class="friend-card" onclick="showFriend(\''+f.id+'\')">'+badge
+    return '<div class="friend-card" onclick="showFriend(\''+f.id+'\')">'
       +'<div class="friend-top-row"><div class="friend-av" style="background:'+fColor+';font-weight:700;font-family:var(--sans);">'+fInitials+'</div><div class="friend-name">'+fFirst+'</div></div>'
-      +'<div class="friend-city">'+f.city+'</div>'+detail
+      +'<div class="friend-city">'+f.city+'</div>'
       +'<div class="friend-count">'+f.watching.length+' watching &middot; '+f.watchlist.length+' list &middot; '+f.watched.length+' binged</div>'
       +'</div>';
   }).join('');
