@@ -72,7 +72,8 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
 .tv-tile{width:46px;height:46px;border-radius:9px;background:var(--olive);display:flex;align-items:center;justify-content:center;flex-shrink:0;}
 .tv-tile svg{width:28px;height:28px;}
 .show-poster{width:51px;height:51px;border-radius:9px;object-fit:cover;flex-shrink:0;}
-.poster-clickable{cursor:pointer;}
+.poster-clickable{cursor:pointer;box-shadow:0 0 0 2px rgba(196,98,45,0.35),0 2px 6px rgba(0,0,0,0.15);transition:transform 0.15s;}
+.poster-clickable:hover{transform:scale(1.05);}
 .cast-scroll{display:flex;gap:10px;overflow-x:auto;padding-bottom:4px;}
 .cast-card{flex-shrink:0;width:70px;text-align:center;}
 .cast-photo{width:70px;height:70px;border-radius:50%;object-fit:cover;background:var(--sand);}
@@ -1589,11 +1590,10 @@ function showRankDetail(idx){
     var rR=''; for(var n=1;n<=5;n++){rR+='<span style="opacity:'+(n<=r.rating?'1':'0.18')+';display:inline-block;">'+remoteIcon(13,n<=r.rating)+'</span>';}
     return '<div class="rank-detail-row"><div class="rank-detail-av" style="background:'+r.color+'">'+r.initials+'</div><div class="rank-detail-name">'+(r.isMe?'You':r.name)+'</div><div style="display:flex;gap:2px;">'+rR+'</div></div>';
   }).join('');
-  var clickAttr=s.tmdb_id?' onclick="openShowDetails('+s.tmdb_id+')"':'';
-  var cursor=s.tmdb_id?'cursor:pointer;':'';
+  var clickAttr=s.tmdb_id?' class="poster-clickable" onclick="openShowDetails('+s.tmdb_id+')"':'';
   var thumb=s.poster_path
-    ? '<img src="'+TMDB_IMG+s.poster_path+'"'+clickAttr+' style="width:60px;height:60px;border-radius:8px;object-fit:cover;flex-shrink:0;'+cursor+'" />'
-    : '<div'+clickAttr+' style="width:60px;height:60px;border-radius:8px;background:var(--olive);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:22px;'+cursor+'">&#128252;</div>';
+    ? '<img src="'+TMDB_IMG+s.poster_path+'"'+clickAttr+' style="width:60px;height:60px;border-radius:8px;object-fit:cover;flex-shrink:0;" />'
+    : '<div'+clickAttr+' style="width:60px;height:60px;border-radius:8px;background:var(--olive);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:22px;">&#128252;</div>';
   panel.style.display='block';
   panel.innerHTML='<button class="rank-close" onclick="backToRankings()">\u2190 Back to rankings</button>'
     +'<div class="rank-detail">'
