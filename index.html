@@ -251,6 +251,15 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
 .btn-platform-edit:hover{background:var(--fig);color:white;}
 .btn-waiting{background:var(--sand);border:none;cursor:pointer;padding:6px 9px;font-size:15px;color:var(--fig);border-radius:7px;line-height:1;transition:all 0.2s;}
 .btn-waiting:hover{background:var(--fig);color:white;}
+.card-menu-wrap{position:relative;display:inline-flex;}
+.btn-more{background:var(--sand);border:none;cursor:pointer;padding:6px 10px;font-size:16px;color:var(--charcoal);border-radius:7px;line-height:1;transition:all 0.2s;}
+.btn-more:hover{background:var(--fig);color:white;}
+.card-menu{position:absolute;top:100%;right:0;background:white;border:1px solid var(--border);border-radius:10px;box-shadow:0 6px 24px rgba(0,0,0,0.12);z-index:300;display:none;margin-top:4px;min-width:190px;overflow:hidden;}
+.card-menu.open{display:block;}
+.card-menu-item{display:block;width:100%;text-align:left;background:none;border:none;border-bottom:1px solid var(--border);padding:11px 14px;font-family:var(--sans);font-size:13px;color:var(--charcoal);cursor:pointer;white-space:nowrap;}
+.card-menu-item:last-child{border-bottom:none;}
+.card-menu-item:hover{background:var(--sand);}
+.card-menu-item.danger{color:#c0392b;}
 .platform-edit-row{margin-top:6px;}
 .platform-edit-row select{width:100%;box-sizing:border-box;border:1px solid var(--border);border-radius:8px;padding:6px 8px;font-family:var(--sans);font-size:12px;color:var(--charcoal);background:var(--cream);}
 .btn-hide.hidden{color:#c0392b;}
@@ -1259,19 +1268,86 @@ function buildDNFCard(s) {
     + '</div>';
 }
 
+// TMDB's show status is fetched at add-time and never refreshed (no scheduled
+// jobs exist in this app), so this is a best-effort guess, not a live fact —
+// callers must always leave a way to pick the other outcome instead of hiding it.
+function guessShowOutcome(s) {
+  var ongoing = ['Returning Series', 'In Production', 'Planned', 'Pilot'];
+  var ended = ['Ended', 'Canceled'];
+  if (s.show_status && ongoing.indexOf(s.show_status) !== -1) return 'waiting';
+  if (s.show_status && ended.indexOf(s.show_status) !== -1) return 'watched';
+  return null;
+}
+
+function buildWatchingCard(s) {
+  var sid = s.id;
+  var guess = guessShowOutcome(s);
+  var primaryHTML;
+  if (guess === 'waiting') {
+    primaryHTML = '<button class="waiting-season-btn" onclick="markWaiting(\''+sid+'\')">Caught Up &#8987;</button>';
+  } else if (guess === 'watched') {
+    primaryHTML = '<button class="done-watching-btn" onclick="markWatched(\''+sid+'\')">Finished &#127871;</button>';
+  } else {
+    primaryHTML = '<button class="waiting-season-btn" onclick="markWaiting(\''+sid+'\')">Caught Up &#8987;</button>'
+      + '<button class="done-watching-btn" onclick="markWatched(\''+sid+'\')">Finished &#127871;</button>';
+  }
+  var dnfHTML = '<button class="didnt-finish-btn" onclick="markDNF(\''+sid+'\')">Didn&#39;t Finish</button>';
+
+  var escapeItem = guess === 'waiting'
+    ? '<button class="card-menu-item" onclick="markWatched(\''+sid+'\');closeCardMenus();">Actually, mark Finished</button>'
+    : guess === 'watched'
+      ? '<button class="card-menu-item" onclick="markWaiting(\''+sid+'\');closeCardMenus();">Actually, mark Caught Up</button>'
+      : '';
+  var hideLabel = s.hidden ? 'Show to friends' : 'Hide from friends';
+  var menuHTML = '<div class="card-menu-wrap">'
+    + '<button class="btn-more" onclick="toggleCardMenu(this)" title="More">&#8942;</button>'
+    + '<div class="card-menu">'
+    + escapeItem
+    + '<button class="card-menu-item" onclick="moveToWatchlist(\''+sid+'\');closeCardMenus();">&#8592; My List</button>'
+    + '<button class="card-menu-item" onclick="toggleHide(\'watching\',\''+sid+'\');closeCardMenus();">'+hideLabel+'</button>'
+    + '<button class="card-menu-item" onclick="togglePlatEdit(\'watching\',\''+sid+'\');closeCardMenus();">Edit platform</button>'
+    + '<button class="card-menu-item danger" onclick="removeShow(\'watching\',\''+sid+'\');closeCardMenus();">Remove</button>'
+    + '</div></div>';
+
+  var inpId='inp-watching-'+sid;
+  var reactToggle='<div class="inline-react"><input class="react-input" id="'+inpId+'" placeholder="What did you think? 😊" /><button class="btn-send" onclick="submitReact(\'watching\',\''+sid+'\')">Send</button><button class="btn-cancel" onclick="document.getElementById(\''+inpId+'\').value=\'\'">Cancel</button></div>'
+    + quickReactRow('quickReact', "'watching','"+sid+"'");
+  var hasReact=reactionsHTML(s.reactions,'watching',sid)||reactToggle;
+  var platformRow=s.editingPlatform?platformSelect('watching',sid,s.platform):'';
+
+  return '<div class="show-card'+(s.hidden?' is-hidden':'')+'"><div class="show-card-top">'+showTile(s)+'<div class="show-info"><div class="show-title">'+s.title+(s.hidden?'<span class="hidden-badge">Hidden from friends</span>':'')+'</div>'+platformRow+'</div></div>'
+    + '<div class="show-move">'+primaryHTML+dnfHTML+menuHTML+'</div>'
+    + (hasReact?'<div class="react-area">'+reactionsHTML(s.reactions,'watching',sid)+reactToggle+'</div>':'')
+    + '</div>';
+}
+
+function toggleCardMenu(btn) {
+  var wrap = btn.closest('.card-menu-wrap');
+  var menu = wrap ? wrap.querySelector('.card-menu') : null;
+  if (!menu) return;
+  var wasOpen = menu.classList.contains('open');
+  closeCardMenus();
+  if (!wasOpen) menu.classList.add('open');
+}
+function closeCardMenus() {
+  document.querySelectorAll('.card-menu.open').forEach(function(m) { m.classList.remove('open'); });
+}
+document.addEventListener('click', function(e) {
+  if (!e.target.closest('.card-menu-wrap')) closeCardMenus();
+});
+
 function buildCard(s, list) {
+  if (list === 'watching' && !s.waitingForSeason) return buildWatchingCard(s);
   var actions='';
   if(list==='watched') actions=remoteRating(list,s.id,s.rating);
   if(list==='watchlist') actions='<button class="btn-start" onclick="moveToWatching(\'' + s.id + '\')" >Watch Now</button>';
-  if(list==='watching') actions=(s.waitingForSeason?remoteRating(list,s.id,s.rating):'')+'<button class="btn-start" onclick="moveToWatchlist(\'' + s.id + '\')" style="background:var(--olive);">&#8592; My List</button>';
+  if(list==='watching') actions=remoteRating(list,s.id,s.rating)+'<button class="btn-start" onclick="moveToWatchlist(\'' + s.id + '\')" style="background:var(--olive);">&#8592; My List</button>';
   if(list==='watched'||list==='watchlist') actions+=waitingBtn(list, s);
   actions+=hideBtn(list, s);
   actions+=platformEditBtn(list, s);
   actions+='<button class="btn-remove" onclick="removeShow(\'' + list + '\',\'' + s.id + '\')" >&#x2715;</button>';
   var moveLink=list==='watching'
-    ?(s.waitingForSeason
-      ?'<div class="show-move"><button class="resume-watching-btn" onclick="resumeWatching(\'' + s.id + '\')" >Resume Watching &#9654;</button></div>'
-      :'<div class="show-move"><button class="done-watching-btn" onclick="markWatched(\'' + s.id + '\')" >Done Watching</button><button class="waiting-season-btn" onclick="markWaiting(\'' + s.id + '\')" >Waiting for New Season</button><button class="didnt-finish-btn" onclick="markDNF(\'' + s.id + '\')" >Didn&#39;t Finish</button></div>')
+    ?'<div class="show-move"><button class="resume-watching-btn" onclick="resumeWatching(\'' + s.id + '\')" >Resume Watching &#9654;</button></div>'
     :'';
   var inpId='inp-'+list+'-'+s.id;
   var reactToggle='<div class="inline-react"><input class="react-input" id="'+inpId+'" placeholder="What did you think? 😊" /><button class="btn-send" onclick="submitReact(\''+list+'\',\''+s.id+'\')">Send</button><button class="btn-cancel" onclick="document.getElementById(\''+inpId+'\').value=\'\'">Cancel</button></div>'
@@ -2206,6 +2282,7 @@ function normalizeShow(s) {
     hidden: s.hidden || false,
     dnf: s.dnf || false,
     waitingForSeason: s.waiting_for_season || false,
+    show_status: s.show_status || null,
     source: s.source || 'manual',
     influencedBy: s.influenced_by || null,
     addedAt: s.added_at,
@@ -2878,6 +2955,7 @@ window.markWaiting = async function(id) {
   s.waitingForSeason = true;
   renderList('watching');
   try { await updateShowStatus(id, 'watching', { waiting_for_season: true }); } catch(e) { console.error('markWaiting error:', e); }
+  openDWM(s, 'Caught up for now?', '⏳');
 };
 
 window.resumeWatching = async function(id) {
