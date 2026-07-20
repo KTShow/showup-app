@@ -87,9 +87,11 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
 .cast-role{font-size:10px;color:var(--muted);line-height:1.25;}
 .show-info{flex:1;}
 .show-title{font-size:14px;font-weight:600;color:var(--charcoal);}
-.show-move{margin-top:8px;display:flex;gap:6px;}
+.show-move{margin-top:8px;display:flex;flex-wrap:wrap;gap:6px;row-gap:8px;}
 .done-watching-btn{background:none;border:1px solid rgba(92,107,58,0.35);color:var(--olive);border-radius:6px;padding:4px 10px;font-family:var(--sans);font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap;}
 .done-watching-btn:hover{background:rgba(92,107,58,0.08);}
+.done-watching-btn.status-primary{background:var(--olive);color:white;border-color:var(--olive);}
+.done-watching-btn.status-primary:hover{opacity:0.9;}
 .show-actions{display:flex;gap:6px;align-items:center;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;row-gap:6px;}
 .remote-row{display:flex;gap:4px;align-items:center;}
 .remote-btn{background:none;border:none;cursor:pointer;padding:0;display:flex;align-items:center;transition:transform 0.1s;}
@@ -237,9 +239,11 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
 .dnf-badge{display:inline-flex;align-items:center;background:#fdecea;color:#c0392b;font-size:10px;font-weight:800;padding:2px 8px;border-radius:10px;letter-spacing:0.04em;border:1px solid rgba(192,57,43,0.2);}
 .dnf-card{background:var(--cream);border:1px solid rgba(192,57,43,0.2);border-left:4px solid #c0392b;border-radius:var(--radius);padding:9px 12px;box-shadow:var(--shadow);margin-bottom:7px;opacity:0.85;}
 .dnf-card .show-title{color:var(--muted);}
-.didnt-finish-btn{background:none;border:1px solid rgba(192,57,43,0.3);color:#c0392b;border-radius:6px;padding:4px 10px;font-family:var(--sans);font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap;margin-left:6px;}
-.waiting-season-btn{background:none;border:1px solid rgba(107,45,78,0.3);color:var(--fig);border-radius:6px;padding:4px 10px;font-family:var(--sans);font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap;margin-left:6px;}
+.didnt-finish-btn{background:none;border:1px solid rgba(192,57,43,0.3);color:#c0392b;border-radius:6px;padding:4px 10px;font-family:var(--sans);font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap;}
+.waiting-season-btn{background:none;border:1px solid rgba(107,45,78,0.3);color:var(--fig);border-radius:6px;padding:4px 10px;font-family:var(--sans);font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap;}
 .waiting-season-btn:hover{background:rgba(107,45,78,0.08);}
+.waiting-season-btn.status-primary{background:var(--fig);color:white;border-color:var(--fig);}
+.waiting-season-btn.status-primary:hover{opacity:0.9;}
 .resume-watching-btn{background:var(--fig);color:white;border:none;border-radius:6px;padding:5px 12px;font-family:var(--sans);font-size:12px;font-weight:600;cursor:pointer;}
 .waiting-section{margin-top:28px;}
 .waiting-header{display:block;font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:0.1em;color:white;background:var(--fig);padding:9px 16px;border-radius:8px;margin-bottom:10px;box-shadow:0 2px 8px rgba(107,45,78,0.3);}
@@ -1231,9 +1235,14 @@ function renderList(list) {
       });
     }
     if (waiting.length) {
-      html+='<div class="waiting-section"><div class="waiting-header">&#8987; Waiting for New Season</div><div class="shows-grid">';
-      waiting.forEach(function(s){ html+=buildCard(s,list); });
-      html+='</div></div>';
+      html+='<div class="waiting-section"><div class="waiting-header">&#8987; Waiting for New Season</div>';
+      var wGroups=groupByService(waiting); var wServices=Object.keys(wGroups).sort();
+      wServices.forEach(function(svc){
+        html+='<div class="service-group"><div class="service-divider"><span class="service-divider-text">'+svc+'</span></div><div class="shows-grid">';
+        wGroups[svc].forEach(function(s){ html+=buildCard(s,list); });
+        html+='</div></div>';
+      });
+      html+='</div>';
     }
     el.innerHTML=html;
     return;
@@ -1282,27 +1291,19 @@ function guessShowOutcome(s) {
 function buildWatchingCard(s) {
   var sid = s.id;
   var guess = guessShowOutcome(s);
-  var primaryHTML;
-  if (guess === 'waiting') {
-    primaryHTML = '<button class="waiting-season-btn" onclick="markWaiting(\''+sid+'\')">Waiting for New Season &#8987;</button>';
-  } else if (guess === 'watched') {
-    primaryHTML = '<button class="done-watching-btn" onclick="markWatched(\''+sid+'\')">Finished &#127871;</button>';
-  } else {
-    primaryHTML = '<button class="waiting-season-btn" onclick="markWaiting(\''+sid+'\')">Caught Up &#8987;</button>'
-      + '<button class="done-watching-btn" onclick="markWatched(\''+sid+'\')">Finished &#127871;</button>';
-  }
+  // All three status choices are always visible, in this fixed order — a status
+  // is a peer choice people expect to see directly, not something they'd think
+  // to look for in the overflow menu. The TMDB guess only promotes one visually.
+  var waitingCls = 'waiting-season-btn' + (guess === 'waiting' ? ' status-primary' : '');
+  var finishedCls = 'done-watching-btn' + (guess === 'watched' ? ' status-primary' : '');
+  var primaryHTML = '<button class="'+waitingCls+'" onclick="markWaiting(\''+sid+'\')">Waiting for New Season &#8987;</button>'
+    + '<button class="'+finishedCls+'" onclick="markWatched(\''+sid+'\')">Finished &#127871;</button>';
   var dnfHTML = '<button class="didnt-finish-btn" onclick="markDNF(\''+sid+'\')">Didn&#39;t Finish</button>';
 
-  var escapeItem = guess === 'waiting'
-    ? '<button class="card-menu-item" onclick="markWatched(\''+sid+'\');closeCardMenus();">Actually, mark Finished</button>'
-    : guess === 'watched'
-      ? '<button class="card-menu-item" onclick="markWaiting(\''+sid+'\');closeCardMenus();">Actually, mark Waiting for New Season</button>'
-      : '';
   var hideLabel = s.hidden ? 'Show to friends' : 'Hide from friends';
   var menuHTML = '<div class="card-menu-wrap">'
     + '<button class="btn-more" onclick="toggleCardMenu(this)" title="More">&#8942;</button>'
     + '<div class="card-menu">'
-    + escapeItem
     + '<button class="card-menu-item" onclick="moveToWatchlist(\''+sid+'\');closeCardMenus();">&#8592; My List</button>'
     + '<button class="card-menu-item" onclick="toggleHide(\'watching\',\''+sid+'\');closeCardMenus();">'+hideLabel+'</button>'
     + '<button class="card-menu-item" onclick="togglePlatEdit(\'watching\',\''+sid+'\');closeCardMenus();">Edit platform</button>'
@@ -1317,6 +1318,29 @@ function buildWatchingCard(s) {
 
   return '<div class="show-card'+(s.hidden?' is-hidden':'')+'"><div class="show-card-top">'+showTile(s)+'<div class="show-info"><div class="show-title">'+s.title+(s.hidden?'<span class="hidden-badge">Hidden from friends</span>':'')+'</div>'+platformRow+'</div></div>'
     + '<div class="show-move">'+primaryHTML+dnfHTML+menuHTML+'</div>'
+    + (hasReact?'<div class="react-area">'+reactionsHTML(s.reactions,'watching',sid)+reactToggle+'</div>':'')
+    + '</div>';
+}
+
+function buildWaitingCard(s) {
+  var sid = s.id;
+  var hideLabel = s.hidden ? 'Show to friends' : 'Hide from friends';
+  var menuHTML = '<div class="card-menu-wrap">'
+    + '<button class="btn-more" onclick="toggleCardMenu(this)" title="More">&#8942;</button>'
+    + '<div class="card-menu">'
+    + '<button class="card-menu-item" onclick="toggleHide(\'watching\',\''+sid+'\');closeCardMenus();">'+hideLabel+'</button>'
+    + '<button class="card-menu-item" onclick="togglePlatEdit(\'watching\',\''+sid+'\');closeCardMenus();">Edit platform</button>'
+    + '<button class="card-menu-item danger" onclick="removeShow(\'watching\',\''+sid+'\');closeCardMenus();">Remove</button>'
+    + '</div></div>';
+
+  var inpId='inp-watching-'+sid;
+  var reactToggle='<div class="inline-react"><input class="react-input" id="'+inpId+'" placeholder="What did you think? 😊" /><button class="btn-send" onclick="submitReact(\'watching\',\''+sid+'\')">Send</button><button class="btn-cancel" onclick="document.getElementById(\''+inpId+'\').value=\'\'">Cancel</button></div>'
+    + quickReactRow('quickReact', "'watching','"+sid+"'");
+  var hasReact=reactionsHTML(s.reactions,'watching',sid)||reactToggle;
+  var platformRow=s.editingPlatform?platformSelect('watching',sid,s.platform):'';
+
+  return '<div class="show-card'+(s.hidden?' is-hidden':'')+'"><div class="show-card-top">'+showTile(s)+'<div class="show-info"><div class="show-title">'+s.title+(s.hidden?'<span class="hidden-badge">Hidden from friends</span>':'')+'</div>'+platformRow+'</div><div class="show-actions">'+remoteRating('watching',sid,s.rating)+'</div></div>'
+    + '<div class="show-move"><button class="resume-watching-btn" onclick="resumeWatching(\''+sid+'\')">Resume Watching &#9654;</button>'+menuHTML+'</div>'
     + (hasReact?'<div class="react-area">'+reactionsHTML(s.reactions,'watching',sid)+reactToggle+'</div>':'')
     + '</div>';
 }
@@ -1337,24 +1361,20 @@ document.addEventListener('click', function(e) {
 });
 
 function buildCard(s, list) {
-  if (list === 'watching' && !s.waitingForSeason) return buildWatchingCard(s);
+  if (list === 'watching') return s.waitingForSeason ? buildWaitingCard(s) : buildWatchingCard(s);
   var actions='';
   if(list==='watched') actions=remoteRating(list,s.id,s.rating);
   if(list==='watchlist') actions='<button class="btn-start" onclick="moveToWatching(\'' + s.id + '\')" >Watch Now</button>';
-  if(list==='watching') actions=remoteRating(list,s.id,s.rating)+'<button class="btn-start" onclick="moveToWatchlist(\'' + s.id + '\')" style="background:var(--olive);">&#8592; My List</button>';
-  if(list==='watched'||list==='watchlist') actions+=waitingBtn(list, s);
+  actions+=waitingBtn(list, s);
   actions+=hideBtn(list, s);
   actions+=platformEditBtn(list, s);
   actions+='<button class="btn-remove" onclick="removeShow(\'' + list + '\',\'' + s.id + '\')" >&#x2715;</button>';
-  var moveLink=list==='watching'
-    ?'<div class="show-move"><button class="resume-watching-btn" onclick="resumeWatching(\'' + s.id + '\')" >Resume Watching &#9654;</button></div>'
-    :'';
   var inpId='inp-'+list+'-'+s.id;
   var reactToggle='<div class="inline-react"><input class="react-input" id="'+inpId+'" placeholder="What did you think? 😊" /><button class="btn-send" onclick="submitReact(\''+list+'\',\''+s.id+'\')">Send</button><button class="btn-cancel" onclick="document.getElementById(\''+inpId+'\').value=\'\'">Cancel</button></div>'
     + quickReactRow('quickReact', "'"+list+"','"+s.id+"'");
   var hasReact=reactionsHTML(s.reactions,list,s.id)||reactToggle;
   var platformRow=s.editingPlatform?platformSelect(list,s.id,s.platform):'';
-  return '<div class="show-card'+(s.hidden?' is-hidden':'')+'"><div class="show-card-top">'+showTile(s)+'<div class="show-info"><div class="show-title">'+s.title+(s.hidden?'<span class="hidden-badge">Hidden from friends</span>':'')+'</div>'+platformRow+'</div><div class="show-actions">'+actions+'</div></div>'+moveLink+(hasReact?'<div class="react-area">'+reactionsHTML(s.reactions,list,s.id)+reactToggle+'</div>':'')+'</div>';
+  return '<div class="show-card'+(s.hidden?' is-hidden':'')+'"><div class="show-card-top">'+showTile(s)+'<div class="show-info"><div class="show-title">'+s.title+(s.hidden?'<span class="hidden-badge">Hidden from friends</span>':'')+'</div>'+platformRow+'</div><div class="show-actions">'+actions+'</div></div>'+(hasReact?'<div class="react-area">'+reactionsHTML(s.reactions,list,s.id)+reactToggle+'</div>':'')+'</div>';
 }
 
 
