@@ -330,11 +330,17 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
   <div class="boot-loader-log" id="boot-loader-log"></div>
 </div>
 <script>
+  // On-screen timing text only shows when ?debug=1 is in the URL — everyday
+  // users should never see raw debug output on the loading screen. Add
+  // ?debug=1 to the app URL when we need to read boot timing off a phone
+  // screen without DevTools access.
+  window._bootDebug = window.location.search.indexOf('debug=1') !== -1;
   window._bootMarks = [];
   window._mark = function(label) {
     try {
       var t = Math.round(performance.now());
       window._bootMarks.push([label, t]);
+      if (!window._bootDebug) return;
       var t0 = window._bootMarks[0][1];
       var el = document.getElementById('boot-loader-log');
       if (el) {
