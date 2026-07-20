@@ -48,6 +48,11 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
 .nav-tab-icon{font-size:20px;line-height:1;}
 .nav-tab-label{font-size:10px;font-weight:600;letter-spacing:0.02em;white-space:nowrap;}
 
+.boot-loader{position:fixed;inset:0;background:var(--sand);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:9999;}
+.boot-loader-logo{font-family:var(--serif);font-size:26px;color:var(--terra);font-weight:700;margin-bottom:16px;}
+.boot-loader-spinner{width:32px;height:32px;border:3px solid rgba(196,98,45,0.22);border-top-color:var(--terra);border-radius:50%;animation:boot-spin 0.8s linear infinite;}
+@keyframes boot-spin{to{transform:rotate(360deg);}}
+
 .content{flex:1;padding:24px 20px 84px;max-width:700px;margin:0 auto;width:100%;}
 .page-title{font-family:var(--serif);font-size:22px;margin-bottom:4px;}
 .page-sub{font-size:13px;color:var(--muted);margin-bottom:20px;}
@@ -304,6 +309,22 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
 </style>
 </head>
 <body>
+<div class="boot-loader" id="boot-loader">
+  <div class="boot-loader-logo">ShowUp</div>
+  <div class="boot-loader-spinner"></div>
+</div>
+<script>
+  window._bootMarks = [];
+  window._mark = function(label) { try { window._bootMarks.push([label, Math.round(performance.now())]); } catch(e) {} };
+  window._bootReport = function() {
+    try {
+      var t0 = window._bootMarks.length ? window._bootMarks[0][1] : 0;
+      console.log('%c[ShowUp boot timing]', 'font-weight:bold;color:#C4622D;');
+      window._bootMarks.forEach(function(m) { console.log(m[0] + ': +' + (m[1] - t0) + 'ms'); });
+    } catch(e) {}
+  };
+  window._mark('body-start');
+</script>
 <div class="confetti-wrap" id="confetti-wrap"></div>
 
 <!-- DONE WATCHING MODAL -->
@@ -801,6 +822,7 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
 <script>
+window._mark('cdn-script-loaded');
 
 var PLATFORMS = ['None','Amazon Prime','Apple TV+','Discovery+','Disney+','ESPN+','HBO Max','Hulu','Netflix','Paramount+','PBS Passport','Peacock','Showtime','Starz','Other'];
 var CONFETTI_COLORS = ['#C4622D','#6B2D4E','#C49A3C','#5C6B3A','#F5EFE6','#D4734E'];
@@ -2146,6 +2168,12 @@ function showScreen(name) {
   document.querySelectorAll('.screen').forEach(function(s) { s.classList.remove('active'); });
   var el = document.getElementById('screen-' + name);
   if (el) el.classList.add('active');
+  var bl = document.getElementById('boot-loader');
+  if (bl && bl.style.display !== 'none') {
+    bl.style.display = 'none';
+    window._mark('first-screen-visible: ' + name);
+    window._bootReport();
+  }
 }
 
 // ============================================================
@@ -2176,6 +2204,7 @@ function normalizeShow(s) {
 }
 
 async function loadUserIntoState(profile) {
+  window._mark('loaduser-start');
   state.user = {
     id: profile.id,
     first: profile.first_name || '',
@@ -2243,6 +2272,7 @@ async function loadUserIntoState(profile) {
 // ============================================================
 
 async function bootstrap() {
+  window._mark('bootstrap-start');
   try {
     // Read session directly from localStorage — never calls getSession() which
     // awaits _initializePromise and deadlocks with supabase-js PKCE flow.
@@ -2281,6 +2311,7 @@ async function bootstrap() {
       { headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + stored.access_token } }
     );
     var profileRows = profileRes.ok ? await profileRes.json() : [];
+    window._mark('profile-fetched');
     var profile = profileRows.length > 0 ? profileRows[0] : null;
 
     _bootstrapComplete = true;
@@ -2603,6 +2634,7 @@ window.backFromSettings = function() { showScreen('app'); };
 
 var _originalSetRoom = null;
 document.addEventListener('DOMContentLoaded', function() {
+  window._mark('dom-content-loaded');
   _originalSetRoom = window.setRoom;
   if (PENDING_INVITER) {
     var banner = document.getElementById('invite-banner');
