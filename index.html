@@ -52,6 +52,7 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
 .boot-loader{position:fixed;inset:0;background:var(--sand);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:9999;}
 .boot-loader-logo{font-family:var(--serif);font-size:26px;color:var(--terra);font-weight:700;margin-bottom:16px;}
 .boot-loader-spinner{width:32px;height:32px;border:3px solid rgba(196,98,45,0.22);border-top-color:var(--terra);border-radius:50%;animation:boot-spin 0.8s linear infinite;}
+.boot-loader-log{margin-top:18px;font-family:monospace;font-size:11px;color:var(--muted);text-align:left;max-width:280px;line-height:1.7;}
 @keyframes boot-spin{to{transform:rotate(360deg);}}
 
 .content{flex:1;padding:24px 20px 84px;max-width:700px;margin:0 auto;width:100%;}
@@ -326,10 +327,23 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
 <div class="boot-loader" id="boot-loader">
   <div class="boot-loader-logo">ShowUp</div>
   <div class="boot-loader-spinner"></div>
+  <div class="boot-loader-log" id="boot-loader-log"></div>
 </div>
 <script>
   window._bootMarks = [];
-  window._mark = function(label) { try { window._bootMarks.push([label, Math.round(performance.now())]); } catch(e) {} };
+  window._mark = function(label) {
+    try {
+      var t = Math.round(performance.now());
+      window._bootMarks.push([label, t]);
+      var t0 = window._bootMarks[0][1];
+      var el = document.getElementById('boot-loader-log');
+      if (el) {
+        var line = document.createElement('div');
+        line.textContent = label + ': +' + (t - t0) + 'ms';
+        el.appendChild(line);
+      }
+    } catch(e) {}
+  };
   window._bootReport = function() {
     try {
       var t0 = window._bootMarks.length ? window._bootMarks[0][1] : 0;
