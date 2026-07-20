@@ -2331,6 +2331,13 @@ function normalizeShow(s) {
   };
 }
 
+function _logFriendsLoadTime() {
+  try {
+    var t0 = window._bootMarks && window._bootMarks.length ? window._bootMarks[0][1] : 0;
+    console.log('[ShowUp] Living Room data ready: +' + (Math.round(performance.now()) - t0) + 'ms');
+  } catch(e) {}
+}
+
 async function loadUserIntoState(profile) {
   window._mark('loaduser-start');
   state.user = {
@@ -2377,10 +2384,6 @@ async function loadUserIntoState(profile) {
     state.lastVisitAt = await lastVisitPromise;
   } catch(e) { console.error('Error loading last visit time:', e); state.lastVisitAt = null; }
 
-  try {
-    state.friends = await friendsPromise;
-  } catch(e) { console.error('Error loading friends:', e); state.friends = []; }
-
   try { await fixupReactionNames(); } catch(e) { console.error('Error fixing reaction names:', e); }
 
   setRoom(state.user.room);
@@ -2393,6 +2396,25 @@ async function loadUserIntoState(profile) {
   init();
   showScreen('app');
   renderAll();
+
+  // Living Room/friends data loads in the background instead of blocking your
+  // own tabs from appearing — on a weak connection, getFriendsWithShows()'s
+  // several sequential lookups were the whole app's bottleneck (measured up
+  // to 8-10s on cellular vs ~2s on wifi). Your own tabs no longer wait on it.
+  friendsPromise
+    .then(function(friends) {
+      state.friends = friends;
+      renderFriends();
+      renderRankings();
+      _logFriendsLoadTime();
+    })
+    .catch(function(e) {
+      console.error('Error loading friends:', e);
+      state.friends = [];
+      renderFriends();
+      renderRankings();
+      _logFriendsLoadTime();
+    });
 }
 
 // ============================================================
