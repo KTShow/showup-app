@@ -1316,8 +1316,8 @@ function buildWatchingCard(s) {
   var hasReact=reactionsHTML(s.reactions,'watching',sid)||reactToggle;
   var platformRow=s.editingPlatform?platformSelect('watching',sid,s.platform):'';
 
-  return '<div class="show-card'+(s.hidden?' is-hidden':'')+'"><div class="show-card-top">'+showTile(s)+'<div class="show-info"><div class="show-title">'+s.title+(s.hidden?'<span class="hidden-badge">Hidden from friends</span>':'')+'</div>'+platformRow+'</div></div>'
-    + '<div class="show-move">'+primaryHTML+dnfHTML+menuHTML+'</div>'
+  return '<div class="show-card'+(s.hidden?' is-hidden':'')+'"><div class="show-card-top">'+showTile(s)+'<div class="show-info"><div class="show-title">'+s.title+(s.hidden?'<span class="hidden-badge">Hidden from friends</span>':'')+'</div>'+platformRow+'</div>'+menuHTML+'</div>'
+    + '<div class="show-move">'+primaryHTML+dnfHTML+'</div>'
     + (hasReact?'<div class="react-area">'+reactionsHTML(s.reactions,'watching',sid)+reactToggle+'</div>':'')
     + '</div>';
 }
@@ -1339,8 +1339,8 @@ function buildWaitingCard(s) {
   var hasReact=reactionsHTML(s.reactions,'watching',sid)||reactToggle;
   var platformRow=s.editingPlatform?platformSelect('watching',sid,s.platform):'';
 
-  return '<div class="show-card'+(s.hidden?' is-hidden':'')+'"><div class="show-card-top">'+showTile(s)+'<div class="show-info"><div class="show-title">'+s.title+(s.hidden?'<span class="hidden-badge">Hidden from friends</span>':'')+'</div>'+platformRow+'</div><div class="show-actions">'+remoteRating('watching',sid,s.rating)+'</div></div>'
-    + '<div class="show-move"><button class="resume-watching-btn" onclick="resumeWatching(\''+sid+'\')">Resume Watching &#9654;</button>'+menuHTML+'</div>'
+  return '<div class="show-card'+(s.hidden?' is-hidden':'')+'"><div class="show-card-top">'+showTile(s)+'<div class="show-info"><div class="show-title">'+s.title+(s.hidden?'<span class="hidden-badge">Hidden from friends</span>':'')+'</div>'+platformRow+'</div><div class="show-actions">'+remoteRating('watching',sid,s.rating)+'</div>'+menuHTML+'</div>'
+    + '<div class="show-move"><button class="resume-watching-btn" onclick="resumeWatching(\''+sid+'\')">Resume Watching &#9654;</button></div>'
     + (hasReact?'<div class="react-area">'+reactionsHTML(s.reactions,'watching',sid)+reactToggle+'</div>':'')
     + '</div>';
 }
