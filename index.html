@@ -1284,7 +1284,7 @@ function buildWatchingCard(s) {
   var guess = guessShowOutcome(s);
   var primaryHTML;
   if (guess === 'waiting') {
-    primaryHTML = '<button class="waiting-season-btn" onclick="markWaiting(\''+sid+'\')">Caught Up &#8987;</button>';
+    primaryHTML = '<button class="waiting-season-btn" onclick="markWaiting(\''+sid+'\')">Waiting for New Season &#8987;</button>';
   } else if (guess === 'watched') {
     primaryHTML = '<button class="done-watching-btn" onclick="markWatched(\''+sid+'\')">Finished &#127871;</button>';
   } else {
@@ -1296,7 +1296,7 @@ function buildWatchingCard(s) {
   var escapeItem = guess === 'waiting'
     ? '<button class="card-menu-item" onclick="markWatched(\''+sid+'\');closeCardMenus();">Actually, mark Finished</button>'
     : guess === 'watched'
-      ? '<button class="card-menu-item" onclick="markWaiting(\''+sid+'\');closeCardMenus();">Actually, mark Caught Up</button>'
+      ? '<button class="card-menu-item" onclick="markWaiting(\''+sid+'\');closeCardMenus();">Actually, mark Waiting for New Season</button>'
       : '';
   var hideLabel = s.hidden ? 'Show to friends' : 'Hide from friends';
   var menuHTML = '<div class="card-menu-wrap">'
