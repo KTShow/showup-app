@@ -2036,39 +2036,44 @@ async function getMyLivingRoom() {
 async function getFriendsWithShows() {
   const { data: { user } } = await sb.auth.getUser();
   if (!user) throw new Error('Not authenticated');
-  const room = await getMyLivingRoom();
-  if (!room) return [];
 
-  // Direction 1: people who joined MY room → fetch their profiles separately
-  const { data: memberRows, error: membersError } = await sb.from('living_room_members')
+  // room and myMemberships only depend on user.id, not on each other — fire together.
+  var roomPromise = getMyLivingRoom();
+  var myMembershipsPromise = sb.from('living_room_members')
+    .select('living_room_id').eq('user_id', user.id).eq('status', 'active');
+
+  const room = await roomPromise;
+  if (!room) return [];
+  const { data: myMemberships } = await myMembershipsPromise;
+
+  // Direction 1 (members of my room) and direction 2 (rooms I joined) are
+  // independent of each other once room/myMemberships are known — fire together.
+  var memberRowsPromise = sb.from('living_room_members')
     .select('user_id')
     .eq('living_room_id', room.id).eq('status', 'active').neq('user_id', user.id);
-  if (membersError) throw membersError;
-  var dir1Ids = (memberRows || []).map(function(m) { return m.user_id; });
-  var dir1Profiles = [];
-  if (dir1Ids.length > 0) {
-    var { data: p1 } = await sb.from('users')
-      .select('id, first_name, last_initial, city, state, room').in('id', dir1Ids);
-    dir1Profiles = p1 || [];
-  }
-
-  // Direction 2: rooms I joined (other than my own) → get those owners
-  const { data: myMemberships } = await sb.from('living_room_members')
-    .select('living_room_id').eq('user_id', user.id).eq('status', 'active');
   var otherRoomIds = (myMemberships || [])
     .map(function(m) { return m.living_room_id; })
     .filter(function(id) { return id !== room.id; });
-  var ownerProfiles = [];
-  if (otherRoomIds.length > 0) {
-    var { data: otherRooms } = await sb.from('living_rooms')
-      .select('owner_id').in('id', otherRoomIds);
-    var ownerIds = (otherRooms || []).map(function(r) { return r.owner_id; }).filter(function(id) { return id !== user.id; });
-    if (ownerIds.length > 0) {
-      var { data: p2 } = await sb.from('users')
-        .select('id, first_name, last_initial, city, state, room').in('id', ownerIds);
-      ownerProfiles = p2 || [];
-    }
-  }
+  var otherRoomsPromise = otherRoomIds.length > 0
+    ? sb.from('living_rooms').select('owner_id').in('id', otherRoomIds)
+    : Promise.resolve({ data: [] });
+
+  const [memberRowsRes, otherRoomsRes] = await Promise.all([memberRowsPromise, otherRoomsPromise]);
+  if (memberRowsRes.error) throw memberRowsRes.error;
+  var dir1Ids = (memberRowsRes.data || []).map(function(m) { return m.user_id; });
+  var ownerIds = (otherRoomsRes.data || []).map(function(r) { return r.owner_id; }).filter(function(id) { return id !== user.id; });
+
+  // Profile lookups for both directions are independent — fire together.
+  var dir1ProfilesPromise = dir1Ids.length > 0
+    ? sb.from('users').select('id, first_name, last_initial, city, state, room').in('id', dir1Ids)
+    : Promise.resolve({ data: [] });
+  var ownerProfilesPromise = ownerIds.length > 0
+    ? sb.from('users').select('id, first_name, last_initial, city, state, room').in('id', ownerIds)
+    : Promise.resolve({ data: [] });
+
+  const [dir1Res, ownerRes] = await Promise.all([dir1ProfilesPromise, ownerProfilesPromise]);
+  var dir1Profiles = dir1Res.data || [];
+  var ownerProfiles = ownerRes.data || [];
 
   // Merge, deduplicate by user id
   var seenIds = new Set([user.id]);
@@ -2089,12 +2094,14 @@ async function getFriendsWithShows() {
   if (!allUsers.length) return [];
   var friendIds = allUsers.map(function(u) { return u.id; });
 
-  const { data: shows, error: showsError } = await sb.from('shows')
-    .select('*').in('user_id', friendIds).eq('hidden', false);
-  if (showsError) throw showsError;
-  const { data: top5, error: top5Error } = await sb.from('top5_shows')
-    .select('*').in('user_id', friendIds).order('rank', { ascending: true });
-  if (top5Error) throw top5Error;
+  const [showsRes, top5Res] = await Promise.all([
+    sb.from('shows').select('*').in('user_id', friendIds).eq('hidden', false),
+    sb.from('top5_shows').select('*').in('user_id', friendIds).order('rank', { ascending: true })
+  ]);
+  if (showsRes.error) throw showsRes.error;
+  if (top5Res.error) throw top5Res.error;
+  var shows = showsRes.data;
+  var top5 = top5Res.data;
 
   var allReactions = [];
   if (shows && shows.length) {
@@ -2190,24 +2197,31 @@ async function loadUserIntoState(profile) {
     sessionCount: profile.session_count || 0,
   };
 
+  // Fire all four independent loads at once instead of waiting on each in turn —
+  // none of these read each other's results, only state.user (already set above).
+  var showsPromise = loadShows();
+  var top5Promise = loadTop5();
+  var lastVisitPromise = getLastVisitTime();
+  var friendsPromise = getFriendsWithShows();
+
   try {
-    var shows = await loadShows();
+    var shows = await showsPromise;
     state.watching = shows.filter(function(s) { return s.status === 'watching'; }).map(normalizeShow);
     state.watchlist = shows.filter(function(s) { return s.status === 'watchlist'; }).map(normalizeShow);
     state.watched = shows.filter(function(s) { return s.status === 'watched' || s.status === 'dnf'; }).map(normalizeShow);
   } catch(e) { console.error('Error loading shows:', e); }
 
   try {
-    var top5 = await loadTop5();
+    var top5 = await top5Promise;
     state.user.top5 = top5.map(function(t) { return { title: t.title, platform: t.platform, poster_path: t.poster_path || null, tmdb_id: t.tmdb_id || null }; });
   } catch(e) { console.error('Error loading top5:', e); }
 
   try {
-    state.lastVisitAt = await getLastVisitTime();
+    state.lastVisitAt = await lastVisitPromise;
   } catch(e) { console.error('Error loading last visit time:', e); state.lastVisitAt = null; }
 
   try {
-    state.friends = await getFriendsWithShows();
+    state.friends = await friendsPromise;
   } catch(e) { console.error('Error loading friends:', e); state.friends = []; }
 
   try { await fixupReactionNames(); } catch(e) { console.error('Error fixing reaction names:', e); }
