@@ -848,6 +848,22 @@ var state = {
 var _firstTimeTellMore = false; // true when completing onboarding for the first time
 var _bootstrapComplete = false; // true once bootstrap has determined the screen to show
 
+// bootstrap() and onAuthStateChange() can both independently detect the same
+// logged-in session on a normal page load (Supabase fires onAuthStateChange on
+// init regardless of what bootstrap already did via its own localStorage read),
+// and onAuthStateChange itself can fire more than once (e.g. INITIAL_SESSION
+// then SIGNED_IN/TOKEN_REFRESHED). Without a guard this triggered the full
+// shows/top5/friends load — and a sessions-table insert — multiple times in a
+// race, each competing for the same network connections. This makes every
+// caller share one in-flight load instead of starting a new one.
+var _userLoadPromise = null;
+function loadUserOnce(profile) {
+  if (!_userLoadPromise) {
+    _userLoadPromise = loadUserIntoState(profile).then(function() { return recordSession(); });
+  }
+  return _userLoadPromise;
+}
+
 
 function openInviteModal() {
   var u = state.user;
@@ -2321,7 +2337,7 @@ async function bootstrap() {
       return;
     }
 
-    await loadUserIntoState(profile);
+    await loadUserOnce(profile);
   } catch(e) {
     console.error('[bootstrap] CATCH error:', e);
     _bootstrapComplete = true;
@@ -2356,8 +2372,7 @@ onAuthStateChange(function(session) {
     if (!profile) {
       showScreen('onboard');
     } else {
-      await loadUserIntoState(profile);
-      await recordSession();
+      await loadUserOnce(profile);
     }
   }, 0);
 });
