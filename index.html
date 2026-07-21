@@ -1243,7 +1243,7 @@ function renderList(list) {
     return;
   }
 
-  if (list === 'watching') {
+  if (list === 'watchlist') {
     var active = items.filter(function(s){ return !s.waitingForSeason; });
     var waiting = items.filter(function(s){ return s.waitingForSeason; });
     var html = '';
@@ -1349,20 +1349,43 @@ function buildWaitingCard(s) {
   var menuHTML = '<div class="card-menu-wrap">'
     + '<button class="btn-more" onclick="toggleCardMenu(this)" title="More">&#8942;</button>'
     + '<div class="card-menu">'
-    + '<button class="card-menu-item" onclick="toggleHide(\'watching\',\''+sid+'\');closeCardMenus();">'+hideLabel+'</button>'
-    + '<button class="card-menu-item" onclick="togglePlatEdit(\'watching\',\''+sid+'\');closeCardMenus();">Edit platform</button>'
-    + '<button class="card-menu-item danger" onclick="removeShow(\'watching\',\''+sid+'\');closeCardMenus();">Remove</button>'
+    + '<button class="card-menu-item" onclick="toggleHide(\'watchlist\',\''+sid+'\');closeCardMenus();">'+hideLabel+'</button>'
+    + '<button class="card-menu-item" onclick="togglePlatEdit(\'watchlist\',\''+sid+'\');closeCardMenus();">Edit streaming service</button>'
+    + '<button class="card-menu-item danger" onclick="removeShow(\'watchlist\',\''+sid+'\');closeCardMenus();">Remove</button>'
     + '</div></div>';
 
-  var inpId='inp-watching-'+sid;
-  var reactToggle='<div class="inline-react"><input class="react-input" id="'+inpId+'" placeholder="What did you think? 😊" /><button class="btn-send" onclick="submitReact(\'watching\',\''+sid+'\')">Send</button><button class="btn-cancel" onclick="document.getElementById(\''+inpId+'\').value=\'\'">Cancel</button></div>'
-    + quickReactRow('quickReact', "'watching','"+sid+"'");
-  var hasReact=reactionsHTML(s.reactions,'watching',sid)||reactToggle;
-  var platformRow=s.editingPlatform?platformSelect('watching',sid,s.platform):'';
+  var inpId='inp-watchlist-'+sid;
+  var reactToggle='<div class="inline-react"><input class="react-input" id="'+inpId+'" placeholder="What did you think? 😊" /><button class="btn-send" onclick="submitReact(\'watchlist\',\''+sid+'\')">Send</button><button class="btn-cancel" onclick="document.getElementById(\''+inpId+'\').value=\'\'">Cancel</button></div>'
+    + quickReactRow('quickReact', "'watchlist','"+sid+"'");
+  var hasReact=reactionsHTML(s.reactions,'watchlist',sid)||reactToggle;
+  var platformRow=s.editingPlatform?platformSelect('watchlist',sid,s.platform):'';
 
-  return '<div class="show-card'+(s.hidden?' is-hidden':'')+'"><div class="show-card-top">'+showTile(s)+'<div class="show-info"><div class="show-title">'+s.title+(s.hidden?'<span class="hidden-badge">Hidden from friends</span>':'')+'</div>'+platformRow+'</div><div class="show-actions">'+remoteRating('watching',sid,s.rating)+'</div>'+menuHTML+'</div>'
+  return '<div class="show-card'+(s.hidden?' is-hidden':'')+'"><div class="show-card-top">'+showTile(s)+'<div class="show-info"><div class="show-title">'+s.title+(s.hidden?'<span class="hidden-badge">Hidden from friends</span>':'')+'</div>'+platformRow+'</div><div class="show-actions">'+remoteRating('watchlist',sid,s.rating)+'</div>'+menuHTML+'</div>'
     + '<div class="show-move"><button class="resume-watching-btn" onclick="resumeWatching(\''+sid+'\')">Resume Watching &#9654;</button></div>'
-    + (hasReact?'<div class="react-area">'+reactionsHTML(s.reactions,'watching',sid)+reactToggle+'</div>':'')
+    + (hasReact?'<div class="react-area">'+reactionsHTML(s.reactions,'watchlist',sid)+reactToggle+'</div>':'')
+    + '</div>';
+}
+
+function buildWatchlistCard(s) {
+  var sid = s.id;
+  var hideLabel = s.hidden ? 'Show to friends' : 'Hide from friends';
+  var menuHTML = '<div class="card-menu-wrap">'
+    + '<button class="btn-more" onclick="toggleCardMenu(this)" title="More">&#8942;</button>'
+    + '<div class="card-menu">'
+    + '<button class="card-menu-item" onclick="toggleHide(\'watchlist\',\''+sid+'\');closeCardMenus();">'+hideLabel+'</button>'
+    + '<button class="card-menu-item" onclick="togglePlatEdit(\'watchlist\',\''+sid+'\');closeCardMenus();">Edit streaming service</button>'
+    + '<button class="card-menu-item danger" onclick="removeShow(\'watchlist\',\''+sid+'\');closeCardMenus();">Remove</button>'
+    + '</div></div>';
+
+  var inpId='inp-watchlist-'+sid;
+  var reactToggle='<div class="inline-react"><input class="react-input" id="'+inpId+'" placeholder="What did you think? 😊" /><button class="btn-send" onclick="submitReact(\'watchlist\',\''+sid+'\')">Send</button><button class="btn-cancel" onclick="document.getElementById(\''+inpId+'\').value=\'\'">Cancel</button></div>'
+    + quickReactRow('quickReact', "'watchlist','"+sid+"'");
+  var hasReact=reactionsHTML(s.reactions,'watchlist',sid)||reactToggle;
+  var platformRow=s.editingPlatform?platformSelect('watchlist',sid,s.platform):'';
+
+  return '<div class="show-card'+(s.hidden?' is-hidden':'')+'"><div class="show-card-top">'+showTile(s)+'<div class="show-info"><div class="show-title">'+s.title+(s.hidden?'<span class="hidden-badge">Hidden from friends</span>':'')+'</div>'+platformRow+'</div>'+menuHTML+'</div>'
+    + '<div class="show-move"><button class="btn-start" onclick="moveToWatching(\''+sid+'\')">Watch Now</button></div>'
+    + (hasReact?'<div class="react-area">'+reactionsHTML(s.reactions,'watchlist',sid)+reactToggle+'</div>':'')
     + '</div>';
 }
 
@@ -1382,10 +1405,10 @@ document.addEventListener('click', function(e) {
 });
 
 function buildCard(s, list) {
-  if (list === 'watching') return s.waitingForSeason ? buildWaitingCard(s) : buildWatchingCard(s);
+  if (list === 'watching') return buildWatchingCard(s);
+  if (list === 'watchlist') return s.waitingForSeason ? buildWaitingCard(s) : buildWatchlistCard(s);
   var actions='';
   if(list==='watched') actions=remoteRating(list,s.id,s.rating);
-  if(list==='watchlist') actions='<button class="btn-start" onclick="moveToWatching(\'' + s.id + '\')" >Watch Now</button>';
   actions+=waitingBtn(list, s);
   actions+=hideBtn(list, s);
   actions+=platformEditBtn(list, s);
@@ -1701,16 +1724,17 @@ function buildRankings(){
   state.friends.forEach(function(f){
     if(!f||!f.name||!f.watched)return;
     var fColor=ROOMS[f.room||'tuscany']?ROOMS[f.room||'tuscany'].color:'#888';
-    // Includes watching (covers shows Waiting for New Season) so a rating
-    // doesn't stop counting just because a show isn't sitting in Binged.
-    (f.watched||[]).concat(f.watching||[]).forEach(function(s){
+    // Includes watching + watchlist (watchlist covers shows Waiting for New
+    // Season, which live there now) so a rating doesn't stop counting just
+    // because a show isn't sitting in Binged.
+    (f.watched||[]).concat(f.watching||[]).concat(f.watchlist||[]).forEach(function(s){
       if(!s||!s.title||!s.rating||s.rating===0)return;
       addRating(f.name,fColor,f.name.split(' ').map(function(x){return x[0]||'';}).join(''),s.title,s.platform,s.rating,false,s.poster_path,s.tmdb_id);
     });
   });
   if(state.user){
     var myColor=ROOMS[state.user.room||'tuscany']?ROOMS[state.user.room||'tuscany'].color:'#C4622D';
-    (state.watched||[]).concat(state.watching||[]).forEach(function(s){
+    (state.watched||[]).concat(state.watching||[]).concat(state.watchlist||[]).forEach(function(s){
       if(!s||!s.title||!s.rating||s.rating===0)return;
       addRating('You',myColor,state.user.initials||'Y',s.title,s.platform,s.rating,true,s.poster_path,s.tmdb_id);
     });
@@ -3021,19 +3045,23 @@ window.markDNF = async function(id) {
 };
 
 window.markWaiting = async function(id) {
-  var s = state.watching.find(function(x) { return x.id === id; });
-  if (!s) return;
+  var idx = state.watching.findIndex(function(x) { return x.id === id; });
+  if (idx === -1) return;
+  var s = state.watching.splice(idx, 1)[0];
   s.waitingForSeason = true;
-  renderList('watching');
-  try { await updateShowStatus(id, 'watching', { waiting_for_season: true }); } catch(e) { console.error('markWaiting error:', e); }
+  state.watchlist.push(s);
+  renderList('watching'); renderList('watchlist');
+  try { await updateShowStatus(id, 'watchlist', { waiting_for_season: true }); } catch(e) { console.error('markWaiting error:', e); }
   openDWM(s, 'Caught up for now?', '⏳');
 };
 
 window.resumeWatching = async function(id) {
-  var s = state.watching.find(function(x) { return x.id === id; });
-  if (!s) return;
+  var idx = state.watchlist.findIndex(function(x) { return x.id === id; });
+  if (idx === -1) return;
+  var s = state.watchlist.splice(idx, 1)[0];
   s.waitingForSeason = false;
-  renderList('watching');
+  state.watching.push(s);
+  renderList('watchlist'); renderList('watching');
   try { await updateShowStatus(id, 'watching', { waiting_for_season: false }); } catch(e) { console.error('resumeWatching error:', e); }
 };
 
@@ -3058,10 +3086,10 @@ async function _doMoveToWaiting(list, id) {
   state[list] = state[list].filter(function(x) { return x.id !== id; });
   s.waitingForSeason = true;
   s.dnf = false;
-  state.watching.push(s);
+  state.watchlist.push(s);
   renderList(list);
-  renderList('watching');
-  try { await updateShowStatus(id, 'watching', { waiting_for_season: true, dnf: false }); } catch(e) { console.error('moveToWaiting error:', e); }
+  renderList('watchlist');
+  try { await updateShowStatus(id, 'watchlist', { waiting_for_season: true, dnf: false }); } catch(e) { console.error('moveToWaiting error:', e); }
 }
 
 window.moveToWatching = async function(id) {
@@ -3697,8 +3725,8 @@ function findMyShowByTitle(title) {
   return null;
 }
 
-var ADD_DEST_STATUS = { watching: 'watching', waiting: 'watching', watchlist: 'watchlist', dnf: 'watched', watched: 'watched' };
-var ADD_DEST_LIST = { watching: 'watching', waiting: 'watching', watchlist: 'watchlist', dnf: 'watched', watched: 'watched' };
+var ADD_DEST_STATUS = { watching: 'watching', waiting: 'watchlist', watchlist: 'watchlist', dnf: 'watched', watched: 'watched' };
+var ADD_DEST_LIST = { watching: 'watching', waiting: 'watchlist', watchlist: 'watchlist', dnf: 'watched', watched: 'watched' };
 var ADD_DEST_RATES = { waiting: true, dnf: true, watched: true };
 
 window.chooseAddDestination = async function(destKey) {
@@ -3736,7 +3764,7 @@ window.chooseAddDestination = async function(destKey) {
         number_of_seasons: info.number_of_seasons, show_status: info.show_status,
         overview: info.overview, vote_average: info.vote_average,
       });
-      if (isWaiting) { try { await updateShowStatus(row.id, 'watching', { waiting_for_season: true }); } catch(e) { console.error('chooseAddDestination waiting flag error:', e); } }
+      if (isWaiting) { try { await updateShowStatus(row.id, 'watchlist', { waiting_for_season: true }); } catch(e) { console.error('chooseAddDestination waiting flag error:', e); } }
       resultShow = {
         id: row.id, title: info.title, platform: 'None', rating: 0, hidden: false, dnf: isDnf, waitingForSeason: isWaiting,
         source: src, influencedBy: inf, addedAt: row.added_at, reactions: [], showReact: false,
