@@ -268,7 +268,7 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
 .platform-edit-row{margin-top:6px;}
 .platform-edit-row select{width:100%;box-sizing:border-box;border:1px solid var(--border);border-radius:8px;padding:6px 8px;font-family:var(--sans);font-size:12px;color:var(--charcoal);background:var(--cream);}
 .btn-hide.hidden{color:#c0392b;}
-.show-card.is-hidden{opacity:0.45;border-style:dashed;}
+.show-card.is-hidden,.dnf-card.is-hidden{opacity:0.45;border-style:dashed;}
 .hidden-badge{font-size:10px;font-weight:700;color:#c0392b;background:#fdecea;padding:1px 7px;border-radius:8px;margin-left:6px;vertical-align:middle;}
 .btn-delete-react{background:none;border:none;color:var(--muted);cursor:pointer;font-size:12px;padding:0 0 0 6px;opacity:0.55;line-height:1;align-self:center;flex-shrink:0;}
 .btn-delete-react:hover{color:#c0392b;opacity:1;}
@@ -1285,14 +1285,24 @@ function buildDNFCard(s) {
   var reactToggle = '<div class="inline-react"><input class="react-input" id="'+inpId+'" placeholder="What did you think? 😊" /><button class="btn-send" onclick="submitReact(&quot;watched&quot;,&quot;'+sid+'&quot;)">Send</button><button class="btn-cancel" onclick="document.getElementById(&quot;'+inpId+'&quot;).value=\'\'">Cancel</button></div>'
     + quickReactRow('quickReact', "'watched','"+sid+"'");
   var platformRow = s.editingPlatform ? platformSelect('watched', s.id, s.platform) : '';
-  return '<div class="dnf-card">'
+  var hideLabel = s.hidden ? 'Show to friends' : 'Hide from friends';
+  var menuHTML = '<div class="card-menu-wrap">'
+    + '<button class="btn-more" onclick="toggleCardMenu(this)" title="More">&#8942;</button>'
+    + '<div class="card-menu">'
+    + '<button class="card-menu-item" onclick="moveToWatchingAgain(\'watched\',\''+sid+'\');closeCardMenus();">Start Watching Again</button>'
+    + '<button class="card-menu-item" onclick="moveToWaiting(\'watched\',\''+sid+'\');closeCardMenus();">Waiting for New Season</button>'
+    + '<button class="card-menu-item" onclick="toggleHide(\'watched\',\''+sid+'\');closeCardMenus();">'+hideLabel+'</button>'
+    + '<button class="card-menu-item" onclick="togglePlatEdit(\'watched\',\''+sid+'\');closeCardMenus();">Edit streaming service</button>'
+    + '<button class="card-menu-item danger" onclick="removeShow(\'watched\',\''+sid+'\');closeCardMenus();">Remove</button>'
+    + '</div></div>';
+  return '<div class="dnf-card'+(s.hidden?' is-hidden':'')+'">'
     + '<div class="show-card-top">' + showTile(s)
-    + '<div class="show-info"><div class="show-title">' + s.title + '</div>'
+    + '<div class="show-info"><div class="show-title">' + s.title + (s.hidden?'<span class="hidden-badge">Hidden from friends</span>':'') + '</div>'
     + '<div style="margin-top:3px;"><span class="dnf-badge">Didn&#39;t Finish</span><span style="font-size:11px;color:var(--muted);margin-left:6px;">' + s.platform + '</span></div>'
     + platformRow
     + '</div>'
-    + '<div class="show-actions">' + remoteRating('watched', s.id, s.rating) + waitingBtn('watched', s) + platformEditBtn('watched', s) + '</div>'
-    + '<button class="btn-remove" onclick="removeShow(&quot;watched&quot;,&quot;' + sid + '&quot;)">&#x2715;</button>'
+    + '<div class="show-actions">' + remoteRating('watched', s.id, s.rating) + '</div>'
+    + menuHTML
     + '</div>'
     + '<div class="react-area">' + reactionsHTML(s.reactions, 'watched', s.id) + reactToggle + '</div>'
     + '</div>';
@@ -1384,7 +1394,7 @@ function buildWatchlistCard(s) {
   var platformRow=s.editingPlatform?platformSelect('watchlist',sid,s.platform):'';
 
   return '<div class="show-card'+(s.hidden?' is-hidden':'')+'"><div class="show-card-top">'+showTile(s)+'<div class="show-info"><div class="show-title">'+s.title+(s.hidden?'<span class="hidden-badge">Hidden from friends</span>':'')+'</div>'+platformRow+'</div>'+menuHTML+'</div>'
-    + '<div class="show-move"><button class="btn-start" onclick="moveToWatching(\''+sid+'\')">Watch Now</button></div>'
+    + '<div class="show-move"><button class="btn-start" onclick="moveToWatching(\''+sid+'\')">Watch Now</button><button class="waiting-season-btn" onclick="markWaitingFromList(\''+sid+'\')">Waiting for New Season &#8987;</button></div>'
     + (hasReact?'<div class="react-area">'+reactionsHTML(s.reactions,'watchlist',sid)+reactToggle+'</div>':'')
     + '</div>';
 }
@@ -1407,35 +1417,31 @@ document.addEventListener('click', function(e) {
 function buildCard(s, list) {
   if (list === 'watching') return buildWatchingCard(s);
   if (list === 'watchlist') return s.waitingForSeason ? buildWaitingCard(s) : buildWatchlistCard(s);
-  var actions='';
-  if(list==='watched') actions=remoteRating(list,s.id,s.rating);
-  actions+=waitingBtn(list, s);
-  actions+=hideBtn(list, s);
-  actions+=platformEditBtn(list, s);
-  actions+='<button class="btn-remove" onclick="removeShow(\'' + list + '\',\'' + s.id + '\')" >&#x2715;</button>';
-  var inpId='inp-'+list+'-'+s.id;
-  var reactToggle='<div class="inline-react"><input class="react-input" id="'+inpId+'" placeholder="What did you think? 😊" /><button class="btn-send" onclick="submitReact(\''+list+'\',\''+s.id+'\')">Send</button><button class="btn-cancel" onclick="document.getElementById(\''+inpId+'\').value=\'\'">Cancel</button></div>'
-    + quickReactRow('quickReact', "'"+list+"','"+s.id+"'");
-  var hasReact=reactionsHTML(s.reactions,list,s.id)||reactToggle;
-  var platformRow=s.editingPlatform?platformSelect(list,s.id,s.platform):'';
-  return '<div class="show-card'+(s.hidden?' is-hidden':'')+'"><div class="show-card-top">'+showTile(s)+'<div class="show-info"><div class="show-title">'+s.title+(s.hidden?'<span class="hidden-badge">Hidden from friends</span>':'')+'</div>'+platformRow+'</div><div class="show-actions">'+actions+'</div></div>'+(hasReact?'<div class="react-area">'+reactionsHTML(s.reactions,list,s.id)+reactToggle+'</div>':'')+'</div>';
+  return buildBingedCard(s);
 }
 
+function buildBingedCard(s) {
+  var sid = s.id;
+  var hideLabel = s.hidden ? 'Show to friends' : 'Hide from friends';
+  var menuHTML = '<div class="card-menu-wrap">'
+    + '<button class="btn-more" onclick="toggleCardMenu(this)" title="More">&#8942;</button>'
+    + '<div class="card-menu">'
+    + '<button class="card-menu-item" onclick="moveToWatchingAgain(\'watched\',\''+sid+'\');closeCardMenus();">Start Watching Again</button>'
+    + '<button class="card-menu-item" onclick="moveToWaiting(\'watched\',\''+sid+'\');closeCardMenus();">Waiting for New Season</button>'
+    + '<button class="card-menu-item" onclick="toggleHide(\'watched\',\''+sid+'\');closeCardMenus();">'+hideLabel+'</button>'
+    + '<button class="card-menu-item" onclick="togglePlatEdit(\'watched\',\''+sid+'\');closeCardMenus();">Edit streaming service</button>'
+    + '<button class="card-menu-item danger" onclick="removeShow(\'watched\',\''+sid+'\');closeCardMenus();">Remove</button>'
+    + '</div></div>';
 
+  var inpId='inp-watched-'+sid;
+  var reactToggle='<div class="inline-react"><input class="react-input" id="'+inpId+'" placeholder="What did you think? 😊" /><button class="btn-send" onclick="submitReact(\'watched\',\''+sid+'\')">Send</button><button class="btn-cancel" onclick="document.getElementById(\''+inpId+'\').value=\'\'">Cancel</button></div>'
+    + quickReactRow('quickReact', "'watched','"+sid+"'");
+  var hasReact=reactionsHTML(s.reactions,'watched',sid)||reactToggle;
+  var platformRow=s.editingPlatform?platformSelect('watched',sid,s.platform):'';
 
-function hideBtn(list, s) {
-  var isHidden = s.hidden ? true : false;
-  var icon = isHidden ? '&#128683;' : '&#128065;&#65039;';
-  var title = isHidden ? 'Show to friends' : 'Hide from friends';
-  return '<button class="btn-hide' + (isHidden ? ' hidden' : '') + '" onclick="toggleHide(\''+list+'\',\''+s.id+'\')" title="'+title+'">' + icon + '</button>';
-}
-
-function platformEditBtn(list, s) {
-  return '<button class="btn-platform-edit" onclick="togglePlatEdit(\''+list+'\',\''+s.id+'\')" title="Change streaming service">&#9998;</button>';
-}
-
-function waitingBtn(list, s) {
-  return '<button class="btn-waiting" onclick="moveToWaiting(\''+list+'\',\''+s.id+'\')" title="Waiting for New Season">&#8987;</button>';
+  return '<div class="show-card'+(s.hidden?' is-hidden':'')+'"><div class="show-card-top">'+showTile(s)+'<div class="show-info"><div class="show-title">'+s.title+(s.hidden?'<span class="hidden-badge">Hidden from friends</span>':'')+'</div>'+platformRow+'</div><div class="show-actions">'+remoteRating('watched',sid,s.rating)+'</div>'+menuHTML+'</div>'
+    + (hasReact?'<div class="react-area">'+reactionsHTML(s.reactions,'watched',sid)+reactToggle+'</div>':'')
+    + '</div>';
 }
 
 function platformSelect(list, id, current) {
@@ -2887,10 +2893,12 @@ window.addShow = function(list) {
 };
 
 var _moveWaitingPending = null;
+var _moveToWatchingPending = null;
 
 window.cancelAddShow = function() {
   _addConfirmPending = null;
   _moveWaitingPending = null;
+  _moveToWatchingPending = null;
   document.getElementById('add-confirm-modal').classList.remove('active');
 };
 
@@ -2916,6 +2924,13 @@ window.confirmAddShow = async function() {
     _moveWaitingPending = null;
     document.getElementById('add-confirm-modal').classList.remove('active');
     _doMoveToWaiting(mw.list, mw.id);
+    return;
+  }
+  if (_moveToWatchingPending) {
+    var mwa = _moveToWatchingPending;
+    _moveToWatchingPending = null;
+    document.getElementById('add-confirm-modal').classList.remove('active');
+    _doMoveToWatchingAgain(mwa.list, mwa.id);
     return;
   }
   var pending = _addConfirmPending;
@@ -3055,6 +3070,17 @@ window.markWaiting = async function(id) {
   openDWM(s, 'Caught up for now?', '⏳');
 };
 
+// Marks a not-yet-started My List item as waiting in place — unlike
+// markWaiting (which moves a show over from Watching), this show is
+// already sitting in My List, so it's just a flag flip, no list change.
+window.markWaitingFromList = async function(id) {
+  var s = state.watchlist.find(function(x) { return x.id === id; });
+  if (!s) return;
+  s.waitingForSeason = true;
+  renderList('watchlist');
+  try { await updateShowStatus(id, 'watchlist', { waiting_for_season: true }); } catch(e) { console.error('markWaitingFromList error:', e); }
+};
+
 window.resumeWatching = async function(id) {
   var idx = state.watchlist.findIndex(function(x) { return x.id === id; });
   if (idx === -1) return;
@@ -3090,6 +3116,30 @@ async function _doMoveToWaiting(list, id) {
   renderList(list);
   renderList('watchlist');
   try { await updateShowStatus(id, 'watchlist', { waiting_for_season: true, dnf: false }); } catch(e) { console.error('moveToWaiting error:', e); }
+}
+
+// Shortcut from Binged/DNF straight back into active Watching. Confirms
+// first for the same reason moveToWaiting does — it's an icon-menu action
+// that silently changes tabs, with no direct one-click way back.
+window.moveToWatchingAgain = function(list, id) {
+  var s = state[list].find(function(x) { return x.id === id; });
+  if (!s) return;
+  _moveToWatchingPending = { list: list, id: id };
+  document.getElementById('add-confirm-title').textContent = s.title;
+  document.getElementById('add-confirm-sub').textContent = 'Start Watching Again?';
+  document.getElementById('add-confirm-modal').classList.add('active');
+};
+
+async function _doMoveToWatchingAgain(list, id) {
+  var s = state[list].find(function(x) { return x.id === id; });
+  if (!s) return;
+  state[list] = state[list].filter(function(x) { return x.id !== id; });
+  s.dnf = false;
+  s.waitingForSeason = false;
+  state.watching.push(s);
+  renderList(list);
+  renderList('watching');
+  try { await updateShowStatus(id, 'watching', { dnf: false, waiting_for_season: false }); } catch(e) { console.error('moveToWatchingAgain error:', e); }
 }
 
 window.moveToWatching = async function(id) {
