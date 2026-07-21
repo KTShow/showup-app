@@ -876,6 +876,7 @@ var state = {
   watchlist: [],
   watched: [],
   friends: [],
+  friendsLoaded: false,
   lastVisitAt: null
 };
 
@@ -1562,6 +1563,10 @@ function renderFriends() {
       +'<div class="friend-count">'+state.watching.length+' watching &middot; '+state.watchlist.length+' list &middot; '+state.watched.length+' binged</div>'
       +'</div>';
   }
+  if (!state.friendsLoaded) {
+    document.getElementById('friends-grid').innerHTML=selfTile+'<div class="empty" style="grid-column:1/-1;"><div class="empty-icon">&#8987;</div>Loading your Living Room&hellip;</div>';
+    return;
+  }
   var sorted=state.friends.slice().sort(function(a,b){return a.name.localeCompare(b.name);});
   document.getElementById('friends-grid').innerHTML=selfTile+sorted.map(function(f){
     var fRoom=f.room||'tuscany'; var fColor=ROOMS[fRoom]?ROOMS[fRoom].color:f.color;
@@ -1717,8 +1722,10 @@ function buildRankings(){
 }
 
 function renderRankings(){
-  var list=buildRankings(); var el=document.getElementById('rankings-list');
+  var el=document.getElementById('rankings-list');
   document.getElementById('rank-detail-panel').style.display='none';
+  if (!state.friendsLoaded) { el.innerHTML='<div class="empty"><div class="empty-icon">&#8987;</div>Loading rankings&hellip;</div>'; return; }
+  var list=buildRankings();
   if(!list.length){el.innerHTML='<div class="empty"><div class="empty-icon">&#128252;</div>No ratings yet from the room.</div>';return;}
   el.innerHTML=list.map(function(s,i){
     var rank=i+1; var isGold=rank<=3;
@@ -2410,6 +2417,7 @@ async function loadUserIntoState(profile) {
   friendsPromise
     .then(function(friends) {
       state.friends = friends;
+      state.friendsLoaded = true;
       renderFriends();
       renderRankings();
       _logFriendsLoadTime();
@@ -2417,6 +2425,7 @@ async function loadUserIntoState(profile) {
     .catch(function(e) {
       console.error('Error loading friends:', e);
       state.friends = [];
+      state.friendsLoaded = true;
       renderFriends();
       renderRankings();
       _logFriendsLoadTime();
@@ -3296,10 +3305,12 @@ async function fixupReactionNames() {
 async function loadAndRenderFriends() {
   try {
     state.friends = await getFriendsWithShows();
+    state.friendsLoaded = true;
     renderFriends();
     renderRankings();
   } catch(e) {
     console.error('Error loading friends:', e);
+    state.friendsLoaded = true;
     var grid = document.getElementById('friends-grid');
     if (grid && !state.friends.length) {
       grid.innerHTML = '<div class="empty"><div class="empty-icon">&#128531;</div>Couldn\'t load your crew right now.</div>';
