@@ -91,8 +91,6 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
 .show-move{margin-top:8px;display:flex;flex-wrap:wrap;gap:6px;row-gap:8px;}
 .done-watching-btn{background:none;border:1px solid rgba(92,107,58,0.35);color:var(--olive);border-radius:6px;padding:4px 10px;font-family:var(--sans);font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap;}
 .done-watching-btn:hover{background:rgba(92,107,58,0.08);}
-.done-watching-btn.status-primary{background:var(--olive);color:white;border-color:var(--olive);}
-.done-watching-btn.status-primary:hover{opacity:0.9;}
 .show-actions{display:flex;gap:6px;align-items:center;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;row-gap:6px;}
 .remote-row{display:flex;gap:4px;align-items:center;}
 .remote-btn{background:none;border:none;cursor:pointer;padding:0;display:flex;align-items:center;transition:transform 0.1s;}
@@ -101,10 +99,6 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
 .btn-start:hover{background:var(--burnt);}
 .btn-remove{background:#fdecea;border:none;color:#c0392b;cursor:pointer;font-size:16px;font-weight:800;padding:6px 9px;border-radius:7px;line-height:1;}
 .btn-remove:hover{background:#c0392b;color:white;}
-.icon-hint-banner{display:flex;align-items:center;justify-content:space-between;gap:10px;background:var(--sand);border:1px solid var(--border);border-radius:10px;padding:10px 14px;margin-bottom:16px;font-size:12px;color:var(--charcoal);}
-.icon-hint-text{line-height:1.5;}
-.icon-hint-close{background:none;border:none;color:var(--muted);cursor:pointer;font-size:13px;padding:2px 4px;flex-shrink:0;}
-.icon-hint-close:hover{color:var(--fig);}
 
 .react-area{margin-top:8px;padding-top:8px;border-top:1px solid var(--border);}
 .react-list{display:flex;flex-direction:column;gap:5px;margin-bottom:6px;}
@@ -243,8 +237,6 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
 .didnt-finish-btn{background:none;border:1px solid rgba(192,57,43,0.3);color:#c0392b;border-radius:6px;padding:4px 10px;font-family:var(--sans);font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap;}
 .waiting-season-btn{background:none;border:1px solid rgba(107,45,78,0.3);color:var(--fig);border-radius:6px;padding:4px 10px;font-family:var(--sans);font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap;}
 .waiting-season-btn:hover{background:rgba(107,45,78,0.08);}
-.waiting-season-btn.status-primary{background:var(--fig);color:white;border-color:var(--fig);}
-.waiting-season-btn.status-primary:hover{opacity:0.9;}
 .resume-watching-btn{background:var(--fig);color:white;border:none;border-radius:6px;padding:5px 12px;font-family:var(--sans);font-size:12px;font-weight:600;cursor:pointer;}
 .waiting-section{margin-top:28px;}
 .waiting-header{display:block;font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:0.1em;color:white;background:var(--fig);padding:9px 16px;border-radius:8px;margin-bottom:10px;box-shadow:0 2px 8px rgba(107,45,78,0.3);}
@@ -667,10 +659,6 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
           <button class="btn-add" onclick="addDirectDNF()">+ Add</button>
         </div>
       </div>
-      <div class="icon-hint-banner" id="icon-hint-banner" style="display:none;">
-        <span class="icon-hint-text"><b>&#9998;</b> changes the streaming service &nbsp;&middot;&nbsp; <b>&#8987;</b> marks it waiting for a new season</span>
-        <button class="icon-hint-close" onclick="dismissIconHint()" aria-label="Dismiss">&#10005;</button>
-      </div>
       <div id="watched-list"></div>
     </div>
     <div id="tab-living-room" class="tab-pane" style="display:none">
@@ -1091,22 +1079,10 @@ function showTab(tab, btn) {
   document.getElementById('tab-'+tab).style.display='block';
   btn.classList.add('active');
   if (tab==='living-room') { renderFriends(); if (typeof loadAndRenderFriends === 'function') loadAndRenderFriends(); }
-  if (tab==='watched') { renderBingedTop5(); maybeShowIconHint(); }
+  if (tab==='watched') { renderBingedTop5(); }
   if (tab!=='living-room') state.lastViewedFriend = null;
   if (state.user) state.user.lastActive = new Date().toISOString();
 }
-
-var ICON_HINT_KEY = 'sw_icon_hint_dismissed';
-function maybeShowIconHint() {
-  var el = document.getElementById('icon-hint-banner');
-  if (!el) return;
-  el.style.display = localStorage.getItem(ICON_HINT_KEY) ? 'none' : 'flex';
-}
-window.dismissIconHint = function() {
-  localStorage.setItem(ICON_HINT_KEY, '1');
-  var el = document.getElementById('icon-hint-banner');
-  if (el) el.style.display = 'none';
-};
 
 function addShow_OLD(list) {
   var tId = list==='watching'?'w-title':list==='watchlist'?'wl-title':'wd-title';
@@ -1289,7 +1265,6 @@ function buildDNFCard(s) {
   var menuHTML = '<div class="card-menu-wrap">'
     + '<button class="btn-more" onclick="toggleCardMenu(this)" title="More">&#8942;</button>'
     + '<div class="card-menu">'
-    + '<button class="card-menu-item" onclick="moveToWatchingAgain(\'watched\',\''+sid+'\');closeCardMenus();">Start Watching Again</button>'
     + '<button class="card-menu-item" onclick="moveToWaiting(\'watched\',\''+sid+'\');closeCardMenus();">Waiting for New Season</button>'
     + '<button class="card-menu-item" onclick="toggleHide(\'watched\',\''+sid+'\');closeCardMenus();">'+hideLabel+'</button>'
     + '<button class="card-menu-item" onclick="togglePlatEdit(\'watched\',\''+sid+'\');closeCardMenus();">Edit streaming service</button>'
@@ -1298,37 +1273,24 @@ function buildDNFCard(s) {
   return '<div class="dnf-card'+(s.hidden?' is-hidden':'')+'">'
     + '<div class="show-card-top">' + showTile(s)
     + '<div class="show-info"><div class="show-title">' + s.title + (s.hidden?'<span class="hidden-badge">Hidden from friends</span>':'') + '</div>'
-    + '<div style="margin-top:3px;"><span class="dnf-badge">Didn&#39;t Finish</span><span style="font-size:11px;color:var(--muted);margin-left:6px;">' + s.platform + '</span></div>'
+    + '<div style="margin-top:3px;font-size:11px;color:var(--muted);">' + s.platform + '</div>'
     + platformRow
     + '</div>'
     + '<div class="show-actions">' + remoteRating('watched', s.id, s.rating) + '</div>'
     + menuHTML
     + '</div>'
+    + '<div class="show-move"><button class="btn-start" onclick="startWatchingFromDNF(\''+sid+'\')">Start Watching</button></div>'
     + '<div class="react-area">' + reactionsHTML(s.reactions, 'watched', s.id) + reactToggle + '</div>'
     + '</div>';
 }
 
-// TMDB's show status is fetched at add-time and never refreshed (no scheduled
-// jobs exist in this app), so this is a best-effort guess, not a live fact —
-// callers must always leave a way to pick the other outcome instead of hiding it.
-function guessShowOutcome(s) {
-  var ongoing = ['Returning Series', 'In Production', 'Planned', 'Pilot'];
-  var ended = ['Ended', 'Canceled'];
-  if (s.show_status && ongoing.indexOf(s.show_status) !== -1) return 'waiting';
-  if (s.show_status && ended.indexOf(s.show_status) !== -1) return 'watched';
-  return null;
-}
-
 function buildWatchingCard(s) {
   var sid = s.id;
-  var guess = guessShowOutcome(s);
-  // All three status choices are always visible, in this fixed order — a status
-  // is a peer choice people expect to see directly, not something they'd think
-  // to look for in the overflow menu. The TMDB guess only promotes one visually.
-  var waitingCls = 'waiting-season-btn' + (guess === 'waiting' ? ' status-primary' : '');
-  var finishedCls = 'done-watching-btn' + (guess === 'watched' ? ' status-primary' : '');
-  var primaryHTML = '<button class="'+waitingCls+'" onclick="markWaiting(\''+sid+'\')">Waiting for New Season &#8987;</button>'
-    + '<button class="'+finishedCls+'" onclick="markWatched(\''+sid+'\')">Finished &#127871;</button>';
+  // All three status choices are always visible, in this fixed order, as
+  // equal-weight peer buttons — a status is a choice people expect to see
+  // directly, not something they'd think to look for in the overflow menu.
+  var primaryHTML = '<button class="waiting-season-btn" onclick="markWaiting(\''+sid+'\')">Waiting for New Season &#8987;</button>'
+    + '<button class="done-watching-btn" onclick="markWatched(\''+sid+'\')">Finished &#127871;</button>';
   var dnfHTML = '<button class="didnt-finish-btn" onclick="markDNF(\''+sid+'\')">Didn&#39;t Finish</button>';
 
   var hideLabel = s.hidden ? 'Show to friends' : 'Hide from friends';
@@ -1337,7 +1299,7 @@ function buildWatchingCard(s) {
     + '<div class="card-menu">'
     + '<button class="card-menu-item" onclick="moveToWatchlist(\''+sid+'\');closeCardMenus();">&#8592; My List</button>'
     + '<button class="card-menu-item" onclick="toggleHide(\'watching\',\''+sid+'\');closeCardMenus();">'+hideLabel+'</button>'
-    + '<button class="card-menu-item" onclick="togglePlatEdit(\'watching\',\''+sid+'\');closeCardMenus();">Edit platform</button>'
+    + '<button class="card-menu-item" onclick="togglePlatEdit(\'watching\',\''+sid+'\');closeCardMenus();">Edit streaming service</button>'
     + '<button class="card-menu-item danger" onclick="removeShow(\'watching\',\''+sid+'\');closeCardMenus();">Remove</button>'
     + '</div></div>';
 
@@ -1371,7 +1333,7 @@ function buildWaitingCard(s) {
   var platformRow=s.editingPlatform?platformSelect('watchlist',sid,s.platform):'';
 
   return '<div class="show-card'+(s.hidden?' is-hidden':'')+'"><div class="show-card-top">'+showTile(s)+'<div class="show-info"><div class="show-title">'+s.title+(s.hidden?'<span class="hidden-badge">Hidden from friends</span>':'')+'</div>'+platformRow+'</div><div class="show-actions">'+remoteRating('watchlist',sid,s.rating)+'</div>'+menuHTML+'</div>'
-    + '<div class="show-move"><button class="resume-watching-btn" onclick="resumeWatching(\''+sid+'\')">Resume Watching &#9654;</button></div>'
+    + '<div class="show-move"><button class="resume-watching-btn" onclick="resumeWatching(\''+sid+'\')">Resume Watching &#9654;</button><button class="didnt-finish-btn" onclick="markDNFFromWaiting(\''+sid+'\')">Didn&#39;t Finish</button></div>'
     + (hasReact?'<div class="react-area">'+reactionsHTML(s.reactions,'watchlist',sid)+reactToggle+'</div>':'')
     + '</div>';
 }
@@ -3059,6 +3021,18 @@ window.markDNF = async function(id) {
   openDWM(show, "Didn't finish? Rate it anyway", '🎬');
 };
 
+window.markDNFFromWaiting = async function(id) {
+  var idx = state.watchlist.findIndex(function(x) { return x.id === id; });
+  if (idx === -1) return;
+  var show = state.watchlist.splice(idx, 1)[0];
+  show.dnf = true;
+  show.waitingForSeason = false;
+  state.watched.push(show);
+  renderList('watchlist'); renderList('watched');
+  try { await updateShowStatus(id, 'dnf', { dnf: true, waiting_for_season: false }); } catch(e) { console.error('markDNFFromWaiting error:', e); }
+  openDWM(show, "Didn't finish? Rate it anyway", '🎬');
+};
+
 window.markWaiting = async function(id) {
   var idx = state.watching.findIndex(function(x) { return x.id === id; });
   if (idx === -1) return;
@@ -3128,6 +3102,14 @@ window.moveToWatchingAgain = function(list, id) {
   document.getElementById('add-confirm-title').textContent = s.title;
   document.getElementById('add-confirm-sub').textContent = 'Start Watching Again?';
   document.getElementById('add-confirm-modal').classList.add('active');
+};
+
+// Direct, no-confirm version for DNF cards' primary button — unlike the
+// kebab-menu shortcut above, this is a visible dedicated button (not an
+// icon-only action), so it follows the same no-confirm pattern as the
+// other primary status buttons (Watch Now, Waiting for New Season, etc).
+window.startWatchingFromDNF = function(id) {
+  _doMoveToWatchingAgain('watched', id);
 };
 
 async function _doMoveToWatchingAgain(list, id) {
