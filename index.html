@@ -243,6 +243,8 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
 .btn-invite-close{background:none;border:1px solid var(--border);border-radius:10px;padding:12px 16px;font-family:var(--sans);font-size:14px;color:var(--muted);cursor:pointer;}
 .picker-option-btn{display:flex;align-items:center;gap:10px;width:100%;background:var(--sand);border:1px solid var(--border);border-radius:10px;padding:12px 14px;font-family:var(--sans);font-size:14px;font-weight:600;color:var(--charcoal);cursor:pointer;text-align:left;box-sizing:border-box;transition:all 0.15s;}
 .picker-option-btn:hover{background:var(--terra);color:white;border-color:var(--terra);}
+.picker-option-btn.selected{background:var(--fig);color:white;border-color:var(--fig);}
+.picker-option-btn.selected:hover{background:var(--fig);border-color:var(--fig);}
 #add-picker-modal{z-index:700;}
 .btn-invite-close:hover{border-color:var(--terra);color:var(--terra);}
 
@@ -1883,42 +1885,56 @@ function findShowAnywhere(showId){
 }
 
 var _recommendPending = null;
+var _recommendSelectedIds = [];
 
 window.openRecommendPicker = function(showId){
   var found = findShowAnywhere(showId);
   if(!found) return;
   _recommendPending = { title:found.show.title, tmdbId:found.show.tmdb_id, posterPath:found.show.poster_path, ownerId:found.ownerId };
+  _recommendSelectedIds = [];
   document.getElementById('rec-picker-title').textContent = found.show.title;
   document.getElementById('rec-picker-note').value = '';
-  var friendsList = (state.friends||[]).filter(function(f){ return f.id !== found.ownerId; });
+  var friendsList = (state.friends||[]).filter(function(f){ return f.id !== found.ownerId; })
+    .slice().sort(function(a,b){ return a.name.localeCompare(b.name); });
   var container = document.getElementById('rec-picker-friends');
   container.innerHTML = friendsList.length
-    ? friendsList.map(function(f){ return '<button class="picker-option-btn" onclick="sendRecommendation(\''+f.id+'\')">'+escAttr(f.name)+'</button>'; }).join('')
+    ? friendsList.map(function(f){ return '<button class="picker-option-btn" id="rec-friend-'+f.id+'" onclick="toggleRecommendFriend(\''+f.id+'\')">'+escAttr(f.name)+'</button>'; }).join('')
     : '<div style="font-size:13px;color:var(--muted);text-align:center;padding:10px 0;">No one else in your Living Room yet.</div>';
   document.getElementById('recommend-picker-modal').classList.add('active');
 };
 
+window.toggleRecommendFriend = function(friendId){
+  var idx = _recommendSelectedIds.indexOf(friendId);
+  if(idx===-1) _recommendSelectedIds.push(friendId); else _recommendSelectedIds.splice(idx,1);
+  var btn = document.getElementById('rec-friend-'+friendId);
+  if(btn) btn.classList.toggle('selected', idx===-1);
+};
+
 window.closeRecommendPicker = function(){
   _recommendPending = null;
+  _recommendSelectedIds = [];
   document.getElementById('recommend-picker-modal').classList.remove('active');
 };
 
-window.sendRecommendation = async function(toUserId){
+window.sendRecommendation = async function(){
   var pending = _recommendPending;
-  if(!pending) return;
+  var ids = _recommendSelectedIds.slice();
+  if(!pending || !ids.length) return;
   var note = document.getElementById('rec-picker-note').value.trim();
-  var friend = (state.friends||[]).find(function(f){return f.id===toUserId;});
+  var names = ids.map(function(id){ var f=(state.friends||[]).find(function(x){return x.id===id;}); return f?f.name:'them'; });
   document.getElementById('recommend-picker-modal').classList.remove('active');
   _recommendPending = null;
+  _recommendSelectedIds = [];
   try {
     const { data: { user } } = await sb.auth.getUser();
     if(!user) return;
-    const { error } = await sb.from('recommendations').insert({
-      from_user_id: user.id, to_user_id: toUserId, title: pending.title,
-      tmdb_id: pending.tmdbId || null, poster_path: pending.posterPath || null, note: note || null,
+    var rows = ids.map(function(toUserId){
+      return { from_user_id: user.id, to_user_id: toUserId, title: pending.title,
+        tmdb_id: pending.tmdbId || null, poster_path: pending.posterPath || null, note: note || null };
     });
+    const { error } = await sb.from('recommendations').insert(rows);
     if(error) throw error;
-    showToast('Sent to ' + (friend ? friend.name : 'them') + '!');
+    showToast('Sent to ' + names.join(', ') + '!');
   } catch(e) {
     console.error('sendRecommendation error:', e);
     showToast("Couldn't send — try again in a moment.");
@@ -4349,10 +4365,13 @@ bootstrap();
 <div class="invite-modal-overlay" id="recommend-picker-modal">
   <div class="invite-modal">
     <div class="invite-modal-title">Recommend <span id="rec-picker-title"></span></div>
-    <div class="invite-modal-sub">Who should see this?</div>
+    <div class="invite-modal-sub">Who should see this? Tap as many as you want.</div>
     <div id="rec-picker-friends" style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px;max-height:200px;overflow-y:auto;"></div>
     <textarea id="rec-picker-note" placeholder="Add a note (optional) — why they'd like it" style="width:100%;box-sizing:border-box;border:1px solid var(--border);border-radius:8px;padding:9px 12px;font-family:var(--sans);font-size:13px;color:var(--charcoal);resize:none;margin-bottom:14px;" rows="2"></textarea>
-    <button class="btn-invite-close" onclick="closeRecommendPicker()" style="width:100%;">Cancel</button>
+    <div style="display:flex;gap:10px;">
+      <button class="btn-invite-copy" id="rec-picker-send-btn" onclick="sendRecommendation()" style="flex:1;">Send</button>
+      <button class="btn-invite-close" onclick="closeRecommendPicker()" style="flex:1;">Cancel</button>
+    </div>
   </div>
 </div>
 
