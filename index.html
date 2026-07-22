@@ -2914,9 +2914,36 @@ window.confirmAddShow = async function() {
   var inf = state.lastViewedFriend || null;
   var isDnf = list === 'dnf';
   var statusMap = { watching: 'watching', watchlist: 'watchlist', watched: 'watched' };
+  var destList = isDnf ? 'watched' : list;
+  var status = isDnf ? 'dnf' : statusMap[list];
   var tmdb = _tmdbPending || {};
+
+  var existing = findMyShowByTitle(title);
+  if (existing) {
+    var srcList = existing.list;
+    var s = existing.show;
+    state[srcList] = state[srcList].filter(function(x) { return x.id !== s.id; });
+    s.dnf = isDnf;
+    s.waitingForSeason = false;
+    s.platform = platform;
+    state[destList].push(s);
+    renderList(srcList);
+    renderList(destList);
+    if (tEl) tEl.value = ''; if (pEl) pEl.value = '';
+    _tmdbPending = {};
+    _addConfirmPending = null;
+    var destLabel = ADD_DEST_DISPLAY_LABELS[list];
+    showToast(srcList === destList
+      ? 'Already in ' + destLabel + ' — updated.'
+      : 'Was in ' + ADD_LIST_LABELS[srcList] + ' — moved to ' + destLabel + '.');
+    try { await updateShowStatus(s.id, status, { dnf: isDnf, waiting_for_season: false, platform: platform }); } catch(e) { console.error('confirmAddShow move error:', e); }
+    if (isDnf) openDWM(s, "Didn't finish? Rate it anyway", '🎬');
+    else if (list === 'watched') openDWM(s);
+    return;
+  }
+
   try {
-    var show = await dbAddShow({ title: title, platform: platform, status: isDnf ? 'dnf' : statusMap[list], dnf: isDnf, source: src, influencedBy: inf,
+    var show = await dbAddShow({ title: title, platform: platform, status: status, dnf: isDnf, source: src, influencedBy: inf,
       tmdb_id: tmdb.tmdb_id, poster_path: tmdb.poster_path, genre: tmdb.genre,
       original_network: tmdb.original_network, first_air_year: tmdb.first_air_year,
       number_of_seasons: tmdb.number_of_seasons, show_status: tmdb.show_status,
@@ -2924,11 +2951,11 @@ window.confirmAddShow = async function() {
     var newShow = { id: show.id, title: title, platform: platform, rating: 0, hidden: false, dnf: isDnf,
       source: src, influencedBy: inf, addedAt: show.added_at, reactions: [], showReact: false,
       poster_path: tmdb.poster_path || null, tmdb_id: tmdb.tmdb_id || null };
-    state[isDnf ? 'watched' : list].push(newShow);
+    state[destList].push(newShow);
     if (tEl) tEl.value = ''; if (pEl) pEl.value = '';
     _tmdbPending = {};
     _addConfirmPending = null;
-    renderList(isDnf ? 'watched' : list);
+    renderList(destList);
     if (isDnf) openDWM(newShow, "Didn't finish? Rate it anyway", '🎬');
     else if (list === 'watched') openDWM(newShow);
   } catch(e) {
@@ -3309,14 +3336,17 @@ window.toggleMuteFriend = async function(friendId) {
   if (!f) return;
   f.muted = !f.muted;
   var wasMuted = !f.muted;
+  var detailOpen = document.getElementById('friend-detail-view').style.display !== 'none';
   renderFriends();
-  if (document.getElementById('friend-detail-view').style.display !== 'none') showFriend(friendId);
+  if (detailOpen) showFriend(friendId);
   try {
     if (f.muted) await dbMuteFriend(friendId); else await dbUnmuteFriend(friendId);
   } catch(e) {
     console.error('toggleMuteFriend error:', e);
     f.muted = wasMuted;
     renderFriends();
+    if (detailOpen) showFriend(friendId);
+    showToast("Couldn't save that — try again in a moment.");
   }
 };
 
