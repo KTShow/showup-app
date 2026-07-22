@@ -138,6 +138,13 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
 .lr-toggle-btn{flex:1;background:var(--cream);border:2px solid var(--border);padding:14px 10px;border-radius:var(--radius);font-family:var(--sans);font-size:13px;font-weight:700;color:var(--muted);cursor:pointer;transition:all 0.2s;text-align:center;box-shadow:var(--shadow);display:flex;flex-direction:column;align-items:center;gap:6px;}
 .toggle-icon{font-size:24px;line-height:1;}
 .lr-toggle-btn.active{background:var(--fig);color:white;border-color:var(--fig);}
+.conv-badge{background:var(--terra);color:white;font-size:10px;font-weight:800;padding:1px 7px;border-radius:10px;margin-left:2px;}
+.conversation-row{display:flex;gap:10px;align-items:flex-start;background:var(--cream);border:1px solid var(--border);border-radius:var(--radius);padding:12px 14px;box-shadow:var(--shadow);margin-bottom:8px;cursor:pointer;transition:border-color 0.15s;}
+.conversation-row:hover{border-color:var(--terra);}
+.conversation-icon{font-size:17px;flex-shrink:0;line-height:1.4;}
+.conversation-text{flex:1;min-width:0;font-size:13px;color:var(--charcoal);line-height:1.45;}
+.conversation-text b{font-weight:700;}
+.conversation-time{font-size:11px;color:var(--muted);white-space:nowrap;flex-shrink:0;}
 
 .rank-card{background:var(--cream);border:1px solid var(--border);border-radius:var(--radius);padding:13px 15px;box-shadow:var(--shadow);display:flex;align-items:center;cursor:pointer;transition:box-shadow 0.2s;margin-bottom:9px;gap:0;}
 .rank-card:hover{box-shadow:0 4px 20px rgba(100,50,20,0.14);}
@@ -674,6 +681,7 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
         <div class="lr-toggle">
           <button class="lr-toggle-btn active" id="toggle-crew" onclick="switchLRView('crew')"><span class="toggle-icon">🛋️</span>Your Crowd</button>
           <button class="lr-toggle-btn" id="toggle-picks" onclick="switchLRView('picks')"><span class="toggle-icon">&#127942;</span>Friends' Favorites</button>
+          <button class="lr-toggle-btn" id="toggle-conversations" onclick="switchLRView('conversations')"><span class="toggle-icon">&#128172;</span>Conversations<span class="conv-badge" id="conv-badge" style="display:none;"></span></button>
         </div>
         <div id="lr-crew-view">
           <div id="room-ticker" class="room-ticker" style="display:none"></div>
@@ -683,6 +691,9 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
         <div id="lr-picks-view" style="display:none">
           <div id="rankings-list"></div>
           <div id="rank-detail-panel" style="display:none"></div>
+        </div>
+        <div id="lr-conversations-view" style="display:none">
+          <div id="conversations-list"></div>
         </div>
       </div>
       <div id="friend-detail-view" style="display:none"></div>
@@ -1575,6 +1586,7 @@ function renderFriends() {
       +'<div class="friend-count">'+f.watching.length+' watching &middot; '+f.watchlist.length+' list &middot; '+f.watched.length+' binged</div>'
       +'</div>';
   }).join('');
+  updateConversationsBadge();
 }
 
 async function logImpressions(friendId, showIds) {
@@ -1678,10 +1690,107 @@ function backToFriends(){document.getElementById('friends-view').style.display='
 function switchLRView(view){
   document.getElementById('lr-crew-view').style.display=view==='crew'?'block':'none';
   document.getElementById('lr-picks-view').style.display=view==='picks'?'block':'none';
+  document.getElementById('lr-conversations-view').style.display=view==='conversations'?'block':'none';
   document.getElementById('toggle-crew').classList.toggle('active',view==='crew');
   document.getElementById('toggle-picks').classList.toggle('active',view==='picks');
+  document.getElementById('toggle-conversations').classList.toggle('active',view==='conversations');
   if(view==='picks'){document.getElementById('rankings-list').style.display='block';document.getElementById('rank-detail-panel').style.display='none';renderRankings();}
+  if(view==='conversations'){renderConversations(); markConversationsSeen();}
 }
+
+// ============================================================
+// CONVERSATIONS — activity feed of what's new since you last looked
+// (new shows added + comments, across the whole Living Room, both
+// directions: friends' activity and comments on your own shows)
+// ============================================================
+
+function timeAgo(iso){
+  var sec=Math.floor((Date.now()-new Date(iso).getTime())/1000);
+  if(sec<60)return 'just now';
+  var min=Math.floor(sec/60); if(min<60)return min+'m ago';
+  var hr=Math.floor(min/60); if(hr<24)return hr+'h ago';
+  var day=Math.floor(hr/24); if(day<7)return day+'d ago';
+  return Math.floor(day/7)+'w ago';
+}
+
+function buildConversationsFeed(){
+  var lastSeen = state.user && state.user.conversationsLastSeenAt ? new Date(state.user.conversationsLastSeenAt) : null;
+  var myId = state.user ? state.user.id : null;
+  function isNew(ts){ return !!ts && (!lastSeen || new Date(ts) > lastSeen); }
+  var events=[];
+
+  // Friends' shows: new adds, and comments from anyone but yourself
+  (state.friends||[]).forEach(function(f){
+    if(!f)return;
+    ['watching','watchlist','watched'].forEach(function(lk){
+      (f[lk]||[]).forEach(function(s){
+        if(isNew(s.addedAt)) events.push({type:'added',friendId:f.id,text:'<b>'+escAttr(f.name)+'</b> added '+escAttr(s.title),ts:s.addedAt});
+        (s.reactions||[]).forEach(function(r){
+          if(r.reactorId && r.reactorId!==myId && isNew(r.reactedAt)){
+            events.push({type:'comment',friendId:f.id,text:'<b>'+escAttr(r.user)+'</b> commented on '+escAttr(s.title)+': &#8220;'+escAttr(r.text)+'&#8221;',ts:r.reactedAt});
+          }
+        });
+      });
+    });
+  });
+
+  // Your own shows: comments from friends (resolve real names via state.friends —
+  // normalizeShow only knows "you" vs "not you", not which friend, for these)
+  var friendsById={};
+  (state.friends||[]).forEach(function(f){ if(f) friendsById[f.id]=f; });
+  ['watching','watchlist','watched'].forEach(function(lk){
+    (state[lk]||[]).forEach(function(s){
+      (s.reactions||[]).forEach(function(r){
+        if(r.reactorId && r.reactorId!==myId && isNew(r.reactedAt)){
+          var name = friendsById[r.reactorId] ? friendsById[r.reactorId].name : 'Someone';
+          events.push({type:'comment-on-you',list:lk,text:'<b>'+escAttr(name)+'</b> commented on your '+escAttr(s.title)+': &#8220;'+escAttr(r.text)+'&#8221;',ts:r.reactedAt});
+        }
+      });
+    });
+  });
+
+  events.sort(function(a,b){ return new Date(b.ts) - new Date(a.ts); });
+  return events;
+}
+
+function renderConversations(){
+  var el=document.getElementById('conversations-list');
+  if(!el)return;
+  var events=buildConversationsFeed();
+  if(!events.length){
+    el.innerHTML='<div class="empty"><div class="empty-icon">&#128172;</div>Nothing new since you last looked.</div>';
+    return;
+  }
+  el.innerHTML=events.map(function(e){
+    var icon=e.type==='added'?'&#127871;':'&#128172;';
+    var click=e.friendId?' onclick="showFriend(\''+e.friendId+'\')"':(e.list?' onclick="goToOwnTab(\''+e.list+'\')"':'');
+    return '<div class="conversation-row"'+click+'><div class="conversation-icon">'+icon+'</div><div class="conversation-text">'+e.text+'</div><div class="conversation-time">'+timeAgo(e.ts)+'</div></div>';
+  }).join('');
+}
+
+window.goToOwnTab = function(list){
+  var btn = document.getElementById('btab-'+list);
+  if (btn) showTab(list, btn);
+};
+
+function updateConversationsBadge(){
+  var badge=document.getElementById('conv-badge');
+  if(!badge)return;
+  var count=buildConversationsFeed().length;
+  badge.style.display=count?'inline-block':'none';
+  badge.textContent=count>99?'99+':String(count);
+}
+
+window.markConversationsSeen = async function(){
+  var now=new Date().toISOString();
+  if(state.user) state.user.conversationsLastSeenAt = now;
+  updateConversationsBadge();
+  try {
+    const { data: { user } } = await sb.auth.getUser();
+    if (!user) return;
+    await sb.from('users').update({ conversations_last_seen_at: now }).eq('id', user.id);
+  } catch(e) { console.error('markConversationsSeen error:', e); }
+};
 
 function buildRankings(){
   // Pools every room member's ratings, including your own, so the ranking is the
@@ -2376,6 +2485,7 @@ async function loadUserIntoState(profile) {
     watchFreq: profile.watch_freq || '',
     discovery: profile.discovery || [],
     sessionCount: profile.session_count || 0,
+    conversationsLastSeenAt: profile.conversations_last_seen_at || null,
   };
 
   // Fire all four independent loads at once instead of waiting on each in turn —
