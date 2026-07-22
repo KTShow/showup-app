@@ -146,7 +146,7 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
 .conversation-text b{font-weight:700;}
 .conversation-time{font-size:11px;color:var(--muted);white-space:nowrap;flex-shrink:0;}
 .conversation-row.type-added{border-left:3px solid var(--terra);}
-.conversation-row.type-comment,.conversation-row.type-comment-on-you{border-left:3px solid var(--fig);}
+.conversation-row.type-comment{border-left:3px solid var(--fig);}
 @keyframes flashHighlight{0%{box-shadow:0 0 0 3px var(--terra);}100%{box-shadow:var(--shadow);}}
 .flash-highlight{animation:flashHighlight 1.8s ease-out;}
 
@@ -1740,31 +1740,40 @@ function buildConversationsFeed(){
   function isNew(ts){ return !!ts && (!lastSeen || new Date(ts) > lastSeen); }
   var events=[];
 
-  // Friends' shows: new adds, and comments from anyone but yourself
+  var friendsById={};
+  (state.friends||[]).forEach(function(f){ if(f) friendsById[f.id]=f; });
+  // normalizeShow only knows "you" vs "not you" for reactions on your own
+  // shows (not which friend) -- resolve the real name via state.friends.
+  function nameFor(reactorId){
+    if (reactorId===myId) return 'You';
+    return friendsById[reactorId] ? friendsById[reactorId].name : 'Someone';
+  }
+
+  // Full activity log, not just "what others did" -- includes your own adds
+  // and comments too, so this reads as a complete room timeline.
+
+  // Friends' shows: adds + every comment, whoever wrote it (including you)
   (state.friends||[]).forEach(function(f){
     if(!f)return;
     ['watching','watchlist','watched'].forEach(function(lk){
       (f[lk]||[]).forEach(function(s){
         if(isNew(s.addedAt)) events.push({type:'added',friendId:f.id,showId:s.id,text:'<b>'+escAttr(f.name)+'</b> added '+escAttr(s.title),ts:s.addedAt});
         (s.reactions||[]).forEach(function(r){
-          if(r.reactorId && r.reactorId!==myId && isNew(r.reactedAt)){
-            events.push({type:'comment',friendId:f.id,showId:s.id,text:'<b>'+escAttr(r.user)+'</b> commented on '+escAttr(s.title)+': &#8220;'+escAttr(r.text)+'&#8221;',ts:r.reactedAt});
+          if(r.reactorId && isNew(r.reactedAt)){
+            events.push({type:'comment',friendId:f.id,showId:s.id,text:'<b>'+escAttr(nameFor(r.reactorId))+'</b> commented on '+escAttr(s.title)+': &#8220;'+escAttr(r.text)+'&#8221;',ts:r.reactedAt});
           }
         });
       });
     });
   });
 
-  // Your own shows: comments from friends (resolve real names via state.friends —
-  // normalizeShow only knows "you" vs "not you", not which friend, for these)
-  var friendsById={};
-  (state.friends||[]).forEach(function(f){ if(f) friendsById[f.id]=f; });
+  // Your own shows: your own adds, and every comment (yours or a friend's)
   ['watching','watchlist','watched'].forEach(function(lk){
     (state[lk]||[]).forEach(function(s){
+      if(isNew(s.addedAt)) events.push({type:'added',list:lk,showId:s.id,text:'<b>You</b> added '+escAttr(s.title),ts:s.addedAt});
       (s.reactions||[]).forEach(function(r){
-        if(r.reactorId && r.reactorId!==myId && isNew(r.reactedAt)){
-          var name = friendsById[r.reactorId] ? friendsById[r.reactorId].name : 'Someone';
-          events.push({type:'comment-on-you',list:lk,showId:s.id,text:'<b>'+escAttr(name)+'</b> commented on your '+escAttr(s.title)+': &#8220;'+escAttr(r.text)+'&#8221;',ts:r.reactedAt});
+        if(r.reactorId && isNew(r.reactedAt)){
+          events.push({type:'comment',list:lk,showId:s.id,text:'<b>'+escAttr(nameFor(r.reactorId))+'</b> commented on your '+escAttr(s.title)+': &#8220;'+escAttr(r.text)+'&#8221;',ts:r.reactedAt});
         }
       });
     });
