@@ -1300,6 +1300,10 @@ function renderList(list) {
 }
 
 
+function recommendBtn(showId){
+  return '<button class="btn-recommend" onclick="openRecommendPicker(\''+showId+'\')" title="Recommend to a friend">&#127919;</button>';
+}
+
 function buildDNFCard(s) {
   var inpId = 'inp-watched-' + s.id;
   var sid = s.id;
@@ -1322,6 +1326,7 @@ function buildDNFCard(s) {
     + platformRow
     + '</div>'
     + '<div class="show-actions">' + remoteRating('watched', s.id, s.rating) + '</div>'
+    + recommendBtn(sid)
     + menuHTML
     + '</div>'
     + '<div class="show-move"><button class="btn-start" onclick="startWatchingFromDNF(\''+sid+'\')">Start Watching</button></div>'
@@ -1354,7 +1359,7 @@ function buildWatchingCard(s) {
   var hasReact=reactionsHTML(s.reactions,'watching',sid)||reactToggle;
   var platformRow=s.editingPlatform?platformSelect('watching',sid,s.platform):'';
 
-  return '<div class="show-card'+(s.hidden?' is-hidden':'')+'" id="card-'+sid+'"><div class="show-card-top">'+showTile(s)+'<div class="show-info"><div class="show-title">'+s.title+(s.hidden?'<span class="hidden-badge">Hidden from friends</span>':'')+'</div>'+platformRow+'</div>'+menuHTML+'</div>'
+  return '<div class="show-card'+(s.hidden?' is-hidden':'')+'" id="card-'+sid+'"><div class="show-card-top">'+showTile(s)+'<div class="show-info"><div class="show-title">'+s.title+(s.hidden?'<span class="hidden-badge">Hidden from friends</span>':'')+'</div>'+platformRow+'</div>'+recommendBtn(sid)+menuHTML+'</div>'
     + '<div class="show-move">'+primaryHTML+dnfHTML+'</div>'
     + (hasReact?'<div class="react-area">'+reactionsHTML(s.reactions,'watching',sid)+reactToggle+'</div>':'')
     + '</div>';
@@ -1377,7 +1382,7 @@ function buildWaitingCard(s) {
   var hasReact=reactionsHTML(s.reactions,'watchlist',sid)||reactToggle;
   var platformRow=s.editingPlatform?platformSelect('watchlist',sid,s.platform):'';
 
-  return '<div class="show-card'+(s.hidden?' is-hidden':'')+'" id="card-'+sid+'"><div class="show-card-top">'+showTile(s)+'<div class="show-info"><div class="show-title">'+s.title+(s.hidden?'<span class="hidden-badge">Hidden from friends</span>':'')+'</div>'+platformRow+'</div><div class="show-actions">'+remoteRating('watchlist',sid,s.rating)+'</div>'+menuHTML+'</div>'
+  return '<div class="show-card'+(s.hidden?' is-hidden':'')+'" id="card-'+sid+'"><div class="show-card-top">'+showTile(s)+'<div class="show-info"><div class="show-title">'+s.title+(s.hidden?'<span class="hidden-badge">Hidden from friends</span>':'')+'</div>'+platformRow+'</div><div class="show-actions">'+remoteRating('watchlist',sid,s.rating)+'</div>'+recommendBtn(sid)+menuHTML+'</div>'
     + '<div class="show-move"><button class="resume-watching-btn" onclick="resumeWatching(\''+sid+'\')">Resume Watching &#9654;</button><button class="didnt-finish-btn" onclick="markDNFFromWaiting(\''+sid+'\')">Didn&#39;t Finish</button></div>'
     + (hasReact?'<div class="react-area">'+reactionsHTML(s.reactions,'watchlist',sid)+reactToggle+'</div>':'')
     + '</div>';
@@ -1400,7 +1405,7 @@ function buildWatchlistCard(s) {
   var hasReact=reactionsHTML(s.reactions,'watchlist',sid)||reactToggle;
   var platformRow=s.editingPlatform?platformSelect('watchlist',sid,s.platform):'';
 
-  return '<div class="show-card'+(s.hidden?' is-hidden':'')+'" id="card-'+sid+'"><div class="show-card-top">'+showTile(s)+'<div class="show-info"><div class="show-title">'+s.title+(s.hidden?'<span class="hidden-badge">Hidden from friends</span>':'')+'</div>'+platformRow+'</div>'+menuHTML+'</div>'
+  return '<div class="show-card'+(s.hidden?' is-hidden':'')+'" id="card-'+sid+'"><div class="show-card-top">'+showTile(s)+'<div class="show-info"><div class="show-title">'+s.title+(s.hidden?'<span class="hidden-badge">Hidden from friends</span>':'')+'</div>'+platformRow+'</div>'+recommendBtn(sid)+menuHTML+'</div>'
     + '<div class="show-move"><button class="btn-start" onclick="moveToWatching(\''+sid+'\')">Watch Now</button><button class="waiting-season-btn" onclick="markWaitingFromList(\''+sid+'\')">Waiting for New Season &#8987;</button></div>'
     + (hasReact?'<div class="react-area">'+reactionsHTML(s.reactions,'watchlist',sid)+reactToggle+'</div>':'')
     + '</div>';
@@ -1446,7 +1451,7 @@ function buildBingedCard(s) {
   var hasReact=reactionsHTML(s.reactions,'watched',sid)||reactToggle;
   var platformRow=s.editingPlatform?platformSelect('watched',sid,s.platform):'';
 
-  return '<div class="show-card'+(s.hidden?' is-hidden':'')+'" id="card-'+sid+'"><div class="show-card-top">'+showTile(s)+'<div class="show-info"><div class="show-title">'+s.title+(s.hidden?'<span class="hidden-badge">Hidden from friends</span>':'')+'</div>'+platformRow+'</div><div class="show-actions">'+remoteRating('watched',sid,s.rating)+'</div>'+menuHTML+'</div>'
+  return '<div class="show-card'+(s.hidden?' is-hidden':'')+'" id="card-'+sid+'"><div class="show-card-top">'+showTile(s)+'<div class="show-info"><div class="show-title">'+s.title+(s.hidden?'<span class="hidden-badge">Hidden from friends</span>':'')+'</div>'+platformRow+'</div><div class="show-actions">'+remoteRating('watched',sid,s.rating)+'</div>'+recommendBtn(sid)+menuHTML+'</div>'
     + (hasReact?'<div class="react-area">'+reactionsHTML(s.reactions,'watched',sid)+reactToggle+'</div>':'')
     + '</div>';
 }
