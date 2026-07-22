@@ -158,6 +158,8 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
 .rank-detail-row:last-child{border-bottom:none;}
 .rank-detail-av{width:28px;height:28px;border-radius:50%;color:white;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
 .rank-detail-name{font-size:13px;font-weight:600;color:var(--charcoal);flex:1;}
+.rank-detail-name-link{cursor:pointer;text-decoration:underline;text-decoration-color:transparent;transition:text-decoration-color 0.15s;}
+.rank-detail-name-link:hover{text-decoration-color:var(--charcoal);}
 .rank-close{background:none;border:none;color:var(--fig);font-family:var(--sans);font-size:13px;cursor:pointer;padding:0;margin-bottom:14px;display:flex;align-items:center;gap:5px;}
 
 .invite-box{background:var(--cream);border:1px solid var(--border);border-radius:14px;padding:20px;margin-top:20px;text-align:center;box-shadow:var(--shadow);}
@@ -1686,13 +1688,13 @@ function buildRankings(){
   // same shared "group favorites" list for everyone in the room — not a personalized
   // view that excludes whoever happens to be looking at it.
   var shows={};
-  function addRating(name,color,initials,title,platform,rating,isMe,posterPath,tmdbId){
+  function addRating(id,name,color,initials,title,platform,rating,isMe,posterPath,tmdbId){
     var key=title.toLowerCase().trim();
     if(!shows[key])shows[key]={title:title,platform:platform||'',ratings:[],raters:[],poster_path:null,tmdb_id:null};
     if(!shows[key].poster_path&&posterPath)shows[key].poster_path=posterPath;
     if(!shows[key].tmdb_id&&tmdbId)shows[key].tmdb_id=tmdbId;
     shows[key].ratings.push(rating);
-    shows[key].raters.push({name:name,color:color,rating:rating,initials:initials,isMe:!!isMe});
+    shows[key].raters.push({id:id,name:name,color:color,rating:rating,initials:initials,isMe:!!isMe});
   }
   state.friends.forEach(function(f){
     if(!f||!f.name||!f.watched)return;
@@ -1702,14 +1704,14 @@ function buildRankings(){
     // because a show isn't sitting in Binged.
     (f.watched||[]).concat(f.watching||[]).concat(f.watchlist||[]).forEach(function(s){
       if(!s||!s.title||!s.rating||s.rating===0)return;
-      addRating(f.name,fColor,f.name.split(' ').map(function(x){return x[0]||'';}).join(''),s.title,s.platform,s.rating,false,s.poster_path,s.tmdb_id);
+      addRating(f.id,f.name,fColor,f.name.split(' ').map(function(x){return x[0]||'';}).join(''),s.title,s.platform,s.rating,false,s.poster_path,s.tmdb_id);
     });
   });
   if(state.user){
     var myColor=ROOMS[state.user.room||'tuscany']?ROOMS[state.user.room||'tuscany'].color:'#C4622D';
     (state.watched||[]).concat(state.watching||[]).concat(state.watchlist||[]).forEach(function(s){
       if(!s||!s.title||!s.rating||s.rating===0)return;
-      addRating('You',myColor,state.user.initials||'Y',s.title,s.platform,s.rating,true,s.poster_path,s.tmdb_id);
+      addRating(state.user.id,'You',myColor,state.user.initials||'Y',s.title,s.platform,s.rating,true,s.poster_path,s.tmdb_id);
     });
   }
   var MIN_RATERS=2; // a single 5-star rating shouldn't outrank a show several people agree on
@@ -1751,7 +1753,8 @@ function showRankDetail(idx){
   var remotes=''; for(var n=1;n<=5;n++){var lit=n<=Math.floor(s.avg);remotes+='<span style="opacity:'+(lit?'1':'0.18')+';display:inline-block;">'+remoteIcon(16,lit)+'</span>';}
   var rows=s.raters.slice().sort(function(a,b){return (b.isMe?1:0)-(a.isMe?1:0)||b.rating-a.rating;}).map(function(r){
     var rR=''; for(var n=1;n<=5;n++){rR+='<span style="opacity:'+(n<=r.rating?'1':'0.18')+';display:inline-block;">'+remoteIcon(13,n<=r.rating)+'</span>';}
-    return '<div class="rank-detail-row"><div class="rank-detail-av" style="background:'+r.color+'">'+r.initials+'</div><div class="rank-detail-name">'+(r.isMe?'You':r.name)+'</div><div style="display:flex;gap:2px;">'+rR+'</div></div>';
+    var nameAttr = (!r.isMe && r.id) ? ' class="rank-detail-name rank-detail-name-link" onclick="showFriend(\''+r.id+'\')"' : ' class="rank-detail-name"';
+    return '<div class="rank-detail-row"><div class="rank-detail-av" style="background:'+r.color+'">'+r.initials+'</div><div'+nameAttr+'>'+(r.isMe?'You':r.name)+'</div><div style="display:flex;gap:2px;">'+rR+'</div></div>';
   }).join('');
   var clickAttr=s.tmdb_id?' class="poster-clickable" onclick="openShowDetails('+s.tmdb_id+')"':'';
   var thumb=s.poster_path
