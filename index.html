@@ -119,6 +119,8 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
 .section-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);margin:18px 0 10px;}
 .friends-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(98px,1fr));gap:9px;margin-bottom:24px;}
 .friend-card{position:relative;background:var(--cream);border:1px solid var(--border);border-radius:var(--radius);padding:11px;text-align:left;cursor:pointer;transition:all 0.2s;box-shadow:var(--shadow);}
+.friend-card.is-muted{opacity:0.5;}
+.muted-badge{font-size:9px;font-weight:700;color:var(--muted);margin-left:5px;text-transform:uppercase;letter-spacing:0.04em;}
 .friend-new-badge{position:absolute;top:8px;right:8px;background:var(--terra);color:#fff;font-size:9px;font-weight:700;letter-spacing:0.04em;padding:2px 6px;border-radius:10px;}
 .friend-new-detail{font-size:10px;color:var(--terra);font-weight:600;margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .room-ticker{background:var(--cream);border:1px solid var(--border);border-radius:var(--radius);padding:10px 14px;margin-bottom:16px;font-size:13px;font-weight:600;color:var(--terra);text-align:center;}
@@ -206,6 +208,8 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
 .confetti-wrap{position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:999;overflow:hidden;}
 
 .invite-modal-overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:200;display:none;align-items:center;justify-content:center;padding:20px;}
+.toast{position:fixed;left:50%;bottom:24px;transform:translate(-50%,12px);background:var(--charcoal);color:white;font-family:var(--sans);font-size:13px;font-weight:600;padding:11px 18px;border-radius:10px;box-shadow:0 4px 16px rgba(0,0,0,0.25);z-index:300;opacity:0;pointer-events:none;transition:opacity 0.25s,transform 0.25s;max-width:90vw;text-align:center;}
+.toast.show{opacity:1;transform:translate(-50%,0);}
 .invite-modal-overlay.active{display:flex;}
 .invite-modal{background:var(--cream);border-radius:20px;padding:28px;width:100%;max-width:400px;box-shadow:0 8px 40px rgba(0,0,0,0.2);}
 .invite-modal-title{font-family:var(--serif);font-size:20px;color:var(--charcoal);font-weight:700;margin-bottom:6px;}
@@ -1563,8 +1567,8 @@ function renderFriends() {
     var fRoom=f.room||'tuscany'; var fColor=ROOMS[fRoom]?ROOMS[fRoom].color:f.color;
     var fInitials=f.name.split(' ').map(function(x){return x[0];}).join('');
     var fFirst=f.name.split(' ')[0];
-    return '<div class="friend-card" onclick="showFriend(\''+f.id+'\')">'
-      +'<div class="friend-top-row"><div class="friend-av" style="background:'+fColor+';font-weight:700;font-family:var(--sans);">'+fInitials+'</div><div class="friend-name">'+fFirst+'</div></div>'
+    return '<div class="friend-card'+(f.muted?' is-muted':'')+'" onclick="showFriend(\''+f.id+'\')">'
+      +'<div class="friend-top-row"><div class="friend-av" style="background:'+fColor+';font-weight:700;font-family:var(--sans);">'+fInitials+'</div><div class="friend-name">'+fFirst+(f.muted?'<span class="muted-badge">Muted</span>':'')+'</div></div>'
       +'<div class="friend-city">'+f.city+'</div>'
       +'<div class="friend-count">'+f.watching.length+' watching &middot; '+f.watchlist.length+' list &middot; '+f.watched.length+' binged</div>'
       +'</div>';
@@ -1630,10 +1634,11 @@ function showFriend(id) {
         }).join('')
       + '</div>';
   }
+  var muteBtn=isSelf?'':'<button class="btn-remove-friend" onclick="toggleMuteFriend(\''+f.id+'\')">'+(f.muted?'Unmute':'Mute')+'</button>';
   var removeBtn=isSelf?'':'<button class="btn-remove-friend" onclick="removeFriend(\''+f.id+'\')">Remove from Room</button>';
   var roomTitle=isSelf?'Your Living Room':f.name+"'s Living Room";
   var cityLine=isSelf?'':'<div style="font-size:13px;color:var(--muted)">'+f.city+'</div>';
-  dv.innerHTML='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;"><button class="back-btn" onclick="backToFriends()">&#8592; Back to Living Room</button>'+removeBtn+'</div>'
+  dv.innerHTML='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;"><button class="back-btn" onclick="backToFriends()">&#8592; Back to Living Room</button><div style="display:flex;gap:8px;">'+muteBtn+removeBtn+'</div></div>'
     +'<div class="friend-header"><div class="friend-header-av" style="background:'+fColor+';font-size:18px;font-weight:700;font-family:var(--sans);">'+fInitials+'</div>'
     +'<div><div style="font-family:Georgia,serif;font-size:20px;font-weight:700">'+roomTitle+'</div>'
     +cityLine+'</div></div>'
@@ -2191,14 +2196,17 @@ async function getFriendsWithShows() {
   const { data: { user } } = await sb.auth.getUser();
   if (!user) throw new Error('Not authenticated');
 
-  // room and myMemberships only depend on user.id, not on each other — fire together.
+  // room, myMemberships, and mutedFriends only depend on user.id, not on each other — fire together.
   var roomPromise = getMyLivingRoom();
   var myMembershipsPromise = sb.from('living_room_members')
     .select('living_room_id').eq('user_id', user.id).eq('status', 'active');
+  var mutedPromise = sb.from('muted_friends').select('muted_user_id').eq('user_id', user.id);
 
   const room = await roomPromise;
   if (!room) return [];
   const { data: myMemberships } = await myMembershipsPromise;
+  const { data: mutedRows } = await mutedPromise;
+  var mutedSet = new Set((mutedRows || []).map(function(r) { return r.muted_user_id; }));
 
   // Direction 1 (members of my room) and direction 2 (rooms I joined) are
   // independent of each other once room/myMemberships are known — fire together.
@@ -2284,6 +2292,7 @@ async function getFriendsWithShows() {
       name: u.first_name + ' ' + u.last_initial + '.',
       city: [u.city, u.state].filter(Boolean).join(', '),
       room: u.room || 'tuscany',
+      muted: mutedSet.has(u.id),
       top5: friendTop5.map(function(t) { return { title: t.title, platform: t.platform }; }),
       watching: friendShows.filter(function(s) { return s.status === 'watching'; }).map(normShow),
       watchlist: friendShows.filter(function(s) { return s.status === 'watchlist'; }).map(normShow),
@@ -3281,6 +3290,36 @@ window.submitEditFriendReact = async function(friendId, lk, showId, reactId) {
   try { await dbUpdateReaction(reactId, txt, sentiment); } catch(e) { console.error('submitEditFriendReact error:', e); }
 };
 
+async function dbMuteFriend(friendId) {
+  const { data: { user } } = await sb.auth.getUser();
+  if (!user) throw new Error('Not authenticated');
+  const { error } = await sb.from('muted_friends').insert({ user_id: user.id, muted_user_id: friendId });
+  if (error) throw error;
+}
+
+async function dbUnmuteFriend(friendId) {
+  const { data: { user } } = await sb.auth.getUser();
+  if (!user) throw new Error('Not authenticated');
+  const { error } = await sb.from('muted_friends').delete().eq('user_id', user.id).eq('muted_user_id', friendId);
+  if (error) throw error;
+}
+
+window.toggleMuteFriend = async function(friendId) {
+  var f = state.friends.find(function(x) { return x.id === friendId; });
+  if (!f) return;
+  f.muted = !f.muted;
+  var wasMuted = !f.muted;
+  renderFriends();
+  if (document.getElementById('friend-detail-view').style.display !== 'none') showFriend(friendId);
+  try {
+    if (f.muted) await dbMuteFriend(friendId); else await dbUnmuteFriend(friendId);
+  } catch(e) {
+    console.error('toggleMuteFriend error:', e);
+    f.muted = wasMuted;
+    renderFriends();
+  }
+};
+
 async function dbRemoveFriend(friendId) {
   const { data: { user } } = await sb.auth.getUser();
   if (!user) throw new Error('Not authenticated');
@@ -3760,6 +3799,17 @@ function findMyShowByTitle(title) {
 var ADD_DEST_STATUS = { watching: 'watching', waiting: 'watchlist', watchlist: 'watchlist', dnf: 'watched', watched: 'watched' };
 var ADD_DEST_LIST = { watching: 'watching', waiting: 'watchlist', watchlist: 'watchlist', dnf: 'watched', watched: 'watched' };
 var ADD_DEST_RATES = { waiting: true, dnf: true, watched: true };
+var ADD_DEST_DISPLAY_LABELS = { watching: 'Currently Watching', waiting: 'Waiting for New Season', watchlist: 'My List', dnf: "Didn't Finish", watched: 'Already Binged' };
+
+var _toastTimer = null;
+function showToast(msg) {
+  var el = document.getElementById('toast');
+  if (!el) return;
+  if (_toastTimer) clearTimeout(_toastTimer);
+  el.textContent = msg;
+  el.classList.add('show');
+  _toastTimer = setTimeout(function() { el.classList.remove('show'); }, 3200);
+}
 
 window.chooseAddDestination = async function(destKey) {
   var info = _currentShowDetails;
@@ -3784,6 +3834,10 @@ window.chooseAddDestination = async function(destKey) {
     renderList(srcList);
     renderList(destList);
     resultShow = s;
+    var destLabel = ADD_DEST_DISPLAY_LABELS[destKey];
+    showToast(srcList === destList
+      ? 'Already in ' + destLabel + ' — updated.'
+      : 'Was in ' + ADD_LIST_LABELS[srcList] + ' — moved to ' + destLabel + '.');
     try { await updateShowStatus(s.id, status, { dnf: isDnf, waiting_for_season: isWaiting }); } catch(e) { console.error('chooseAddDestination move error:', e); }
   } else {
     var src = state.lastViewedFriend ? 'living_room' : 'manual';
@@ -3901,6 +3955,9 @@ bootstrap();
     <button class="btn-invite-close" onclick="closeInviteModal()" style="width:100%;">Close</button>
   </div>
 </div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
 
 <!-- ADD-SHOW CONFIRM MODAL -->
 <div class="invite-modal-overlay" id="add-confirm-modal">
