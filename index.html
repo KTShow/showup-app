@@ -2845,6 +2845,21 @@ window.setRoomAndSave = async function(roomKey) {
 var _addConfirmPending = null;
 var ADD_LIST_LABELS = { watching: 'Currently Watching', watchlist: 'My List', watched: 'Already Binged' };
 
+// Checked up front, before the confirm popup even opens, so a duplicate
+// warning is something the user can act on (Cancel is right there) —
+// not something they find out after they've already hit Add.
+function addConfirmSubtext(list, title, platform) {
+  var destList = list === 'dnf' ? 'watched' : list;
+  var destLabel = ADD_DEST_DISPLAY_LABELS[list];
+  var existing = findMyShowByTitle(title);
+  if (existing) {
+    return existing.list === destList
+      ? 'Already in ' + destLabel + ' — update it?'
+      : 'Already in ' + ADD_LIST_LABELS[existing.list] + ' — move to ' + destLabel + '?';
+  }
+  return 'Add to ' + destLabel + ' — ' + platform + '?';
+}
+
 window.addShow = function(list) {
   var tId = list==='watching'?'w-title':list==='watchlist'?'wl-title':'wd-title';
   var pId = list==='watching'?'w-platform':list==='watchlist'?'wl-platform':'wd-platform';
@@ -2859,7 +2874,7 @@ window.addShow = function(list) {
   }
   _addConfirmPending = { list: list, title: title, platform: platform, tId: tId, pId: pId };
   document.getElementById('add-confirm-title').textContent = title;
-  document.getElementById('add-confirm-sub').textContent = 'Add to ' + ADD_LIST_LABELS[list] + ' — ' + platform + '?';
+  document.getElementById('add-confirm-sub').textContent = addConfirmSubtext(list, title, platform);
   document.getElementById('add-confirm-modal').classList.add('active');
 };
 
@@ -2885,7 +2900,7 @@ window.addDirectDNF = function() {
   }
   _addConfirmPending = { list: 'dnf', title: title, platform: platform, tId: 'dnf-title', pId: 'dnf-platform' };
   document.getElementById('add-confirm-title').textContent = title;
-  document.getElementById('add-confirm-sub').textContent = "Add to Didn't Finish — " + platform + '?';
+  document.getElementById('add-confirm-sub').textContent = addConfirmSubtext('dnf', title, platform);
   document.getElementById('add-confirm-modal').classList.add('active');
 };
 
