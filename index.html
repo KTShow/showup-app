@@ -149,6 +149,16 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
 .conversation-row.type-comment{border-left:3px solid var(--fig);}
 @keyframes flashHighlight{0%{box-shadow:0 0 0 3px var(--terra);}100%{box-shadow:var(--shadow);}}
 .flash-highlight{animation:flashHighlight 1.8s ease-out;}
+.btn-recommend{background:none;border:none;font-size:15px;cursor:pointer;padding:2px;line-height:1;opacity:0.6;}
+.btn-recommend:hover{opacity:1;}
+.rec-banner{background:linear-gradient(135deg,var(--fig),#8a4a6b);border-radius:var(--radius);padding:14px 16px;margin-bottom:12px;box-shadow:0 4px 14px rgba(107,45,78,0.3);}
+.rec-banner-top{display:flex;gap:12px;align-items:flex-start;}
+.rec-banner-body{flex:1;min-width:0;}
+.rec-banner-from{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.05em;color:rgba(255,255,255,0.85);margin-bottom:3px;}
+.rec-banner-title{font-family:var(--serif);font-size:16px;font-weight:700;color:white;}
+.rec-banner-note{font-size:12px;color:rgba(255,255,255,0.9);font-style:italic;margin-top:4px;}
+.rec-banner-actions{display:flex;gap:8px;margin-top:12px;}
+.rec-banner-actions .btn-start{flex:1;}
 
 .rank-card{background:var(--cream);border:1px solid var(--border);border-radius:var(--radius);padding:13px 15px;box-shadow:var(--shadow);display:flex;align-items:center;cursor:pointer;transition:box-shadow 0.2s;margin-bottom:9px;gap:0;}
 .rank-card:hover{box-shadow:0 4px 20px rgba(100,50,20,0.14);}
@@ -682,6 +692,7 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
       <div id="friends-view">
         <div class="page-title">&#127968;&nbsp; The Living Room</div>
         <div class="page-sub">Your Crowd &mdash; see what everyone's watching</div>
+        <div id="recommendations-banner"></div>
         <div class="lr-toggle">
           <button class="lr-toggle-btn active" id="toggle-crew" onclick="switchLRView('crew')"><span class="toggle-icon">🛋️</span>Your Crowd</button>
           <button class="lr-toggle-btn" id="toggle-picks" onclick="switchLRView('picks')"><span class="toggle-icon">&#127942;</span>Friends' Favorites</button>
@@ -886,6 +897,7 @@ var state = {
   watched: [],
   friends: [],
   friendsLoaded: false,
+  recommendations: [],
   lastVisitAt: null
 };
 
@@ -1580,6 +1592,7 @@ function renderRoomTicker() {
 function renderFriends() {
   renderTop5Banner();
   renderRoomTicker();
+  renderRecommendationBanners();
   var selfTile='';
   if(state.user){
     var myColor=ROOMS[state.user.room||'tuscany']?ROOMS[state.user.room||'tuscany'].color:'#C4622D';
@@ -1647,6 +1660,7 @@ function showFriend(id) {
         var reactToggle=isSelf?'':('<div class="inline-react"><input class="react-input" id="'+inpId+'" placeholder="What did you think? 😊" /><button class="btn-send" onclick="submitFR(\''+f.id+'\',\''+lk+'\',\''+s.id+'\')">Send</button><button class="btn-cancel" onclick="document.getElementById(\''+inpId+'\').value=\'\'">Cancel</button></div>'
           + quickReactRow('quickReactFR', "'"+f.id+"','"+lk+"','"+s.id+"'"));
         var actions=(lk==='w'||lk==='wd')?remoteStatic(s.rating):'';
+        actions+='<button class="btn-recommend" onclick="openRecommendPicker(\''+s.id+'\')" title="Recommend to a friend">&#128228;</button>';
         var watchedBadge=lk==='wd'?'<span style="font-size:11px;color:var(--fig);font-weight:600;">&#10003; Binged</span>':'';
         html+='<div class="show-card" id="card-'+s.id+'"><div class="show-card-top">'+showTile(s)+'<div class="show-info"><div class="show-title">'+s.title+'</div>'+(watchedBadge?'<div style="margin-top:2px;">'+watchedBadge+'</div>':'')+'</div><div class="show-actions">'+actions+'</div></div><div class="react-area">'+rHTML+reactToggle+'</div></div>';
       });
@@ -1779,6 +1793,13 @@ function buildConversationsFeed(){
     });
   });
 
+  // Closing the loop on recommendations you sent that got added
+  (state.recommendations||[]).forEach(function(r){
+    if(r.from_user_id===myId && r.status==='added' && isNew(r.resolved_at)){
+      events.push({type:'comment',text:'<b>'+escAttr(nameFor(r.to_user_id))+'</b> added your recommendation, '+escAttr(r.title),ts:r.resolved_at});
+    }
+  });
+
   events.sort(function(a,b){ return new Date(b.ts) - new Date(a.ts); });
   return events;
 }
@@ -1832,6 +1853,136 @@ window.markConversationsSeen = async function(){
     if (!user) return;
     await sb.from('users').update({ conversations_last_seen_at: now }).eq('id', user.id);
   } catch(e) { console.error('markConversationsSeen error:', e); }
+};
+
+// ============================================================
+// RECOMMENDATIONS — a targeted nudge to one specific friend,
+// distinct from a regular comment. Lands as a prominent banner at
+// the top of Living Room for the recipient, not just another row
+// in Conversations.
+// ============================================================
+
+function findShowAnywhere(showId){
+  var lists=['watching','watchlist','watched'];
+  for(var i=0;i<lists.length;i++){
+    var s=(state[lists[i]]||[]).find(function(x){return x.id===showId;});
+    if(s) return { show:s, ownerId: state.user?state.user.id:null };
+  }
+  for(var j=0;j<(state.friends||[]).length;j++){
+    var f=state.friends[j];
+    for(var k=0;k<lists.length;k++){
+      var s2=(f[lists[k]]||[]).find(function(x){return x.id===showId;});
+      if(s2) return { show:s2, ownerId:f.id };
+    }
+  }
+  return null;
+}
+
+var _recommendPending = null;
+
+window.openRecommendPicker = function(showId){
+  var found = findShowAnywhere(showId);
+  if(!found) return;
+  _recommendPending = { title:found.show.title, tmdbId:found.show.tmdb_id, posterPath:found.show.poster_path, ownerId:found.ownerId };
+  document.getElementById('rec-picker-title').textContent = found.show.title;
+  document.getElementById('rec-picker-note').value = '';
+  var friendsList = (state.friends||[]).filter(function(f){ return f.id !== found.ownerId; });
+  var container = document.getElementById('rec-picker-friends');
+  container.innerHTML = friendsList.length
+    ? friendsList.map(function(f){ return '<button class="picker-option-btn" onclick="sendRecommendation(\''+f.id+'\')">'+escAttr(f.name)+'</button>'; }).join('')
+    : '<div style="font-size:13px;color:var(--muted);text-align:center;padding:10px 0;">No one else in your Living Room yet.</div>';
+  document.getElementById('recommend-picker-modal').classList.add('active');
+};
+
+window.closeRecommendPicker = function(){
+  _recommendPending = null;
+  document.getElementById('recommend-picker-modal').classList.remove('active');
+};
+
+window.sendRecommendation = async function(toUserId){
+  var pending = _recommendPending;
+  if(!pending) return;
+  var note = document.getElementById('rec-picker-note').value.trim();
+  var friend = (state.friends||[]).find(function(f){return f.id===toUserId;});
+  document.getElementById('recommend-picker-modal').classList.remove('active');
+  _recommendPending = null;
+  try {
+    const { data: { user } } = await sb.auth.getUser();
+    if(!user) return;
+    const { error } = await sb.from('recommendations').insert({
+      from_user_id: user.id, to_user_id: toUserId, title: pending.title,
+      tmdb_id: pending.tmdbId || null, poster_path: pending.posterPath || null, note: note || null,
+    });
+    if(error) throw error;
+    showToast('Sent to ' + (friend ? friend.name : 'them') + '!');
+  } catch(e) {
+    console.error('sendRecommendation error:', e);
+    showToast("Couldn't send — try again in a moment.");
+  }
+};
+
+function renderRecommendationBanners(){
+  var el = document.getElementById('recommendations-banner');
+  if(!el) return;
+  var myId = state.user ? state.user.id : null;
+  var pending = (state.recommendations||[]).filter(function(r){ return r.to_user_id===myId && r.status==='pending'; });
+  if(!pending.length){ el.innerHTML=''; return; }
+  var friendsById={};
+  (state.friends||[]).forEach(function(f){ if(f) friendsById[f.id]=f; });
+  el.innerHTML = pending.map(function(r){
+    var senderName = friendsById[r.from_user_id] ? friendsById[r.from_user_id].name : 'Someone';
+    var poster = r.poster_path
+      ? '<img src="https://image.tmdb.org/t/p/w92'+r.poster_path+'" style="width:52px;height:78px;border-radius:8px;object-fit:cover;flex-shrink:0;" />'
+      : '<div style="width:52px;height:78px;border-radius:8px;background:rgba(255,255,255,0.2);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:22px;">&#128252;</div>';
+    return '<div class="rec-banner">'
+      + '<div class="rec-banner-top">' + poster
+      + '<div class="rec-banner-body"><div class="rec-banner-from">&#127919; '+escAttr(senderName)+' recommended this to you</div>'
+      + '<div class="rec-banner-title">'+escAttr(r.title)+'</div>'
+      + (r.note ? '<div class="rec-banner-note">&#8220;'+escAttr(r.note)+'&#8221;</div>' : '')
+      + '</div></div>'
+      + '<div class="rec-banner-actions"><button class="btn-start" onclick="acceptRecommendation(\''+r.id+'\')">+ Add to My List</button><button class="btn-invite-close" onclick="dismissRecommendation(\''+r.id+'\')" style="flex:0 0 auto;padding:8px 14px;">Dismiss</button></div>'
+      + '</div>';
+  }).join('');
+}
+
+window.acceptRecommendation = async function(recId){
+  var rec = (state.recommendations||[]).find(function(r){return r.id===recId;});
+  if(!rec) return;
+  var existing = findMyShowByTitle(rec.title);
+  try {
+    if(existing){
+      var s = existing.show;
+      if(existing.list !== 'watchlist'){
+        state[existing.list] = state[existing.list].filter(function(x){return x.id!==s.id;});
+        s.waitingForSeason = false;
+        state.watchlist.push(s);
+        renderList(existing.list); renderList('watchlist');
+        await updateShowStatus(s.id, 'watchlist', { waiting_for_season:false });
+      }
+      showToast('Already had it — kept it in My List.');
+    } else {
+      var row = await dbAddShow({ title:rec.title, platform:'None', status:'watchlist', dnf:false, source:'living_room', influencedBy:rec.from_user_id, tmdb_id:rec.tmdb_id, poster_path:rec.poster_path });
+      state.watchlist.push({ id:row.id, title:rec.title, platform:'None', rating:0, hidden:false, dnf:false, waitingForSeason:false, source:'living_room', influencedBy:rec.from_user_id, addedAt:row.added_at, reactions:[], showReact:false, poster_path:rec.poster_path||null, tmdb_id:rec.tmdb_id||null });
+      renderList('watchlist');
+      showToast('Added to My List!');
+    }
+    rec.status='added'; rec.resolved_at=new Date().toISOString();
+    renderRecommendationBanners();
+    await sb.from('recommendations').update({ status:'added', resolved_at:new Date().toISOString() }).eq('id', recId);
+  } catch(e) {
+    console.error('acceptRecommendation error:', e);
+    showToast("Couldn't add — try again in a moment.");
+  }
+};
+
+window.dismissRecommendation = async function(recId){
+  var rec = (state.recommendations||[]).find(function(r){return r.id===recId;});
+  if(!rec) return;
+  rec.status='dismissed'; rec.resolved_at=new Date().toISOString();
+  renderRecommendationBanners();
+  try {
+    await sb.from('recommendations').update({ status:'dismissed', resolved_at:new Date().toISOString() }).eq('id', recId);
+  } catch(e) { console.error('dismissRecommendation error:', e); }
 };
 
 function buildRankings(){
@@ -3550,7 +3701,7 @@ window.removeFriend = async function(friendId) {
 window.handleSignOut = async function() {
   try {
     await signOut();
-    state.user = null; state.watching = []; state.watchlist = []; state.watched = []; state.friends = []; state.lastVisitAt = null;
+    state.user = null; state.watching = []; state.watchlist = []; state.watched = []; state.friends = []; state.recommendations = []; state.lastVisitAt = null;
     showScreen('login');
   } catch(e) { console.error('Sign out error:', e); }
 };
@@ -3601,9 +3752,28 @@ async function fixupReactionNames() {
   });
 }
 
+// Recommendations are fetched here (on-demand, when Living Room is opened)
+// rather than added to the boot-time background friends load -- that path
+// is deliberately being kept lean given the still-open weak-connection
+// question there, see the loadtime investigation notes.
+async function loadRecommendations() {
+  try {
+    const { data: { user } } = await sb.auth.getUser();
+    if (!user) return [];
+    const { data, error } = await sb.from('recommendations')
+      .select('*')
+      .or('from_user_id.eq.' + user.id + ',to_user_id.eq.' + user.id)
+      .order('created_at', { ascending: false });
+    if (error) throw error;
+    return data || [];
+  } catch(e) { console.error('loadRecommendations error:', e); return []; }
+}
+
 async function loadAndRenderFriends() {
   try {
-    state.friends = await getFriendsWithShows();
+    var results = await Promise.all([getFriendsWithShows(), loadRecommendations()]);
+    state.friends = results[0];
+    state.recommendations = results[1];
     state.friendsLoaded = true;
     renderFriends();
     renderRankings();
@@ -4168,6 +4338,17 @@ bootstrap();
       <button class="btn-invite-copy" onclick="confirmAddShow()" style="flex:1;">Add</button>
       <button class="btn-invite-close" onclick="cancelAddShow()" style="flex:1;">Cancel</button>
     </div>
+  </div>
+</div>
+
+<!-- RECOMMEND-TO-A-FRIEND PICKER -->
+<div class="invite-modal-overlay" id="recommend-picker-modal">
+  <div class="invite-modal">
+    <div class="invite-modal-title">Recommend <span id="rec-picker-title"></span></div>
+    <div class="invite-modal-sub">Who should see this?</div>
+    <div id="rec-picker-friends" style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px;max-height:200px;overflow-y:auto;"></div>
+    <textarea id="rec-picker-note" placeholder="Add a note (optional) — why they'd like it" style="width:100%;box-sizing:border-box;border:1px solid var(--border);border-radius:8px;padding:9px 12px;font-family:var(--sans);font-size:13px;color:var(--charcoal);resize:none;margin-bottom:14px;" rows="2"></textarea>
+    <button class="btn-invite-close" onclick="closeRecommendPicker()" style="width:100%;">Cancel</button>
   </div>
 </div>
 
