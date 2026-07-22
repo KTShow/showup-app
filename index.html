@@ -145,6 +145,10 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
 .conversation-text{flex:1;min-width:0;font-size:13px;color:var(--charcoal);line-height:1.45;}
 .conversation-text b{font-weight:700;}
 .conversation-time{font-size:11px;color:var(--muted);white-space:nowrap;flex-shrink:0;}
+.conversation-row.type-added{border-left:3px solid var(--terra);}
+.conversation-row.type-comment,.conversation-row.type-comment-on-you{border-left:3px solid var(--fig);}
+@keyframes flashHighlight{0%{box-shadow:0 0 0 3px var(--terra);}100%{box-shadow:var(--shadow);}}
+.flash-highlight{animation:flashHighlight 1.8s ease-out;}
 
 .rank-card{background:var(--cream);border:1px solid var(--border);border-radius:var(--radius);padding:13px 15px;box-shadow:var(--shadow);display:flex;align-items:center;cursor:pointer;transition:box-shadow 0.2s;margin-bottom:9px;gap:0;}
 .rank-card:hover{box-shadow:0 4px 20px rgba(100,50,20,0.14);}
@@ -1090,11 +1094,24 @@ function completeOnboard_OLD() {
   updateAvatar();
 }
 
+var _conversationsViewed = false;
+var _skipConversationsMarkSeen = false;
+
 function showTab(tab, btn) {
+  // A genuine, deliberate move away from Living Room (not a feed click that
+  // happens to route through here, e.g. "comment on your own show" jumping
+  // to that tab -- see goToOwnTab) is what marks the Conversations feed
+  // seen, so a single click doesn't quietly clear items still unread.
+  var leavingLivingRoom = document.getElementById('tab-living-room').style.display==='block' && tab!=='living-room';
   document.querySelectorAll('.tab-pane').forEach(function(t){ t.style.display='none'; });
   document.querySelectorAll('.nav-tab').forEach(function(t){ t.classList.remove('active'); });
   document.getElementById('tab-'+tab).style.display='block';
   btn.classList.add('active');
+  if (leavingLivingRoom && _conversationsViewed && !_skipConversationsMarkSeen) {
+    markConversationsSeen();
+    _conversationsViewed = false;
+  }
+  _skipConversationsMarkSeen = false;
   if (tab==='living-room') { renderFriends(); if (typeof loadAndRenderFriends === 'function') loadAndRenderFriends(); }
   if (tab==='watched') { renderBingedTop5(); }
   if (tab!=='living-room') state.lastViewedFriend = null;
@@ -1287,7 +1304,7 @@ function buildDNFCard(s) {
     + '<button class="card-menu-item" onclick="togglePlatEdit(\'watched\',\''+sid+'\');closeCardMenus();">Edit streaming service</button>'
     + '<button class="card-menu-item danger" onclick="removeShow(\'watched\',\''+sid+'\');closeCardMenus();">Remove</button>'
     + '</div></div>';
-  return '<div class="dnf-card'+(s.hidden?' is-hidden':'')+'">'
+  return '<div class="dnf-card'+(s.hidden?' is-hidden':'')+'" id="card-'+sid+'">'
     + '<div class="show-card-top">' + showTile(s)
     + '<div class="show-info"><div class="show-title">' + s.title + (s.hidden?'<span class="hidden-badge">Hidden from friends</span>':'') + '</div>'
     + '<div style="margin-top:3px;font-size:11px;color:var(--muted);">' + s.platform + '</div>'
@@ -1326,7 +1343,7 @@ function buildWatchingCard(s) {
   var hasReact=reactionsHTML(s.reactions,'watching',sid)||reactToggle;
   var platformRow=s.editingPlatform?platformSelect('watching',sid,s.platform):'';
 
-  return '<div class="show-card'+(s.hidden?' is-hidden':'')+'"><div class="show-card-top">'+showTile(s)+'<div class="show-info"><div class="show-title">'+s.title+(s.hidden?'<span class="hidden-badge">Hidden from friends</span>':'')+'</div>'+platformRow+'</div>'+menuHTML+'</div>'
+  return '<div class="show-card'+(s.hidden?' is-hidden':'')+'" id="card-'+sid+'"><div class="show-card-top">'+showTile(s)+'<div class="show-info"><div class="show-title">'+s.title+(s.hidden?'<span class="hidden-badge">Hidden from friends</span>':'')+'</div>'+platformRow+'</div>'+menuHTML+'</div>'
     + '<div class="show-move">'+primaryHTML+dnfHTML+'</div>'
     + (hasReact?'<div class="react-area">'+reactionsHTML(s.reactions,'watching',sid)+reactToggle+'</div>':'')
     + '</div>';
@@ -1349,7 +1366,7 @@ function buildWaitingCard(s) {
   var hasReact=reactionsHTML(s.reactions,'watchlist',sid)||reactToggle;
   var platformRow=s.editingPlatform?platformSelect('watchlist',sid,s.platform):'';
 
-  return '<div class="show-card'+(s.hidden?' is-hidden':'')+'"><div class="show-card-top">'+showTile(s)+'<div class="show-info"><div class="show-title">'+s.title+(s.hidden?'<span class="hidden-badge">Hidden from friends</span>':'')+'</div>'+platformRow+'</div><div class="show-actions">'+remoteRating('watchlist',sid,s.rating)+'</div>'+menuHTML+'</div>'
+  return '<div class="show-card'+(s.hidden?' is-hidden':'')+'" id="card-'+sid+'"><div class="show-card-top">'+showTile(s)+'<div class="show-info"><div class="show-title">'+s.title+(s.hidden?'<span class="hidden-badge">Hidden from friends</span>':'')+'</div>'+platformRow+'</div><div class="show-actions">'+remoteRating('watchlist',sid,s.rating)+'</div>'+menuHTML+'</div>'
     + '<div class="show-move"><button class="resume-watching-btn" onclick="resumeWatching(\''+sid+'\')">Resume Watching &#9654;</button><button class="didnt-finish-btn" onclick="markDNFFromWaiting(\''+sid+'\')">Didn&#39;t Finish</button></div>'
     + (hasReact?'<div class="react-area">'+reactionsHTML(s.reactions,'watchlist',sid)+reactToggle+'</div>':'')
     + '</div>';
@@ -1372,7 +1389,7 @@ function buildWatchlistCard(s) {
   var hasReact=reactionsHTML(s.reactions,'watchlist',sid)||reactToggle;
   var platformRow=s.editingPlatform?platformSelect('watchlist',sid,s.platform):'';
 
-  return '<div class="show-card'+(s.hidden?' is-hidden':'')+'"><div class="show-card-top">'+showTile(s)+'<div class="show-info"><div class="show-title">'+s.title+(s.hidden?'<span class="hidden-badge">Hidden from friends</span>':'')+'</div>'+platformRow+'</div>'+menuHTML+'</div>'
+  return '<div class="show-card'+(s.hidden?' is-hidden':'')+'" id="card-'+sid+'"><div class="show-card-top">'+showTile(s)+'<div class="show-info"><div class="show-title">'+s.title+(s.hidden?'<span class="hidden-badge">Hidden from friends</span>':'')+'</div>'+platformRow+'</div>'+menuHTML+'</div>'
     + '<div class="show-move"><button class="btn-start" onclick="moveToWatching(\''+sid+'\')">Watch Now</button><button class="waiting-season-btn" onclick="markWaitingFromList(\''+sid+'\')">Waiting for New Season &#8987;</button></div>'
     + (hasReact?'<div class="react-area">'+reactionsHTML(s.reactions,'watchlist',sid)+reactToggle+'</div>':'')
     + '</div>';
@@ -1418,7 +1435,7 @@ function buildBingedCard(s) {
   var hasReact=reactionsHTML(s.reactions,'watched',sid)||reactToggle;
   var platformRow=s.editingPlatform?platformSelect('watched',sid,s.platform):'';
 
-  return '<div class="show-card'+(s.hidden?' is-hidden':'')+'"><div class="show-card-top">'+showTile(s)+'<div class="show-info"><div class="show-title">'+s.title+(s.hidden?'<span class="hidden-badge">Hidden from friends</span>':'')+'</div>'+platformRow+'</div><div class="show-actions">'+remoteRating('watched',sid,s.rating)+'</div>'+menuHTML+'</div>'
+  return '<div class="show-card'+(s.hidden?' is-hidden':'')+'" id="card-'+sid+'"><div class="show-card-top">'+showTile(s)+'<div class="show-info"><div class="show-title">'+s.title+(s.hidden?'<span class="hidden-badge">Hidden from friends</span>':'')+'</div>'+platformRow+'</div><div class="show-actions">'+remoteRating('watched',sid,s.rating)+'</div>'+menuHTML+'</div>'
     + (hasReact?'<div class="react-area">'+reactionsHTML(s.reactions,'watched',sid)+reactToggle+'</div>':'')
     + '</div>';
 }
@@ -1631,7 +1648,7 @@ function showFriend(id) {
           + quickReactRow('quickReactFR', "'"+f.id+"','"+lk+"','"+s.id+"'"));
         var actions=(lk==='w'||lk==='wd')?remoteStatic(s.rating):'';
         var watchedBadge=lk==='wd'?'<span style="font-size:11px;color:var(--fig);font-weight:600;">&#10003; Binged</span>':'';
-        html+='<div class="show-card"><div class="show-card-top">'+showTile(s)+'<div class="show-info"><div class="show-title">'+s.title+'</div>'+(watchedBadge?'<div style="margin-top:2px;">'+watchedBadge+'</div>':'')+'</div><div class="show-actions">'+actions+'</div></div><div class="react-area">'+rHTML+reactToggle+'</div></div>';
+        html+='<div class="show-card" id="card-'+s.id+'"><div class="show-card-top">'+showTile(s)+'<div class="show-info"><div class="show-title">'+s.title+'</div>'+(watchedBadge?'<div style="margin-top:2px;">'+watchedBadge+'</div>':'')+'</div><div class="show-actions">'+actions+'</div></div><div class="react-area">'+rHTML+reactToggle+'</div></div>';
       });
       html+='</div></div>';
     });
@@ -1667,7 +1684,7 @@ function showFriend(id) {
               var inpId='finp-wd-'+f.id+'-'+s.id;
               var reactToggle=isSelf?'':('<div class="inline-react"><input class="react-input" id="'+inpId+'" placeholder="What did you think? 😊" /><button class="btn-send" onclick="submitFR(\''+f.id+'\',\'wd\',\''+s.id+'\')">Send</button><button class="btn-cancel" onclick="document.getElementById(\''+inpId+'\').value=\'\'">Cancel</button></div>'
                 + quickReactRow('quickReactFR', "'"+f.id+"','wd','"+s.id+"'"));
-              return '<div class="dnf-card"><div class="show-card-top">'+showTile(s)
+              return '<div class="dnf-card" id="card-'+s.id+'"><div class="show-card-top">'+showTile(s)
                 +'<div class="show-info"><div class="show-title">'+s.title+'</div>'
                 +'<div style="margin-top:3px;"><span class="dnf-badge">Didn&#39;t Finish</span>'
                 +'<span style="font-size:11px;color:var(--muted);margin-left:6px;">'+s.platform+'</span>'
@@ -1695,7 +1712,11 @@ function switchLRView(view){
   document.getElementById('toggle-picks').classList.toggle('active',view==='picks');
   document.getElementById('toggle-conversations').classList.toggle('active',view==='conversations');
   if(view==='picks'){document.getElementById('rankings-list').style.display='block';document.getElementById('rank-detail-panel').style.display='none';renderRankings();}
-  if(view==='conversations'){renderConversations(); markConversationsSeen();}
+  // Doesn't mark seen here on open — marking happens when the user actually
+  // leaves Living Room (see showTab), so browsing several items in one visit
+  // (clicking into a friend's room and back, more than once) doesn't quietly
+  // clear the rest of the list before they've looked at it.
+  if(view==='conversations'){renderConversations(); _conversationsViewed = true;}
 }
 
 // ============================================================
@@ -1724,10 +1745,10 @@ function buildConversationsFeed(){
     if(!f)return;
     ['watching','watchlist','watched'].forEach(function(lk){
       (f[lk]||[]).forEach(function(s){
-        if(isNew(s.addedAt)) events.push({type:'added',friendId:f.id,text:'<b>'+escAttr(f.name)+'</b> added '+escAttr(s.title),ts:s.addedAt});
+        if(isNew(s.addedAt)) events.push({type:'added',friendId:f.id,showId:s.id,text:'<b>'+escAttr(f.name)+'</b> added '+escAttr(s.title),ts:s.addedAt});
         (s.reactions||[]).forEach(function(r){
           if(r.reactorId && r.reactorId!==myId && isNew(r.reactedAt)){
-            events.push({type:'comment',friendId:f.id,text:'<b>'+escAttr(r.user)+'</b> commented on '+escAttr(s.title)+': &#8220;'+escAttr(r.text)+'&#8221;',ts:r.reactedAt});
+            events.push({type:'comment',friendId:f.id,showId:s.id,text:'<b>'+escAttr(r.user)+'</b> commented on '+escAttr(s.title)+': &#8220;'+escAttr(r.text)+'&#8221;',ts:r.reactedAt});
           }
         });
       });
@@ -1743,7 +1764,7 @@ function buildConversationsFeed(){
       (s.reactions||[]).forEach(function(r){
         if(r.reactorId && r.reactorId!==myId && isNew(r.reactedAt)){
           var name = friendsById[r.reactorId] ? friendsById[r.reactorId].name : 'Someone';
-          events.push({type:'comment-on-you',list:lk,text:'<b>'+escAttr(name)+'</b> commented on your '+escAttr(s.title)+': &#8220;'+escAttr(r.text)+'&#8221;',ts:r.reactedAt});
+          events.push({type:'comment-on-you',list:lk,showId:s.id,text:'<b>'+escAttr(name)+'</b> commented on your '+escAttr(s.title)+': &#8220;'+escAttr(r.text)+'&#8221;',ts:r.reactedAt});
         }
       });
     });
@@ -1762,15 +1783,27 @@ function renderConversations(){
     return;
   }
   el.innerHTML=events.map(function(e){
-    var icon=e.type==='added'?'&#127871;':'&#128172;';
-    var click=e.friendId?' onclick="showFriend(\''+e.friendId+'\')"':(e.list?' onclick="goToOwnTab(\''+e.list+'\')"':'');
-    return '<div class="conversation-row"'+click+'><div class="conversation-icon">'+icon+'</div><div class="conversation-text">'+e.text+'</div><div class="conversation-time">'+timeAgo(e.ts)+'</div></div>';
+    var icon=e.type==='added'?'&#127881;':'&#128172;';
+    var nav=e.friendId?'showFriend(\''+e.friendId+'\')':(e.list?'goToOwnTab(\''+e.list+'\')':'');
+    var click=nav?' onclick="'+nav+(e.showId?';scrollToShowCard(\''+e.showId+'\')':'')+'"':'';
+    return '<div class="conversation-row type-'+e.type+'"'+click+'><div class="conversation-icon">'+icon+'</div><div class="conversation-text">'+e.text+'</div><div class="conversation-time">'+timeAgo(e.ts)+'</div></div>';
   }).join('');
 }
 
 window.goToOwnTab = function(list){
+  _skipConversationsMarkSeen = true;
   var btn = document.getElementById('btab-'+list);
   if (btn) showTab(list, btn);
+};
+
+window.scrollToShowCard = function(showId){
+  setTimeout(function(){
+    var el = document.getElementById('card-'+showId);
+    if (!el) return;
+    el.scrollIntoView({behavior:'smooth', block:'center'});
+    el.classList.add('flash-highlight');
+    setTimeout(function(){ el.classList.remove('flash-highlight'); }, 1800);
+  }, 60);
 };
 
 function updateConversationsBadge(){
