@@ -149,8 +149,7 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
 .conversation-row.type-comment{border-left:3px solid var(--fig);}
 @keyframes flashHighlight{0%{box-shadow:0 0 0 3px var(--terra);}100%{box-shadow:var(--shadow);}}
 .flash-highlight{animation:flashHighlight 1.8s ease-out;}
-.btn-recommend{background:none;border:none;font-size:15px;cursor:pointer;padding:2px;line-height:1;opacity:0.6;}
-.btn-recommend:hover{opacity:1;}
+.btn-recommend{background:var(--sand);border:none;cursor:pointer;padding:6px 9px;font-size:15px;color:var(--charcoal);border-radius:7px;line-height:1;transition:all 0.2s;}
 .rec-banner{background:linear-gradient(135deg,var(--fig),#8a4a6b);border-radius:var(--radius);padding:14px 16px;margin-bottom:12px;box-shadow:0 4px 14px rgba(107,45,78,0.3);}
 .rec-banner-top{display:flex;gap:12px;align-items:flex-start;}
 .rec-banner-body{flex:1;min-width:0;}
@@ -1660,7 +1659,7 @@ function showFriend(id) {
         var reactToggle=isSelf?'':('<div class="inline-react"><input class="react-input" id="'+inpId+'" placeholder="What did you think? 😊" /><button class="btn-send" onclick="submitFR(\''+f.id+'\',\''+lk+'\',\''+s.id+'\')">Send</button><button class="btn-cancel" onclick="document.getElementById(\''+inpId+'\').value=\'\'">Cancel</button></div>'
           + quickReactRow('quickReactFR', "'"+f.id+"','"+lk+"','"+s.id+"'"));
         var actions=(lk==='w'||lk==='wd')?remoteStatic(s.rating):'';
-        actions+='<button class="btn-recommend" onclick="openRecommendPicker(\''+s.id+'\')" title="Recommend to a friend">&#128228;</button>';
+        actions+='<button class="btn-recommend" onclick="openRecommendPicker(\''+s.id+'\')" title="Recommend to a friend">&#127919;</button>';
         var watchedBadge=lk==='wd'?'<span style="font-size:11px;color:var(--fig);font-weight:600;">&#10003; Binged</span>':'';
         html+='<div class="show-card" id="card-'+s.id+'"><div class="show-card-top">'+showTile(s)+'<div class="show-info"><div class="show-title">'+s.title+'</div>'+(watchedBadge?'<div style="margin-top:2px;">'+watchedBadge+'</div>':'')+'</div><div class="show-actions">'+actions+'</div></div><div class="react-area">'+rHTML+reactToggle+'</div></div>';
       });
