@@ -139,6 +139,9 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
 .toggle-icon{font-size:24px;line-height:1;}
 .lr-toggle-btn.active{background:var(--fig);color:white;border-color:var(--fig);}
 .conv-badge{background:var(--terra);color:white;font-size:10px;font-weight:800;padding:1px 7px;border-radius:10px;margin-left:2px;}
+.lr-search-wrap{margin-bottom:14px;}
+.lr-search-input{width:100%;box-sizing:border-box;background:var(--cream);border:2px solid var(--border);border-radius:var(--radius);padding:10px 14px;font-family:var(--sans);font-size:14px;color:var(--charcoal);outline:none;}
+.lr-search-input:focus{border-color:var(--fig);}
 .conversation-row{display:flex;gap:10px;align-items:flex-start;background:var(--cream);border:1px solid var(--border);border-radius:var(--radius);padding:12px 14px;box-shadow:var(--shadow);margin-bottom:8px;cursor:pointer;transition:border-color 0.15s;}
 .conversation-row:hover{border-color:var(--terra);}
 .conversation-icon{font-size:17px;flex-shrink:0;line-height:1.4;}
@@ -703,13 +706,16 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
         <div id="lr-crew-view">
           <div id="room-ticker" class="room-ticker" style="display:none"></div>
           <div id="top5-banner-wrap"></div>
+          <div class="lr-search-wrap"><input type="text" id="crew-search" class="lr-search-input" placeholder="Search friends..." oninput="renderFriends()" autocomplete="off" /></div>
           <div class="friends-grid" id="friends-grid"></div>
         </div>
         <div id="lr-picks-view" style="display:none">
+          <div class="lr-search-wrap" id="rankings-search-wrap"><input type="text" id="rankings-search" class="lr-search-input" placeholder="Search shows..." oninput="renderRankings()" autocomplete="off" /></div>
           <div id="rankings-list"></div>
           <div id="rank-detail-panel" style="display:none"></div>
         </div>
         <div id="lr-showtalk-view" style="display:none">
+          <div class="lr-search-wrap" id="showtalk-search-wrap"><input type="text" id="showtalk-search" class="lr-search-input" placeholder="Search shows..." oninput="renderShowTalk()" autocomplete="off" /></div>
           <div id="showtalk-list"></div>
           <div id="showtalk-detail-panel" style="display:none"></div>
         </div>
@@ -1616,7 +1622,14 @@ function renderFriends() {
     document.getElementById('friends-grid').innerHTML=selfTile+'<div class="empty" style="grid-column:1/-1;"><div class="empty-icon">&#8987;</div>Loading your Living Room&hellip;</div>';
     return;
   }
+  var q=((document.getElementById('crew-search')||{}).value||'').trim().toLowerCase();
   var sorted=state.friends.slice().sort(function(a,b){return a.name.localeCompare(b.name);});
+  if(q) sorted=sorted.filter(function(f){return f.name.toLowerCase().indexOf(q)!==-1;});
+  if(q && !sorted.length){
+    document.getElementById('friends-grid').innerHTML=selfTile+'<div class="empty" style="grid-column:1/-1;"><div class="empty-icon">&#128269;</div>No friends match "'+escAttr(q)+'".</div>';
+    updateConversationsBadge();
+    return;
+  }
   document.getElementById('friends-grid').innerHTML=selfTile+sorted.map(function(f){
     var fRoom=f.room||'tuscany'; var fColor=ROOMS[fRoom]?ROOMS[fRoom].color:f.color;
     var fInitials=f.name.split(' ').map(function(x){return x[0];}).join('');
@@ -1883,11 +1896,22 @@ function buildShowTalk(){
   return list;
 }
 
+var _showTalkListCache = [];
 function renderShowTalk(){
   var el=document.getElementById('showtalk-list');
   if(!el)return;
+  var searchWrap=document.getElementById('showtalk-search-wrap');
+  if(searchWrap)searchWrap.style.display='block';
   var list=buildShowTalk();
-  if(!list.length){el.innerHTML='<div class="empty"><div class="empty-icon">&#128483;&#65039;</div>No comments yet &mdash; be the first to say something about a show.</div>';return;}
+  var q=((document.getElementById('showtalk-search')||{}).value||'').trim().toLowerCase();
+  if(q) list=list.filter(function(s){return s.title.toLowerCase().indexOf(q)!==-1;});
+  _showTalkListCache=list;
+  if(!list.length){
+    el.innerHTML = q
+      ? '<div class="empty"><div class="empty-icon">&#128269;</div>No shows match "'+escAttr(q)+'".</div>'
+      : '<div class="empty"><div class="empty-icon">&#128483;&#65039;</div>No comments yet &mdash; be the first to say something about a show.</div>';
+    return;
+  }
   el.innerHTML=list.map(function(s,i){
     var thumb=s.poster_path
       ? '<img src="'+TMDB_IMG+s.poster_path+'" style="width:46px;height:46px;border-radius:8px;object-fit:cover;flex-shrink:0;margin-right:12px;" />'
@@ -1907,7 +1931,7 @@ function renderShowTalk(){
 var _showTalkScrollY = 0;
 function showShowTalkDetail(idx){
   _showTalkScrollY = window.scrollY;
-  var list=buildShowTalk(); var s=list[idx];
+  var s=_showTalkListCache[idx];
   if(!s)return;
   var panel=document.getElementById('showtalk-detail-panel');
   var rows=s.comments.map(function(c){
@@ -1936,10 +1960,12 @@ function showShowTalkDetail(idx){
     +'<div class="rank-detail-sub">'+s.comments.length+' comment'+(s.comments.length===1?'':'s')+'</div>'
     +rows+'</div>';
   document.getElementById('showtalk-list').style.display='none';
+  var searchWrap=document.getElementById('showtalk-search-wrap');
+  if(searchWrap)searchWrap.style.display='none';
   panel.scrollIntoView({behavior:'smooth'});
 }
 
-function backToShowTalk(){document.getElementById('showtalk-detail-panel').style.display='none';document.getElementById('showtalk-list').style.display='block';window.scrollTo(0,_showTalkScrollY);}
+function backToShowTalk(){document.getElementById('showtalk-detail-panel').style.display='none';document.getElementById('showtalk-list').style.display='block';var searchWrap=document.getElementById('showtalk-search-wrap');if(searchWrap)searchWrap.style.display='block';window.scrollTo(0,_showTalkScrollY);}
 
 window.goToOwnTab = function(list){
   _skipConversationsMarkSeen = true;
@@ -2157,12 +2183,23 @@ function buildRankings(){
   return list.slice(0, 25);
 }
 
+var _rankingsListCache = [];
 function renderRankings(){
   var el=document.getElementById('rankings-list');
   document.getElementById('rank-detail-panel').style.display='none';
+  var searchWrap=document.getElementById('rankings-search-wrap');
+  if(searchWrap)searchWrap.style.display='block';
   if (!state.friendsLoaded) { el.innerHTML='<div class="empty"><div class="empty-icon">&#8987;</div>Loading rankings&hellip;</div>'; return; }
   var list=buildRankings();
-  if(!list.length){el.innerHTML='<div class="empty"><div class="empty-icon">&#128252;</div>No ratings yet from the room.</div>';return;}
+  var q=((document.getElementById('rankings-search')||{}).value||'').trim().toLowerCase();
+  if(q) list=list.filter(function(s){return s.title.toLowerCase().indexOf(q)!==-1;});
+  _rankingsListCache=list;
+  if(!list.length){
+    el.innerHTML = q
+      ? '<div class="empty"><div class="empty-icon">&#128269;</div>No shows match "'+escAttr(q)+'".</div>'
+      : '<div class="empty"><div class="empty-icon">&#128252;</div>No ratings yet from the room.</div>';
+    return;
+  }
   el.innerHTML=list.map(function(s,i){
     var rank=i+1; var isGold=rank<=3;
     var thumb=s.poster_path
@@ -2185,7 +2222,8 @@ function renderRankings(){
 var _rankScrollY = 0;
 function showRankDetail(idx){
   _rankScrollY = window.scrollY;
-  var list=buildRankings(); var s=list[idx];
+  var s=_rankingsListCache[idx];
+  if(!s)return;
   var panel=document.getElementById('rank-detail-panel');
   var remotes=''; for(var n=1;n<=5;n++){var lit=n<=Math.floor(s.avg);remotes+='<span style="opacity:'+(lit?'1':'0.18')+';display:inline-block;">'+remoteIcon(16,lit)+'</span>';}
   var rows=s.raters.slice().sort(function(a,b){return (b.isMe?1:0)-(a.isMe?1:0)||b.rating-a.rating;}).map(function(r){
@@ -2213,10 +2251,12 @@ function showRankDetail(idx){
     +'<div class="rank-detail-sub">rated by '+s.count+' in the room</div>'
     +rows+'</div>';
   document.getElementById('rankings-list').style.display='none';
+  var searchWrap=document.getElementById('rankings-search-wrap');
+  if(searchWrap)searchWrap.style.display='none';
   panel.scrollIntoView({behavior:'smooth'});
 }
 
-function backToRankings(){document.getElementById('rank-detail-panel').style.display='none';document.getElementById('rankings-list').style.display='block';window.scrollTo(0,_rankScrollY);}
+function backToRankings(){document.getElementById('rank-detail-panel').style.display='none';document.getElementById('rankings-list').style.display='block';var searchWrap=document.getElementById('rankings-search-wrap');if(searchWrap)searchWrap.style.display='block';window.scrollTo(0,_rankScrollY);}
 
 function copyInvite(){
   var btn=document.getElementById('copy-btn');
