@@ -134,7 +134,7 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
 .friend-header{display:flex;align-items:center;gap:14px;margin-bottom:20px;}
 .friend-header-av{width:54px;height:54px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:22px;color:white;}
 
-.lr-toggle{display:flex;gap:14px;margin-bottom:24px;}
+.lr-toggle{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:24px;}
 .lr-toggle-btn{flex:1;background:var(--cream);border:2px solid var(--border);padding:14px 10px;border-radius:var(--radius);font-family:var(--sans);font-size:13px;font-weight:700;color:var(--muted);cursor:pointer;transition:all 0.2s;text-align:center;box-shadow:var(--shadow);display:flex;flex-direction:column;align-items:center;gap:6px;}
 .toggle-icon{font-size:24px;line-height:1;}
 .lr-toggle-btn.active{background:var(--fig);color:white;border-color:var(--fig);}
@@ -697,6 +697,7 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
         <div class="lr-toggle">
           <button class="lr-toggle-btn active" id="toggle-crew" onclick="switchLRView('crew')"><span class="toggle-icon">🛋️</span>Your Crowd</button>
           <button class="lr-toggle-btn" id="toggle-picks" onclick="switchLRView('picks')"><span class="toggle-icon">&#127942;</span>Friends' Favorites</button>
+          <button class="lr-toggle-btn" id="toggle-showtalk" onclick="switchLRView('showtalk')"><span class="toggle-icon">&#128483;&#65039;</span>Show Talk</button>
           <button class="lr-toggle-btn" id="toggle-conversations" onclick="switchLRView('conversations')"><span class="toggle-icon">&#128172;</span>Conversations<span class="conv-badge" id="conv-badge" style="display:none;"></span></button>
         </div>
         <div id="lr-crew-view">
@@ -707,6 +708,10 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
         <div id="lr-picks-view" style="display:none">
           <div id="rankings-list"></div>
           <div id="rank-detail-panel" style="display:none"></div>
+        </div>
+        <div id="lr-showtalk-view" style="display:none">
+          <div id="showtalk-list"></div>
+          <div id="showtalk-detail-panel" style="display:none"></div>
         </div>
         <div id="lr-conversations-view" style="display:none">
           <div id="conversations-list"></div>
@@ -1727,11 +1732,14 @@ function backToFriends(){document.getElementById('friends-view').style.display='
 function switchLRView(view){
   document.getElementById('lr-crew-view').style.display=view==='crew'?'block':'none';
   document.getElementById('lr-picks-view').style.display=view==='picks'?'block':'none';
+  document.getElementById('lr-showtalk-view').style.display=view==='showtalk'?'block':'none';
   document.getElementById('lr-conversations-view').style.display=view==='conversations'?'block':'none';
   document.getElementById('toggle-crew').classList.toggle('active',view==='crew');
   document.getElementById('toggle-picks').classList.toggle('active',view==='picks');
+  document.getElementById('toggle-showtalk').classList.toggle('active',view==='showtalk');
   document.getElementById('toggle-conversations').classList.toggle('active',view==='conversations');
   if(view==='picks'){document.getElementById('rankings-list').style.display='block';document.getElementById('rank-detail-panel').style.display='none';renderRankings();}
+  if(view==='showtalk'){document.getElementById('showtalk-list').style.display='block';document.getElementById('showtalk-detail-panel').style.display='none';renderShowTalk();}
   // Doesn't mark seen here on open — marking happens when the user actually
   // leaves Living Room (see showTab), so browsing several items in one visit
   // (clicking into a friend's room and back, more than once) doesn't quietly
@@ -1825,6 +1833,113 @@ function renderConversations(){
     return '<div class="conversation-row type-'+e.type+'"'+click+'><div class="conversation-icon">'+icon+'</div><div class="conversation-text">'+e.text+'</div><div class="conversation-time">'+timeAgo(e.ts)+'</div></div>';
   }).join('');
 }
+
+// ============================================================
+// SHOW TALK — every show with at least one comment, A-Z, so you can
+// browse "what's everyone saying" per-show instead of a live feed
+// (that's Conversations). Pools comments across watching/watchlist/
+// watched, both your shows and friends', into one thread per show.
+// ============================================================
+
+function buildShowTalk(){
+  var shows={};
+  var friendsById={};
+  (state.friends||[]).forEach(function(f){ if(f) friendsById[f.id]=f; });
+  var myId = state.user ? state.user.id : null;
+  function nameFor(reactorId){
+    if (reactorId===myId) return 'You';
+    return friendsById[reactorId] ? friendsById[reactorId].name : 'Someone';
+  }
+  function colorFor(reactorId,isMe){
+    if(isMe) return state.user && ROOMS[state.user.room||'tuscany'] ? ROOMS[state.user.room||'tuscany'].color : '#C4622D';
+    var f=friendsById[reactorId];
+    return f ? (ROOMS[f.room||'tuscany']?ROOMS[f.room||'tuscany'].color:'#888') : '#aaa';
+  }
+  function initialsFor(reactorId,isMe){
+    if(isMe) return (state.user&&state.user.initials)||'Y';
+    var f=friendsById[reactorId];
+    return f&&f.name ? f.name.split(' ').map(function(x){return x[0]||'';}).join('') : '?';
+  }
+  function addShow(s){
+    if(!s||!s.title||!(s.reactions&&s.reactions.length))return;
+    var key=s.title.toLowerCase().trim();
+    if(!shows[key])shows[key]={title:s.title,platform:s.platform,poster_path:s.poster_path,tmdb_id:s.tmdb_id,comments:[]};
+    if(!shows[key].poster_path&&s.poster_path)shows[key].poster_path=s.poster_path;
+    if(!shows[key].tmdb_id&&s.tmdb_id)shows[key].tmdb_id=s.tmdb_id;
+    (s.reactions||[]).forEach(function(r){
+      if(!r.reactorId||!r.text)return;
+      var isMe=r.reactorId===myId;
+      shows[key].comments.push({name:nameFor(r.reactorId),color:colorFor(r.reactorId,isMe),initials:initialsFor(r.reactorId,isMe),text:r.text,reactedAt:r.reactedAt,isMe:isMe,reactorId:r.reactorId});
+    });
+  }
+  (state.friends||[]).forEach(function(f){
+    if(!f)return;
+    ['watching','watchlist','watched'].forEach(function(lk){ (f[lk]||[]).forEach(addShow); });
+  });
+  ['watching','watchlist','watched'].forEach(function(lk){ (state[lk]||[]).forEach(addShow); });
+  var list=Object.values(shows).filter(function(s){return s.comments.length>0;});
+  list.forEach(function(s){ s.comments.sort(function(a,b){return new Date(b.reactedAt)-new Date(a.reactedAt);}); });
+  list.sort(function(a,b){return a.title.toLowerCase().localeCompare(b.title.toLowerCase());});
+  return list;
+}
+
+function renderShowTalk(){
+  var el=document.getElementById('showtalk-list');
+  if(!el)return;
+  var list=buildShowTalk();
+  if(!list.length){el.innerHTML='<div class="empty"><div class="empty-icon">&#128483;&#65039;</div>No comments yet &mdash; be the first to say something about a show.</div>';return;}
+  el.innerHTML=list.map(function(s,i){
+    var thumb=s.poster_path
+      ? '<img src="'+TMDB_IMG+s.poster_path+'" style="width:46px;height:46px;border-radius:8px;object-fit:cover;flex-shrink:0;margin-right:12px;" />'
+      : '<div style="width:46px;height:46px;border-radius:8px;background:var(--olive);flex-shrink:0;margin-right:12px;display:flex;align-items:center;justify-content:center;font-size:18px;">&#128252;</div>';
+    return '<div class="rank-card" onclick="showShowTalkDetail('+i+')">'
+      +thumb
+      +'<div class="rank-info">'
+      +'<div class="rank-title-text">'+(s.title||'')+'</div>'
+      +'<div class="rank-meta-line">'
+      +(s.platform?'<span class="rank-platform">'+s.platform+'</span>':'')
+      +'<span class="rank-count-inline">'+s.comments.length+' comment'+(s.comments.length===1?'':'s')+'</span>'
+      +'</div></div>'
+      +'</div>';
+  }).join('');
+}
+
+var _showTalkScrollY = 0;
+function showShowTalkDetail(idx){
+  _showTalkScrollY = window.scrollY;
+  var list=buildShowTalk(); var s=list[idx];
+  if(!s)return;
+  var panel=document.getElementById('showtalk-detail-panel');
+  var rows=s.comments.map(function(c){
+    var nameAttr = (!c.isMe && c.reactorId) ? ' class="rank-detail-name rank-detail-name-link" onclick="showFriend(\''+c.reactorId+'\')"' : ' class="rank-detail-name"';
+    return '<div class="rank-detail-row" style="align-items:flex-start;">'
+      +'<div class="rank-detail-av" style="background:'+c.color+'">'+c.initials+'</div>'
+      +'<div style="flex:1;min-width:0;">'
+      +'<div'+nameAttr+'>'+(c.isMe?'You':c.name)+'</div>'
+      +'<div class="conversation-text">'+escAttr(c.text)+'</div>'
+      +'<div class="conversation-time">'+timeAgo(c.reactedAt)+'</div>'
+      +'</div></div>';
+  }).join('');
+  var clickAttr=s.tmdb_id?' class="poster-clickable" onclick="openShowDetails('+s.tmdb_id+')"':'';
+  var thumb=s.poster_path
+    ? '<img src="'+TMDB_IMG+s.poster_path+'"'+clickAttr+' style="width:84px;height:84px;border-radius:10px;object-fit:cover;flex-shrink:0;" />'
+    : '<div'+clickAttr+' style="width:84px;height:84px;border-radius:10px;background:var(--olive);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:30px;">&#128252;</div>';
+  panel.style.display='block';
+  panel.innerHTML='<button class="rank-close" onclick="backToShowTalk()">← Back to Show Talk</button>'
+    +'<div class="rank-detail">'
+    +'<div style="display:flex;gap:12px;align-items:flex-start;margin-bottom:4px;">'
+    +thumb
+    +'<div style="flex:1;min-width:0;">'
+    +'<div class="rank-detail-title">'+s.title+'</div>'
+    +(s.platform?'<span class="rank-platform" style="margin:0 0 6px 0;display:inline-block;">'+s.platform+'</span>':'')
+    +'</div></div>'
+    +'<div class="rank-detail-sub">'+s.comments.length+' comment'+(s.comments.length===1?'':'s')+'</div>'
+    +rows+'</div>';
+  document.getElementById('showtalk-list').style.display='none';
+  panel.scrollIntoView({behavior:'smooth'});
+}
+
+function backToShowTalk(){document.getElementById('showtalk-detail-panel').style.display='none';document.getElementById('showtalk-list').style.display='block';window.scrollTo(0,_showTalkScrollY);}
 
 window.goToOwnTab = function(list){
   _skipConversationsMarkSeen = true;
