@@ -3952,6 +3952,8 @@ async function loadAndRenderFriends() {
     state.friendsLoaded = true;
     renderFriends();
     renderRankings();
+    renderShowTalk();
+    renderConversations();
   } catch(e) {
     console.error('Error loading friends:', e);
     state.friendsLoaded = true;
