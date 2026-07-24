@@ -1912,7 +1912,9 @@ function _showTalkDebugLine(){
   ['watching','watchlist','watched'].forEach(function(lk){
     (state[lk]||[]).forEach(function(s){ myShows++; myComments+=(s.reactions||[]).length; });
   });
-  return '<div style="font-size:10px;color:#999;padding:4px 8px;font-family:monospace;">DEBUG friendsLoaded='+state.friendsLoaded+' friends='+((state.friends||[]).length)+' friendShows='+totalFriendShows+' friendComments='+totalFriendComments+' myShows='+myShows+' myComments='+myComments+'</div>';
+  var rx=window._debugRx||{};
+  return '<div style="font-size:10px;color:#999;padding:4px 8px;font-family:monospace;">DEBUG friendsLoaded='+state.friendsLoaded+' friends='+((state.friends||[]).length)+' friendShows='+totalFriendShows+' friendComments='+totalFriendComments+' myShows='+myShows+' myComments='+myComments+'</div>'
+    + '<div style="font-size:10px;color:#999;padding:0 8px 4px;font-family:monospace;">DEBUG2 showIds='+rx.showIdsCount+' rawReactions='+rx.rxCount+' error='+(rx.error||'none')+(rx.note?' note='+rx.note:'')+'</div>';
 }
 function renderShowTalk(){
   var el=document.getElementById('showtalk-list');
@@ -2766,8 +2768,11 @@ async function getFriendsWithShows() {
   var allReactions = [];
   if (shows && shows.length) {
     var showIds = shows.map(function(s) { return s.id; });
-    var { data: rxData } = await sb.from('reactions').select('*').in('show_id', showIds);
-    allReactions = rxData || [];
+    var rxRes = await sb.from('reactions').select('*').in('show_id', showIds);
+    allReactions = rxRes.data || [];
+    window._debugRx = { showIdsCount: showIds.length, rxCount: allReactions.length, error: rxRes.error ? (rxRes.error.message || JSON.stringify(rxRes.error)) : null };
+  } else {
+    window._debugRx = { showIdsCount: 0, rxCount: 0, error: null, note: 'no shows fetched' };
   }
 
   var userLookup = {};
