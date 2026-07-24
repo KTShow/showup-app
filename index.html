@@ -1327,6 +1327,7 @@ function buildDNFCard(s) {
   var menuHTML = '<div class="card-menu-wrap">'
     + '<button class="btn-more" onclick="toggleCardMenu(this)" title="More">&#8942;</button>'
     + '<div class="card-menu">'
+    + '<button class="card-menu-item" onclick="moveDNFToBinged(\''+sid+'\');closeCardMenus();">&#127871; Move to Binged</button>'
     + '<button class="card-menu-item" onclick="moveToWaiting(\'watched\',\''+sid+'\');closeCardMenus();">Waiting for New Season</button>'
     + '<button class="card-menu-item" onclick="toggleHide(\'watched\',\''+sid+'\');closeCardMenus();">'+hideLabel+'</button>'
     + '<button class="card-menu-item" onclick="togglePlatEdit(\'watched\',\''+sid+'\');closeCardMenus();">Edit streaming service</button>'
@@ -3364,11 +3365,13 @@ window.addShow = function(list) {
 
 var _moveWaitingPending = null;
 var _moveToWatchingPending = null;
+var _moveDNFToBingedPending = null;
 
 window.cancelAddShow = function() {
   _addConfirmPending = null;
   _moveWaitingPending = null;
   _moveToWatchingPending = null;
+  _moveDNFToBingedPending = null;
   document.getElementById('add-confirm-modal').classList.remove('active');
 };
 
@@ -3401,6 +3404,13 @@ window.confirmAddShow = async function() {
     _moveToWatchingPending = null;
     document.getElementById('add-confirm-modal').classList.remove('active');
     _doMoveToWatchingAgain(mwa.list, mwa.id);
+    return;
+  }
+  if (_moveDNFToBingedPending) {
+    var mdb = _moveDNFToBingedPending;
+    _moveDNFToBingedPending = null;
+    document.getElementById('add-confirm-modal').classList.remove('active');
+    _doMoveDNFToBinged(mdb);
     return;
   }
   var pending = _addConfirmPending;
@@ -3625,6 +3635,27 @@ async function _doMoveToWaiting(list, id) {
   renderList(list);
   renderList('watchlist');
   try { await updateShowStatus(id, 'watchlist', { waiting_for_season: true, dnf: false }); } catch(e) { console.error('moveToWaiting error:', e); }
+}
+
+// Kebab-menu shortcut on a Didn't Finish card, for shows marked DNF by
+// mistake — un-marks it so it moves from the DNF section into the regular
+// Already Binged section, without leaving the Binged tab. Confirms first,
+// same reasoning as moveToWaiting: icon-only action, silently changes section.
+window.moveDNFToBinged = function(id) {
+  var s = state.watched.find(function(x) { return x.id === id; });
+  if (!s) return;
+  _moveDNFToBingedPending = id;
+  document.getElementById('add-confirm-title').textContent = s.title;
+  document.getElementById('add-confirm-sub').textContent = 'Move to Binged?';
+  document.getElementById('add-confirm-modal').classList.add('active');
+};
+
+async function _doMoveDNFToBinged(id) {
+  var s = state.watched.find(function(x) { return x.id === id; });
+  if (!s) return;
+  s.dnf = false;
+  renderList('watched');
+  try { await updateShowStatus(id, 'watched', { dnf: false }); } catch(e) { console.error('moveDNFToBinged error:', e); }
 }
 
 // Shortcut from Binged/DNF straight back into active Watching. Confirms
