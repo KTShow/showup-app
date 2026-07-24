@@ -1384,7 +1384,6 @@ function buildWaitingCard(s) {
   var menuHTML = '<div class="card-menu-wrap">'
     + '<button class="btn-more" onclick="toggleCardMenu(this)" title="More">&#8942;</button>'
     + '<div class="card-menu">'
-    + '<button class="card-menu-item" onclick="moveToBinged(\'watchlist\',\''+sid+'\');closeCardMenus();">&#127871; Move to Binged</button>'
     + '<button class="card-menu-item" onclick="toggleHide(\'watchlist\',\''+sid+'\');closeCardMenus();">'+hideLabel+'</button>'
     + '<button class="card-menu-item" onclick="togglePlatEdit(\'watchlist\',\''+sid+'\');closeCardMenus();">Edit streaming service</button>'
     + '<button class="card-menu-item danger" onclick="removeShow(\'watchlist\',\''+sid+'\');closeCardMenus();">Remove</button>'
@@ -1408,7 +1407,6 @@ function buildWatchlistCard(s) {
   var menuHTML = '<div class="card-menu-wrap">'
     + '<button class="btn-more" onclick="toggleCardMenu(this)" title="More">&#8942;</button>'
     + '<div class="card-menu">'
-    + '<button class="card-menu-item" onclick="moveToBinged(\'watchlist\',\''+sid+'\');closeCardMenus();">&#127871; Move to Binged</button>'
     + '<button class="card-menu-item" onclick="toggleHide(\'watchlist\',\''+sid+'\');closeCardMenus();">'+hideLabel+'</button>'
     + '<button class="card-menu-item" onclick="togglePlatEdit(\'watchlist\',\''+sid+'\');closeCardMenus();">Edit streaming service</button>'
     + '<button class="card-menu-item danger" onclick="removeShow(\'watchlist\',\''+sid+'\');closeCardMenus();">Remove</button>'
@@ -1715,6 +1713,9 @@ function showFriend(id) {
     +cityLine+'</div></div>'
     +'<div style="margin:24px 0 12px;background:var(--fig);color:white;padding:10px 18px;border-radius:8px;font-family:var(--serif);font-size:15px;font-weight:700;letter-spacing:0.2px;display:flex;align-items:center;gap:8px;">&#128250; On Right Now</div>'+fGrouped(f.watching.filter(function(x){return !x.hidden;}),'w')
     +'<div style="margin:24px 0 12px;background:var(--fig);color:white;padding:10px 18px;border-radius:8px;font-family:var(--serif);font-size:15px;font-weight:700;letter-spacing:0.2px;display:flex;align-items:center;gap:8px;">🛋️ Saving a Seat</div>'+fGrouped(f.watchlist.filter(function(x){return !x.hidden&&!x.waitingForSeason;}),'wl')
+  +(f.watchlist&&f.watchlist.filter(function(x){return x.waitingForSeason&&!x.hidden;}).length
+    ? '<div style="margin:24px 0 12px;background:var(--fig);color:white;padding:10px 18px;border-radius:8px;font-family:var(--serif);font-size:15px;font-weight:700;letter-spacing:0.2px;display:flex;align-items:center;gap:8px;">&#8987; Waiting for New Season</div>'+fGrouped(f.watchlist.filter(function(x){return x.waitingForSeason&&!x.hidden;}),'wl')
+    : '')
   +(f.watched&&f.watched.length
     ? '<div style="margin:24px 0 12px;background:var(--fig);color:white;padding:10px 18px;border-radius:8px;font-family:var(--serif);font-size:15px;font-weight:700;letter-spacing:0.2px;display:flex;align-items:center;gap:8px;">&#128252; Already Binged</div>'+fGrouped(f.watched.filter(function(x){return !x.dnf&&!x.hidden;}),'wd')
       +(f.watched.filter(function(x){return x.dnf;}).length
@@ -1734,9 +1735,6 @@ function showFriend(id) {
                 +'</div>';
             }).join('')+'</div>'
         : '')
-    : '')
-  +(f.watchlist&&f.watchlist.filter(function(x){return x.waitingForSeason&&!x.hidden;}).length
-    ? '<div style="margin:24px 0 12px;background:var(--fig);color:white;padding:10px 18px;border-radius:8px;font-family:var(--serif);font-size:15px;font-weight:700;letter-spacing:0.2px;display:flex;align-items:center;gap:8px;">&#8987; Waiting for New Season</div>'+fGrouped(f.watchlist.filter(function(x){return x.waitingForSeason&&!x.hidden;}),'wl')
     : '')
   + top5HTML
   + '<div style="margin-top:24px;text-align:center;"><button class="back-btn" onclick="backToFriends()">&#8592; Back to Living Room</button></div>';
@@ -2767,7 +2765,7 @@ async function getFriendsWithShows() {
     var ku = userLookup[r.user_id] || { name: 'Someone', initials: '?', color: '#aaa' };
     return { id: r.id, reactorId: r.user_id, user: ku.name, initials: ku.initials, color: ku.color, text: r.text, sentiment: r.sentiment, reactedAt: r.reacted_at };
   }
-  function normShow(s) { var rx = allReactions.filter(function(r){ return r.show_id === s.id; }); return Object.assign({}, s, { reactions: rx.map(normReaction), showReact: false }); }
+  function normShow(s) { var rx = allReactions.filter(function(r){ return r.show_id === s.id; }); return Object.assign({}, s, { reactions: rx.map(normReaction), showReact: false, waitingForSeason: s.waiting_for_season || false }); }
 
   return allUsers.map(function(u) {
     var friendShows = (shows || []).filter(function(s) { return s.user_id === u.id; });
@@ -3366,13 +3364,11 @@ window.addShow = function(list) {
 
 var _moveWaitingPending = null;
 var _moveToWatchingPending = null;
-var _moveToBingedPending = null;
 
 window.cancelAddShow = function() {
   _addConfirmPending = null;
   _moveWaitingPending = null;
   _moveToWatchingPending = null;
-  _moveToBingedPending = null;
   document.getElementById('add-confirm-modal').classList.remove('active');
 };
 
@@ -3405,13 +3401,6 @@ window.confirmAddShow = async function() {
     _moveToWatchingPending = null;
     document.getElementById('add-confirm-modal').classList.remove('active');
     _doMoveToWatchingAgain(mwa.list, mwa.id);
-    return;
-  }
-  if (_moveToBingedPending) {
-    var mb = _moveToBingedPending;
-    _moveToBingedPending = null;
-    document.getElementById('add-confirm-modal').classList.remove('active');
-    _doMoveToBinged(mb.list, mb.id);
     return;
   }
   var pending = _addConfirmPending;
@@ -3636,31 +3625,6 @@ async function _doMoveToWaiting(list, id) {
   renderList(list);
   renderList('watchlist');
   try { await updateShowStatus(id, 'watchlist', { waiting_for_season: true, dnf: false }); } catch(e) { console.error('moveToWaiting error:', e); }
-}
-
-// Kebab-menu shortcut from My List (active or Waiting for New Season) straight
-// to Binged, for shows added to the wrong list by mistake. Confirms first —
-// same reasoning as moveToWaiting: icon-only action, silently changes tabs.
-window.moveToBinged = function(list, id) {
-  var s = state[list].find(function(x) { return x.id === id; });
-  if (!s) return;
-  _moveToBingedPending = { list: list, id: id };
-  document.getElementById('add-confirm-title').textContent = s.title;
-  document.getElementById('add-confirm-sub').textContent = 'Move to Binged?';
-  document.getElementById('add-confirm-modal').classList.add('active');
-};
-
-async function _doMoveToBinged(list, id) {
-  var idx = state[list].findIndex(function(x) { return x.id === id; });
-  if (idx === -1) return;
-  var s = state[list].splice(idx, 1)[0];
-  s.waitingForSeason = false;
-  s.dnf = false;
-  state.watched.push(s);
-  renderList(list);
-  renderList('watched');
-  try { await updateShowStatus(id, 'watched', { waiting_for_season: false, dnf: false, moved_to_binged_at: new Date().toISOString() }); } catch(e) { console.error('moveToBinged error:', e); }
-  openDWM(s);
 }
 
 // Shortcut from Binged/DNF straight back into active Watching. Confirms
