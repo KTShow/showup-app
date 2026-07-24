@@ -1914,7 +1914,7 @@ function _showTalkDebugLine(){
   });
   var rx=window._debugRx||{};
   return '<div style="font-size:10px;color:#999;padding:4px 8px;font-family:monospace;">DEBUG friendsLoaded='+state.friendsLoaded+' friends='+((state.friends||[]).length)+' friendShows='+totalFriendShows+' friendComments='+totalFriendComments+' myShows='+myShows+' myComments='+myComments+'</div>'
-    + '<div style="font-size:10px;color:#999;padding:0 8px 4px;font-family:monospace;">DEBUG2 showIds='+rx.showIdsCount+' rawReactions='+rx.rxCount+' error='+(rx.error||'none')+(rx.note?' note='+rx.note:'')+'</div>';
+    + '<div style="font-size:10px;color:#999;padding:0 8px 4px;font-family:monospace;">DEBUG2 showIds='+rx.showIdsCount+' chunks='+rx.chunkCount+' rawReactions='+rx.rxCount+' error='+(rx.error||'none')+(rx.note?' note='+rx.note:'')+'</div>';
 }
 function renderShowTalk(){
   var el=document.getElementById('showtalk-list');
@@ -2767,10 +2767,18 @@ async function getFriendsWithShows() {
 
   var allReactions = [];
   if (shows && shows.length) {
+    // A single .in() request listing every friend show id can exceed a
+    // request-size limit once a real session's auth header is attached
+    // (confirmed via a "bad request" error on ~600+ ids) — batching avoids
+    // that regardless of the exact limit, and scales as the room grows.
     var showIds = shows.map(function(s) { return s.id; });
-    var rxRes = await sb.from('reactions').select('*').in('show_id', showIds);
-    allReactions = rxRes.data || [];
-    window._debugRx = { showIdsCount: showIds.length, rxCount: allReactions.length, error: rxRes.error ? (rxRes.error.message || JSON.stringify(rxRes.error)) : null };
+    var CHUNK = 150;
+    var chunks = [];
+    for (var ci = 0; ci < showIds.length; ci += CHUNK) chunks.push(showIds.slice(ci, ci + CHUNK));
+    var rxResults = await Promise.all(chunks.map(function(c) { return sb.from('reactions').select('*').in('show_id', c); }));
+    var rxErrors = [];
+    rxResults.forEach(function(r) { if (r.error) rxErrors.push(r.error.message || JSON.stringify(r.error)); if (r.data) allReactions = allReactions.concat(r.data); });
+    window._debugRx = { showIdsCount: showIds.length, rxCount: allReactions.length, chunkCount: chunks.length, error: rxErrors.length ? rxErrors.join(' | ') : null };
   } else {
     window._debugRx = { showIdsCount: 0, rxCount: 0, error: null, note: 'no shows fetched' };
   }
