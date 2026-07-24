@@ -1877,12 +1877,19 @@ function buildShowTalk(){
     var f=friendsById[reactorId];
     return f&&f.name ? f.name.split(' ').map(function(x){return x[0]||'';}).join('') : '?';
   }
-  function addShow(s){
+  function addShow(s,owner){
     if(!s||!s.title||!(s.reactions&&s.reactions.length))return;
     var key=s.title.toLowerCase().trim();
-    if(!shows[key])shows[key]={title:s.title,platform:s.platform,poster_path:s.poster_path,tmdb_id:s.tmdb_id,comments:[]};
+    if(!shows[key])shows[key]={title:s.title,platform:s.platform,poster_path:s.poster_path,tmdb_id:s.tmdb_id,comments:[],ratings:[]};
     if(!shows[key].poster_path&&s.poster_path)shows[key].poster_path=s.poster_path;
     if(!shows[key].tmdb_id&&s.tmdb_id)shows[key].tmdb_id=s.tmdb_id;
+    if(s.rating) shows[key].ratings.push(s.rating);
+    // Prefer the current user's own copy of the show as the react target;
+    // fall back to whichever friend's copy we saw first so the box still works
+    // even when the user hasn't added the show themselves.
+    if(owner&&(!shows[key].target||owner.type==='self')){
+      shows[key].target = owner.type==='self' ? {mine:true,list:owner.list,id:s.id} : {mine:false,friendId:owner.friendId,list:owner.list,id:s.id};
+    }
     (s.reactions||[]).forEach(function(r){
       if(!r.reactorId||!r.text)return;
       var isMe=r.reactorId===myId;
@@ -1891,11 +1898,15 @@ function buildShowTalk(){
   }
   (state.friends||[]).forEach(function(f){
     if(!f)return;
-    ['watching','watchlist','watched'].forEach(function(lk){ (f[lk]||[]).forEach(addShow); });
+    ['watching','watchlist','watched'].forEach(function(lk){ (f[lk]||[]).forEach(function(s){ addShow(s,{type:'friend',friendId:f.id,list:lk}); }); });
   });
-  ['watching','watchlist','watched'].forEach(function(lk){ (state[lk]||[]).forEach(addShow); });
+  ['watching','watchlist','watched'].forEach(function(lk){ (state[lk]||[]).forEach(function(s){ addShow(s,{type:'self',list:lk}); }); });
   var list=Object.values(shows).filter(function(s){return s.comments.length>0;});
-  list.forEach(function(s){ s.comments.sort(function(a,b){return new Date(b.reactedAt)-new Date(a.reactedAt);}); });
+  list.forEach(function(s){
+    s.comments.sort(function(a,b){return new Date(b.reactedAt)-new Date(a.reactedAt);});
+    if(s.ratings.length){ s.avgRating=Math.round((s.ratings.reduce(function(a,b){return a+b;},0)/s.ratings.length)*10)/10; s.ratingCount=s.ratings.length; }
+    else { s.avgRating=null; s.ratingCount=0; }
+  });
   list.sort(function(a,b){return a.title.toLowerCase().localeCompare(b.title.toLowerCase());});
   return list;
 }
@@ -1942,6 +1953,7 @@ function renderShowTalk(){
       +'<div class="rank-title-text">'+(s.title||'')+'</div>'
       +'<div class="rank-meta-line">'
       +(s.platform?'<span class="rank-platform">'+s.platform+'</span>':'')
+      +(s.avgRating?'<span class="rank-avg-inline">&#9733;'+s.avgRating.toFixed(1)+'</span>':'')
       +'<span class="rank-count-inline">'+s.comments.length+' comment'+(s.comments.length===1?'':'s')+'</span>'
       +'</div></div>'
       +'</div>';
@@ -1968,6 +1980,13 @@ function showShowTalkDetail(idx){
   var thumb=s.poster_path
     ? '<img src="'+TMDB_IMG+s.poster_path+'"'+clickAttr+' style="width:84px;height:84px;border-radius:10px;object-fit:cover;flex-shrink:0;" />'
     : '<div'+clickAttr+' style="width:84px;height:84px;border-radius:10px;background:var(--olive);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:30px;">&#128252;</div>';
+  var ratingHTML='';
+  if(s.avgRating){
+    var remotes=''; for(var n=1;n<=5;n++){var lit=n<=Math.round(s.avgRating);remotes+='<span style="opacity:'+(lit?'1':'0.18')+';display:inline-block;">'+remoteIcon(16,lit)+'</span>';}
+    ratingHTML='<div style="display:flex;align-items:center;gap:6px;margin:2px 0 6px;">'+remotes+'<span style="font-size:13px;color:var(--muted);">'+s.avgRating.toFixed(1)+' ('+s.ratingCount+' rating'+(s.ratingCount===1?'':'s')+')</span></div>';
+  }
+  var reactBoxId='showtalk-react-'+idx;
+  var reactHTML='<div class="inline-react" style="margin:4px 0 12px;"><input class="react-input" id="'+reactBoxId+'" placeholder="What did you think? 😊" /><button class="btn-send" onclick="submitShowTalkReact('+idx+')">Send</button><button class="btn-cancel" onclick="document.getElementById(&quot;'+reactBoxId+'&quot;).value=\'\'">Cancel</button></div>';
   panel.style.display='block';
   panel.innerHTML='<button class="rank-close" onclick="backToShowTalk()">← Back to Show Talk</button>'
     +'<div class="rank-detail">'
@@ -1976,7 +1995,9 @@ function showShowTalkDetail(idx){
     +'<div style="flex:1;min-width:0;">'
     +'<div class="rank-detail-title">'+s.title+'</div>'
     +(s.platform?'<span class="rank-platform" style="margin:0 0 6px 0;display:inline-block;">'+s.platform+'</span>':'')
+    +ratingHTML
     +'</div></div>'
+    +reactHTML
     +'<div class="rank-detail-sub">'+s.comments.length+' comment'+(s.comments.length===1?'':'s')+'</div>'
     +rows+'</div>';
   document.getElementById('showtalk-list').style.display='none';
@@ -1986,6 +2007,33 @@ function showShowTalkDetail(idx){
 }
 
 function backToShowTalk(){document.getElementById('showtalk-detail-panel').style.display='none';document.getElementById('showtalk-list').style.display='block';var searchWrap=document.getElementById('showtalk-search-wrap');if(searchWrap)searchWrap.style.display='block';window.scrollTo(0,_showTalkScrollY);}
+
+window.submitShowTalkReact = async function(idx){
+  var s=_showTalkListCache[idx];
+  var inp=document.getElementById('showtalk-react-'+idx);
+  if(!s||!s.target||!inp||!inp.value.trim())return;
+  var txt=inp.value.trim();
+  var sentiment=detectSentiment(txt);
+  var u=state.user;
+  var target=s.target;
+  var showRec;
+  if(target.mine){
+    showRec=(state[target.list]||[]).find(function(x){return x.id===target.id;});
+  } else {
+    var f=state.friends.find(function(x){return x.id===target.friendId;});
+    showRec=f?(f[target.list]||[]).find(function(x){return x.id===target.id;}):null;
+  }
+  if(!showRec)return;
+  if(!showRec.reactions)showRec.reactions=[];
+  showRec.reactions.push({id:null,reactorId:u?u.id:null,user:u?(u.first+(u.last?' '+u.last:'')):'You',initials:u?u.initials:'Y',color:'#C4622D',text:txt,sentiment:sentiment,reactedAt:new Date().toISOString()});
+  renderShowTalk();
+  var newIdx=_showTalkListCache.findIndex(function(x){return x.title===s.title;});
+  showShowTalkDetail(newIdx>=0?newIdx:idx);
+  try{
+    var data=await dbAddReaction(showRec.id,txt,sentiment);
+    if(data&&data.id) showRec.reactions[showRec.reactions.length-1].id=data.id;
+  }catch(e){ console.error('showtalk reaction error:',e); }
+};
 
 window.goToOwnTab = function(list){
   _skipConversationsMarkSeen = true;
