@@ -1931,15 +1931,21 @@ function renderShowTalk(){
     var thumb=s.poster_path
       ? '<img src="'+TMDB_IMG+s.poster_path+'" style="width:46px;height:46px;border-radius:8px;object-fit:cover;flex-shrink:0;margin-right:12px;" />'
       : '<div style="width:46px;height:46px;border-radius:8px;background:var(--olive);flex-shrink:0;margin-right:12px;display:flex;align-items:center;justify-content:center;font-size:18px;">&#128252;</div>';
+    var remotesHTML='';
+    if(s.avgRating){
+      var lit=Math.floor(s.avgRating);
+      var remotes=''; for(var n=1;n<=5;n++){remotes+='<span style="opacity:'+(n<=lit?'1':'0.18')+';display:inline-block;">'+remoteIcon(13,n<=lit)+'</span>';}
+      remotesHTML='<div style="display:flex;gap:2px;flex-shrink:0;margin-left:10px;">'+remotes+'</div>';
+    }
     return '<div class="rank-card" onclick="showShowTalkDetail('+i+')">'
       +thumb
       +'<div class="rank-info">'
       +'<div class="rank-title-text">'+(s.title||'')+'</div>'
       +'<div class="rank-meta-line">'
       +(s.platform?'<span class="rank-platform">'+s.platform+'</span>':'')
-      +(s.avgRating?'<span class="rank-avg-inline">&#9733;'+s.avgRating.toFixed(1)+'</span>':'')
       +'<span class="rank-count-inline">'+s.comments.length+' comment'+(s.comments.length===1?'':'s')+'</span>'
       +'</div></div>'
+      +remotesHTML
       +'</div>';
   }).join('');
 }
@@ -1966,7 +1972,7 @@ function showShowTalkDetail(idx){
     : '<div'+clickAttr+' style="width:84px;height:84px;border-radius:10px;background:var(--olive);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:30px;">&#128252;</div>';
   var ratingHTML='';
   if(s.avgRating){
-    var remotes=''; for(var n=1;n<=5;n++){var lit=n<=Math.round(s.avgRating);remotes+='<span style="opacity:'+(lit?'1':'0.18')+';display:inline-block;">'+remoteIcon(16,lit)+'</span>';}
+    var remotes=''; for(var n=1;n<=5;n++){var lit=n<=Math.floor(s.avgRating);remotes+='<span style="opacity:'+(lit?'1':'0.18')+';display:inline-block;">'+remoteIcon(16,lit)+'</span>';}
     ratingHTML='<div style="display:flex;align-items:center;gap:6px;margin:2px 0 6px;">'+remotes+'<span style="font-size:13px;color:var(--muted);">'+s.avgRating.toFixed(1)+' ('+s.ratingCount+' rating'+(s.ratingCount===1?'':'s')+')</span></div>';
   }
   var reactBoxId='showtalk-react-'+idx;
