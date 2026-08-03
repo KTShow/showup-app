@@ -1912,6 +1912,7 @@ function buildShowTalk(){
 }
 
 var _showTalkListCache = [];
+var _showTalkAddIdx = null;
 function renderShowTalk(){
   var el=document.getElementById('showtalk-list');
   if(!el)return;
@@ -1984,7 +1985,10 @@ function showShowTalkDetail(idx){
     +thumb
     +'<div style="flex:1;min-width:0;">'
     +'<div class="rank-detail-title">'+s.title+'</div>'
-    +(s.platform?'<span class="rank-platform" style="margin:0 0 6px 0;display:inline-block;">'+s.platform+'</span>':'')
+    +'<div style="display:flex;align-items:center;gap:8px;margin:0 0 6px 0;">'
+    +(s.platform?'<span class="rank-platform" style="margin:0;display:inline-block;">'+s.platform+'</span>':'')
+    +'<button onclick="handleShowTalkAdd('+idx+')" style="display:inline-flex;align-items:center;gap:4px;background:none;border:1px solid var(--terra);color:var(--terra);border-radius:8px;padding:2px 8px;font-family:var(--sans);font-size:11px;font-weight:700;cursor:pointer;line-height:1.6;white-space:nowrap;flex-shrink:0;">&#10133; Add</button>'
+    +'</div>'
     +ratingHTML
     +'</div></div>'
     +reactHTML
@@ -1997,6 +2001,25 @@ function showShowTalkDetail(idx){
 }
 
 function backToShowTalk(){document.getElementById('showtalk-detail-panel').style.display='none';document.getElementById('showtalk-list').style.display='block';var searchWrap=document.getElementById('showtalk-search-wrap');if(searchWrap)searchWrap.style.display='block';window.scrollTo(0,_showTalkScrollY);}
+
+// Lightweight add straight from Show Talk — skips the TMDB detail fetch
+// (thumbnail click still gives the full flow); just needs the picker to
+// know where the reaction back to Show Talk should refresh to after.
+window.handleShowTalkAdd = function(idx){
+  var s=_showTalkListCache[idx];
+  if(!s)return;
+  if(s.target && s.target.mine){
+    showToast('Already on your list — '+(ADD_LIST_LABELS[s.target.list]||'My Lists')+'.');
+    return;
+  }
+  _currentShowDetails = {
+    tmdb_id: s.tmdb_id||null, title: s.title, poster_path: s.poster_path||null,
+    genre: null, original_network: null, first_air_year: null,
+    number_of_seasons: null, show_status: null, overview: null, vote_average: null,
+  };
+  _showTalkAddIdx = idx;
+  openAddPicker();
+};
 
 window.submitShowTalkReact = async function(idx){
   var s=_showTalkListCache[idx];
@@ -4505,6 +4528,13 @@ window.chooseAddDestination = async function(destKey) {
       alert('Error adding show. Please try again.');
       return;
     }
+  }
+
+  if (_showTalkAddIdx != null) {
+    _showTalkAddIdx = null;
+    renderShowTalk();
+    var stIdx = _showTalkListCache.findIndex(function(x) { return x.title === info.title; });
+    if (stIdx >= 0) showShowTalkDetail(stIdx);
   }
 
   if (ADD_DEST_RATES[destKey]) {
