@@ -2301,6 +2301,7 @@ function renderRankings(){
 }
 
 var _rankScrollY = 0;
+var _rankAddIdx = null;
 function showRankDetail(idx){
   _rankScrollY = window.scrollY;
   var s=_rankingsListCache[idx];
@@ -2324,6 +2325,9 @@ function showRankDetail(idx){
     +'<div style="flex:1;min-width:0;">'
     +'<div class="rank-detail-title">'+s.title+'</div>'
     +(s.platform?'<span class="rank-platform" style="margin:0 0 6px 0;display:inline-block;">'+s.platform+'</span>':'')
+    +'<div>'
+    +'<button onclick="handleRankAdd('+idx+')" style="display:inline-flex;align-items:center;gap:4px;background:none;border:1px solid var(--terra);color:var(--terra);border-radius:8px;padding:2px 8px;font-family:var(--sans);font-size:11px;font-weight:700;cursor:pointer;line-height:1.6;white-space:nowrap;">&#10133; Add</button>'
+    +'</div>'
     +'</div></div>'
     +'<div style="display:flex;align-items:baseline;gap:10px;margin-bottom:4px;">'
     +'<span class="rank-detail-avg">'+s.avg.toFixed(1)+'</span>'
@@ -2338,6 +2342,25 @@ function showRankDetail(idx){
 }
 
 function backToRankings(){document.getElementById('rank-detail-panel').style.display='none';document.getElementById('rankings-list').style.display='block';var searchWrap=document.getElementById('rankings-search-wrap');if(searchWrap)searchWrap.style.display='block';window.scrollTo(0,_rankScrollY);}
+
+// Lightweight add straight from Friends' Favorites — mirrors handleShowTalkAdd,
+// but rankings don't pre-track "is this mine" so it's checked here via title match.
+window.handleRankAdd = function(idx){
+  var s=_rankingsListCache[idx];
+  if(!s)return;
+  var existing=findMyShowByTitle(s.title);
+  if(existing){
+    showToast('Already on your list — '+(ADD_LIST_LABELS[existing.list]||'My Lists')+'.');
+    return;
+  }
+  _currentShowDetails = {
+    tmdb_id: s.tmdb_id||null, title: s.title, poster_path: s.poster_path||null,
+    genre: null, original_network: null, first_air_year: null,
+    number_of_seasons: null, show_status: null, overview: null, vote_average: null,
+  };
+  _rankAddIdx = idx;
+  openAddPicker();
+};
 
 function copyInvite(){
   var btn=document.getElementById('copy-btn');
@@ -4535,6 +4558,13 @@ window.chooseAddDestination = async function(destKey) {
     renderShowTalk();
     var stIdx = _showTalkListCache.findIndex(function(x) { return x.title === info.title; });
     if (stIdx >= 0) showShowTalkDetail(stIdx);
+  }
+
+  if (_rankAddIdx != null) {
+    _rankAddIdx = null;
+    renderRankings();
+    var rIdx = _rankingsListCache.findIndex(function(x) { return x.title === info.title; });
+    if (rIdx >= 0) showRankDetail(rIdx);
   }
 
   if (ADD_DEST_RATES[destKey]) {
