@@ -70,8 +70,13 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
 
 .shows-grid{display:flex;flex-direction:column;gap:7px;}
 .service-group{margin-bottom:14px;}
-.service-divider{margin-bottom:10px;}
+.service-group.collapsed .shows-grid{display:none;}
+.service-divider{margin-bottom:10px;cursor:pointer;user-select:none;}
 .service-divider-text{display:block;font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:0.1em;color:white;background:var(--terra);padding:9px 16px;border-radius:8px;box-shadow:0 2px 8px rgba(196,98,45,0.3);}
+.service-count{font-weight:600;opacity:0.85;margin-left:2px;}
+.section-toggle-all{font-size:12px;color:var(--muted);text-align:right;margin-bottom:10px;}
+.section-toggle-all span{cursor:pointer;text-decoration:underline;text-decoration-color:transparent;transition:text-decoration-color 0.15s;}
+.section-toggle-all span:hover{text-decoration-color:var(--muted);}
 
 .show-card{background:var(--cream);border:1px solid var(--border);border-radius:var(--radius);padding:9px 12px;box-shadow:var(--shadow);transition:box-shadow 0.2s;}
 .show-card:hover{box-shadow:0 4px 20px rgba(100,50,20,0.14);}
@@ -1245,6 +1250,54 @@ function groupByService(items) {
   return groups;
 }
 
+// Per-device (localStorage), not per-account — collapsed state doesn't
+// follow you across browsers/devices, only remembered on this one.
+var _collapsedSections = (function(){
+  try { return JSON.parse(localStorage.getItem('showup_collapsed_sections')||'{}'); } catch(e){ return {}; }
+})();
+function saveCollapsedSections(){
+  try { localStorage.setItem('showup_collapsed_sections', JSON.stringify(_collapsedSections)); } catch(e){}
+}
+window.toggleServiceSection = function(key){
+  _collapsedSections[key] = !_collapsedSections[key];
+  saveCollapsedSections();
+  renderList(key.split(':')[0]);
+};
+window.setAllSections = function(list, collapse){
+  getServiceKeysForList(list).forEach(function(k){ _collapsedSections[k]=collapse; });
+  saveCollapsedSections();
+  renderList(list);
+};
+function getServiceKeysForList(list){
+  var keys=[];
+  if(list==='watched'){
+    var rated=(state.watched||[]).filter(function(s){return !s.dnf;});
+    Object.keys(groupByService(rated)).forEach(function(svc){ keys.push('watched:main:'+svc); });
+  } else if(list==='watchlist'){
+    var active=(state.watchlist||[]).filter(function(s){return !s.waitingForSeason;});
+    var waiting=(state.watchlist||[]).filter(function(s){return s.waitingForSeason;});
+    Object.keys(groupByService(active)).forEach(function(svc){ keys.push('watchlist:main:'+svc); });
+    Object.keys(groupByService(waiting)).forEach(function(svc){ keys.push('watchlist:waiting:'+svc); });
+  } else {
+    Object.keys(groupByService(state[list]||[])).forEach(function(svc){ keys.push(list+':main:'+svc); });
+  }
+  return keys;
+}
+function sectionToggleControls(list){
+  if(getServiceKeysForList(list).length<2) return '';
+  return '<div class="section-toggle-all"><span onclick="setAllSections(\''+list+'\',true)">Collapse all</span> &middot; <span onclick="setAllSections(\''+list+'\',false)">Expand all</span></div>';
+}
+function renderServiceGroup(key, svc, shows, list){
+  var isCollapsed = !!_collapsedSections[key];
+  var cardsHTML = shows.map(function(s){ return buildCard(s,list); }).join('');
+  return '<div class="service-group'+(isCollapsed?' collapsed':'')+'">'
+    + '<div class="service-divider" onclick="toggleServiceSection(\''+key+'\')">'
+    + '<span class="service-divider-text">'+(isCollapsed?'&#9656;':'&#9662;')+' '+svc+' <span class="service-count">('+shows.length+')</span></span>'
+    + '</div>'
+    + '<div class="shows-grid">'+cardsHTML+'</div>'
+    + '</div>';
+}
+
 function renderAll(){ renderList('watching'); renderList('watchlist'); renderList('watched'); }
 
 function renderList(list) {
@@ -1259,10 +1312,9 @@ function renderList(list) {
     var html = '';
     if (rated.length) {
       var groups=groupByService(rated); var services=Object.keys(groups).sort();
+      html += sectionToggleControls('watched');
       services.forEach(function(svc){
-        html+='<div class="service-group"><div class="service-divider"><span class="service-divider-text">'+svc+'</span></div><div class="shows-grid">';
-        groups[svc].forEach(function(s){ html+=buildCard(s,list); });
-        html+='</div></div>';
+        html += renderServiceGroup('watched:main:'+svc, svc, groups[svc], 'watched');
       });
     }
     if (dnf.length) {
@@ -1280,22 +1332,18 @@ function renderList(list) {
   if (list === 'watchlist') {
     var active = items.filter(function(s){ return !s.waitingForSeason; });
     var waiting = items.filter(function(s){ return s.waitingForSeason; });
-    var html = '';
+    var html = sectionToggleControls('watchlist');
     if (active.length) {
       var groups=groupByService(active); var services=Object.keys(groups).sort();
       services.forEach(function(svc){
-        html+='<div class="service-group"><div class="service-divider"><span class="service-divider-text">'+svc+'</span></div><div class="shows-grid">';
-        groups[svc].forEach(function(s){ html+=buildCard(s,list); });
-        html+='</div></div>';
+        html += renderServiceGroup('watchlist:main:'+svc, svc, groups[svc], 'watchlist');
       });
     }
     if (waiting.length) {
       html+='<div class="waiting-section"><div class="waiting-header">&#8987; Waiting for New Season</div>';
       var wGroups=groupByService(waiting); var wServices=Object.keys(wGroups).sort();
       wServices.forEach(function(svc){
-        html+='<div class="service-group"><div class="service-divider"><span class="service-divider-text">'+svc+'</span></div><div class="shows-grid">';
-        wGroups[svc].forEach(function(s){ html+=buildCard(s,list); });
-        html+='</div></div>';
+        html += renderServiceGroup('watchlist:waiting:'+svc, svc, wGroups[svc], 'watchlist');
       });
       html+='</div>';
     }
@@ -1303,11 +1351,9 @@ function renderList(list) {
     return;
   }
 
-  var groups=groupByService(items); var services=Object.keys(groups).sort(); var html='';
+  var groups=groupByService(items); var services=Object.keys(groups).sort(); var html=sectionToggleControls(list);
   services.forEach(function(svc){
-    html+='<div class="service-group"><div class="service-divider"><span class="service-divider-text">'+svc+'</span></div><div class="shows-grid">';
-    groups[svc].forEach(function(s){ html+=buildCard(s,list); });
-    html+='</div></div>';
+    html += renderServiceGroup(list+':main:'+svc, svc, groups[svc], list);
   });
   el.innerHTML=html;
 }
