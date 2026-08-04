@@ -1947,6 +1947,7 @@ function renderShowTalk(){
       +'<span class="rank-count-inline">'+s.comments.length+' comment'+(s.comments.length===1?'':'s')+'</span>'
       +'</div></div>'
       +remotesHTML
+      +'<button onclick="event.stopPropagation();handleShowTalkAdd('+i+')" style="display:inline-flex;align-items:center;gap:4px;background:none;border:1px solid var(--terra);color:var(--terra);border-radius:8px;padding:2px 8px;font-family:var(--sans);font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;flex-shrink:0;margin-left:10px;">&#10133; Add</button>'
       +'</div>';
   }).join('');
 }
@@ -2296,6 +2297,7 @@ function renderRankings(){
       +'<span class="rank-avg-inline">&#9733;'+s.avg.toFixed(1)+'</span>'
       +'<span class="rank-count-inline">'+s.count+' rated</span>'
       +'</div></div>'
+      +'<button onclick="event.stopPropagation();handleRankAdd('+i+')" style="display:inline-flex;align-items:center;gap:4px;background:none;border:1px solid var(--terra);color:var(--terra);border-radius:8px;padding:2px 8px;font-family:var(--sans);font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;flex-shrink:0;margin-left:10px;">&#10133; Add</button>'
       +'</div>';
   }).join('');
 }
@@ -4555,16 +4557,22 @@ window.chooseAddDestination = async function(destKey) {
 
   if (_showTalkAddIdx != null) {
     _showTalkAddIdx = null;
+    var stWasDetail = document.getElementById('showtalk-detail-panel').style.display === 'block';
     renderShowTalk();
-    var stIdx = _showTalkListCache.findIndex(function(x) { return x.title === info.title; });
-    if (stIdx >= 0) showShowTalkDetail(stIdx);
+    if (stWasDetail) {
+      var stIdx = _showTalkListCache.findIndex(function(x) { return x.title === info.title; });
+      if (stIdx >= 0) showShowTalkDetail(stIdx);
+    }
   }
 
   if (_rankAddIdx != null) {
     _rankAddIdx = null;
+    var rWasDetail = document.getElementById('rank-detail-panel').style.display === 'block';
     renderRankings();
-    var rIdx = _rankingsListCache.findIndex(function(x) { return x.title === info.title; });
-    if (rIdx >= 0) showRankDetail(rIdx);
+    if (rWasDetail) {
+      var rIdx = _rankingsListCache.findIndex(function(x) { return x.title === info.title; });
+      if (rIdx >= 0) showRankDetail(rIdx);
+    }
   }
 
   if (ADD_DEST_RATES[destKey]) {
