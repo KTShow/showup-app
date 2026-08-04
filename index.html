@@ -1250,6 +1250,21 @@ function groupByService(items) {
   return groups;
 }
 
+// Friends (by title match, respecting their hidden-from-friends flag)
+// who have this show as watched or currently watching — surfaced on My
+// List cards so a big backlog has a signal for what to start next.
+function friendsWhoHaveShow(title) {
+  var key=(title||'').toLowerCase().trim();
+  if(!key) return [];
+  var seen={}; var names=[];
+  (state.friends||[]).forEach(function(f){
+    if(!f || seen[f.id]) return;
+    var hit=(f.watched||[]).concat(f.watching||[]).some(function(s){ return !s.hidden && (s.title||'').toLowerCase().trim()===key; });
+    if(hit){ seen[f.id]=true; names.push(f.name); }
+  });
+  return names;
+}
+
 // Per-device (localStorage), not per-account — collapsed state doesn't
 // follow you across browsers/devices, only remembered on this one.
 var _collapsedSections = (function(){
@@ -1469,8 +1484,15 @@ function buildWatchlistCard(s) {
     var recFriend=(state.friends||[]).find(function(x){return x.id===s.influencedBy;});
     if(recFriend) recommendedBadge='<div style="font-size:11px;color:var(--fig);font-weight:600;margin-top:2px;">&#127919; Recommended by '+recFriend.name+'</div>';
   }
+  var watchedByBadge='';
+  var watchedByNames=friendsWhoHaveShow(s.title);
+  if(watchedByNames.length){
+    var shownNames=watchedByNames.slice(0,2).join(', ');
+    var extraCount=watchedByNames.length>2?' +'+(watchedByNames.length-2)+' more':'';
+    watchedByBadge='<div style="font-size:11px;color:var(--muted);margin-top:2px;">&#128064; Watched or watching: '+shownNames+extraCount+'</div>';
+  }
 
-  return '<div class="show-card'+(s.hidden?' is-hidden':'')+'" id="card-'+sid+'"><div class="show-card-top">'+showTile(s)+'<div class="show-info"><div class="show-title">'+s.title+(s.hidden?'<span class="hidden-badge">Hidden from friends</span>':'')+'</div>'+platformRow+recommendedBadge+'</div>'+recommendBtn(sid)+menuHTML+'</div>'
+  return '<div class="show-card'+(s.hidden?' is-hidden':'')+'" id="card-'+sid+'"><div class="show-card-top">'+showTile(s)+'<div class="show-info"><div class="show-title">'+s.title+(s.hidden?'<span class="hidden-badge">Hidden from friends</span>':'')+'</div>'+platformRow+recommendedBadge+watchedByBadge+'</div>'+recommendBtn(sid)+menuHTML+'</div>'
     + '<div class="show-move"><button class="btn-start" onclick="moveToWatching(\''+sid+'\')">Watch Now</button><button class="waiting-season-btn" onclick="markWaitingFromList(\''+sid+'\')">Waiting for New Season &#8987;</button></div>'
     + (hasReact?'<div class="react-area">'+reactionsHTML(s.reactions,'watchlist',sid)+reactToggle+'</div>':'')
     + '</div>';
