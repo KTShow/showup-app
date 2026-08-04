@@ -4170,6 +4170,7 @@ async function loadAndRenderFriends() {
     renderRankings();
     renderShowTalk();
     renderConversations();
+    renderList('watchlist');
   } catch(e) {
     console.error('Error loading friends:', e);
     state.friendsLoaded = true;
