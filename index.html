@@ -1637,28 +1637,48 @@ function getNewestActivity(f) {
   return newest;
 }
 
+// Earliest-ever add timestamp per title across all friends' lists — lets
+// us tell a genuinely new-to-the-room show apart from someone re-adding
+// a title that's already established elsewhere in the room.
+function getEarliestRoomAddByTitle() {
+  var earliest = {};
+  (state.friends||[]).forEach(function(f) {
+    if(!f) return;
+    [f.watching, f.watchlist, f.watched].forEach(function(arr) {
+      (arr||[]).forEach(function(s) {
+        if(!s || !s.title || !s.added_at) return;
+        var key = s.title.toLowerCase().trim();
+        var t = new Date(s.added_at).getTime();
+        if(!earliest[key] || t < earliest[key]) earliest[key] = t;
+      });
+    });
+  });
+  return earliest;
+}
+
 var _tickerTimer = null;
 function buildRoomTickerMessages() {
   var cutoff = Date.now() - 7*24*60*60*1000;
-  var newShows = 0, newComments = 0, activeFriends = {};
+  var activeFriends = {};
   state.friends.forEach(function(f) {
     [f.watching, f.watchlist, f.watched].forEach(function(arr) {
       arr.forEach(function(s) {
         if (s.added_at && new Date(s.added_at).getTime() > cutoff) {
-          newShows++; activeFriends[f.id] = true;
+          activeFriends[f.id] = true;
         }
         (s.reactions || []).forEach(function(r) {
           if (r.reactedAt && new Date(r.reactedAt).getTime() > cutoff) {
-            newComments++; activeFriends[f.id] = true;
+            activeFriends[f.id] = true;
           }
         });
       });
     });
   });
+  var earliestByTitle = getEarliestRoomAddByTitle();
+  var newShows = Object.keys(earliestByTitle).filter(function(k) { return earliestByTitle[k] > cutoff; }).length;
   var activeCount = Object.keys(activeFriends).length;
   var msgs = [];
   if (newShows > 0) msgs.push('&#127871; ' + newShows + ' new show' + (newShows===1?'':'s') + ' added to the room this week');
-  if (newComments > 0) msgs.push('&#128172; ' + newComments + ' new comment' + (newComments===1?'':'s') + ' this week');
   if (activeCount > 0) msgs.push('&#128075; ' + activeCount + ' friend' + (activeCount===1?'':'s') + ' active in the room this week');
   return msgs;
 }
@@ -1870,12 +1890,21 @@ function buildConversationsFeed(){
   // Full activity log, not just "what others did" -- includes your own adds
   // and comments too, so this reads as a complete room timeline.
 
+  // Friend show objects keep the raw DB field name (added_at), unlike
+  // your own shows which go through normalizeShow's addedAt rename.
+  var earliestByTitle = getEarliestRoomAddByTitle();
+
   // Friends' shows: adds + every comment, whoever wrote it (including you)
   (state.friends||[]).forEach(function(f){
     if(!f)return;
     ['watching','watchlist','watched'].forEach(function(lk){
       (f[lk]||[]).forEach(function(s){
-        if(isNew(s.addedAt)) events.push({type:'added',friendId:f.id,showId:s.id,text:'<b>'+escAttr(f.name)+'</b> added '+escAttr(s.title),ts:s.addedAt});
+        if(isNew(s.added_at)){
+          var titleKey=(s.title||'').toLowerCase().trim();
+          var isNewToRoom = titleKey && earliestByTitle[titleKey]===new Date(s.added_at).getTime();
+          var addedPrefix = isNewToRoom ? '&#127381; <b>New to the room</b> &mdash; ' : '';
+          events.push({type:'added',friendId:f.id,showId:s.id,text:addedPrefix+'<b>'+escAttr(f.name)+'</b> added '+escAttr(s.title),ts:s.added_at});
+        }
         (s.reactions||[]).forEach(function(r){
           if(r.reactorId && isNew(r.reactedAt)){
             events.push({type:'comment',friendId:f.id,showId:s.id,text:'<b>'+escAttr(nameFor(r.reactorId))+'</b> commented on '+escAttr(s.title)+': &#8220;'+escAttr(r.text)+'&#8221;',ts:r.reactedAt});
