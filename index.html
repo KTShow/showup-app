@@ -3088,6 +3088,7 @@ async function loadUserIntoState(profile) {
       state.friendsLoaded = true;
       renderFriends();
       renderRankings();
+      renderList('watchlist');
       _logFriendsLoadTime();
     })
     .catch(function(e) {
