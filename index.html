@@ -1154,8 +1154,8 @@ function renderTastemakersBanner() {
     var leader = rows[0];
     var tiedCount = rows.filter(function(r){ return r.count===leader.count; }).length;
     subtext = tiedCount > 1
-      ? tiedCount + ' friends tied for the lead with ' + leader.count + ' pick' + (leader.count===1?'':'s') + ' each'
-      : leader.name + ' leads with ' + leader.count + ' pick' + (leader.count===1?'':'s') + ' accepted';
+      ? tiedCount + ' friends tied for the lead with ' + leader.count + ' recommendation' + (leader.count===1?'':'s') + ' each'
+      : leader.name + ' leads with ' + leader.count + ' recommendation' + (leader.count===1?'':'s') + ' accepted';
   }
   wrap.innerHTML = '<div class="tastemakers-banner" onclick="openTastemakersModal()">'
     + '<div class="tastemakers-banner-icon">&#127942;</div>'
@@ -2404,14 +2404,18 @@ window.acceptRecommendation = async function(recId){
   try {
     if(existing){
       var s = existing.show;
-      if(existing.list !== 'watchlist'){
+      var wasInDifferentList = existing.list !== 'watchlist';
+      s.source = 'recommendation';
+      s.influencedBy = rec.from_user_id;
+      s.waitingForSeason = false;
+      if(wasInDifferentList){
         state[existing.list] = state[existing.list].filter(function(x){return x.id!==s.id;});
-        s.waitingForSeason = false;
         state.watchlist.push(s);
-        renderList(existing.list); renderList('watchlist');
-        await updateShowStatus(s.id, 'watchlist', { waiting_for_season:false });
+        renderList(existing.list);
       }
+      renderList('watchlist');
       showToast('Already had it — kept it in My List.');
+      await updateShowStatus(s.id, 'watchlist', { waiting_for_season:false, source:'recommendation', influenced_by:rec.from_user_id });
     } else {
       var row = await dbAddShow({ title:rec.title, platform:rec.platform||'None', status:'watchlist', dnf:false, source:'recommendation', influencedBy:rec.from_user_id, tmdb_id:rec.tmdb_id, poster_path:rec.poster_path });
       state.watchlist.push({ id:row.id, title:rec.title, platform:rec.platform||'None', rating:0, hidden:false, dnf:false, waitingForSeason:false, source:'recommendation', influencedBy:rec.from_user_id, addedAt:row.added_at, reactions:[], showReact:false, poster_path:rec.poster_path||null, tmdb_id:rec.tmdb_id||null });
