@@ -265,6 +265,20 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
 .top5-banner-sub{font-size:12px;color:rgba(255,255,255,0.75);}
 .top5-banner-arrow{font-size:20px;color:rgba(255,255,255,0.7);}
 
+.tastemakers-banner{background:linear-gradient(135deg,var(--gold),var(--terra));border-radius:14px;padding:16px 18px;margin-bottom:16px;display:flex;align-items:center;gap:14px;box-shadow:var(--shadow);cursor:pointer;transition:opacity 0.2s;}
+.tastemakers-banner:hover{opacity:0.92;}
+.tastemakers-banner-icon{font-size:28px;flex-shrink:0;}
+.tastemakers-banner-text{flex:1;min-width:0;}
+.tastemakers-banner-title{font-size:14px;font-weight:700;color:white;margin-bottom:3px;}
+.tastemakers-banner-sub{font-size:12px;color:rgba(255,255,255,0.85);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.tastemakers-banner-arrow{font-size:20px;color:rgba(255,255,255,0.7);flex-shrink:0;}
+.tastemakers-row{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border);}
+.tastemakers-row:last-child{border-bottom:none;}
+.tastemakers-rank{width:26px;font-family:var(--serif);font-size:16px;font-weight:700;color:var(--gold);flex-shrink:0;text-align:center;}
+.tastemakers-name{font-size:14px;font-weight:600;color:var(--charcoal);}
+.tastemakers-count{font-size:13px;font-weight:700;color:var(--terra);flex-shrink:0;}
+.tastemakers-shows{font-size:11px;color:var(--muted);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+
 .dnf-section{margin-top:28px;}
 .dnf-section.collapsed .shows-grid{display:none;}
 .dnf-header{display:block;font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:0.1em;color:white;background:#c0392b;padding:9px 16px;border-radius:8px;margin-bottom:10px;box-shadow:0 2px 8px rgba(192,57,43,0.3);cursor:pointer;user-select:none;}
@@ -710,6 +724,7 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
           <button class="lr-toggle-btn" id="toggle-conversations" onclick="switchLRView('conversations')"><span class="toggle-icon">&#128172;</span>Conversations<span class="conv-badge" id="conv-badge" style="display:none;"></span></button>
         </div>
         <div id="lr-crew-view">
+          <div id="tastemakers-banner-wrap"></div>
           <div id="room-ticker" class="room-ticker" style="display:none"></div>
           <div id="top5-banner-wrap"></div>
           <div class="lr-search-wrap"><input type="text" id="crew-search" class="lr-search-input" placeholder="Search friends..." oninput="renderFriends()" autocomplete="off" /></div>
@@ -1090,6 +1105,91 @@ function renderTop5Banner() {
     + '<div class="top5-banner-arrow">&#8250;</div>'
     + '</div>';
 }
+
+// All-time tally of accepted recommendations (source==='recommendation',
+// landed in Watching or My List only -- not DNF/Binged/Waiting) per
+// recommender, across the whole room (you + friends). Friend show
+// objects keep the raw DB field name (influenced_by), unlike your own
+// shows which go through normalizeShow's influencedBy rename -- same
+// pattern as the added_at/addedAt split elsewhere in this file.
+function buildTastemakersLeaderboard() {
+  var counts = {};
+  function nameFor(id) {
+    if (state.user && id === state.user.id) return 'You';
+    var f = (state.friends||[]).find(function(x){ return x.id===id; });
+    return f ? f.name : 'Someone';
+  }
+  function tally(id, title) {
+    if (!id) return;
+    if (!counts[id]) counts[id] = { id: id, name: nameFor(id), count: 0, shows: [] };
+    counts[id].count++;
+    counts[id].shows.push(title);
+  }
+  ['watching','watchlist'].forEach(function(lk){
+    (state[lk]||[]).forEach(function(s){
+      if (s.source==='recommendation' && s.influencedBy) tally(s.influencedBy, s.title);
+    });
+  });
+  (state.friends||[]).forEach(function(f){
+    if(!f) return;
+    ['watching','watchlist'].forEach(function(lk){
+      (f[lk]||[]).forEach(function(s){
+        if (s.source==='recommendation' && s.influenced_by) tally(s.influenced_by, s.title);
+      });
+    });
+  });
+  var rows = Object.keys(counts).map(function(id){ return counts[id]; });
+  rows.sort(function(a,b){ return b.count - a.count; });
+  return rows;
+}
+
+function renderTastemakersBanner() {
+  var wrap = document.getElementById('tastemakers-banner-wrap');
+  if (!wrap) return;
+  var rows = buildTastemakersLeaderboard();
+  var subtext;
+  if (!rows.length) {
+    subtext = 'Recommend a show to be the first on the board';
+  } else {
+    var leader = rows[0];
+    var tiedCount = rows.filter(function(r){ return r.count===leader.count; }).length;
+    subtext = tiedCount > 1
+      ? tiedCount + ' friends tied for the lead with ' + leader.count + ' pick' + (leader.count===1?'':'s') + ' each'
+      : leader.name + ' leads with ' + leader.count + ' pick' + (leader.count===1?'':'s') + ' accepted';
+  }
+  wrap.innerHTML = '<div class="tastemakers-banner" onclick="openTastemakersModal()">'
+    + '<div class="tastemakers-banner-icon">&#127942;</div>'
+    + '<div class="tastemakers-banner-text">'
+    + '<div class="tastemakers-banner-title">Tastemakers</div>'
+    + '<div class="tastemakers-banner-sub">'+escAttr(subtext)+'</div>'
+    + '</div>'
+    + '<div class="tastemakers-banner-arrow">&#8250;</div>'
+    + '</div>';
+}
+
+window.openTastemakersModal = function() {
+  var rows = buildTastemakersLeaderboard();
+  var body = document.getElementById('tastemakers-list');
+  if (!rows.length) {
+    body.innerHTML = '<div class="empty"><div class="empty-icon">&#127942;</div>No accepted recommendations yet &mdash; be the first Tastemaker!</div>';
+  } else {
+    body.innerHTML = rows.map(function(r, i){
+      var rank = i===0 ? '&#129351;' : i===1 ? '&#129352;' : i===2 ? '&#129353;' : (i+1)+'.';
+      return '<div class="tastemakers-row">'
+        + '<div class="tastemakers-rank">'+rank+'</div>'
+        + '<div style="flex:1;min-width:0;">'
+        + '<div class="tastemakers-name">'+escAttr(r.name)+'</div>'
+        + '<div class="tastemakers-shows">'+escAttr(r.shows.join(', '))+'</div>'
+        + '</div>'
+        + '<div class="tastemakers-count">'+r.count+'</div>'
+        + '</div>';
+    }).join('');
+  }
+  document.getElementById('tastemakers-modal').classList.add('active');
+};
+window.closeTastemakersModal = function() {
+  document.getElementById('tastemakers-modal').classList.remove('active');
+};
 
 function renderRoomGrid() {
   var grid = document.getElementById('room-grid');
@@ -1708,6 +1808,7 @@ function renderRoomTicker() {
 
 function renderFriends() {
   renderTop5Banner();
+  renderTastemakersBanner();
   renderRoomTicker();
   renderRecommendationBanners();
   var selfTile='';
@@ -2319,6 +2420,7 @@ window.acceptRecommendation = async function(recId){
     }
     rec.status='added'; rec.resolved_at=new Date().toISOString();
     renderRecommendationBanners();
+    renderTastemakersBanner();
     await sb.from('recommendations').update({ status:'added', resolved_at:new Date().toISOString() }).eq('id', recId);
   } catch(e) {
     console.error('acceptRecommendation error:', e);
@@ -4824,6 +4926,16 @@ bootstrap();
       <button class="btn-invite-copy" id="rec-picker-send-btn" onclick="sendRecommendation()" style="flex:1;">Send</button>
       <button class="btn-invite-close" onclick="closeRecommendPicker()" style="flex:1;">Cancel</button>
     </div>
+  </div>
+</div>
+
+<!-- TASTEMAKERS LEADERBOARD -->
+<div class="invite-modal-overlay" id="tastemakers-modal">
+  <div class="invite-modal">
+    <div class="invite-modal-title">&#127942; Tastemakers</div>
+    <div class="invite-modal-sub">All-time leaderboard &mdash; recommendations your crowd accepted into Watching or My List.</div>
+    <div id="tastemakers-list" style="max-height:320px;overflow-y:auto;margin-bottom:14px;"></div>
+    <button class="btn-invite-close" onclick="closeTastemakersModal()" style="width:100%;">Close</button>
   </div>
 </div>
 
