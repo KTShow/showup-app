@@ -1418,8 +1418,13 @@ function buildWatchlistCard(s) {
     + quickReactRow('quickReact', "'watchlist','"+sid+"'");
   var hasReact=reactionsHTML(s.reactions,'watchlist',sid)||reactToggle;
   var platformRow=s.editingPlatform?platformSelect('watchlist',sid,s.platform):'';
+  var recommendedBadge='';
+  if(s.source==='recommendation'&&s.influencedBy){
+    var recFriend=(state.friends||[]).find(function(x){return x.id===s.influencedBy;});
+    if(recFriend) recommendedBadge='<div style="font-size:11px;color:var(--fig);font-weight:600;margin-top:2px;">&#127919; Recommended by '+recFriend.name+'</div>';
+  }
 
-  return '<div class="show-card'+(s.hidden?' is-hidden':'')+'" id="card-'+sid+'"><div class="show-card-top">'+showTile(s)+'<div class="show-info"><div class="show-title">'+s.title+(s.hidden?'<span class="hidden-badge">Hidden from friends</span>':'')+'</div>'+platformRow+'</div>'+recommendBtn(sid)+menuHTML+'</div>'
+  return '<div class="show-card'+(s.hidden?' is-hidden':'')+'" id="card-'+sid+'"><div class="show-card-top">'+showTile(s)+'<div class="show-info"><div class="show-title">'+s.title+(s.hidden?'<span class="hidden-badge">Hidden from friends</span>':'')+'</div>'+platformRow+recommendedBadge+'</div>'+recommendBtn(sid)+menuHTML+'</div>'
     + '<div class="show-move"><button class="btn-start" onclick="moveToWatching(\''+sid+'\')">Watch Now</button><button class="waiting-season-btn" onclick="markWaitingFromList(\''+sid+'\')">Waiting for New Season &#8987;</button></div>'
     + (hasReact?'<div class="react-area">'+reactionsHTML(s.reactions,'watchlist',sid)+reactToggle+'</div>':'')
     + '</div>';
@@ -2014,7 +2019,7 @@ window.handleShowTalkAdd = function(idx){
     return;
   }
   _currentShowDetails = {
-    tmdb_id: s.tmdb_id||null, title: s.title, poster_path: s.poster_path||null,
+    tmdb_id: s.tmdb_id||null, title: s.title, poster_path: s.poster_path||null, platform: s.platform||null,
     genre: null, original_network: null, first_air_year: null,
     number_of_seasons: null, show_status: null, overview: null, vote_average: null,
   };
@@ -2113,7 +2118,7 @@ var _recommendSelectedIds = [];
 window.openRecommendPicker = function(showId){
   var found = findShowAnywhere(showId);
   if(!found) return;
-  _recommendPending = { title:found.show.title, tmdbId:found.show.tmdb_id, posterPath:found.show.poster_path, ownerId:found.ownerId };
+  _recommendPending = { title:found.show.title, tmdbId:found.show.tmdb_id, posterPath:found.show.poster_path, platform:found.show.platform, ownerId:found.ownerId };
   _recommendSelectedIds = [];
   document.getElementById('rec-picker-title').textContent = found.show.title;
   document.getElementById('rec-picker-note').value = '';
@@ -2153,7 +2158,7 @@ window.sendRecommendation = async function(){
     if(!user) return;
     var rows = ids.map(function(toUserId){
       return { from_user_id: user.id, to_user_id: toUserId, title: pending.title,
-        tmdb_id: pending.tmdbId || null, poster_path: pending.posterPath || null, note: note || null };
+        tmdb_id: pending.tmdbId || null, poster_path: pending.posterPath || null, platform: pending.platform || null, note: note || null };
     });
     const { error } = await sb.from('recommendations').insert(rows);
     if(error) throw error;
@@ -2204,8 +2209,8 @@ window.acceptRecommendation = async function(recId){
       }
       showToast('Already had it — kept it in My List.');
     } else {
-      var row = await dbAddShow({ title:rec.title, platform:'None', status:'watchlist', dnf:false, source:'living_room', influencedBy:rec.from_user_id, tmdb_id:rec.tmdb_id, poster_path:rec.poster_path });
-      state.watchlist.push({ id:row.id, title:rec.title, platform:'None', rating:0, hidden:false, dnf:false, waitingForSeason:false, source:'living_room', influencedBy:rec.from_user_id, addedAt:row.added_at, reactions:[], showReact:false, poster_path:rec.poster_path||null, tmdb_id:rec.tmdb_id||null });
+      var row = await dbAddShow({ title:rec.title, platform:rec.platform||'None', status:'watchlist', dnf:false, source:'recommendation', influencedBy:rec.from_user_id, tmdb_id:rec.tmdb_id, poster_path:rec.poster_path });
+      state.watchlist.push({ id:row.id, title:rec.title, platform:rec.platform||'None', rating:0, hidden:false, dnf:false, waitingForSeason:false, source:'recommendation', influencedBy:rec.from_user_id, addedAt:row.added_at, reactions:[], showReact:false, poster_path:rec.poster_path||null, tmdb_id:rec.tmdb_id||null });
       renderList('watchlist');
       showToast('Added to My List!');
     }
@@ -2356,7 +2361,7 @@ window.handleRankAdd = function(idx){
     return;
   }
   _currentShowDetails = {
-    tmdb_id: s.tmdb_id||null, title: s.title, poster_path: s.poster_path||null,
+    tmdb_id: s.tmdb_id||null, title: s.title, poster_path: s.poster_path||null, platform: s.platform||null,
     genre: null, original_network: null, first_air_year: null,
     number_of_seasons: null, show_status: null, overview: null, vote_average: null,
   };
@@ -4534,7 +4539,7 @@ window.chooseAddDestination = async function(destKey) {
     var inf = state.lastViewedFriend || null;
     try {
       var row = await dbAddShow({
-        title: info.title, platform: 'None', status: status, dnf: isDnf, source: src, influencedBy: inf,
+        title: info.title, platform: info.platform || 'None', status: status, dnf: isDnf, source: src, influencedBy: inf,
         tmdb_id: info.tmdb_id, poster_path: info.poster_path, genre: info.genre,
         original_network: info.original_network, first_air_year: info.first_air_year,
         number_of_seasons: info.number_of_seasons, show_status: info.show_status,
@@ -4542,7 +4547,7 @@ window.chooseAddDestination = async function(destKey) {
       });
       if (isWaiting) { try { await updateShowStatus(row.id, 'watchlist', { waiting_for_season: true }); } catch(e) { console.error('chooseAddDestination waiting flag error:', e); } }
       resultShow = {
-        id: row.id, title: info.title, platform: 'None', rating: 0, hidden: false, dnf: isDnf, waitingForSeason: isWaiting,
+        id: row.id, title: info.title, platform: info.platform || 'None', rating: 0, hidden: false, dnf: isDnf, waitingForSeason: isWaiting,
         source: src, influencedBy: inf, addedAt: row.added_at, reactions: [], showReact: false,
         poster_path: info.poster_path || null, tmdb_id: info.tmdb_id || null,
       };
