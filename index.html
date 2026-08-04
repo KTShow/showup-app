@@ -266,7 +266,8 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
 .top5-banner-arrow{font-size:20px;color:rgba(255,255,255,0.7);}
 
 .dnf-section{margin-top:28px;}
-.dnf-header{display:block;font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:0.1em;color:white;background:#c0392b;padding:9px 16px;border-radius:8px;margin-bottom:10px;box-shadow:0 2px 8px rgba(192,57,43,0.3);}
+.dnf-section.collapsed .shows-grid{display:none;}
+.dnf-header{display:block;font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:0.1em;color:white;background:#c0392b;padding:9px 16px;border-radius:8px;margin-bottom:10px;box-shadow:0 2px 8px rgba(192,57,43,0.3);cursor:pointer;user-select:none;}
 .dnf-badge{display:inline-flex;align-items:center;background:#fdecea;color:#c0392b;font-size:10px;font-weight:800;padding:2px 8px;border-radius:10px;letter-spacing:0.04em;border:1px solid rgba(192,57,43,0.2);}
 .dnf-card{background:var(--cream);border:1px solid rgba(192,57,43,0.2);border-left:4px solid #c0392b;border-radius:var(--radius);padding:9px 12px;box-shadow:var(--shadow);margin-bottom:7px;opacity:0.85;}
 .dnf-card .show-title{color:var(--muted);}
@@ -1287,7 +1288,9 @@ function getServiceKeysForList(list){
   var keys=[];
   if(list==='watched'){
     var rated=(state.watched||[]).filter(function(s){return !s.dnf;});
+    var dnfItems=(state.watched||[]).filter(function(s){return s.dnf;});
     Object.keys(groupByService(rated)).forEach(function(svc){ keys.push('watched:main:'+svc); });
+    if(dnfItems.length) keys.push('watched:dnf');
   } else if(list==='watchlist'){
     var active=(state.watchlist||[]).filter(function(s){return !s.waitingForSeason;});
     var waiting=(state.watchlist||[]).filter(function(s){return s.waitingForSeason;});
@@ -1333,9 +1336,12 @@ function renderList(list) {
       });
     }
     if (dnf.length) {
-      html+='<div class="dnf-section"><div class="dnf-header">&#128683; Didn&#39;t Finish</div>';
-      dnf.sort(function(a,b){return a.title.localeCompare(b.title);}).forEach(function(s){ html+=buildDNFCard(s); });
-      html+='</div>';
+      var dnfCollapsed=!!_collapsedSections['watched:dnf'];
+      dnf.sort(function(a,b){return a.title.localeCompare(b.title);});
+      html+='<div class="dnf-section'+(dnfCollapsed?' collapsed':'')+'">'
+        + '<div class="dnf-header" onclick="toggleServiceSection(\'watched:dnf\')">'+(dnfCollapsed?'&#9656;':'&#9662;')+' &#128683; Didn&#39;t Finish <span class="service-count">('+dnf.length+')</span></div>'
+        + '<div class="shows-grid">' + dnf.map(function(s){ return buildDNFCard(s); }).join('') + '</div>'
+        + '</div>';
     }
     if (!rated.length && !dnf.length) {
       html='<div class="empty"><div class="empty-icon">&#127871;</div>No credits have rolled yet. Get watching.</div>';
