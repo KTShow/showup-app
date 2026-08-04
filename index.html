@@ -895,7 +895,7 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
 <script>
 window._mark('cdn-script-loaded');
 
-var PLATFORMS = ['None','Amazon Prime','Apple TV+','Discovery+','Disney+','ESPN+','HBO Max','Hulu','Netflix','Paramount+','PBS Passport','Peacock','Showtime','Starz','Other'];
+var PLATFORMS = ['None','Amazon Prime','Apple TV+','BritBox','Discovery+','Disney+','ESPN+','HBO Max','Hulu','Netflix','Paramount+','PBS Passport','Peacock','Pluto TV','Showtime','Starz','Tubi','Other'];
 var CONFETTI_COLORS = ['#C4622D','#6B2D4E','#C49A3C','#5C6B3A','#F5EFE6','#D4734E'];
 
 var ROOMS = {
@@ -4334,12 +4334,34 @@ var PROVIDER_NAME_MAP = {
   'pbs': 'PBS Passport',
   'pbs documentaries': 'PBS Passport',
   'pbs masterpiece': 'PBS Passport',
+  'britbox': 'BritBox',
+  'tubi': 'Tubi',
+  'tubi tv': 'Tubi',
+  'pluto tv': 'Pluto TV',
 };
+
+// Fallback for TMDB provider name variants the exact-match table above
+// doesn't cover — ad tiers, bundles, and channel add-ons like "Netflix
+// Standard with Ads" or "Max Amazon Channel" — matched on a whole word
+// so it doesn't misfire (e.g. "max" won't match "Cinemax").
+var PROVIDER_KEYWORD_FALLBACK = [
+  ['netflix', 'Netflix'], ['hulu', 'Hulu'], ['disney plus', 'Disney+'],
+  ['amazon prime video', 'Amazon Prime'], ['amazon video', 'Amazon Prime'],
+  ['apple tv plus', 'Apple TV+'], ['hbo max', 'HBO Max'], ['max', 'HBO Max'],
+  ['paramount plus', 'Paramount+'], ['peacock', 'Peacock'], ['espn plus', 'ESPN+'],
+  ['discovery plus', 'Discovery+'], ['showtime', 'Showtime'], ['starz', 'Starz'],
+  ['pbs', 'PBS Passport'], ['britbox', 'BritBox'], ['tubi', 'Tubi'], ['pluto tv', 'Pluto TV'],
+];
 
 function mapProviderToPlatform(name) {
   if (!name) return null;
   var key = name.toLowerCase().replace(/\+/g, ' plus').replace(/\s+/g, ' ').trim();
-  return PROVIDER_NAME_MAP[key] || null;
+  if (PROVIDER_NAME_MAP[key]) return PROVIDER_NAME_MAP[key];
+  for (var i = 0; i < PROVIDER_KEYWORD_FALLBACK.length; i++) {
+    var kw = PROVIDER_KEYWORD_FALLBACK[i][0];
+    if (new RegExp('\\b' + kw.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b').test(key)) return PROVIDER_KEYWORD_FALLBACK[i][1];
+  }
+  return null;
 }
 
 async function fetchAutoPlatform(tmdbId) {
