@@ -314,6 +314,7 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
 .btn-hide.hidden{color:#c0392b;}
 .show-card.is-hidden,.dnf-card.is-hidden{opacity:0.45;border-style:dashed;}
 .hidden-badge{font-size:10px;font-weight:700;color:#c0392b;background:#fdecea;padding:1px 7px;border-radius:8px;margin-left:6px;vertical-align:middle;}
+.new-season-badge{font-size:10px;font-weight:700;color:#fff;background:var(--terra);padding:2px 8px;border-radius:8px;margin-left:6px;vertical-align:middle;cursor:pointer;}
 .btn-delete-react{background:none;border:none;color:var(--muted);cursor:pointer;font-size:12px;padding:0 0 0 6px;opacity:0.55;line-height:1;align-self:center;flex-shrink:0;}
 .btn-delete-react:hover{color:#c0392b;opacity:1;}
 .btn-edit-react{background:none;border:none;color:var(--muted);cursor:pointer;font-size:12px;padding:0 0 0 6px;opacity:0.55;line-height:1;align-self:center;flex-shrink:0;}
@@ -1565,7 +1566,8 @@ function buildWaitingCard(s) {
   var hasReact=reactionsHTML(s.reactions,'watchlist',sid)||reactToggle;
   var platformRow=s.editingPlatform?platformSelect('watchlist',sid,s.platform):'';
 
-  return '<div class="show-card'+(s.hidden?' is-hidden':'')+'" id="card-'+sid+'"><div class="show-card-top">'+showTile(s)+'<div class="show-info"><div class="show-title">'+s.title+(s.hidden?'<span class="hidden-badge">Hidden from friends</span>':'')+'</div>'+platformRow+'</div><div class="show-actions">'+remoteRating('watchlist',sid,s.rating)+'</div>'+recommendBtn(sid)+menuHTML+'</div>'
+  var newSeasonBadge = s.newSeasonAvailable ? '<span class="new-season-badge" onclick="tapNewSeasonBadge(\''+sid+'\')">&#127881; New season!</span>' : '';
+  return '<div class="show-card'+(s.hidden?' is-hidden':'')+'" id="card-'+sid+'"><div class="show-card-top">'+showTile(s)+'<div class="show-info"><div class="show-title">'+s.title+(s.hidden?'<span class="hidden-badge">Hidden from friends</span>':'')+newSeasonBadge+'</div>'+platformRow+'</div><div class="show-actions">'+remoteRating('watchlist',sid,s.rating)+'</div>'+recommendBtn(sid)+menuHTML+'</div>'
     + '<div class="show-move"><button class="resume-watching-btn" onclick="resumeWatching(\''+sid+'\')">Resume Watching &#9654;</button><button class="didnt-finish-btn" onclick="markDNFFromWaiting(\''+sid+'\')">Didn&#39;t Finish</button></div>'
     + (hasReact?'<div class="react-area">'+reactionsHTML(s.reactions,'watchlist',sid)+reactToggle+'</div>':'')
     + '</div>';
@@ -3072,6 +3074,8 @@ function normalizeShow(s) {
     hidden: s.hidden || false,
     dnf: s.dnf || false,
     waitingForSeason: s.waiting_for_season || false,
+    newSeasonAvailable: s.new_season_available || false,
+    numberOfSeasons: s.number_of_seasons || null,
     show_status: s.show_status || null,
     source: s.source || 'manual',
     influencedBy: s.influenced_by || null,
@@ -3142,6 +3146,7 @@ async function loadUserIntoState(profile) {
     state.watching = shows.filter(function(s) { return s.status === 'watching'; }).map(normalizeShow);
     state.watchlist = shows.filter(function(s) { return s.status === 'watchlist'; }).map(normalizeShow);
     state.watched = shows.filter(function(s) { return s.status === 'watched' || s.status === 'dnf'; }).map(normalizeShow);
+    checkForNewSeasons(); // fire-and-forget, updates badges in the background as each check resolves
   } catch(e) { console.error('Error loading shows:', e); }
 
   try {
@@ -3881,6 +3886,19 @@ window.resumeWatching = async function(id) {
   try { await updateShowStatus(id, 'watching', { waiting_for_season: false }); } catch(e) { console.error('resumeWatching error:', e); }
 };
 
+window.tapNewSeasonBadge = async function(id) {
+  var idx = state.watchlist.findIndex(function(x) { return x.id === id; });
+  if (idx === -1) return;
+  var s = state.watchlist[idx];
+  if (!confirm('New season of ' + s.title + ' is out! Move to Currently Watching?')) return;
+  state.watchlist.splice(idx, 1);
+  s.waitingForSeason = false;
+  s.newSeasonAvailable = false;
+  state.watching.push(s);
+  renderList('watchlist'); renderList('watching');
+  try { await updateShowStatus(id, 'watching', { waiting_for_season: false, new_season_available: false }); } catch(e) { console.error('tapNewSeasonBadge error:', e); }
+};
+
 // Shortcut from Binged/DNF/My List straight into the Waiting section,
 // skipping the "move to Watching, then mark waiting" two-step. Confirms
 // first since it's an icon-only action that silently changes tabs, and
@@ -4474,6 +4492,29 @@ function mapProviderToPlatform(name) {
     if (new RegExp('\\b' + kw.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b').test(key)) return PROVIDER_KEYWORD_FALLBACK[i][1];
   }
   return null;
+}
+
+// Background check for "Waiting for New Season" shows: compares the season
+// count captured when each show was added against TMDB's current count.
+// Fires after the watchlist loads, doesn't block anything. Only checks shows
+// not already flagged, so a flag persists (and stops re-checking) until the
+// user acts on it via tapNewSeasonBadge().
+function checkForNewSeasons() {
+  var waiting = (state.watchlist || []).filter(function(s) {
+    return s.waitingForSeason && !s.newSeasonAvailable && s.tmdb_id && s.numberOfSeasons != null;
+  });
+  waiting.forEach(function(s) {
+    fetch('https://api.themoviedb.org/3/tv/' + s.tmdb_id + '?api_key=' + TMDB_KEY)
+      .then(function(res) { return res.json(); })
+      .then(function(d) {
+        if (!d.number_of_seasons || d.number_of_seasons <= s.numberOfSeasons) return;
+        s.newSeasonAvailable = true;
+        s.numberOfSeasons = d.number_of_seasons;
+        renderList('watchlist');
+        return updateShowStatus(s.id, 'watchlist', { new_season_available: true, number_of_seasons: d.number_of_seasons });
+      })
+      .catch(function(e) { console.error('checkForNewSeasons error for ' + s.title + ':', e); });
+  });
 }
 
 async function fetchAutoPlatform(tmdbId) {
