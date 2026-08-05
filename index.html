@@ -53,6 +53,7 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
 .boot-loader-logo{font-family:var(--serif);font-size:26px;color:var(--terra);font-weight:700;margin-bottom:16px;}
 .boot-loader-spinner{width:32px;height:32px;border:3px solid rgba(196,98,45,0.22);border-top-color:var(--terra);border-radius:50%;animation:boot-spin 0.8s linear infinite;}
 .boot-loader-log{margin-top:18px;font-family:monospace;font-size:11px;color:var(--muted);text-align:left;max-width:280px;line-height:1.7;}
+.debug-badge{position:fixed;bottom:12px;left:12px;z-index:9999;background:rgba(0,0,0,0.78);color:#fff;font-family:monospace;font-size:11px;line-height:1.6;padding:8px 10px;border-radius:8px;max-width:260px;display:none;}
 @keyframes boot-spin{to{transform:rotate(360deg);}}
 
 .content{flex:1;padding:24px 20px 84px;max-width:700px;margin:0 auto;width:100%;}
@@ -372,6 +373,7 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
   <div class="boot-loader-spinner"></div>
   <div class="boot-loader-log" id="boot-loader-log"></div>
 </div>
+<div class="debug-badge" id="debug-badge"></div>
 <script>
   // On-screen timing text only shows when ?debug=1 is in the URL — everyday
   // users should never see raw debug output on the loading screen. Add
@@ -3155,7 +3157,19 @@ function normalizeShow(s) {
 function _logFriendsLoadTime() {
   try {
     var t0 = window._bootMarks && window._bootMarks.length ? window._bootMarks[0][1] : 0;
-    console.log('[ShowUp] Living Room data ready: +' + (Math.round(performance.now()) - t0) + 'ms');
+    var elapsed = Math.round(performance.now()) - t0;
+    console.log('[ShowUp] Living Room data ready: +' + elapsed + 'ms');
+    // Own tabs render (and hide the boot-loader) before this resolves, so the
+    // boot-loader-log is already off-screen by the time we get here — this
+    // separate badge stays visible so the number can still be read/screenshotted
+    // on a phone without DevTools. Only shown with ?debug=1, same as boot timing.
+    if (window._bootDebug) {
+      var badge = document.getElementById('debug-badge');
+      if (badge) {
+        badge.style.display = 'block';
+        badge.textContent = 'Living Room data ready: +' + elapsed + 'ms';
+      }
+    }
   } catch(e) {}
 }
 
