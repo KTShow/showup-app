@@ -2998,88 +2998,21 @@ async function getFriendsWithShows() {
   const { data: { user } } = await sb.auth.getUser();
   if (!user) throw new Error('Not authenticated');
 
-  // room, myMemberships, and mutedFriends only depend on user.id, not on each other — fire together.
-  var roomPromise = getMyLivingRoom();
-  var myMembershipsPromise = sb.from('living_room_members')
-    .select('living_room_id').eq('user_id', user.id).eq('status', 'active');
-  var mutedPromise = sb.from('muted_friends').select('muted_user_id').eq('user_id', user.id);
+  // Single server-side call replaces what used to be ~5 sequential round
+  // trips (room -> members -> profiles -> shows/top5 -> reactions). The
+  // get_living_room_data() function runs as the calling user (no elevated
+  // privileges), so it can only ever return what these same RLS-governed
+  // table queries already allowed — see create_get_living_room_data_rpc.sql.
+  const { data: bundle, error: bundleErr } = await sb.rpc('get_living_room_data');
+  if (bundleErr) throw bundleErr;
+  if (!bundle) return [];
 
-  const room = await roomPromise;
-  if (!room) return [];
-  const { data: myMemberships } = await myMembershipsPromise;
-  const { data: mutedRows } = await mutedPromise;
-  var mutedSet = new Set((mutedRows || []).map(function(r) { return r.muted_user_id; }));
-
-  // Direction 1 (members of my room) and direction 2 (rooms I joined) are
-  // independent of each other once room/myMemberships are known — fire together.
-  var memberRowsPromise = sb.from('living_room_members')
-    .select('user_id')
-    .eq('living_room_id', room.id).eq('status', 'active').neq('user_id', user.id);
-  var otherRoomIds = (myMemberships || [])
-    .map(function(m) { return m.living_room_id; })
-    .filter(function(id) { return id !== room.id; });
-  var otherRoomsPromise = otherRoomIds.length > 0
-    ? sb.from('living_rooms').select('owner_id').in('id', otherRoomIds)
-    : Promise.resolve({ data: [] });
-
-  const [memberRowsRes, otherRoomsRes] = await Promise.all([memberRowsPromise, otherRoomsPromise]);
-  if (memberRowsRes.error) throw memberRowsRes.error;
-  var dir1Ids = (memberRowsRes.data || []).map(function(m) { return m.user_id; });
-  var ownerIds = (otherRoomsRes.data || []).map(function(r) { return r.owner_id; }).filter(function(id) { return id !== user.id; });
-
-  // Profile lookups for both directions are independent — fire together.
-  var dir1ProfilesPromise = dir1Ids.length > 0
-    ? sb.from('users').select('id, first_name, last_initial, city, state, room').in('id', dir1Ids)
-    : Promise.resolve({ data: [] });
-  var ownerProfilesPromise = ownerIds.length > 0
-    ? sb.from('users').select('id, first_name, last_initial, city, state, room').in('id', ownerIds)
-    : Promise.resolve({ data: [] });
-
-  const [dir1Res, ownerRes] = await Promise.all([dir1ProfilesPromise, ownerProfilesPromise]);
-  var dir1Profiles = dir1Res.data || [];
-  var ownerProfiles = ownerRes.data || [];
-
-  // Merge, deduplicate by user id
-  var seenIds = new Set([user.id]);
-  var allUsers = [];
-  dir1Profiles.forEach(function(u) {
-    if (!seenIds.has(u.id)) {
-      seenIds.add(u.id);
-      allUsers.push(u);
-    }
-  });
-  ownerProfiles.forEach(function(u) {
-    if (!seenIds.has(u.id)) {
-      seenIds.add(u.id);
-      allUsers.push(u);
-    }
-  });
-
+  var allUsers = bundle.friends || [];
   if (!allUsers.length) return [];
-  var friendIds = allUsers.map(function(u) { return u.id; });
-
-  const [showsRes, top5Res] = await Promise.all([
-    sb.from('shows').select('*').in('user_id', friendIds).eq('hidden', false),
-    sb.from('top5_shows').select('*').in('user_id', friendIds).order('rank', { ascending: true })
-  ]);
-  if (showsRes.error) throw showsRes.error;
-  if (top5Res.error) throw top5Res.error;
-  var shows = showsRes.data;
-  var top5 = top5Res.data;
-
-  var allReactions = [];
-  if (shows && shows.length) {
-    // A single .in() request listing every friend show id can exceed a
-    // request-size limit once a real session's auth header is attached
-    // (confirmed via a "bad request" error on ~600+ ids) — batching avoids
-    // that regardless of the exact limit, and scales as the room grows.
-    var showIds = shows.map(function(s) { return s.id; });
-    var CHUNK = 150;
-    var chunks = [];
-    for (var ci = 0; ci < showIds.length; ci += CHUNK) chunks.push(showIds.slice(ci, ci + CHUNK));
-    var rxResults = await Promise.all(chunks.map(function(c) { return sb.from('reactions').select('*').in('show_id', c); }));
-    rxResults.forEach(function(r) { if (r.data) allReactions = allReactions.concat(r.data); });
-  }
+  var shows = bundle.shows || [];
+  var top5 = bundle.top5 || [];
+  var allReactions = bundle.reactions || [];
+  var mutedSet = new Set(bundle.muted || []);
 
   var userLookup = {};
   if (state.user) userLookup[user.id] = { name: state.user.first + (state.user.last ? ' ' + state.user.last : ''), initials: state.user.initials || 'Y', color: '#C4622D' };
