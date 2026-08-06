@@ -3250,15 +3250,20 @@ async function loadUserIntoState(profile) {
 
   setRoom(state.user.room);
   updateAvatar();
-  // Deliberately NOT processing PENDING_INVITER/PENDING_ROOM_ID here. This is
-  // the RETURNING/existing-user path (loadUserIntoState runs after an
-  // existing profile is found) -- an established user should never re-run an
-  // invite join just because they land on an old bookmarked invite link.
-  // (2026-08-06 incident: an existing user briefly looked "new" due to an
-  // unrelated transient error, still had a stale invite link pending, and
-  // re-running connect_to_beta_group cross-connected people who were never
-  // meant to be connected. Invite processing now only happens once, in
-  // completeOnboard(), for a genuinely brand-new profile.)
+  // Deliberately NOT processing PENDING_INVITER (the old beta1 mesh invite)
+  // here in the RETURNING/existing-user path -- an established user should
+  // never re-run that join just because they land on an old bookmarked
+  // invite link. (2026-08-06 incident: an existing user briefly looked "new"
+  // due to an unrelated transient error, still had a stale PENDING_INVITER
+  // pending, and re-running connect_to_beta_group cross-connected people who
+  // were never meant to be connected.) PENDING_ROOM_ID is different and safe
+  // to keep processing here: join_living_room() only ever touches the one
+  // specific room in the link, so an existing user deliberately clicking a
+  // NEW room's invite while already logged in (the normal case) still works.
+  if (PENDING_ROOM_ID) {
+    await joinLivingRoom(PENDING_ROOM_ID);
+    PENDING_ROOM_ID = null;
+  }
   init();
   showScreen('app');
   renderAll();
