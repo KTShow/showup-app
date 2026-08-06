@@ -123,6 +123,13 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
 .quick-react-btn:hover{background:var(--border);}
 
 .section-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);margin:18px 0 10px;}
+.room-picker-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:12px;margin-bottom:24px;}
+.room-tile{background:var(--cream);border:1px solid var(--border);border-radius:var(--radius);padding:16px 14px;text-align:left;cursor:pointer;transition:all 0.2s;box-shadow:var(--shadow);}
+.room-tile:hover{border-color:var(--terra);transform:translateY(-2px);}
+.room-tile-name{font-family:var(--serif);font-size:16px;font-weight:700;color:var(--fig);margin-bottom:4px;}
+.room-tile-meta{font-size:12px;color:var(--muted);}
+.room-tile-create{background:none;border:2px dashed var(--border);border-radius:var(--radius);padding:16px 14px;text-align:center;cursor:pointer;transition:all 0.2s;color:var(--muted);font-family:var(--sans);font-size:14px;font-weight:600;display:flex;align-items:center;justify-content:center;min-height:64px;}
+.room-tile-create:hover{border-color:var(--terra);color:var(--terra);}
 .friends-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(98px,1fr));gap:9px;margin-bottom:24px;}
 .friend-card{position:relative;background:var(--cream);border:1px solid var(--border);border-radius:var(--radius);padding:11px;text-align:left;cursor:pointer;transition:all 0.2s;box-shadow:var(--shadow);}
 .friend-card.is-muted{opacity:0.5;}
@@ -653,7 +660,6 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
   <div class="nav">
     <div class="nav-logo">ShowUp</div>
     <div class="nav-right">
-      <button onclick="openInviteModal()" style="background:var(--terra);color:white;border:none;border-radius:20px;padding:5px 12px;font-family:var(--sans);font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;">Invite Friends</button>
       <button class="nav-settings" onclick="goToSettings()" title="Settings">&#9881;&#65039;</button>
       <button class="nav-avatar" id="user-avatar" onclick="goToProfile()">?</button>
     </div>
@@ -716,9 +722,14 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
       <div id="watched-list"></div>
     </div>
     <div id="tab-living-room" class="tab-pane" style="display:none">
-      <div id="friends-view">
-        <div class="page-title">&#127968;&nbsp; The Living Room</div>
-        <div class="page-sub">Your Crowd &mdash; see what everyone's watching</div>
+      <div id="room-picker-view">
+        <div class="page-title">&#127968;&nbsp; Your Living Rooms</div>
+        <div class="page-sub">Pick a room to enter, or start a new one.</div>
+        <div class="room-picker-grid" id="room-picker-grid"></div>
+      </div>
+      <div id="friends-view" style="display:none">
+        <div class="page-title"><button class="nav-back" onclick="backToRoomPicker()" style="margin-right:6px;">&#8592;</button>&#127968;&nbsp; <span id="current-room-name">The Living Room</span></div>
+        <div class="page-sub">Your Crowd &mdash; see what everyone's watching &mdash; <a href="#" onclick="openInviteModal();return false;" style="color:var(--terra);font-weight:600;">Invite someone</a></div>
         <div id="recommendations-banner"></div>
         <div class="lr-toggle">
           <button class="lr-toggle-btn active" id="toggle-crew" onclick="switchLRView('crew')"><span class="toggle-icon">🛋️</span>Your Crowd</button>
@@ -763,7 +774,6 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
   <div class="nav">
     <div class="nav-logo">ShowUp</div>
     <div style="display:flex;align-items:center;gap:8px;">
-      <button onclick="openInviteModal()" style="background:var(--terra);color:white;border:none;border-radius:20px;padding:5px 12px;font-family:var(--sans);font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;">Invite Friends</button>
       <button class="nav-back" onclick="backFromProfile()">&#8592; Back</button>
     </div>
   </div>
@@ -834,7 +844,6 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
   <div class="nav">
     <div class="nav-logo">ShowUp</div>
     <div style="display:flex;align-items:center;gap:8px;">
-      <button onclick="openInviteModal()" style="background:var(--terra);color:white;border:none;border-radius:20px;padding:5px 12px;font-family:var(--sans);font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;">Invite Friends</button>
       <button class="nav-back" onclick="backFromSettings()">&#8592; Back</button>
     </div>
   </div>
@@ -934,7 +943,11 @@ var state = {
   friends: [],
   friendsLoaded: false,
   recommendations: [],
-  lastVisitAt: null
+  lastVisitAt: null,
+  currentRoomId: null,   // which Living Room the user has entered, if any
+  currentRoomName: '',
+  myRooms: [],           // rooms the user owns or belongs to, for the room picker
+  myRoomsLoaded: false,
 };
 
 var _firstTimeTellMore = false; // true when completing onboarding for the first time
@@ -954,18 +967,6 @@ function loadUserOnce(profile) {
     _userLoadPromise = loadUserIntoState(profile).then(function() { return recordSession(); });
   }
   return _userLoadPromise;
-}
-
-
-function openInviteModal() {
-  var u = state.user;
-  var name = u && u.first ? u.first : 'your friend';
-  document.getElementById('invite-modal-sub').textContent = name + " wants you on the couch. Join their ShowUp Living Room.";
-  document.getElementById('invite-modal').classList.add('active');
-}
-
-function closeInviteModal() {
-  document.getElementById('invite-modal').classList.remove('active');
 }
 
 
@@ -1245,7 +1246,7 @@ function showTab(tab, btn) {
     _conversationsViewed = false;
   }
   _skipConversationsMarkSeen = false;
-  if (tab==='living-room') { renderFriends(); if (typeof loadAndRenderFriends === 'function') loadAndRenderFriends(); }
+  if (tab==='living-room') { showRoomPicker(); }
   if (tab==='watched') { renderBingedTop5(); }
   if (tab!=='living-room') state.lastViewedFriend = null;
   if (state.user) state.user.lastActive = new Date().toISOString();
@@ -1967,6 +1968,85 @@ function switchLRView(view){
   // clear the rest of the list before they've looked at it.
   if(view==='conversations'){renderConversations(); _conversationsViewed = true;}
 }
+
+// ============================================================
+// ROOM PICKER — entry point for the Living Room tab. Users can own/belong
+// to any number of rooms; this lists them and lets you enter one or create
+// a new one, before the existing Your Crowd/Favorites/Show Talk/Conversations
+// view (unchanged underneath, just now scoped to state.currentRoomId).
+// ============================================================
+
+async function showRoomPicker() {
+  document.getElementById('room-picker-view').style.display = 'block';
+  document.getElementById('friends-view').style.display = 'none';
+  document.getElementById('friend-detail-view').style.display = 'none';
+  state.currentRoomId = null;
+  state.currentRoomName = '';
+  state.friendsLoaded = false;
+  await loadAndRenderRoomPicker();
+}
+
+async function loadAndRenderRoomPicker() {
+  var grid = document.getElementById('room-picker-grid');
+  if (!state.myRoomsLoaded && grid) {
+    grid.innerHTML = '<div class="empty" style="grid-column:1/-1;"><div class="empty-icon">&#8987;</div>Loading your rooms&hellip;</div>';
+  }
+  try {
+    const { data, error } = await sb.rpc('get_my_living_rooms');
+    if (error) throw error;
+    state.myRooms = data || [];
+  } catch(e) {
+    console.error('Error loading living rooms:', e);
+    state.myRooms = [];
+  }
+  state.myRoomsLoaded = true;
+  renderRoomPicker();
+}
+
+function renderRoomPicker() {
+  var grid = document.getElementById('room-picker-grid');
+  if (!grid) return;
+  var tiles = state.myRooms.map(function(r) {
+    return '<div class="room-tile" onclick="enterLivingRoom(\''+r.id+'\')"><div class="room-tile-name">'+escAttr(r.name)+'</div><div class="room-tile-meta">'+r.member_count+' member'+(r.member_count===1?'':'s')+'</div></div>';
+  }).join('');
+  grid.innerHTML = tiles + '<div class="room-tile-create" onclick="openCreateRoomModal()">+ Create New Room</div>';
+}
+
+window.enterLivingRoom = async function(roomId, roomName) {
+  if (!roomName) {
+    var room = state.myRooms.find(function(r) { return r.id === roomId; });
+    roomName = room ? room.name : 'The Living Room';
+  }
+  state.currentRoomId = roomId;
+  state.currentRoomName = roomName;
+  state.friendsLoaded = false;
+  state.friends = [];
+  document.getElementById('room-picker-view').style.display = 'none';
+  document.getElementById('friends-view').style.display = 'block';
+  document.getElementById('friend-detail-view').style.display = 'none';
+  var nameEl = document.getElementById('current-room-name');
+  if (nameEl) nameEl.textContent = roomName;
+  switchLRView('crew');
+  renderFriends();
+  await loadAndRenderFriends();
+  updateInviteLinks();
+};
+
+window.backToRoomPicker = function() { showRoomPicker(); };
+
+window.openCreateRoomModal = async function() {
+  var name = prompt('Name your new Living Room:');
+  if (!name || !name.trim()) return;
+  try {
+    const { data: roomId, error } = await sb.rpc('create_living_room', { p_name: name.trim() });
+    if (error) throw error;
+    state.myRoomsLoaded = false; // refetch next time the picker is shown, so the new room appears in it
+    await enterLivingRoom(roomId, name.trim());
+  } catch(e) {
+    console.error('create_living_room error:', e);
+    alert('Could not create the room, please try again.');
+  }
+};
 
 // ============================================================
 // CONVERSATIONS — activity feed of what's new since you last looked
@@ -2692,9 +2772,17 @@ init();
 const SUPABASE_URL = 'https://sgnulweruogjfdddwboe.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNnbnVsd2VydW9namZkZGR3Ym9lIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkxMzQ0MzMsImV4cCI6MjA5NDcxMDQzM30.bL28eAEx24TjpE8msSmoZHUQOWU5Yj6EfHpMv8V5VrM';
 
-// Read inviter username from /join/:username URL (set by Vercel rewrite)
+// Read inviter username from /join/:username URL (set by Vercel rewrite) --
+// legacy beta1 mesh invite, left untouched so old shared links keep working.
 var PENDING_INVITER = (function() {
   var m = window.location.pathname.match(/^\/join\/([a-z0-9-]+)$/i);
+  return m ? m[1] : null;
+})();
+
+// Read a specific room id to join from /join-room/:roomId URL (set by Vercel
+// rewrite) -- the new per-room invite mechanism, additive alongside the above.
+var PENDING_ROOM_ID = (function() {
+  var m = window.location.pathname.match(/^\/join-room\/([0-9a-f-]{36})$/i);
   return m ? m[1] : null;
 })();
 
@@ -2773,6 +2861,15 @@ async function connectViaInvite(inviterUsername) {
     if (error) console.error('[connectViaInvite] rpc error:', error);
   } catch(e) {
     console.error('[connectViaInvite] exception:', e);
+  }
+}
+
+async function joinLivingRoom(roomId) {
+  try {
+    var { error } = await sb.rpc('join_living_room', { p_room_id: roomId });
+    if (error) console.error('[joinLivingRoom] rpc error:', error);
+  } catch(e) {
+    console.error('[joinLivingRoom] exception:', e);
   }
 }
 
@@ -2986,26 +3083,18 @@ async function saveTop5(showsArray) {
 // LIVING ROOM / FRIENDS
 // ============================================================
 
-async function getMyLivingRoom() {
+async function getFriendsWithShows(roomId) {
   const { data: { user } } = await sb.auth.getUser();
   if (!user) throw new Error('Not authenticated');
-  const { data, error } = await sb.from('living_rooms')
-    .select('*').eq('owner_id', user.id).single();
-  if (error && error.code === 'PGRST116') return null;
-  if (error) throw error;
-  return data;
-}
-
-async function getFriendsWithShows() {
-  const { data: { user } } = await sb.auth.getUser();
-  if (!user) throw new Error('Not authenticated');
+  if (!roomId) return [];
 
   // Single server-side call replaces what used to be ~5 sequential round
   // trips (room -> members -> profiles -> shows/top5 -> reactions). The
   // get_living_room_data() function runs as the calling user (no elevated
-  // privileges), so it can only ever return what these same RLS-governed
-  // table queries already allowed — see create_get_living_room_data_rpc.sql.
-  const { data: bundle, error: bundleErr } = await sb.rpc('get_living_room_data');
+  // privileges) for a SPECIFIC room, so it can only ever return what these
+  // same RLS-governed table queries already allowed for that room's members
+  // — see multiroom_phase1_migration.sql.
+  const { data: bundle, error: bundleErr } = await sb.rpc('get_living_room_data', { p_room_id: roomId });
   if (bundleErr) throw bundleErr;
   if (!bundle) return [];
 
@@ -3134,12 +3223,11 @@ async function loadUserIntoState(profile) {
     conversationsLastSeenAt: profile.conversations_last_seen_at || null,
   };
 
-  // Fire all four independent loads at once instead of waiting on each in turn —
+  // Fire all three independent loads at once instead of waiting on each in turn —
   // none of these read each other's results, only state.user (already set above).
   var showsPromise = loadShows();
   var top5Promise = loadTop5();
   var lastVisitPromise = getLastVisitTime();
-  var friendsPromise = getFriendsWithShows();
 
   try {
     var shows = await showsPromise;
@@ -3162,36 +3250,17 @@ async function loadUserIntoState(profile) {
 
   setRoom(state.user.room);
   updateAvatar();
-  updateInviteLinks(state.user.username);
   if (PENDING_INVITER) {
     await connectViaInvite(PENDING_INVITER);
     PENDING_INVITER = null;
   }
+  if (PENDING_ROOM_ID) {
+    await joinLivingRoom(PENDING_ROOM_ID);
+    PENDING_ROOM_ID = null;
+  }
   init();
   showScreen('app');
   renderAll();
-
-  // Living Room/friends data loads in the background instead of blocking your
-  // own tabs from appearing — on a weak connection, getFriendsWithShows()'s
-  // several sequential lookups were the whole app's bottleneck (measured up
-  // to 8-10s on cellular vs ~2s on wifi). Your own tabs no longer wait on it.
-  friendsPromise
-    .then(function(friends) {
-      state.friends = friends;
-      state.friendsLoaded = true;
-      renderFriends();
-      renderRankings();
-      renderList('watchlist');
-      _logFriendsLoadTime();
-    })
-    .catch(function(e) {
-      console.error('Error loading friends:', e);
-      state.friends = [];
-      state.friendsLoaded = true;
-      renderFriends();
-      renderRankings();
-      _logFriendsLoadTime();
-    });
 }
 
 // ============================================================
@@ -3390,10 +3459,13 @@ window.completeOnboard = async function() {
       room: 'tuscany', username: profile.username, top5: [],
     };
     updateAvatar();
-    updateInviteLinks(profile.username);
     if (PENDING_INVITER) {
       await connectViaInvite(PENDING_INVITER);
       PENDING_INVITER = null;
+    }
+    if (PENDING_ROOM_ID) {
+      await joinLivingRoom(PENDING_ROOM_ID);
+      PENDING_ROOM_ID = null;
     }
     _firstTimeTellMore = true;
     showScreen('tellmore');
@@ -3452,7 +3524,6 @@ window.saveTellMore = async function() {
   }
   if (_firstTimeTellMore) {
     _firstTimeTellMore = false;
-    try { state.friends = await getFriendsWithShows(); } catch(e) { state.friends = []; }
     showScreen('app');
     renderAll();
     var lrBtn = document.getElementById('btab-living-room');
@@ -3562,7 +3633,7 @@ var _originalSetRoom = null;
 document.addEventListener('DOMContentLoaded', function() {
   window._mark('dom-content-loaded');
   _originalSetRoom = window.setRoom;
-  if (PENDING_INVITER) {
+  if (PENDING_INVITER || PENDING_ROOM_ID) {
     var banner = document.getElementById('invite-banner');
     if (banner) banner.style.display = 'block';
   }
@@ -4139,14 +4210,14 @@ window.submitEditFriendReact = async function(friendId, lk, showId, reactId) {
 async function dbMuteFriend(friendId) {
   const { data: { user } } = await sb.auth.getUser();
   if (!user) throw new Error('Not authenticated');
-  const { error } = await sb.from('muted_friends').insert({ user_id: user.id, muted_user_id: friendId });
+  const { error } = await sb.from('muted_friends').insert({ user_id: user.id, muted_user_id: friendId, living_room_id: state.currentRoomId });
   if (error) throw error;
 }
 
 async function dbUnmuteFriend(friendId) {
   const { data: { user } } = await sb.auth.getUser();
   if (!user) throw new Error('Not authenticated');
-  const { error } = await sb.from('muted_friends').delete().eq('user_id', user.id).eq('muted_user_id', friendId);
+  const { error } = await sb.from('muted_friends').delete().eq('user_id', user.id).eq('muted_user_id', friendId).eq('living_room_id', state.currentRoomId);
   if (error) throw error;
 }
 
@@ -4170,22 +4241,17 @@ window.toggleMuteFriend = async function(friendId) {
 };
 
 async function dbRemoveFriend(friendId) {
-  const { data: { user } } = await sb.auth.getUser();
-  if (!user) throw new Error('Not authenticated');
-  const myRoom = await getMyLivingRoom();
-  if (myRoom) {
-    await sb.from('living_room_members').delete()
-      .eq('living_room_id', myRoom.id).eq('user_id', friendId);
-  }
-  const { data: theirRoom } = await sb.from('living_rooms').select('id').eq('owner_id', friendId).single();
-  if (theirRoom) {
-    await sb.from('living_room_members').delete()
-      .eq('living_room_id', theirRoom.id).eq('user_id', user.id);
-  }
+  // Removes this person from the room currently being viewed only -- under
+  // multi-room, a global cross-room "unfriend" would be ambiguous (which
+  // room?). If they share another room with you, they're unaffected there.
+  if (!state.currentRoomId) return;
+  const { error } = await sb.from('living_room_members').delete()
+    .eq('living_room_id', state.currentRoomId).eq('user_id', friendId);
+  if (error) throw error;
 }
 
 window.removeFriend = async function(friendId) {
-  if (!confirm('Remove this person from your Living Room? You can re-invite them later.')) return;
+  if (!confirm('Remove this person from "' + (state.currentRoomName || 'this room') + '"? You can re-invite them later. They’ll be unaffected in any other room you share with them.')) return;
   backToFriends();
   state.friends = state.friends.filter(function(f) { return f.id !== friendId; });
   renderFriends();
@@ -4268,8 +4334,9 @@ async function loadRecommendations() {
 }
 
 async function loadAndRenderFriends() {
+  if (!state.currentRoomId) return;
   try {
-    var results = await Promise.all([getFriendsWithShows(), loadRecommendations()]);
+    var results = await Promise.all([getFriendsWithShows(state.currentRoomId), loadRecommendations()]);
     state.friends = results[0];
     state.recommendations = results[1];
     state.friendsLoaded = true;
@@ -4812,26 +4879,30 @@ window.chooseAddDestination = async function(destKey) {
 // INVITE LINKS
 // ============================================================
 
-function updateInviteLinks(username) {
-  var link = 'https://showup-app-zeta.vercel.app/join/' + username;
-  document.querySelectorAll('.invite-link, #invite-modal-link').forEach(function(el) { el.textContent = link; });
+function updateInviteLinks() {
+  if (!state.currentRoomId) return;
+  var link = 'https://showup-app-zeta.vercel.app/join-room/' + state.currentRoomId;
+  document.querySelectorAll('#invite-modal-link').forEach(function(el) { el.textContent = link; });
 }
 
 window.openInviteModal = function() {
+  if (!state.currentRoomId) return;
   var u = state.user;
   var name = u && u.first ? u.first : 'your friend';
-  document.getElementById('invite-modal-sub').textContent = name + ' wants you on the couch. Join their ShowUp Living Room.';
-  if (u && u.username) {
-    document.getElementById('invite-modal-link').textContent = 'https://showup-app-zeta.vercel.app/join/' + u.username;
-  }
+  var roomName = state.currentRoomName || 'their Living Room';
+  document.getElementById('invite-modal-sub').textContent = name + ' wants you on the couch. Join "' + roomName + '" on ShowUp.';
+  document.getElementById('invite-modal-link').textContent = 'https://showup-app-zeta.vercel.app/join-room/' + state.currentRoomId;
   document.getElementById('invite-modal').classList.add('active');
 };
 
 window.closeInviteModal = function() { document.getElementById('invite-modal').classList.remove('active'); };
 
 function copyInviteContent(link, btn, resetLabel) {
-  var html = '<p>Welcome to the ShowUp App as the Beta1 Group. We appreciate your help. Follow the link, gain your access code and you\'ll be taken directly to a login screen. We will see you in the Living Room. Thank you, Tracey and George</p><p><a href="' + link + '">' + link + '</a></p>';
-  var plain = 'Welcome to the ShowUp App as the Beta1 Group. We appreciate your help. Follow the link, gain your access code and you\'ll be taken directly to a login screen. We will see you in the Living Room. Thank you, Tracey and George\n\n' + link;
+  var u = state.user;
+  var inviterName = u && u.first ? u.first : 'A friend';
+  var roomName = state.currentRoomName || 'their Living Room';
+  var html = '<p>' + inviterName + ' invited you to join "' + roomName + '" on ShowUp! Follow the link, get your access code by email, and you\'ll be taken right in.</p><p><a href="' + link + '">' + link + '</a></p>';
+  var plain = inviterName + ' invited you to join "' + roomName + '" on ShowUp! Follow the link, get your access code by email, and you\'ll be taken right in.\n\n' + link;
   function onCopied() { btn.textContent = 'Copied! \u2713'; setTimeout(function() { btn.textContent = resetLabel; }, 1800); }
   if (window.ClipboardItem && navigator.clipboard && navigator.clipboard.write) {
     navigator.clipboard.write([new ClipboardItem({
