@@ -955,6 +955,7 @@ var state = {
   currentRoomId: null,   // which Living Room the user has entered, if any
   currentRoomName: '',
   currentRoomIsOwner: false,
+  influencerNames: {},   // who-recommended-what, resolved independent of room (see loadInfluencerNames)
   myRooms: [],           // rooms the user owns or belongs to, for the room picker
   myRoomsLoaded: false,
 };
@@ -1630,8 +1631,8 @@ function buildWatchlistCard(s) {
   var platformRow=s.editingPlatform?platformSelect('watchlist',sid,s.platform):'';
   var recommendedBadge='';
   if(s.source==='recommendation'&&s.influencedBy){
-    var recFriend=(state.friends||[]).find(function(x){return x.id===s.influencedBy;});
-    if(recFriend) recommendedBadge='<div style="font-size:11px;color:var(--fig);font-weight:600;margin-top:2px;">&#127919; Recommended by '+recFriend.name+'</div>';
+    var recName=state.influencerNames[s.influencedBy];
+    if(recName) recommendedBadge='<div style="font-size:11px;color:var(--fig);font-weight:600;margin-top:2px;">&#127919; Recommended by '+recName+'</div>';
   }
   var watchedByBadge='';
   var watchedByNames=friendsWhoHaveShow(s.title);
@@ -3408,6 +3409,7 @@ async function loadUserIntoState(profile) {
     state.watchlist = shows.filter(function(s) { return s.status === 'watchlist'; }).map(normalizeShow);
     state.watched = shows.filter(function(s) { return s.status === 'watched' || s.status === 'dnf'; }).map(normalizeShow);
     checkForNewSeasons(); // fire-and-forget, updates badges in the background as each check resolves
+    loadInfluencerNames(); // fire-and-forget, fills in "Recommended by" badges once resolved
   } catch(e) { console.error('Error loading shows:', e); }
 
   try {
@@ -4773,6 +4775,25 @@ function checkForNewSeasons() {
       })
       .catch(function(e) { console.error('checkForNewSeasons error for ' + s.title + ':', e); });
   });
+}
+
+// "Recommended by" badges need the recommender's name, but your own
+// Watching/My List tabs aren't tied to any specific room -- state.friends
+// (room-scoped) can't be trusted here. Resolves names directly instead,
+// independent of whichever room (if any) is currently open.
+function loadInfluencerNames() {
+  var ids = new Set();
+  ['watching','watchlist','watched'].forEach(function(lk){
+    (state[lk]||[]).forEach(function(s){ if(s.source==='recommendation' && s.influencedBy) ids.add(s.influencedBy); });
+  });
+  var missing = Array.from(ids).filter(function(id){ return !state.influencerNames[id]; });
+  if (!missing.length) return;
+  sb.from('users').select('id, first_name, last_initial').in('id', missing)
+    .then(function(res){
+      (res.data||[]).forEach(function(u){ state.influencerNames[u.id] = u.first_name + (u.last_initial ? ' ' + u.last_initial + '.' : ''); });
+      renderList('watching'); renderList('watchlist'); renderList('watched');
+    })
+    .catch(function(e){ console.error('loadInfluencerNames error:', e); });
 }
 
 async function fetchAutoPlatform(tmdbId) {
