@@ -1126,7 +1126,13 @@ function buildTastemakersLeaderboard() {
   }
   function tally(id, title) {
     if (!id) return;
-    if (!counts[id]) counts[id] = { id: id, name: nameFor(id), count: 0, shows: [] };
+    // Tastemakers is a per-room leaderboard like Friends Favorites -- if the
+    // recommender isn't in the room currently being viewed (e.g. they
+    // recommended it back in a different room), skip them rather than
+    // showing a vague "Someone" placeholder.
+    var name = nameFor(id);
+    if (name === 'Someone') return;
+    if (!counts[id]) counts[id] = { id: id, name: name, count: 0, shows: [] };
     counts[id].count++;
     counts[id].shows.push(title);
   }
