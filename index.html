@@ -1326,9 +1326,32 @@ function escAttr(str) {
 function reactionsHTML(reactions, list, showId, friendId) {
   if(!reactions||!reactions.length) return '';
   var uid = state.user && state.user.id;
+  // Own-card reactions are loaded once at boot, unfiltered by room and
+  // labeled "Someone" for anyone but you (normalizeShow can't know which
+  // friend it is). Friend cards already resolve real names correctly via
+  // the room-scoped RPC. For your own cards, resolve the real name live
+  // against whoever's actually in the room you're viewing right now, and
+  // drop any reaction from someone who isn't (consistent with
+  // Conversations/Show Talk -- a show carries into every room you're in,
+  // but a comment from outside the room being viewed shouldn't surface).
+  var isOwnCard = !friendId;
+  var friendsById = {};
+  if (isOwnCard) (state.friends||[]).forEach(function(f){ if(f) friendsById[f.id]=f; });
+  var visible = isOwnCard
+    ? reactions.filter(function(r){ return r.reactorId===uid || friendsById[r.reactorId]; })
+    : reactions;
+  if(!visible.length) return '';
   var html='<div class="react-list">';
-  reactions.forEach(function(r){
+  visible.forEach(function(r){
     var canEdit = uid && r.reactorId === uid && r.id && list && showId;
+    if (isOwnCard && r.reactorId !== uid && friendsById[r.reactorId]) {
+      var fr = friendsById[r.reactorId];
+      r = Object.assign({}, r, {
+        user: fr.name,
+        initials: fr.name.split(' ').map(function(x){return x[0]||'';}).join('').toUpperCase(),
+        color: ROOMS[fr.room||'tuscany'] ? ROOMS[fr.room||'tuscany'].color : '#888',
+      });
+    }
     if (canEdit && r.editing) {
       var editInpId = (friendId ? 'edit-finp-' : 'edit-inp-') + list + '-' + (friendId ? friendId + '-' : '') + showId + '-' + r.id;
       var saveCall = friendId
