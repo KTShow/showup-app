@@ -2135,12 +2135,15 @@ function buildConversationsFeed(){
     });
   });
 
-  // Your own shows: your own adds, and every comment (yours or a friend's)
+  // Your own shows: your own adds, and comments from people in THIS room
+  // (yours, or a current room member's) -- your show carries into every
+  // room you're in, but a comment left by someone outside the room being
+  // viewed right now shouldn't surface here.
   ['watching','watchlist','watched'].forEach(function(lk){
     (state[lk]||[]).forEach(function(s){
       if(isNew(s.addedAt)) events.push({type:'added',list:lk,showId:s.id,text:'<b>You</b> added '+escAttr(s.title),ts:s.addedAt});
       (s.reactions||[]).forEach(function(r){
-        if(r.reactorId && isNew(r.reactedAt)){
+        if(r.reactorId && isNew(r.reactedAt) && (r.reactorId===myId || friendsById[r.reactorId])){
           events.push({type:'comment',list:lk,showId:s.id,text:'<b>'+escAttr(nameFor(r.reactorId))+'</b> commented on your '+escAttr(s.title)+': &#8220;'+escAttr(r.text)+'&#8221;',ts:r.reactedAt});
         }
       });
