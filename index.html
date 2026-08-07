@@ -5054,8 +5054,10 @@ function copyInviteContent(link, btn, resetLabel) {
   var u = state.user;
   var inviterName = u && u.first ? u.first : 'A friend';
   var roomName = state.currentRoomName || 'their Living Room';
-  var html = '<p>' + inviterName + ' invited you to join "' + roomName + '" on ShowUp! Follow the link, get your access code by email, and you\'ll be taken right in.</p><p><a href="' + link + '">' + link + '</a></p>';
-  var plain = inviterName + ' invited you to join "' + roomName + '" on ShowUp! Follow the link, get your access code by email, and you\'ll be taken right in.\n\n' + link;
+  var pronoun = u && u.gender === 'Male' ? 'his' : u && u.gender === 'Female' ? 'her' : 'their';
+  var intro = inviterName + ' invited you to join ' + pronoun + ' living room "' + roomName + '" on the ShowUp App.';
+  var html = '<p>' + intro + ' Follow the link, get your access code by email, and you\'ll be taken right in.</p><p><a href="' + link + '">' + link + '</a></p>';
+  var plain = intro + ' Follow the link, get your access code by email, and you\'ll be taken right in.\n\n' + link;
   function onCopied() { btn.textContent = 'Copied! \u2713'; setTimeout(function() { btn.textContent = resetLabel; }, 1800); }
   if (window.ClipboardItem && navigator.clipboard && navigator.clipboard.write) {
     navigator.clipboard.write([new ClipboardItem({
