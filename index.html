@@ -2309,6 +2309,10 @@ function buildShowTalk(){
     (s.reactions||[]).forEach(function(r){
       if(!r.reactorId||!r.text)return;
       var isMe=r.reactorId===myId;
+      // A show carries into every room its owner belongs to, but a comment
+      // from someone outside the room being viewed right now shouldn't
+      // surface here -- same rule as Conversations.
+      if(!isMe && !friendsById[r.reactorId])return;
       shows[key].comments.push({name:nameFor(r.reactorId),color:colorFor(r.reactorId,isMe),initials:initialsFor(r.reactorId,isMe),text:r.text,reactedAt:r.reactedAt,isMe:isMe,reactorId:r.reactorId});
     });
   }
