@@ -728,7 +728,7 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
         <div class="room-picker-grid" id="room-picker-grid"></div>
       </div>
       <div id="friends-view" style="display:none">
-        <div class="page-title"><button class="nav-back" onclick="backToRoomPicker()" style="margin-right:6px;">&#8592;</button>&#127968;&nbsp; <span id="current-room-name">The Living Room</span></div>
+        <div class="page-title"><button class="nav-back" onclick="backToRoomPicker()" style="margin-right:6px;">&#8592;</button>&#127968;&nbsp; <span id="current-room-name">The Living Room</span><button id="rename-room-btn" onclick="renameCurrentRoom()" style="display:none;background:none;border:none;cursor:pointer;font-size:14px;margin-left:6px;color:var(--muted);vertical-align:middle;" title="Rename this room">&#9998;&#65039;</button></div>
         <div class="page-sub">Your Crowd &mdash; see what everyone's watching &mdash; <a href="#" onclick="openInviteModal();return false;" style="color:var(--terra);font-weight:600;">Invite someone</a></div>
         <div id="recommendations-banner"></div>
         <div class="lr-toggle">
@@ -946,6 +946,7 @@ var state = {
   lastVisitAt: null,
   currentRoomId: null,   // which Living Room the user has entered, if any
   currentRoomName: '',
+  currentRoomIsOwner: false,
   myRooms: [],           // rooms the user owns or belongs to, for the room picker
   myRoomsLoaded: false,
 };
@@ -1982,6 +1983,7 @@ async function showRoomPicker() {
   document.getElementById('friend-detail-view').style.display = 'none';
   state.currentRoomId = null;
   state.currentRoomName = '';
+  state.currentRoomIsOwner = false;
   state.friendsLoaded = false;
   await loadAndRenderRoomPicker();
 }
@@ -2012,13 +2014,15 @@ function renderRoomPicker() {
   grid.innerHTML = tiles + '<div class="room-tile-create" onclick="openCreateRoomModal()">+ Create New Room</div>';
 }
 
-window.enterLivingRoom = async function(roomId, roomName) {
-  if (!roomName) {
+window.enterLivingRoom = async function(roomId, roomName, isOwner) {
+  if (!roomName || isOwner === undefined) {
     var room = state.myRooms.find(function(r) { return r.id === roomId; });
-    roomName = room ? room.name : 'The Living Room';
+    if (!roomName) roomName = room ? room.name : 'The Living Room';
+    if (isOwner === undefined) isOwner = room ? !!room.is_owner : false;
   }
   state.currentRoomId = roomId;
   state.currentRoomName = roomName;
+  state.currentRoomIsOwner = isOwner;
   state.friendsLoaded = false;
   state.friends = [];
   document.getElementById('room-picker-view').style.display = 'none';
@@ -2026,6 +2030,8 @@ window.enterLivingRoom = async function(roomId, roomName) {
   document.getElementById('friend-detail-view').style.display = 'none';
   var nameEl = document.getElementById('current-room-name');
   if (nameEl) nameEl.textContent = roomName;
+  var renameBtn = document.getElementById('rename-room-btn');
+  if (renameBtn) renameBtn.style.display = isOwner ? 'inline' : 'none';
   switchLRView('crew');
   renderFriends();
   await loadAndRenderFriends();
@@ -2041,10 +2047,28 @@ window.openCreateRoomModal = async function() {
     const { data: roomId, error } = await sb.rpc('create_living_room', { p_name: name.trim() });
     if (error) throw error;
     state.myRoomsLoaded = false; // refetch next time the picker is shown, so the new room appears in it
-    await enterLivingRoom(roomId, name.trim());
+    await enterLivingRoom(roomId, name.trim(), true);
   } catch(e) {
     console.error('create_living_room error:', e);
     alert('Could not create the room, please try again.');
+  }
+};
+
+window.renameCurrentRoom = async function() {
+  if (!state.currentRoomId || !state.currentRoomIsOwner) return;
+  var name = prompt('Rename this Living Room:', state.currentRoomName);
+  if (!name || !name.trim() || name.trim() === state.currentRoomName) return;
+  var newName = name.trim();
+  try {
+    const { error } = await sb.rpc('rename_living_room', { p_room_id: state.currentRoomId, p_name: newName });
+    if (error) throw error;
+    state.currentRoomName = newName;
+    var nameEl = document.getElementById('current-room-name');
+    if (nameEl) nameEl.textContent = newName;
+    state.myRoomsLoaded = false; // refetch next time the picker is shown, so it reflects the new name
+  } catch(e) {
+    console.error('renameCurrentRoom error:', e);
+    alert('Could not rename the room, please try again.');
   }
 };
 
@@ -2892,12 +2916,10 @@ async function createUserProfile(profileData) {
     last_active: new Date().toISOString(),
   }).select().single();
   if (error) throw error;
-  const { error: roomError } = await sb.from('living_rooms').insert({
-    owner_id: user.id,
-    name: profileData.firstName + "'s Living Room",
-    is_public: false,
-  });
-  if (roomError) throw roomError;
+  // No longer auto-creating a personal "X's Living Room" here -- new users
+  // start owning zero rooms. They land in Beta1 (or whichever room) via
+  // whatever invite link brought them in, and can create their own rooms
+  // from the picker whenever they want one.
   await recordSession();
   return data;
 }
