@@ -725,6 +725,14 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
       <div id="room-picker-view">
         <div class="page-title">&#127968;&nbsp; Your Living Rooms</div>
         <div class="page-sub">Pick a room to enter, or start a new one.</div>
+        <div class="tastemakers-banner" onclick="openPrimeTimeModal()" style="margin-bottom:16px;">
+          <div class="tastemakers-banner-icon">&#127909;</div>
+          <div class="tastemakers-banner-text">
+            <div class="tastemakers-banner-title">Prime Time</div>
+            <div class="tastemakers-banner-sub">See what your crowd loves most, across every room</div>
+          </div>
+          <div class="tastemakers-banner-arrow">&#8250;</div>
+        </div>
         <div class="room-picker-grid" id="room-picker-grid"></div>
       </div>
       <div id="friends-view" style="display:none">
@@ -2060,6 +2068,86 @@ window.openCreateRoomModal = async function() {
     console.error('create_living_room error:', e);
     alert('Could not create the room, please try again.');
   }
+};
+
+// ============================================================
+// PRIME TIME — cross-room leaderboard, pools ratings across every room
+// you belong to (not just the one you're currently in), deduped by
+// person. Scoped to your own network, same as Friends Favorites.
+// ============================================================
+
+var _primeTimeData = null;
+async function loadPrimeTimeData() {
+  if (_primeTimeData) return _primeTimeData;
+  try {
+    const { data, error } = await sb.rpc('get_prime_time_rankings');
+    if (error) throw error;
+    _primeTimeData = data || { shows: [], people: [] };
+  } catch(e) {
+    console.error('get_prime_time_rankings error:', e);
+    _primeTimeData = { shows: [], people: [] };
+  }
+  return _primeTimeData;
+}
+
+function buildPrimeTimeLeaderboard(data) {
+  var peopleById = {};
+  (data.people||[]).forEach(function(p){ peopleById[p.id] = p; });
+  function nameFor(id) {
+    if (state.user && id === state.user.id) return 'You';
+    var p = peopleById[id];
+    return p ? (p.first_name + (p.last_initial ? ' ' + p.last_initial + '.' : '')) : 'Someone';
+  }
+  var shows = {};
+  (data.shows||[]).forEach(function(s){
+    if (!s.title || !s.rating || s.rating === 0) return;
+    var key = s.title.toLowerCase().trim();
+    if (!shows[key]) shows[key] = { title: s.title, platform: s.platform||'', ratings: [], raters: [], poster_path: s.poster_path||null, tmdb_id: s.tmdb_id||null };
+    if (!shows[key].poster_path && s.poster_path) shows[key].poster_path = s.poster_path;
+    if (!shows[key].tmdb_id && s.tmdb_id) shows[key].tmdb_id = s.tmdb_id;
+    if (shows[key].raters.some(function(r){ return r.id === s.user_id; })) return; // one rating per person per show
+    shows[key].ratings.push(s.rating);
+    shows[key].raters.push({ id: s.user_id, name: nameFor(s.user_id), rating: s.rating });
+  });
+  var MIN_RATERS = 2;
+  var list = Object.values(shows).filter(function(s){ return s.ratings.length >= MIN_RATERS; }).map(function(s){
+    var avg = s.ratings.reduce(function(a,b){ return a+b; }, 0) / s.ratings.length;
+    return { title: s.title, platform: s.platform, avg: Math.round(avg*10)/10, count: s.ratings.length, poster_path: s.poster_path, tmdb_id: s.tmdb_id };
+  });
+  list.sort(function(a,b){ return b.avg - a.avg || b.count - a.count; });
+  return list.slice(0, 25);
+}
+
+window.openPrimeTimeModal = async function() {
+  var body = document.getElementById('prime-time-list');
+  body.innerHTML = '<div class="empty"><div class="empty-icon">&#8987;</div>Loading&hellip;</div>';
+  document.getElementById('prime-time-modal').classList.add('active');
+  var data = await loadPrimeTimeData();
+  var list = buildPrimeTimeLeaderboard(data);
+  if (!list.length) {
+    body.innerHTML = '<div class="empty"><div class="empty-icon">&#127909;</div>No ratings yet across your rooms.</div>';
+    return;
+  }
+  body.innerHTML = list.map(function(s, i){
+    var rank = i+1; var isGold = rank<=3;
+    var thumb = s.poster_path
+      ? '<img src="'+TMDB_IMG+s.poster_path+'" style="width:46px;height:46px;border-radius:8px;object-fit:cover;flex-shrink:0;margin-right:12px;" />'
+      : '<div style="width:46px;height:46px;border-radius:8px;background:var(--olive);flex-shrink:0;margin-right:12px;display:flex;align-items:center;justify-content:center;font-size:18px;">&#128252;</div>';
+    return '<div class="rank-card">'
+      +'<span class="rank-badge'+(isGold?' gold':'')+'">#'+rank+'</span>'
+      +thumb
+      +'<div class="rank-info">'
+      +'<div class="rank-title-text">'+escAttr(s.title)+'</div>'
+      +'<div class="rank-meta-line">'
+      +(s.platform?'<span class="rank-platform">'+escAttr(s.platform)+'</span>':'')
+      +'<span class="rank-avg-inline">&#9733;'+s.avg.toFixed(1)+'</span>'
+      +'<span class="rank-count-inline">'+s.count+' rated</span>'
+      +'</div></div>'
+      +'</div>';
+  }).join('');
+};
+window.closePrimeTimeModal = function() {
+  document.getElementById('prime-time-modal').classList.remove('active');
 };
 
 window.renameCurrentRoom = async function() {
@@ -5065,6 +5153,16 @@ bootstrap();
     <div class="invite-modal-sub">All-time leaderboard &mdash; recommendations your crowd accepted into Watching or My List.</div>
     <div id="tastemakers-list" style="max-height:320px;overflow-y:auto;margin-bottom:14px;"></div>
     <button class="btn-invite-close" onclick="closeTastemakersModal()" style="width:100%;">Close</button>
+  </div>
+</div>
+
+<!-- PRIME TIME LEADERBOARD -->
+<div class="invite-modal-overlay" id="prime-time-modal">
+  <div class="invite-modal">
+    <div class="invite-modal-title">&#127909; Prime Time</div>
+    <div class="invite-modal-sub">Top-rated shows across every room you're in.</div>
+    <div id="prime-time-list" style="max-height:320px;overflow-y:auto;margin-bottom:14px;"></div>
+    <button class="btn-invite-close" onclick="closePrimeTimeModal()" style="width:100%;">Close</button>
   </div>
 </div>
 
