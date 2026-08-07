@@ -2560,6 +2560,11 @@ function buildRankings(){
     if(!shows[key])shows[key]={title:title,platform:platform||'',ratings:[],raters:[],poster_path:null,tmdb_id:null};
     if(!shows[key].poster_path&&posterPath)shows[key].poster_path=posterPath;
     if(!shows[key].tmdb_id&&tmdbId)shows[key].tmdb_id=tmdbId;
+    // One rating per person per show, even if the same person has more than
+    // one row for it (e.g. an old duplicate-add from before that was
+    // prevented) -- otherwise a single duplicate DB row makes it look like
+    // two different people rated it.
+    if(shows[key].raters.some(function(r){return r.id===id;}))return;
     shows[key].ratings.push(rating);
     shows[key].raters.push({id:id,name:name,color:color,rating:rating,initials:initials,isMe:!!isMe});
   }
