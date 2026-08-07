@@ -1898,6 +1898,7 @@ function showFriend(id) {
           + quickReactRow('quickReactFR', "'"+f.id+"','"+lk+"','"+s.id+"'"));
         var actions=(lk==='w'||lk==='wd')?remoteStatic(s.rating):'';
         actions+='<button class="btn-recommend" onclick="openRecommendPicker(\''+s.id+'\')" title="Recommend to a friend">&#127919;</button>';
+        if(!isSelf) actions+='<button class="btn-recommend" onclick="addFromFriendCard(\''+s.id+'\')" title="Add to my list">&#10133;</button>';
         var watchedBadge=lk==='wd'?'<span style="font-size:11px;color:var(--fig);font-weight:600;">&#10003; Binged</span>':'';
         html+='<div class="show-card" id="card-'+s.id+'"><div class="show-card-top">'+showTile(s)+'<div class="show-info"><div class="show-title">'+s.title+'</div>'+(watchedBadge?'<div style="margin-top:2px;">'+watchedBadge+'</div>':'')+'</div><div class="show-actions">'+actions+'</div></div><div class="react-area">'+rHTML+reactToggle+'</div></div>';
       });
@@ -1938,12 +1939,13 @@ function showFriend(id) {
               var inpId='finp-wd-'+f.id+'-'+s.id;
               var reactToggle=isSelf?'':('<div class="inline-react"><input class="react-input" id="'+inpId+'" placeholder="What did you think? 😊" /><button class="btn-send" onclick="submitFR(\''+f.id+'\',\'wd\',\''+s.id+'\')">Send</button><button class="btn-cancel" onclick="document.getElementById(\''+inpId+'\').value=\'\'">Cancel</button></div>'
                 + quickReactRow('quickReactFR', "'"+f.id+"','wd','"+s.id+"'"));
+              var dnfActions=isSelf?'':'<button class="btn-recommend" onclick="addFromFriendCard(\''+s.id+'\')" title="Add to my list">&#10133;</button>';
               return '<div class="dnf-card" id="card-'+s.id+'"><div class="show-card-top">'+showTile(s)
                 +'<div class="show-info"><div class="show-title">'+s.title+'</div>'
                 +'<div style="margin-top:3px;"><span class="dnf-badge">Didn&#39;t Finish</span>'
                 +'<span style="font-size:11px;color:var(--muted);margin-left:6px;">'+s.platform+'</span>'
                 +'</div>'+(s.rating?'<div style="margin-top:5px;">'+remoteStatic(s.rating)+'</div>':'')
-                +'</div></div>'
+                +'</div>'+(dnfActions?'<div class="show-actions">'+dnfActions+'</div>':'')+'</div>'
                 +'<div class="react-area">'+rHTML+reactToggle+'</div>'
                 +'</div>';
             }).join('')+'</div>'
@@ -2432,6 +2434,28 @@ function findShowAnywhere(showId){
   }
   return null;
 }
+
+// Add straight from a friend's card (any category -- watching, list,
+// binged, waiting, or didn't-finish) without re-searching TMDB, reusing
+// the same picker as Show Talk/rankings. state.lastViewedFriend is already
+// set by showFriend(), so chooseAddDestination() correctly attributes this
+// as a living-room-influenced add.
+window.addFromFriendCard = function(showId){
+  var found = findShowAnywhere(showId);
+  if(!found || !found.show) return;
+  var s = found.show;
+  var existing = findMyShowByTitle(s.title);
+  if (existing) {
+    showToast('Already on your list — ' + (ADD_LIST_LABELS[existing.list]||'My Lists') + '.');
+    return;
+  }
+  _currentShowDetails = {
+    tmdb_id: s.tmdb_id||null, title: s.title, poster_path: s.poster_path||null, platform: s.platform||null,
+    genre: null, original_network: null, first_air_year: null,
+    number_of_seasons: s.numberOfSeasons||null, show_status: null, overview: null, vote_average: null,
+  };
+  openAddPicker();
+};
 
 var _recommendPending = null;
 var _recommendSelectedIds = [];
