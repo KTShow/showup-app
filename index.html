@@ -5041,10 +5041,9 @@ function updateInviteLinks() {
 
 window.openInviteModal = function() {
   if (!state.currentRoomId) return;
-  var u = state.user;
-  var name = u && u.first ? u.first : 'your friend';
-  var roomName = state.currentRoomName || 'their Living Room';
-  document.getElementById('invite-modal-sub').textContent = name + ' wants you on the couch. Join "' + roomName + '" on ShowUp.';
+  var roomName = state.currentRoomName || 'your Living Room';
+  document.getElementById('invite-modal-title').textContent = 'Invite to "' + roomName + '"';
+  document.getElementById('invite-modal-sub').textContent = 'Copy the message below and send it however you like — text, email, whatever’s easiest.';
   document.getElementById('invite-modal-link').textContent = 'https://showup-app-zeta.vercel.app/join-room/' + state.currentRoomId;
   document.getElementById('invite-modal').classList.add('active');
 };
@@ -5109,10 +5108,10 @@ bootstrap();
 <!-- INVITE MODAL -->
 <div class="invite-modal-overlay" id="invite-modal">
   <div class="invite-modal">
-    <div class="invite-modal-title">Invite to your Living Room</div>
+    <div class="invite-modal-title" id="invite-modal-title">Invite to your Living Room</div>
     <div class="invite-modal-sub" id="invite-modal-sub">Share your link and get your friends on the couch.</div>
-    <div class="invite-modal-link" id="invite-modal-link">https://showup-app-zeta.vercel.app/join/tracey-m-x7k2</div>
-    <button class="btn-invite-copy" id="invite-msg-btn" onclick="copyInviteMessage()" style="width:100%;margin-bottom:10px;">Copy ready-to-send message</button>
+    <div class="invite-modal-link" id="invite-modal-link" style="display:none;">https://showup-app-zeta.vercel.app/join/tracey-m-x7k2</div>
+    <button class="btn-invite-copy" id="invite-msg-btn" onclick="copyInviteMessage()" style="width:100%;margin-bottom:10px;">&#128203; Copy Invite Message</button>
     <button class="btn-invite-close" onclick="closeInviteModal()" style="width:100%;">Close</button>
   </div>
 </div>
