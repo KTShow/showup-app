@@ -2612,10 +2612,8 @@ function renderRecommendationBanners(){
   var myId = state.user ? state.user.id : null;
   var pending = (state.recommendations||[]).filter(function(r){ return r.to_user_id===myId && r.status==='pending'; });
   if(!pending.length){ el.innerHTML=''; return; }
-  var friendsById={};
-  (state.friends||[]).forEach(function(f){ if(f) friendsById[f.id]=f; });
   el.innerHTML = pending.map(function(r){
-    var senderName = friendsById[r.from_user_id] ? friendsById[r.from_user_id].name : 'Someone';
+    var senderName = r.fromName || 'Someone';
     var poster = r.poster_path
       ? '<img src="https://image.tmdb.org/t/p/w92'+r.poster_path+'" style="width:52px;height:78px;border-radius:8px;object-fit:cover;flex-shrink:0;" />'
       : '<div style="width:52px;height:78px;border-radius:8px;background:rgba(255,255,255,0.2);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:22px;">&#128252;</div>';
@@ -4487,7 +4485,19 @@ async function loadRecommendations() {
       .or('from_user_id.eq.' + user.id + ',to_user_id.eq.' + user.id)
       .order('created_at', { ascending: false });
     if (error) throw error;
-    return data || [];
+    var recs = data || [];
+    // Recommendations are person-to-person, not room content -- the sender
+    // might not be a member of whichever room happens to be open right now,
+    // so resolve their name directly instead of relying on state.friends
+    // (which is scoped to the current room and would show "Someone").
+    var senderIds = Array.from(new Set(recs.map(function(r){ return r.from_user_id; }).filter(Boolean)));
+    if (senderIds.length) {
+      var { data: senders } = await sb.from('users').select('id, first_name, last_initial').in('id', senderIds);
+      var byId = {};
+      (senders||[]).forEach(function(u){ byId[u.id] = u.first_name + (u.last_initial ? ' ' + u.last_initial + '.' : ''); });
+      recs.forEach(function(r){ r.fromName = byId[r.from_user_id] || null; });
+    }
+    return recs;
   } catch(e) { console.error('loadRecommendations error:', e); return []; }
 }
 
