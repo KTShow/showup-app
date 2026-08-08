@@ -278,7 +278,7 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
 .tastemakers-banner-icon{font-size:28px;flex-shrink:0;}
 .tastemakers-banner-text{flex:1;min-width:0;}
 .tastemakers-banner-title{font-size:14px;font-weight:700;color:white;margin-bottom:3px;}
-.tastemakers-banner-sub{font-size:12px;color:rgba(255,255,255,0.85);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.tastemakers-banner-sub{font-size:12px;color:rgba(255,255,255,0.85);line-height:1.4;}
 .tastemakers-banner-arrow{font-size:20px;color:rgba(255,255,255,0.7);flex-shrink:0;}
 .tastemakers-row{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border);}
 .tastemakers-row:last-child{border-bottom:none;}
@@ -1178,7 +1178,7 @@ function renderTastemakersBanner() {
       : leader.name + ' leads with ' + leader.count + ' recommendation' + (leader.count===1?'':'s') + ' accepted';
   }
   wrap.innerHTML = '<div class="tastemakers-banner" onclick="openTastemakersModal()">'
-    + '<div class="tastemakers-banner-icon">&#127942;</div>'
+    + '<div class="tastemakers-banner-icon">&#128225;</div>'
     + '<div class="tastemakers-banner-text">'
     + '<div class="tastemakers-banner-title">Tastemakers</div>'
     + '<div class="tastemakers-banner-sub">'+escAttr(subtext)+'</div>'
