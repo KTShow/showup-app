@@ -2363,7 +2363,7 @@ function buildConversationsFeed(){
         }
         (s.reactions||[]).forEach(function(r){
           if(r.reactorId && isNew(r.reactedAt)){
-            events.push({type:'comment',friendId:f.id,showId:s.id,text:'<b>'+escAttr(nameFor(r.reactorId))+'</b> commented on '+escAttr(s.title)+': &#8220;'+escAttr(r.text)+'&#8221;',ts:r.reactedAt});
+            events.push({type:'comment',friendId:f.id,list:lk,showId:s.id,reactionId:r.id,isMine:r.reactorId===myId,commentText:r.text,text:'<b>'+escAttr(nameFor(r.reactorId))+'</b> commented on '+escAttr(s.title)+': &#8220;'+escAttr(r.text)+'&#8221;',ts:r.reactedAt});
           }
         });
       });
@@ -2379,7 +2379,7 @@ function buildConversationsFeed(){
       if(isNew(s.addedAt)) events.push({type:'added',list:lk,showId:s.id,text:'<b>You</b> added '+escAttr(s.title),ts:s.addedAt});
       (s.reactions||[]).forEach(function(r){
         if(r.reactorId && isNew(r.reactedAt) && (r.reactorId===myId || friendsById[r.reactorId])){
-          events.push({type:'comment',list:lk,showId:s.id,text:'<b>'+escAttr(nameFor(r.reactorId))+'</b> commented on your '+escAttr(s.title)+': &#8220;'+escAttr(r.text)+'&#8221;',ts:r.reactedAt});
+          events.push({type:'comment',list:lk,showId:s.id,reactionId:r.id,isMine:r.reactorId===myId,commentText:r.text,text:'<b>'+escAttr(nameFor(r.reactorId))+'</b> commented on your '+escAttr(s.title)+': &#8220;'+escAttr(r.text)+'&#8221;',ts:r.reactedAt});
         }
       });
     });
@@ -2408,9 +2408,69 @@ function renderConversations(){
     var icon=e.type==='added'?'&#127881;':'&#128172;';
     var nav=e.friendId?'showFriend(\''+e.friendId+'\')':(e.list?'goToOwnTab(\''+e.list+'\')':'');
     var click=nav?' onclick="'+nav+(e.showId?';scrollToShowCard(\''+e.showId+'\')':'')+'"':'';
-    return '<div class="conversation-row type-'+e.type+'"'+click+'><div class="conversation-icon">'+icon+'</div><div class="conversation-text">'+e.text+'</div><div class="conversation-time">'+timeAgo(e.ts)+'</div></div>';
+    if (e.type==='comment' && e.reactionId && _conversationsEditingId===e.reactionId) {
+      var editInpId='edit-conv-'+e.reactionId;
+      var editArgs='\''+(e.list||'')+'\',\''+e.showId+'\',\''+(e.friendId||'')+'\',\''+e.reactionId+'\'';
+      return '<div class="conversation-row type-'+e.type+'"><div class="conversation-icon">'+icon+'</div>'
+        +'<div class="inline-react" style="flex:1;"><input class="react-input" id="'+editInpId+'" value="'+escAttr(e.commentText||'')+'" />'
+        +'<button class="btn-send" onclick="submitEditConversationComment('+editArgs+')">Save</button>'
+        +'<button class="btn-cancel" onclick="toggleEditConversationComment('+editArgs+')">Cancel</button></div></div>';
+    }
+    var actionBtns='';
+    if (e.type==='comment' && e.isMine && e.reactionId) {
+      var actArgs='\''+(e.list||'')+'\',\''+e.showId+'\',\''+(e.friendId||'')+'\',\''+e.reactionId+'\'';
+      actionBtns='<button class="btn-edit-react" onclick="event.stopPropagation();toggleEditConversationComment('+actArgs+')">&#9998;</button>'
+        +'<button class="btn-delete-react" onclick="event.stopPropagation();deleteConversationComment('+actArgs+')">&#x2715;</button>';
+    }
+    return '<div class="conversation-row type-'+e.type+'"'+click+'><div class="conversation-icon">'+icon+'</div><div class="conversation-text">'+e.text+'</div><div class="conversation-time">'+timeAgo(e.ts)+'</div>'+actionBtns+'</div>';
   }).join('');
 }
+
+// Finds the actual show object (own or a friend's copy) a Conversations
+// comment event came from, same reasoning as Show Talk's equivalent helper.
+function findShowForConversationEvent(list, showId, friendId){
+  var arr;
+  if (friendId) {
+    var f = (state.friends||[]).find(function(x){ return x.id === friendId; });
+    if (!f) return null;
+    arr = list==='watching'?f.watching:list==='watchlist'?f.watchlist:f.watched;
+  } else {
+    arr = state[list];
+  }
+  return (arr||[]).find(function(x){ return x.id === showId; });
+}
+
+var _conversationsEditingId = null;
+
+window.toggleEditConversationComment = function(list, showId, friendId, reactionId){
+  _conversationsEditingId = (_conversationsEditingId === reactionId) ? null : reactionId;
+  renderConversations();
+  if (_conversationsEditingId === reactionId) setTimeout(function(){
+    var el = document.getElementById('edit-conv-'+reactionId);
+    if (el) { el.focus(); el.setSelectionRange(el.value.length, el.value.length); }
+  }, 50);
+};
+
+window.submitEditConversationComment = async function(list, showId, friendId, reactionId){
+  var inp = document.getElementById('edit-conv-'+reactionId);
+  if (!inp || !inp.value.trim()) return;
+  var txt = inp.value.trim();
+  var sentiment = detectSentiment(txt);
+  var show = findShowForConversationEvent(list, showId, friendId);
+  var r = show && (show.reactions||[]).find(function(x){ return x.id === reactionId; });
+  if (r) { r.text = txt; r.sentiment = sentiment; }
+  _conversationsEditingId = null;
+  renderConversations();
+  try { await dbUpdateReaction(reactionId, txt, sentiment); } catch(e) { console.error('submitEditConversationComment error:', e); }
+};
+
+window.deleteConversationComment = async function(list, showId, friendId, reactionId){
+  if (!confirm('Delete this comment?')) return;
+  var show = findShowForConversationEvent(list, showId, friendId);
+  if (show) show.reactions = (show.reactions||[]).filter(function(x){ return x.id !== reactionId; });
+  renderConversations();
+  try { await dbDeleteReaction(reactionId); } catch(e) { console.error('deleteConversationComment error:', e); }
+};
 
 // ============================================================
 // SHOW TALK — every show with at least one comment, A-Z, so you can
