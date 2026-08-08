@@ -764,7 +764,7 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
           <div id="tastemakers-banner-wrap"></div>
           <div id="room-ticker" class="room-ticker" style="display:none;cursor:pointer;" onclick="openNewThisWeekModal()" title="See what's new this week"></div>
           <div id="top5-banner-wrap"></div>
-          <div class="lr-search-wrap"><input type="text" id="crew-search" class="lr-search-input" placeholder="Search friends..." oninput="renderFriends()" autocomplete="off" /></div>
+          <div class="lr-search-wrap"><input type="text" id="crew-search" class="lr-search-input" placeholder="Search friends, shows, or platforms..." oninput="renderFriends()" autocomplete="off" /></div>
           <div class="friends-grid" id="friends-grid"></div>
         </div>
         <div id="lr-picks-view" style="display:none">
@@ -2073,7 +2073,25 @@ function renderFriends() {
   }
   var q=((document.getElementById('crew-search')||{}).value||'').trim().toLowerCase();
   var sorted=state.friends.slice().sort(function(a,b){return a.name.localeCompare(b.name);});
-  if(q) sorted=sorted.filter(function(f){return f.name.toLowerCase().indexOf(q)!==-1;});
+  // Search matches friend name, OR any show title/platform they have --
+  // "search by title/platform, see who has it" without a separate screen.
+  var matchedShowByFriendId={};
+  if(q) sorted=sorted.filter(function(f){
+    if(f.name.toLowerCase().indexOf(q)!==-1) return true;
+    var lists=[f.watching,f.watchlist,f.watched];
+    for(var i=0;i<lists.length;i++){
+      var arr=lists[i]||[];
+      for(var j=0;j<arr.length;j++){
+        var s=arr[j];
+        if(s.hidden) continue;
+        if((s.title||'').toLowerCase().indexOf(q)!==-1 || (s.platform||'').toLowerCase().indexOf(q)!==-1){
+          matchedShowByFriendId[f.id]=s;
+          return true;
+        }
+      }
+    }
+    return false;
+  });
   if(q && !sorted.length){
     document.getElementById('friends-grid').innerHTML=selfTile+'<div class="empty" style="grid-column:1/-1;"><div class="empty-icon">&#128269;</div>No friends match "'+escAttr(q)+'".</div>';
     updateConversationsBadge();
@@ -2083,10 +2101,13 @@ function renderFriends() {
     var fRoom=f.room||'tuscany'; var fColor=ROOMS[fRoom]?ROOMS[fRoom].color:f.color;
     var fInitials=f.name.split(' ').map(function(x){return x[0];}).join('');
     var fFirst=f.name.split(' ')[0];
+    var matchedShow=matchedShowByFriendId[f.id];
+    var matchDetail=matchedShow?'<div class="friend-new-detail">Has: '+escAttr(matchedShow.title)+(matchedShow.platform?' ('+escAttr(matchedShow.platform)+')':'')+'</div>':'';
     return '<div class="friend-card'+(f.muted?' is-muted':'')+'" onclick="showFriend(\''+f.id+'\')">'
       +'<div class="friend-top-row"><div class="friend-av" style="background:'+fColor+';font-weight:700;font-family:var(--sans);">'+fInitials+'</div><div class="friend-name">'+fFirst+(f.muted?'<span class="muted-badge">Muted</span>':'')+'</div></div>'
       +'<div class="friend-city">'+f.city+'</div>'
       +'<div class="friend-count">'+f.watching.length+' watching &middot; '+f.watchlist.length+' list &middot; '+f.watched.length+' binged</div>'
+      +matchDetail
       +'</div>';
   }).join('');
   updateConversationsBadge();
