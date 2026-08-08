@@ -1357,6 +1357,12 @@ window.clearSearchInput = function(inputId){
   if (!el) return;
   el.value = '';
   toggleSearchClearBtn(el);
+  var prefix = inputId.replace(/-title$/, '');
+  var platformSelId = (typeof PLATFORM_SELECT_ID !== 'undefined') ? PLATFORM_SELECT_ID[prefix] : null;
+  if (platformSelId) {
+    var platformSel = document.getElementById(platformSelId);
+    if (platformSel) platformSel.value = '';
+  }
   el.dispatchEvent(new Event('input'));
   el.focus();
 };
