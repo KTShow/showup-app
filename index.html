@@ -2133,6 +2133,12 @@ function buildPrimeTimeLeaderboard(data) {
     var p = peopleById[id];
     return p ? (p.first_name + (p.last_initial ? ' ' + p.last_initial + '.' : '')) : 'Neighbor';
   }
+  function initialsFor(id) {
+    if (state.user && id === state.user.id) return state.user.initials || 'Y';
+    if (!networkSet[id]) return 'N';
+    var p = peopleById[id];
+    return p ? ((p.first_name||'')[0]||'') + ((p.last_initial||'')[0]||'') : 'N';
+  }
   var shows = {};
   (data.shows||[]).forEach(function(s){
     if (!s.title || !s.rating || s.rating === 0) return;
@@ -2142,7 +2148,7 @@ function buildPrimeTimeLeaderboard(data) {
     if (!shows[key].tmdb_id && s.tmdb_id) shows[key].tmdb_id = s.tmdb_id;
     if (shows[key].raters.some(function(r){ return r.id === s.user_id; })) return; // one rating per person per show
     shows[key].ratings.push(s.rating);
-    shows[key].raters.push({ id: s.user_id, name: nameFor(s.user_id), rating: s.rating, isMe: s.user_id===(state.user&&state.user.id), inNetwork: !!networkSet[s.user_id] });
+    shows[key].raters.push({ id: s.user_id, name: nameFor(s.user_id), initials: initialsFor(s.user_id), rating: s.rating, isMe: s.user_id===(state.user&&state.user.id), inNetwork: !!networkSet[s.user_id] });
   });
   var MIN_RATERS = 2;
   var list = Object.values(shows).filter(function(s){ return s.ratings.length >= MIN_RATERS; }).map(function(s){
@@ -2202,7 +2208,7 @@ window.showPrimeTimeDetail = function(idx){
   var remotes=''; for(var n=1;n<=5;n++){var lit=n<=Math.floor(s.avg);remotes+='<span style="opacity:'+(lit?'1':'0.18')+';display:inline-block;">'+remoteIcon(16,lit)+'</span>';}
   var rows=s.raters.slice().sort(function(a,b){return (b.isMe?1:0)-(a.isMe?1:0)||b.rating-a.rating;}).map(function(r){
     var rR=''; for(var n=1;n<=5;n++){rR+='<span style="opacity:'+(n<=r.rating?'1':'0.18')+';display:inline-block;">'+remoteIcon(13,n<=r.rating)+'</span>';}
-    return '<div class="rank-detail-row"><div class="rank-detail-av" style="background:#888">'+(r.isMe?(state.user.initials||'Y'):'?')+'</div><div class="rank-detail-name">'+escAttr(r.name)+'</div><div style="display:flex;gap:2px;">'+rR+'</div></div>';
+    return '<div class="rank-detail-row"><div class="rank-detail-av" style="background:#888">'+escAttr(r.initials||'?')+'</div><div class="rank-detail-name">'+escAttr(r.name)+'</div><div style="display:flex;gap:2px;">'+rR+'</div></div>';
   }).join('');
   var thumb=s.poster_path
     ? '<img src="'+TMDB_IMG+s.poster_path+'" style="width:84px;height:84px;border-radius:10px;object-fit:cover;flex-shrink:0;" />'
