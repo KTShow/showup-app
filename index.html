@@ -743,7 +743,9 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
           </div>
           <div class="tastemakers-banner-arrow">&#8250;</div>
         </div>
+        <div class="lr-search-wrap"><input type="text" id="room-picker-search" class="lr-search-input" placeholder="Search shows or platforms across all your rooms..." oninput="renderRoomPickerSearch();toggleSearchClearBtn(this)" autocomplete="off" /><button class="lr-search-clear" type="button" aria-label="Clear search" onclick="clearSearchInput('room-picker-search')">&#10005;</button></div>
         <div class="room-picker-grid" id="room-picker-grid"></div>
+        <div id="room-picker-search-results" style="display:none;"></div>
       </div>
       <div id="prime-time-view" style="display:none">
         <div class="page-title"><button class="nav-back" onclick="backFromPrimeTimeView()" style="margin-right:6px;">&#8592;</button>&#128225;&nbsp; Prime Time</div>
@@ -977,6 +979,8 @@ var state = {
   influencerNames: {},   // who-recommended-what, resolved independent of room (see loadInfluencerNames)
   myRooms: [],           // rooms the user owns or belongs to, for the room picker
   myRoomsLoaded: false,
+  allRoomsSearchData: [], // everyone you share ANY room with + their shows, for cross-room search
+  allRoomsSearchLoaded: false,
 };
 
 var _firstTimeTellMore = false; // true when completing onboarding for the first time
@@ -2384,6 +2388,25 @@ async function loadAndRenderRoomPicker() {
   }
   state.myRoomsLoaded = true;
   renderRoomPicker();
+  loadAllRoomsSearchData();
+}
+
+// Powers the room-picker search bar -- searching across every room the
+// user belongs to, not just the one currently open (that's crew-search).
+// Fetched once per picker visit (cached until a room is created/renamed/
+// left/deleted), fire-and-forget since it shouldn't block the tile render.
+async function loadAllRoomsSearchData() {
+  if (state.allRoomsSearchLoaded) return;
+  try {
+    const { data, error } = await sb.rpc('get_my_all_rooms_search_data');
+    if (error) throw error;
+    state.allRoomsSearchData = data || [];
+  } catch(e) {
+    console.error('Error loading cross-room search data:', e);
+    state.allRoomsSearchData = [];
+  }
+  state.allRoomsSearchLoaded = true;
+  renderRoomPickerSearch();
 }
 
 function renderRoomPicker() {
@@ -2394,6 +2417,86 @@ function renderRoomPicker() {
   }).join('');
   grid.innerHTML = tiles + '<div class="room-tile-create" onclick="openCreateRoomModal()">+ Create New Room</div>';
 }
+
+function buildAllRoomsSearchResults(q) {
+  var shows = {};
+  (state.allRoomsSearchData || []).forEach(function(p) {
+    (p.shows || []).forEach(function(s) {
+      if (!s || !s.title) return;
+      var matchesTitle = s.title.toLowerCase().indexOf(q) !== -1;
+      var matchesPlatform = (s.platform || '').toLowerCase().indexOf(q) !== -1;
+      if (!matchesTitle && !matchesPlatform) return;
+      var key = s.title.toLowerCase().trim();
+      if (!shows[key]) shows[key] = { title: s.title, platform: s.platform, poster_path: s.poster_path, tmdb_id: s.tmdb_id, people: [], roomNames: [] };
+      if (!shows[key].poster_path && s.poster_path) shows[key].poster_path = s.poster_path;
+      shows[key].people.push({ name: p.first_name, rating: s.rating || 0 });
+      (p.room_names || []).forEach(function(rn) { if (shows[key].roomNames.indexOf(rn) === -1) shows[key].roomNames.push(rn); });
+    });
+  });
+  var list = Object.values(shows);
+  list.sort(function(a, b) { return a.title.toLowerCase().localeCompare(b.title.toLowerCase()); });
+  return list;
+}
+
+var _allRoomsSearchCache = [];
+
+function renderRoomPickerSearch() {
+  var q = ((document.getElementById('room-picker-search') || {}).value || '').trim().toLowerCase();
+  var grid = document.getElementById('room-picker-grid');
+  var resultsEl = document.getElementById('room-picker-search-results');
+  if (!resultsEl || !grid) return;
+  if (!q) {
+    resultsEl.style.display = 'none';
+    grid.style.display = '';
+    return;
+  }
+  grid.style.display = 'none';
+  resultsEl.style.display = '';
+  if (!state.allRoomsSearchLoaded) {
+    resultsEl.innerHTML = '<div class="empty"><div class="empty-icon">&#8987;</div>Loading&hellip;</div>';
+    return;
+  }
+  var list = buildAllRoomsSearchResults(q);
+  _allRoomsSearchCache = list;
+  var matchLabel = isPlatformQuery(q)
+    ? '<div style="font-size:12px;color:var(--muted);margin-bottom:8px;">Showing: <b style="color:var(--terra);">' + matchedPlatformNames(q).map(escAttr).join(', ') + '</b></div>'
+    : '';
+  if (!list.length) {
+    resultsEl.innerHTML = matchLabel + '<div class="empty"><div class="empty-icon">&#128269;</div>No shows match "' + escAttr(q) + '" across your rooms.</div>';
+    return;
+  }
+  resultsEl.innerHTML = matchLabel + '<div class="room-picker-grid">' + list.map(function(s, i) {
+    var thumb = s.poster_path
+      ? '<img src="' + TMDB_IMG + s.poster_path + '" style="width:100%;aspect-ratio:1;border-radius:8px;object-fit:cover;" />'
+      : '<div style="width:100%;aspect-ratio:1;border-radius:8px;background:var(--olive);display:flex;align-items:center;justify-content:center;font-size:22px;">&#128252;</div>';
+    var ratings = s.people.filter(function(p) { return p.rating > 0; });
+    var avg = ratings.length ? (ratings.reduce(function(a, b) { return a + b.rating; }, 0) / ratings.length) : null;
+    var ratingLine = avg ? ('&#9733;' + avg.toFixed(1) + ' &middot; ' + ratings.length + ' rated') : 'Not yet rated';
+    var haveIt = (state.watching || []).concat(state.watchlist || [], state.watched || []).some(function(x) { return (x.title || '').toLowerCase().trim() === s.title.toLowerCase().trim(); });
+    var addBtn = haveIt ? '' : '<button onclick="event.stopPropagation();handleAllRoomsSearchAdd(' + i + ')" style="display:inline-flex;align-items:center;gap:4px;background:none;border:1px solid var(--terra);color:var(--terra);border-radius:8px;padding:2px 8px;font-family:var(--sans);font-size:11px;font-weight:700;cursor:pointer;margin-top:4px;">&#10133; Add</button>';
+    var roomTag = s.roomNames.length ? '<div style="font-size:11px;color:var(--muted);margin-top:2px;">Seen in: ' + s.roomNames.map(escAttr).join(', ') + '</div>' : '';
+    return '<div class="friend-card">' + thumb
+      + '<div class="friend-name" style="margin-top:6px;">' + escAttr(s.title) + '</div>'
+      + '<div class="friend-city">' + escAttr(s.platform || '') + '</div>'
+      + '<div class="friend-count">' + ratingLine + ' &middot; ' + s.people.length + ' ' + (s.people.length === 1 ? 'person has' : 'people have') + ' it</div>'
+      + roomTag
+      + addBtn
+      + '</div>';
+  }).join('') + '</div>';
+}
+
+window.handleAllRoomsSearchAdd = function(idx) {
+  var s = _allRoomsSearchCache[idx];
+  if (!s) return;
+  var existing = findMyShowByTitle(s.title);
+  if (existing) { showToast('Already on your list — ' + (ADD_LIST_LABELS[existing.list] || 'My Lists') + '.'); return; }
+  _currentShowDetails = {
+    tmdb_id: s.tmdb_id || null, title: s.title, poster_path: s.poster_path || null, platform: s.platform || null,
+    genre: null, original_network: null, first_air_year: null,
+    number_of_seasons: null, show_status: null, overview: null, vote_average: null,
+  };
+  openAddPicker();
+};
 
 window.enterLivingRoom = async function(roomId, roomName, isOwner, isAdminView) {
   if (!roomName || isOwner === undefined) {
@@ -2444,6 +2547,7 @@ window.openCreateRoomModal = async function() {
     const { data: roomId, error } = await sb.rpc('create_living_room', { p_name: name.trim() });
     if (error) throw error;
     state.myRoomsLoaded = false; // refetch next time the picker is shown, so the new room appears in it
+    state.allRoomsSearchLoaded = false;
     await enterLivingRoom(roomId, name.trim(), true);
   } catch(e) {
     console.error('create_living_room error:', e);
@@ -2683,6 +2787,7 @@ window.renameCurrentRoom = async function() {
     var nameEl = document.getElementById('current-room-name');
     if (nameEl) nameEl.textContent = newName;
     state.myRoomsLoaded = false; // refetch next time the picker is shown, so it reflects the new name
+    state.allRoomsSearchLoaded = false;
   } catch(e) {
     console.error('renameCurrentRoom error:', e);
     alert('Could not rename the room, please try again.');
@@ -2696,6 +2801,7 @@ window.deleteCurrentRoom = async function() {
     const { error } = await sb.rpc('delete_living_room', { p_room_id: state.currentRoomId });
     if (error) throw error;
     state.myRoomsLoaded = false;
+    state.allRoomsSearchLoaded = false;
     showRoomPicker();
   } catch(e) {
     console.error('deleteCurrentRoom error:', e);
@@ -2711,6 +2817,7 @@ window.leaveCurrentRoom = async function() {
       .eq('living_room_id', state.currentRoomId).eq('user_id', state.user.id);
     if (error) throw error;
     state.myRoomsLoaded = false;
+    state.allRoomsSearchLoaded = false;
     showRoomPicker();
   } catch(e) {
     console.error('leaveCurrentRoom error:', e);
@@ -5104,6 +5211,7 @@ window.removeFriend = async function(friendId) {
   backToFriends();
   state.friends = state.friends.filter(function(f) { return f.id !== friendId; });
   renderFriends();
+  state.allRoomsSearchLoaded = false;
   try { await dbRemoveFriend(friendId); } catch(e) { console.error('removeFriend error:', e); }
 };
 
