@@ -2165,7 +2165,7 @@ function buildPrimeTimeLeaderboard(data) {
     shows[key].ratings.push(s.rating);
     shows[key].raters.push({ id: s.user_id, name: nameFor(s.user_id), initials: initialsFor(s.user_id), rating: s.rating, isMe: s.user_id===(state.user&&state.user.id), inNetwork: !!networkSet[s.user_id] });
   });
-  var MIN_RATERS = 2;
+  var MIN_RATERS = 3; // higher bar than per-room Friends Favorites -- pooled across many more people, so 2 is too easy to hit by coincidence
   var list = Object.values(shows).filter(function(s){ return s.ratings.length >= MIN_RATERS; }).map(function(s){
     var avg = s.ratings.reduce(function(a,b){ return a+b; }, 0) / s.ratings.length;
     return { title: s.title, platform: s.platform, avg: Math.round(avg*10)/10, count: s.ratings.length, poster_path: s.poster_path, tmdb_id: s.tmdb_id, raters: s.raters };
