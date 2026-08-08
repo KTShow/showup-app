@@ -1125,6 +1125,7 @@ function removeTop5(idx) {
 function renderTop5Banner() {
   var wrap = document.getElementById('top5-banner-wrap');
   if (!wrap) return;
+  if (state.currentRoomIsAdminView) { wrap.innerHTML = ''; return; } // your own top5 status is irrelevant while observing someone else's room
   var top5 = state.user && state.user.top5 ? state.user.top5 : [];
   if (top5.length >= 1) { wrap.innerHTML = ''; return; }
   wrap.innerHTML = '<div class="top5-banner" onclick="goToProfileTop5()">'
@@ -2458,8 +2459,10 @@ function buildConversationsFeed(){
   // Your own shows: your own adds, and comments from people in THIS room
   // (yours, or a current room member's) -- your show carries into every
   // room you're in, but a comment left by someone outside the room being
-  // viewed right now shouldn't surface here.
-  ['watching','watchlist','watched'].forEach(function(lk){
+  // viewed right now shouldn't surface here. Skipped entirely in admin-view
+  // mode -- your own shows have nothing to do with a room you're just
+  // observing, not actually a member of.
+  (state.currentRoomIsAdminView ? [] : ['watching','watchlist','watched']).forEach(function(lk){
     (state[lk]||[]).forEach(function(s){
       if(isNew(s.addedAt)) events.push({type:'added',list:lk,showId:s.id,text:'<b>You</b> added '+escAttr(s.title),ts:s.addedAt});
       (s.reactions||[]).forEach(function(r){
@@ -2470,8 +2473,9 @@ function buildConversationsFeed(){
     });
   });
 
-  // Closing the loop on recommendations you sent that got added
-  (state.recommendations||[]).forEach(function(r){
+  // Closing the loop on recommendations you sent that got added -- your
+  // own recommendations, so skip in admin-view mode same as above.
+  if (!state.currentRoomIsAdminView) (state.recommendations||[]).forEach(function(r){
     if(r.from_user_id===myId && r.status==='added' && isNew(r.resolved_at)){
       events.push({type:'comment',text:'<b>'+escAttr(nameFor(r.to_user_id))+'</b> added your recommendation, '+escAttr(r.title),ts:r.resolved_at});
     }
@@ -2611,7 +2615,9 @@ function buildShowTalk(){
     if(!f)return;
     ['watching','watchlist','watched'].forEach(function(lk){ (f[lk]||[]).forEach(function(s){ addShow(s,{type:'friend',friendId:f.id,list:lk}); }); });
   });
-  ['watching','watchlist','watched'].forEach(function(lk){ (state[lk]||[]).forEach(function(s){ addShow(s,{type:'self',list:lk}); }); });
+  // Skipped entirely in admin-view mode -- your own shows have nothing to
+  // do with a room you're just observing, not actually a member of.
+  if (!state.currentRoomIsAdminView) ['watching','watchlist','watched'].forEach(function(lk){ (state[lk]||[]).forEach(function(s){ addShow(s,{type:'self',list:lk}); }); });
   var list=Object.values(shows).filter(function(s){return s.comments.length>0;});
   list.forEach(function(s){
     s.comments.sort(function(a,b){return new Date(b.reactedAt)-new Date(a.reactedAt);});
