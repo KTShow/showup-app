@@ -736,7 +736,7 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
         <div class="room-picker-grid" id="room-picker-grid"></div>
       </div>
       <div id="friends-view" style="display:none">
-        <div class="page-title"><button class="nav-back" onclick="backToRoomPicker()" style="margin-right:6px;">&#8592;</button>&#127968;&nbsp; <span id="current-room-name">The Living Room</span><button id="rename-room-btn" onclick="renameCurrentRoom()" style="display:none;background:none;border:none;cursor:pointer;font-size:14px;margin-left:6px;color:var(--muted);vertical-align:middle;" title="Rename this room">&#9998;&#65039;</button></div>
+        <div class="page-title"><button class="nav-back" onclick="backToRoomPicker()" style="margin-right:6px;">&#8592;</button>&#127968;&nbsp; <span id="current-room-name">The Living Room</span><button id="rename-room-btn" onclick="renameCurrentRoom()" style="display:none;background:none;border:none;cursor:pointer;font-size:14px;margin-left:6px;color:var(--muted);vertical-align:middle;" title="Rename this room">&#9998;&#65049;</button><button id="delete-room-btn" onclick="deleteCurrentRoom()" style="display:none;background:none;border:none;cursor:pointer;font-size:14px;margin-left:6px;color:var(--muted);vertical-align:middle;" title="Delete this room">&#128465;&#65049;</button><button id="leave-room-btn" onclick="leaveCurrentRoom()" style="display:none;background:none;border:none;cursor:pointer;font-size:14px;margin-left:6px;color:var(--muted);vertical-align:middle;" title="Leave this room">&#128682;</button></div>
         <div class="page-sub">Your Crowd &mdash; see what everyone's watching &mdash; <a href="#" onclick="openInviteModal();return false;" style="color:var(--terra);font-weight:600;">Invite someone</a></div>
         <div id="recommendations-banner"></div>
         <div class="lr-toggle">
@@ -1950,7 +1950,11 @@ function showFriend(id) {
       + '</div>';
   }
   var muteBtn=isSelf?'':'<button class="btn-remove-friend" onclick="toggleMuteFriend(\''+f.id+'\')">'+(f.muted?'Unmute':'Mute')+'</button>';
-  var removeBtn=isSelf?'':'<button class="btn-remove-friend" onclick="removeFriend(\''+f.id+'\')">Remove from Room</button>';
+  // RLS only actually permits the room OWNER to remove a member (invited_by
+  // is never set by join_living_room, so that alternate path never applies)
+  // -- hiding this for non-owners instead of showing a button that would
+  // silently fail.
+  var removeBtn=(isSelf||!state.currentRoomIsOwner)?'':'<button class="btn-remove-friend" onclick="removeFriend(\''+f.id+'\')">Remove from Room</button>';
   var roomTitle=isSelf?'Your Living Room':f.name+"'s Living Room";
   var cityLine=isSelf?'':'<div style="font-size:13px;color:var(--muted)">'+f.city+'</div>';
   dv.innerHTML='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;"><button class="back-btn" onclick="backToFriends()">&#8592; Back to Living Room</button><div style="display:flex;gap:8px;">'+muteBtn+removeBtn+'</div></div>'
@@ -2072,6 +2076,10 @@ window.enterLivingRoom = async function(roomId, roomName, isOwner) {
   if (nameEl) nameEl.textContent = roomName;
   var renameBtn = document.getElementById('rename-room-btn');
   if (renameBtn) renameBtn.style.display = isOwner ? 'inline' : 'none';
+  var deleteBtn = document.getElementById('delete-room-btn');
+  if (deleteBtn) deleteBtn.style.display = isOwner ? 'inline' : 'none';
+  var leaveBtn = document.getElementById('leave-room-btn');
+  if (leaveBtn) leaveBtn.style.display = isOwner ? 'none' : 'inline';
   switchLRView('crew');
   renderFriends();
   await loadAndRenderFriends();
@@ -2189,6 +2197,35 @@ window.renameCurrentRoom = async function() {
   } catch(e) {
     console.error('renameCurrentRoom error:', e);
     alert('Could not rename the room, please try again.');
+  }
+};
+
+window.deleteCurrentRoom = async function() {
+  if (!state.currentRoomId || !state.currentRoomIsOwner) return;
+  if (!confirm('Delete "' + state.currentRoomName + '"? Everyone in it will lose this grouping — their own shows and ratings are untouched, they just won\'t see this room anymore. This can\'t be undone.')) return;
+  try {
+    const { error } = await sb.rpc('delete_living_room', { p_room_id: state.currentRoomId });
+    if (error) throw error;
+    state.myRoomsLoaded = false;
+    showRoomPicker();
+  } catch(e) {
+    console.error('deleteCurrentRoom error:', e);
+    alert('Could not delete the room, please try again.');
+  }
+};
+
+window.leaveCurrentRoom = async function() {
+  if (!state.currentRoomId || state.currentRoomIsOwner || !state.user) return;
+  if (!confirm('Leave "' + state.currentRoomName + '"? You can rejoin later if invited again.')) return;
+  try {
+    const { error } = await sb.from('living_room_members').delete()
+      .eq('living_room_id', state.currentRoomId).eq('user_id', state.user.id);
+    if (error) throw error;
+    state.myRoomsLoaded = false;
+    showRoomPicker();
+  } catch(e) {
+    console.error('leaveCurrentRoom error:', e);
+    alert('Could not leave the room, please try again.');
   }
 };
 
