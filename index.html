@@ -2166,6 +2166,7 @@ var _primeTimeAddIdx = null;
 window.openPrimeTimeModal = async function() {
   var body = document.getElementById('prime-time-list');
   body.innerHTML = '<div class="empty"><div class="empty-icon">&#8987;</div>Loading&hellip;</div>';
+  body.scrollTop = 0;
   document.getElementById('prime-time-detail').style.display = 'none';
   body.style.display = 'block';
   document.getElementById('prime-time-modal').classList.add('active');
@@ -2232,11 +2233,14 @@ window.showPrimeTimeDetail = function(idx){
     +rows+'</div>';
   document.getElementById('prime-time-list').style.display='none';
   panel.style.display='block';
+  panel.scrollTop = 0;
 };
 
 window.backToPrimeTimeList = function(){
+  var list = document.getElementById('prime-time-list');
   document.getElementById('prime-time-detail').style.display='none';
-  document.getElementById('prime-time-list').style.display='block';
+  list.style.display='block';
+  list.scrollTop = 0;
 };
 
 window.handlePrimeTimeAdd = function(idx){
