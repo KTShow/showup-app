@@ -1968,6 +1968,90 @@ window.handleNewThisWeekAdd = function(idx){
   openAddPicker();
 };
 
+// ============================================================
+// SHARED TASTE — pick a friend, see only the shows you both have (by
+// title), each with both people's rating/status side by side.
+// ============================================================
+
+function statusLabelForSharedTaste(s, lk){
+  if (lk==='w') return 'Watching';
+  if (lk==='wl') return s.waitingForSeason ? 'Waiting for Season' : 'My List';
+  if (lk==='wd') return s.dnf ? "Didn't Finish" : 'Binged';
+  return '';
+}
+
+function buildSharedTasteList(friendId){
+  var f = (state.friends||[]).find(function(x){ return x.id===friendId; });
+  if (!f) return [];
+  function mapOf(lists, isFriend){
+    var m = {};
+    [['w',lists.watching],['wl',lists.watchlist],['wd',lists.watched]].forEach(function(pair){
+      var lk=pair[0], arr=pair[1]||[];
+      arr.forEach(function(s){
+        if (!s || !s.title) return;
+        if (isFriend && s.hidden) return;
+        var key = s.title.toLowerCase().trim();
+        if (!m[key]) m[key] = { title:s.title, platform:s.platform, poster_path:s.poster_path, tmdb_id:s.tmdb_id, rating:s.rating||0, statusLabel: statusLabelForSharedTaste(s, lk) };
+      });
+    });
+    return m;
+  }
+  var mine = mapOf({watching:state.watching, watchlist:state.watchlist, watched:state.watched}, false);
+  var theirs = mapOf({watching:f.watching, watchlist:f.watchlist, watched:f.watched}, true);
+  var shared = [];
+  Object.keys(mine).forEach(function(key){
+    if (theirs[key]) {
+      shared.push({
+        title: mine[key].title,
+        platform: mine[key].platform || theirs[key].platform,
+        poster_path: mine[key].poster_path || theirs[key].poster_path,
+        tmdb_id: mine[key].tmdb_id || theirs[key].tmdb_id,
+        myRating: mine[key].rating, myStatus: mine[key].statusLabel,
+        theirRating: theirs[key].rating, theirStatus: theirs[key].statusLabel,
+      });
+    }
+  });
+  shared.sort(function(a,b){ return a.title.toLowerCase().localeCompare(b.title.toLowerCase()); });
+  return shared;
+}
+
+window.openSharedTasteModal = function(friendId){
+  var f = (state.friends||[]).find(function(x){ return x.id===friendId; });
+  var titleEl = document.getElementById('shared-taste-title');
+  if (titleEl) titleEl.textContent = '\u{1F49D} You & ' + (f ? f.name : 'them');
+  document.getElementById('shared-taste-modal').classList.add('active');
+  renderSharedTasteList(friendId);
+};
+
+window.closeSharedTasteModal = function(){
+  document.getElementById('shared-taste-modal').classList.remove('active');
+};
+
+function renderSharedTasteList(friendId){
+  var el = document.getElementById('shared-taste-list');
+  if (!el) return;
+  var list = buildSharedTasteList(friendId);
+  if (!list.length){
+    el.innerHTML = '<div class="empty"><div class="empty-icon">&#128156;</div>No overlap yet &mdash; nothing you both have.</div>';
+    return;
+  }
+  el.innerHTML = list.map(function(s){
+    var thumb = s.poster_path
+      ? '<img src="'+TMDB_IMG+s.poster_path+'" style="width:46px;height:46px;border-radius:8px;object-fit:cover;flex-shrink:0;margin-right:12px;" />'
+      : '<div style="width:46px;height:46px;border-radius:8px;background:var(--olive);flex-shrink:0;margin-right:12px;display:flex;align-items:center;justify-content:center;font-size:18px;">&#128252;</div>';
+    var myR = s.myRating ? remoteStatic(s.myRating) : '<span style="font-size:11px;color:var(--muted);">Not rated</span>';
+    var theirR = s.theirRating ? remoteStatic(s.theirRating) : '<span style="font-size:11px;color:var(--muted);">Not rated</span>';
+    return '<div class="show-card"><div class="show-card-top">'+thumb
+      +'<div class="show-info"><div class="show-title">'+escAttr(s.title)+'</div>'
+      +(s.platform?'<span class="rank-platform">'+escAttr(s.platform)+'</span>':'')
+      +'</div></div>'
+      +'<div style="display:flex;justify-content:space-between;margin-top:8px;font-size:12px;gap:12px;">'
+      +'<div><div style="color:var(--muted);margin-bottom:2px;">You &mdash; '+escAttr(s.myStatus)+'</div>'+myR+'</div>'
+      +'<div style="text-align:right;"><div style="color:var(--muted);margin-bottom:2px;">'+escAttr(s.theirStatus)+'</div>'+theirR+'</div>'
+      +'</div></div>';
+  }).join('');
+}
+
 function renderFriends() {
   renderTop5Banner();
   renderTastemakersBanner();
@@ -2073,9 +2157,10 @@ function showFriend(id) {
   // -- hiding this for non-owners instead of showing a button that would
   // silently fail.
   var removeBtn=(isSelf||!state.currentRoomIsOwner)?'':'<button class="btn-remove-friend" onclick="removeFriend(\''+f.id+'\')">Remove from Room</button>';
+  var sharedTasteBtn=isSelf?'':'<button class="btn-remove-friend" onclick="openSharedTasteModal(\''+f.id+'\')">&#128156; Shared Taste</button>';
   var roomTitle=isSelf?'Your Living Room':f.name+"'s Living Room";
   var cityLine=isSelf?'':'<div style="font-size:13px;color:var(--muted)">'+f.city+'</div>';
-  dv.innerHTML='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;"><button class="back-btn" onclick="backToFriends()">&#8592; Back to Living Room</button><div style="display:flex;gap:8px;">'+muteBtn+removeBtn+'</div></div>'
+  dv.innerHTML='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;"><button class="back-btn" onclick="backToFriends()">&#8592; Back to Living Room</button><div style="display:flex;gap:8px;">'+sharedTasteBtn+muteBtn+removeBtn+'</div></div>'
     +'<div class="friend-header"><div class="friend-header-av" style="background:'+fColor+';font-size:18px;font-weight:700;font-family:var(--sans);">'+fInitials+'</div>'
     +'<div><div style="font-family:Georgia,serif;font-size:20px;font-weight:700">'+roomTitle+'</div>'
     +cityLine+'</div></div>'
@@ -5677,6 +5762,16 @@ bootstrap();
     <div class="invite-modal-sub">Added in the last 7 days, in this room.</div>
     <div id="new-this-week-list" style="max-height:400px;overflow-y:auto;margin-bottom:14px;"></div>
     <button class="btn-invite-close" onclick="closeNewThisWeekModal()" style="width:100%;">Close</button>
+  </div>
+</div>
+
+<!-- SHARED TASTE -->
+<div class="invite-modal-overlay" id="shared-taste-modal">
+  <div class="invite-modal">
+    <div class="invite-modal-title" id="shared-taste-title">&#128156; Shared Taste</div>
+    <div class="invite-modal-sub" id="shared-taste-sub">Shows you both have.</div>
+    <div id="shared-taste-list" style="max-height:400px;overflow-y:auto;margin-bottom:14px;"></div>
+    <button class="btn-invite-close" onclick="closeSharedTasteModal()" style="width:100%;">Close</button>
   </div>
 </div>
 
