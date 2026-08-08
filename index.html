@@ -2180,6 +2180,7 @@ function renderPrimeTimeList(data) {
   _primeTimeListCache = list;
   if (!list.length) {
     body.innerHTML = '<div class="empty"><div class="empty-icon">&#128225;</div>No ratings yet across your rooms.</div>';
+    body.scrollTop = 0;
     return;
   }
   body.innerHTML = list.map(function(s, i){
@@ -2199,6 +2200,7 @@ function renderPrimeTimeList(data) {
       +'</div></div>'
       +'</div>';
   }).join('');
+  body.scrollTop = 0;
 }
 
 window.showPrimeTimeDetail = function(idx){
