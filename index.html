@@ -725,7 +725,7 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
       <div id="room-picker-view">
         <div class="page-title">&#127968;&nbsp; Your Living Rooms</div>
         <div class="page-sub">Pick a room to enter, or start a new one.</div>
-        <div class="tastemakers-banner" onclick="openPrimeTimeModal()" style="margin-bottom:16px;">
+        <div class="tastemakers-banner" onclick="openPrimeTimeView()" style="margin-bottom:16px;">
           <div class="tastemakers-banner-icon">&#128225;</div>
           <div class="tastemakers-banner-text">
             <div class="tastemakers-banner-title">Prime Time</div>
@@ -742,6 +742,13 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
           <div class="tastemakers-banner-arrow">&#8250;</div>
         </div>
         <div class="room-picker-grid" id="room-picker-grid"></div>
+      </div>
+      <div id="prime-time-view" style="display:none">
+        <div class="page-title"><button class="nav-back" onclick="backFromPrimeTimeView()" style="margin-right:6px;">&#8592;</button>&#128225;&nbsp; Prime Time</div>
+        <div class="page-sub">Top-rated shows across all of ShowUp.</div>
+        <div class="lr-search-wrap" id="prime-time-search-wrap"><input type="text" id="prime-time-search" class="lr-search-input" placeholder="Search shows..." oninput="renderPrimeTimeList()" autocomplete="off" /></div>
+        <div id="prime-time-list-view"></div>
+        <div id="prime-time-detail-view" style="display:none"></div>
       </div>
       <div id="friends-view" style="display:none">
         <div class="page-title"><button class="nav-back" onclick="backToRoomPicker()" style="margin-right:6px;">&#8592;</button>&#127968;&nbsp; <span id="current-room-name">The Living Room</span><button id="rename-room-btn" onclick="renameCurrentRoom()" style="display:none;background:none;border:none;cursor:pointer;font-size:14px;margin-left:6px;color:var(--muted);vertical-align:middle;" title="Rename this room">&#9998;&#65049;</button><button id="delete-room-btn" onclick="deleteCurrentRoom()" style="display:none;background:none;border:none;cursor:pointer;font-size:14px;margin-left:6px;color:var(--muted);vertical-align:middle;" title="Delete this room">&#128465;&#65049;</button><button id="leave-room-btn" onclick="leaveCurrentRoom()" style="display:none;background:none;border:none;cursor:pointer;font-size:14px;margin-left:6px;color:var(--muted);vertical-align:middle;" title="Leave this room">&#128075; Leave Room</button></div>
@@ -2178,27 +2185,38 @@ var _primeTimeListCache = [];
 var _primeTimeScrollY = 0;
 var _primeTimeAddIdx = null;
 
-window.openPrimeTimeModal = async function() {
-  var body = document.getElementById('prime-time-list');
-  body.innerHTML = '<div class="empty"><div class="empty-icon">&#8987;</div>Loading&hellip;</div>';
-  body.scrollTop = 0;
-  document.getElementById('prime-time-detail').style.display = 'none';
-  body.style.display = 'block';
-  document.getElementById('prime-time-modal').classList.add('active');
-  var data = await loadPrimeTimeData();
-  renderPrimeTimeList(data);
+window.openPrimeTimeView = async function() {
+  document.getElementById('room-picker-view').style.display = 'none';
+  document.getElementById('prime-time-view').style.display = 'block';
+  document.getElementById('prime-time-detail-view').style.display = 'none';
+  var searchWrap = document.getElementById('prime-time-search-wrap');
+  if (searchWrap) searchWrap.style.display = 'block';
+  var listEl = document.getElementById('prime-time-list-view');
+  listEl.style.display = 'block';
+  listEl.innerHTML = '<div class="empty"><div class="empty-icon">&#8987;</div>Loading&hellip;</div>';
+  await loadPrimeTimeData();
+  renderPrimeTimeList();
 };
 
-function renderPrimeTimeList(data) {
-  var body = document.getElementById('prime-time-list');
-  var list = buildPrimeTimeLeaderboard(data);
+window.backFromPrimeTimeView = function() {
+  document.getElementById('prime-time-view').style.display = 'none';
+  document.getElementById('room-picker-view').style.display = 'block';
+};
+
+function renderPrimeTimeList() {
+  var listEl = document.getElementById('prime-time-list-view');
+  if (!listEl || !_primeTimeData) return;
+  var list = buildPrimeTimeLeaderboard(_primeTimeData);
+  var q = ((document.getElementById('prime-time-search')||{}).value||'').trim().toLowerCase();
+  if (q) list = list.filter(function(s){ return s.title.toLowerCase().indexOf(q) !== -1; });
   _primeTimeListCache = list;
   if (!list.length) {
-    body.innerHTML = '<div class="empty"><div class="empty-icon">&#128225;</div>No ratings yet across your rooms.</div>';
-    body.scrollTop = 0;
+    listEl.innerHTML = q
+      ? '<div class="empty"><div class="empty-icon">&#128269;</div>No shows match "'+escAttr(q)+'".</div>'
+      : '<div class="empty"><div class="empty-icon">&#128225;</div>No ratings yet across ShowUp.</div>';
     return;
   }
-  body.innerHTML = list.map(function(s, i){
+  listEl.innerHTML = list.map(function(s, i){
     var rank = i+1; var isGold = rank<=3;
     var thumb = s.poster_path
       ? '<img src="'+TMDB_IMG+s.poster_path+'" style="width:46px;height:46px;border-radius:8px;object-fit:cover;flex-shrink:0;margin-right:12px;" />'
@@ -2215,14 +2233,13 @@ function renderPrimeTimeList(data) {
       +'</div></div>'
       +'</div>';
   }).join('');
-  body.scrollTop = 0;
 }
 
 window.showPrimeTimeDetail = function(idx){
   _primeTimeScrollY = window.scrollY;
   var s=_primeTimeListCache[idx];
   if(!s)return;
-  var panel=document.getElementById('prime-time-detail');
+  var panel=document.getElementById('prime-time-detail-view');
   var remotes=''; for(var n=1;n<=5;n++){var lit=n<=Math.floor(s.avg);remotes+='<span style="opacity:'+(lit?'1':'0.18')+';display:inline-block;">'+remoteIcon(16,lit)+'</span>';}
   var rows=s.raters.slice().sort(function(a,b){return (b.isMe?1:0)-(a.isMe?1:0)||b.rating-a.rating;}).map(function(r){
     var rR=''; for(var n=1;n<=5;n++){rR+='<span style="opacity:'+(n<=r.rating?'1':'0.18')+';display:inline-block;">'+remoteIcon(13,n<=r.rating)+'</span>';}
@@ -2248,16 +2265,19 @@ window.showPrimeTimeDetail = function(idx){
     +'</div>'
     +'<div class="rank-detail-sub">rated by '+s.count+' across ShowUp</div>'
     +rows+'</div>';
-  document.getElementById('prime-time-list').style.display='none';
+  document.getElementById('prime-time-list-view').style.display='none';
+  var searchWrap=document.getElementById('prime-time-search-wrap');
+  if(searchWrap)searchWrap.style.display='none';
   panel.style.display='block';
-  panel.scrollTop = 0;
+  panel.scrollIntoView({behavior:'smooth'});
 };
 
 window.backToPrimeTimeList = function(){
-  var list = document.getElementById('prime-time-list');
-  document.getElementById('prime-time-detail').style.display='none';
-  list.style.display='block';
-  list.scrollTop = 0;
+  document.getElementById('prime-time-detail-view').style.display='none';
+  document.getElementById('prime-time-list-view').style.display='block';
+  var searchWrap=document.getElementById('prime-time-search-wrap');
+  if(searchWrap)searchWrap.style.display='block';
+  window.scrollTo(0,_primeTimeScrollY);
 };
 
 window.handlePrimeTimeAdd = function(idx){
@@ -2275,10 +2295,6 @@ window.handlePrimeTimeAdd = function(idx){
   };
   _primeTimeAddIdx = idx;
   openAddPicker();
-};
-
-window.closePrimeTimeModal = function() {
-  document.getElementById('prime-time-modal').classList.remove('active');
 };
 
 // ============================================================
@@ -5533,16 +5549,6 @@ bootstrap();
   </div>
 </div>
 
-<!-- PRIME TIME LEADERBOARD -->
-<div class="invite-modal-overlay" id="prime-time-modal">
-  <div class="invite-modal">
-    <div class="invite-modal-title">&#128225; Prime Time</div>
-    <div class="invite-modal-sub">Top-rated shows across all of ShowUp.</div>
-    <div id="prime-time-list" style="max-height:320px;overflow-y:auto;margin-bottom:14px;"></div>
-    <div id="prime-time-detail" style="display:none;max-height:400px;overflow-y:auto;margin-bottom:14px;"></div>
-    <button class="btn-invite-close" onclick="closePrimeTimeModal()" style="width:100%;">Close</button>
-  </div>
-</div>
 
 <!-- ADMIN: BROWSE ALL ROOMS -->
 <div class="invite-modal-overlay" id="admin-rooms-modal">
