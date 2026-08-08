@@ -2458,7 +2458,8 @@ function buildShowTalk(){
       // from someone outside the room being viewed right now shouldn't
       // surface here -- same rule as Conversations.
       if(!isMe && !friendsById[r.reactorId])return;
-      shows[key].comments.push({name:nameFor(r.reactorId),color:colorFor(r.reactorId,isMe),initials:initialsFor(r.reactorId,isMe),text:r.text,reactedAt:r.reactedAt,isMe:isMe,reactorId:r.reactorId});
+      shows[key].comments.push({name:nameFor(r.reactorId),color:colorFor(r.reactorId,isMe),initials:initialsFor(r.reactorId,isMe),text:r.text,reactedAt:r.reactedAt,isMe:isMe,reactorId:r.reactorId,
+        id:r.id, list:owner.list, showId:s.id, friendId:(owner.type==='friend'?owner.friendId:null)});
     });
   }
   (state.friends||[]).forEach(function(f){
@@ -2523,15 +2524,26 @@ function showShowTalkDetail(idx){
   var s=_showTalkListCache[idx];
   if(!s)return;
   var panel=document.getElementById('showtalk-detail-panel');
-  var rows=s.comments.map(function(c){
+  var rows=s.comments.map(function(c, ci){
+    if (c.isMe && c.editing) {
+      var editInpId = 'edit-st-'+idx+'-'+ci;
+      return '<div class="rank-detail-row" style="align-items:flex-start;">'
+        +'<div class="rank-detail-av" style="background:'+c.color+'">'+c.initials+'</div>'
+        +'<div class="inline-react" style="flex:1;"><input class="react-input" id="'+editInpId+'" value="'+escAttr(c.text)+'" />'
+        +'<button class="btn-send" onclick="submitEditShowTalkComment('+idx+','+ci+')">Save</button>'
+        +'<button class="btn-cancel" onclick="toggleEditShowTalkComment('+idx+','+ci+')">Cancel</button></div></div>';
+    }
     var nameAttr = (!c.isMe && c.reactorId) ? ' class="rank-detail-name rank-detail-name-link" onclick="showFriend(\''+c.reactorId+'\')"' : ' class="rank-detail-name"';
+    var actionBtns = c.isMe
+      ? '<button class="btn-edit-react" onclick="toggleEditShowTalkComment('+idx+','+ci+')">&#9998;</button><button class="btn-delete-react" onclick="deleteShowTalkComment('+idx+','+ci+')">&#x2715;</button>'
+      : '';
     return '<div class="rank-detail-row" style="align-items:flex-start;">'
       +'<div class="rank-detail-av" style="background:'+c.color+'">'+c.initials+'</div>'
       +'<div style="flex:1;min-width:0;">'
       +'<div'+nameAttr+'>'+(c.isMe?'You':c.name)+'</div>'
       +'<div class="conversation-text">'+escAttr(c.text)+'</div>'
       +'<div class="conversation-time">'+timeAgo(c.reactedAt)+'</div>'
-      +'</div></div>';
+      +'</div>'+actionBtns+'</div>';
   }).join('');
   var clickAttr=s.tmdb_id?' class="poster-clickable" onclick="openShowDetails('+s.tmdb_id+')"':'';
   var thumb=s.poster_path
@@ -2567,6 +2579,65 @@ function showShowTalkDetail(idx){
 }
 
 function backToShowTalk(){document.getElementById('showtalk-detail-panel').style.display='none';document.getElementById('showtalk-list').style.display='block';var searchWrap=document.getElementById('showtalk-search-wrap');if(searchWrap)searchWrap.style.display='block';window.scrollTo(0,_showTalkScrollY);}
+
+// Finds the actual show object (own or a friend's copy) a Show Talk comment
+// came from, so edit/delete can mutate the same state everywhere else reads
+// from -- Show Talk pools comments across your own and friends' copies of
+// a title, so this has to check c.friendId to know which array to search.
+function findShowForShowTalkComment(c){
+  var arr;
+  if (c.friendId) {
+    var f = (state.friends||[]).find(function(x){ return x.id === c.friendId; });
+    if (!f) return null;
+    arr = c.list==='watching'?f.watching:c.list==='watchlist'?f.watchlist:f.watched;
+  } else {
+    arr = state[c.list];
+  }
+  return (arr||[]).find(function(x){ return x.id === c.showId; });
+}
+
+window.toggleEditShowTalkComment = function(idx, ci){
+  var s = _showTalkListCache[idx];
+  var c = s && s.comments[ci];
+  if (!c) return;
+  c.editing = !c.editing;
+  var show = findShowForShowTalkComment(c);
+  var r = show && (show.reactions||[]).find(function(x){ return x.id === c.id; });
+  if (r) r.editing = c.editing;
+  showShowTalkDetail(idx);
+  if (c.editing) setTimeout(function(){
+    var el = document.getElementById('edit-st-'+idx+'-'+ci);
+    if (el) { el.focus(); el.setSelectionRange(el.value.length, el.value.length); }
+  }, 50);
+};
+
+window.submitEditShowTalkComment = async function(idx, ci){
+  var s = _showTalkListCache[idx];
+  var c = s && s.comments[ci];
+  var inp = document.getElementById('edit-st-'+idx+'-'+ci);
+  if (!c || !inp || !inp.value.trim()) return;
+  var txt = inp.value.trim();
+  var sentiment = detectSentiment(txt);
+  var show = findShowForShowTalkComment(c);
+  var r = show && (show.reactions||[]).find(function(x){ return x.id === c.id; });
+  if (r) { r.text = txt; r.sentiment = sentiment; r.editing = false; }
+  c.text = txt; c.editing = false;
+  showShowTalkDetail(idx);
+  try { await dbUpdateReaction(c.id, txt, sentiment); } catch(e) { console.error('submitEditShowTalkComment error:', e); }
+};
+
+window.deleteShowTalkComment = async function(idx, ci){
+  var s = _showTalkListCache[idx];
+  var c = s && s.comments[ci];
+  if (!c) return;
+  if (!confirm('Delete this comment?')) return;
+  var show = findShowForShowTalkComment(c);
+  if (show) show.reactions = (show.reactions||[]).filter(function(x){ return x.id !== c.id; });
+  s.comments.splice(ci, 1);
+  if (s.comments.length) { showShowTalkDetail(idx); }
+  else { backToShowTalk(); renderShowTalk(); }
+  try { await dbDeleteReaction(c.id); } catch(e) { console.error('deleteShowTalkComment error:', e); }
+};
 
 // Lightweight add straight from Show Talk — skips the TMDB detail fetch
 // (thumbnail click still gives the full flow); just needs the picker to
