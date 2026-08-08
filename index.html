@@ -746,7 +746,7 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
       <div id="prime-time-view" style="display:none">
         <div class="page-title"><button class="nav-back" onclick="backFromPrimeTimeView()" style="margin-right:6px;">&#8592;</button>&#128225;&nbsp; Prime Time</div>
         <div class="page-sub">Top-rated shows across all of ShowUp.</div>
-        <div class="lr-search-wrap" id="prime-time-search-wrap"><input type="text" id="prime-time-search" class="lr-search-input" placeholder="Search shows..." oninput="renderPrimeTimeList()" autocomplete="off" /></div>
+        <div class="lr-search-wrap" id="prime-time-search-wrap"><input type="text" id="prime-time-search" class="lr-search-input" placeholder="Search shows or platforms..." oninput="renderPrimeTimeList()" autocomplete="off" /></div>
         <div id="prime-time-list-view"></div>
         <div id="prime-time-detail-view" style="display:none"></div>
       </div>
@@ -2502,7 +2502,7 @@ function renderPrimeTimeList() {
   if (!listEl || !_primeTimeData) return;
   var list = buildPrimeTimeLeaderboard(_primeTimeData);
   var q = ((document.getElementById('prime-time-search')||{}).value||'').trim().toLowerCase();
-  if (q) list = list.filter(function(s){ return s.title.toLowerCase().indexOf(q) !== -1; });
+  if (q) list = list.filter(function(s){ return s.title.toLowerCase().indexOf(q) !== -1 || (s.platform||'').toLowerCase().indexOf(q) !== -1; });
   _primeTimeListCache = list;
   if (!list.length) {
     listEl.innerHTML = q
