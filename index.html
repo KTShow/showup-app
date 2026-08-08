@@ -769,6 +769,10 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
           <div id="room-ticker" class="room-ticker" style="display:none;cursor:pointer;" onclick="openNewThisWeekModal()" title="See what's new this week"></div>
           <div id="top5-banner-wrap"></div>
           <div class="lr-search-wrap"><input type="text" id="crew-search" class="lr-search-input" placeholder="Search friends, shows, or platforms..." oninput="renderFriends();toggleSearchClearBtn(this)" autocomplete="off" /><button class="lr-search-clear" type="button" aria-label="Clear search" onclick="clearSearchInput('crew-search')">&#10005;</button></div>
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap;">
+            <button id="crew-platform-toggle" onclick="toggleCrewPlatformView()" style="background:none;border:1px solid var(--terra);color:var(--terra);border-radius:8px;padding:6px 12px;font-family:var(--sans);font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;">&#128256; Sort by Platform</button>
+            <select id="crew-person-filter" onchange="renderFriends()" style="display:none;background:white;border:1px solid var(--border);border-radius:8px;padding:6px 10px;font-family:var(--sans);font-size:12px;color:var(--charcoal);"><option value="">Everyone</option></select>
+          </div>
           <div class="friends-grid" id="friends-grid"></div>
         </div>
         <div id="lr-picks-view" style="display:none">
@@ -981,6 +985,7 @@ var state = {
   myRoomsLoaded: false,
   allRoomsSearchData: [], // everyone you share ANY room with + their shows, for cross-room search
   allRoomsSearchLoaded: false,
+  crewShowsByPlatform: false, // Your Crowd view mode: friend tiles (false) vs. shows grouped by platform (true)
 };
 
 var _firstTimeTellMore = false; // true when completing onboarding for the first time
@@ -2149,6 +2154,82 @@ function renderShowsByPlatform(q){
   }).join('');
 }
 
+// "Sort by Platform" toggle + "Everyone / [person]" filter on Your Crowd
+// (Section C backlog item: sort within the room by platform, toggle
+// whole-room vs. one person's view).
+window.toggleCrewPlatformView = function(){
+  state.crewShowsByPlatform = !state.crewShowsByPlatform;
+  var btn = document.getElementById('crew-platform-toggle');
+  var sel = document.getElementById('crew-person-filter');
+  if (btn) {
+    btn.style.background = state.crewShowsByPlatform ? 'var(--terra)' : 'none';
+    btn.style.color = state.crewShowsByPlatform ? 'white' : 'var(--terra)';
+  }
+  if (sel) sel.style.display = state.crewShowsByPlatform ? 'inline-block' : 'none';
+  renderFriends();
+};
+
+function populateCrewPersonFilter(){
+  var sel = document.getElementById('crew-person-filter');
+  if (!sel) return;
+  var current = sel.value;
+  var opts = '<option value="">Everyone</option>';
+  if (state.user && !state.currentRoomIsAdminView) opts += '<option value="'+state.user.id+'">You</option>';
+  opts += (state.friends||[]).slice().sort(function(a,b){ return a.name.localeCompare(b.name); }).map(function(f){
+    return '<option value="'+f.id+'">'+escAttr(f.name)+'</option>';
+  }).join('');
+  sel.innerHTML = opts;
+  if (Array.prototype.some.call(sel.options, function(o){ return o.value === current; })) sel.value = current;
+}
+
+function buildAllRoomShows(personFilterId){
+  var list=[];
+  function addFrom(arr, ownerId, ownerName, isMe){
+    (arr||[]).forEach(function(s){
+      if(!isMe && s.hidden) return;
+      if(!s.platform) return;
+      list.push({title:s.title, platform:s.platform, poster_path:s.poster_path, tmdb_id:s.tmdb_id, rating:s.rating||0, ownerName:isMe?'You':ownerName});
+    });
+  }
+  var meId = state.user && state.user.id;
+  if (!state.currentRoomIsAdminView && (!personFilterId || personFilterId === meId)) {
+    addFrom(state.watching, meId, 'You', true);
+    addFrom(state.watchlist, meId, 'You', true);
+    addFrom(state.watched, meId, 'You', true);
+  }
+  (state.friends||[]).forEach(function(f){
+    if(!f) return;
+    if(personFilterId && personFilterId !== f.id) return;
+    addFrom(f.watching, f.id, f.name, false);
+    addFrom(f.watchlist, f.id, f.name, false);
+    addFrom(f.watched, f.id, f.name, false);
+  });
+  return list;
+}
+
+function renderCrewGroupedByPlatform(q){
+  var personFilterId = (document.getElementById('crew-person-filter')||{}).value || '';
+  var list = buildAllRoomShows(personFilterId);
+  if (q) list = list.filter(function(s){ return s.title.toLowerCase().indexOf(q)!==-1 || s.platform.toLowerCase().indexOf(q)!==-1; });
+  var el = document.getElementById('friends-grid');
+  if (!list.length) {
+    el.innerHTML = '<div class="empty" style="grid-column:1/-1;"><div class="empty-icon">&#128252;</div>Nothing to show here yet.</div>';
+    return;
+  }
+  var groups={};
+  list.forEach(function(s){ if(!groups[s.platform]) groups[s.platform]=[]; groups[s.platform].push(s); });
+  var platforms = Object.keys(groups).sort();
+  el.innerHTML = '<div style="grid-column:1/-1;display:flex;flex-direction:column;gap:16px;">' + platforms.map(function(plat){
+    var shows = groups[plat].slice().sort(function(a,b){ return a.title.toLowerCase().localeCompare(b.title.toLowerCase()); });
+    return '<div class="service-group"><div class="service-divider"><span class="service-divider-text">'+escAttr(plat)+'</span></div><div class="shows-grid">'
+      + shows.map(function(s){
+          var ratingLine = s.rating ? ('&#9733;'+s.rating) : '';
+          return '<div class="show-card"><div class="show-card-top">'+showTile(s)+'<div class="show-info"><div class="show-title">'+escAttr(s.title)+'</div><div style="font-size:11px;color:var(--muted);margin-top:2px;">'+escAttr(s.ownerName)+(ratingLine?' &middot; '+ratingLine:'')+'</div></div></div></div>';
+        }).join('')
+      + '</div></div>';
+  }).join('') + '</div>';
+}
+
 window.handlePlatformShowAdd = function(idx){
   var s=_platformShowsCache[idx];
   if(!s) return;
@@ -2179,7 +2260,12 @@ function renderFriends() {
     document.getElementById('friends-grid').innerHTML=selfTile+'<div class="empty" style="grid-column:1/-1;"><div class="empty-icon">&#8987;</div>Loading your Living Room&hellip;</div>';
     return;
   }
+  populateCrewPersonFilter();
   var q=((document.getElementById('crew-search')||{}).value||'').trim().toLowerCase();
+  // "Sort by Platform" is a persistent view-mode toggle, not a search --
+  // stays active until switched off, and can be further narrowed to one
+  // person via the adjacent select.
+  if (state.crewShowsByPlatform) { renderCrewGroupedByPlatform(q); updateConversationsBadge(); return; }
   // A platform-looking query ("Netflix") surfaces shows on that platform,
   // not people -- that's a fundamentally different, more useful result
   // than "which friends happen to have something on Netflix".
