@@ -152,8 +152,10 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
 .toggle-icon{font-size:24px;line-height:1;}
 .lr-toggle-btn.active{background:var(--fig);color:white;border-color:var(--fig);}
 .conv-badge{background:var(--terra);color:white;font-size:10px;font-weight:800;padding:1px 7px;border-radius:10px;margin-left:2px;}
-.lr-search-wrap{margin-bottom:14px;}
-.lr-search-input{width:100%;box-sizing:border-box;background:var(--cream);border:2px solid var(--border);border-radius:var(--radius);padding:10px 14px;font-family:var(--sans);font-size:14px;color:var(--charcoal);outline:none;}
+.lr-search-wrap{margin-bottom:14px;position:relative;}
+.lr-search-input{width:100%;box-sizing:border-box;background:var(--cream);border:2px solid var(--border);border-radius:var(--radius);padding:10px 36px 10px 14px;font-family:var(--sans);font-size:14px;color:var(--charcoal);outline:none;}
+.lr-search-clear{display:none;position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:16px;color:var(--muted);padding:4px;line-height:1;}
+.lr-search-wrap.has-text .lr-search-clear{display:block;}
 .lr-search-input:focus{border-color:var(--fig);}
 .conversation-row{display:flex;gap:10px;align-items:flex-start;background:var(--cream);border:1px solid var(--border);border-radius:var(--radius);padding:12px 14px;box-shadow:var(--shadow);margin-bottom:8px;cursor:pointer;transition:border-color 0.15s;}
 .conversation-row:hover{border-color:var(--terra);}
@@ -746,7 +748,7 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
       <div id="prime-time-view" style="display:none">
         <div class="page-title"><button class="nav-back" onclick="backFromPrimeTimeView()" style="margin-right:6px;">&#8592;</button>&#128225;&nbsp; Prime Time</div>
         <div class="page-sub">Top-rated shows across all of ShowUp.</div>
-        <div class="lr-search-wrap" id="prime-time-search-wrap"><input type="text" id="prime-time-search" class="lr-search-input" placeholder="Search shows or platforms..." oninput="renderPrimeTimeList()" autocomplete="off" /></div>
+        <div class="lr-search-wrap" id="prime-time-search-wrap"><input type="text" id="prime-time-search" class="lr-search-input" placeholder="Search shows or platforms..." oninput="renderPrimeTimeList();toggleSearchClearBtn(this)" autocomplete="off" /><button class="lr-search-clear" type="button" aria-label="Clear search" onclick="clearSearchInput('prime-time-search')">&#10005;</button></div>
         <div id="prime-time-list-view"></div>
         <div id="prime-time-detail-view" style="display:none"></div>
       </div>
@@ -764,16 +766,16 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
           <div id="tastemakers-banner-wrap"></div>
           <div id="room-ticker" class="room-ticker" style="display:none;cursor:pointer;" onclick="openNewThisWeekModal()" title="See what's new this week"></div>
           <div id="top5-banner-wrap"></div>
-          <div class="lr-search-wrap"><input type="text" id="crew-search" class="lr-search-input" placeholder="Search friends, shows, or platforms..." oninput="renderFriends()" autocomplete="off" /></div>
+          <div class="lr-search-wrap"><input type="text" id="crew-search" class="lr-search-input" placeholder="Search friends, shows, or platforms..." oninput="renderFriends();toggleSearchClearBtn(this)" autocomplete="off" /><button class="lr-search-clear" type="button" aria-label="Clear search" onclick="clearSearchInput('crew-search')">&#10005;</button></div>
           <div class="friends-grid" id="friends-grid"></div>
         </div>
         <div id="lr-picks-view" style="display:none">
-          <div class="lr-search-wrap" id="rankings-search-wrap"><input type="text" id="rankings-search" class="lr-search-input" placeholder="Search shows..." oninput="renderRankings()" autocomplete="off" /></div>
+          <div class="lr-search-wrap" id="rankings-search-wrap"><input type="text" id="rankings-search" class="lr-search-input" placeholder="Search shows..." oninput="renderRankings();toggleSearchClearBtn(this)" autocomplete="off" /><button class="lr-search-clear" type="button" aria-label="Clear search" onclick="clearSearchInput('rankings-search')">&#10005;</button></div>
           <div id="rankings-list"></div>
           <div id="rank-detail-panel" style="display:none"></div>
         </div>
         <div id="lr-showtalk-view" style="display:none">
-          <div class="lr-search-wrap" id="showtalk-search-wrap"><input type="text" id="showtalk-search" class="lr-search-input" placeholder="Search shows..." oninput="renderShowTalk()" autocomplete="off" /></div>
+          <div class="lr-search-wrap" id="showtalk-search-wrap"><input type="text" id="showtalk-search" class="lr-search-input" placeholder="Search shows..." oninput="renderShowTalk();toggleSearchClearBtn(this)" autocomplete="off" /><button class="lr-search-clear" type="button" aria-label="Clear search" onclick="clearSearchInput('showtalk-search')">&#10005;</button></div>
           <div id="showtalk-list"></div>
           <div id="showtalk-detail-panel" style="display:none"></div>
         </div>
@@ -1341,6 +1343,23 @@ function remoteStatic(rating) {
 function escAttr(str) {
   return (str || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
+
+// Shared clear-button behavior for every search/filter bar (Your Crowd,
+// Friends Favorites, Show Talk, Prime Time) -- shows an X while there's
+// text, clicking it clears and re-runs whatever filter is already wired
+// to the input's own oninput handler (no need to know it by name here).
+function toggleSearchClearBtn(inputEl){
+  var wrap = inputEl.closest('.lr-search-wrap');
+  if (wrap) wrap.classList.toggle('has-text', !!inputEl.value);
+}
+window.clearSearchInput = function(inputId){
+  var el = document.getElementById(inputId);
+  if (!el) return;
+  el.value = '';
+  toggleSearchClearBtn(el);
+  el.dispatchEvent(new Event('input'));
+  el.focus();
+};
 
 function reactionsHTML(reactions, list, showId, friendId) {
   if(!reactions||!reactions.length) return '';
@@ -2063,6 +2082,13 @@ function isPlatformQuery(q){
   return PLATFORMS.some(function(p){ return p!=='None' && p!=='Other' && p.toLowerCase().indexOf(q)!==-1; });
 }
 
+// The actual full platform name(s) a short/partial query resolved to, so
+// the UI can confirm "you searched 'net', here's what that means" instead
+// of leaving the user to infer it from the results alone.
+function matchedPlatformNames(q){
+  return PLATFORMS.filter(function(p){ return p!=='None' && p!=='Other' && p.toLowerCase().indexOf(q)!==-1; });
+}
+
 function buildShowsByPlatform(q){
   var shows={};
   function addShow(s, ownerName, isMe){
@@ -2090,11 +2116,12 @@ function renderShowsByPlatform(q){
   var list=buildShowsByPlatform(q);
   _platformShowsCache=list;
   var el=document.getElementById('friends-grid');
+  var matchLabel='<div style="grid-column:1/-1;font-size:12px;color:var(--muted);margin-bottom:2px;">Showing: <b style="color:var(--terra);">'+matchedPlatformNames(q).map(escAttr).join(', ')+'</b></div>';
   if(!list.length){
-    el.innerHTML='<div class="empty" style="grid-column:1/-1;"><div class="empty-icon">&#128269;</div>No shows on a platform matching "'+escAttr(q)+'".</div>';
+    el.innerHTML=matchLabel+'<div class="empty" style="grid-column:1/-1;"><div class="empty-icon">&#128269;</div>No shows on a platform matching "'+escAttr(q)+'".</div>';
     return;
   }
-  el.innerHTML=list.map(function(s,i){
+  el.innerHTML=matchLabel+list.map(function(s,i){
     var thumb=s.poster_path
       ? '<img src="'+TMDB_IMG+s.poster_path+'" style="width:100%;aspect-ratio:1;border-radius:8px;object-fit:cover;" />'
       : '<div style="width:100%;aspect-ratio:1;border-radius:8px;background:var(--olive);display:flex;align-items:center;justify-content:center;font-size:22px;">&#128252;</div>';
@@ -2504,13 +2531,16 @@ function renderPrimeTimeList() {
   var q = ((document.getElementById('prime-time-search')||{}).value||'').trim().toLowerCase();
   if (q) list = list.filter(function(s){ return s.title.toLowerCase().indexOf(q) !== -1 || (s.platform||'').toLowerCase().indexOf(q) !== -1; });
   _primeTimeListCache = list;
+  var matchLabel = isPlatformQuery(q)
+    ? '<div style="font-size:12px;color:var(--muted);margin-bottom:8px;">Showing: <b style="color:var(--terra);">'+matchedPlatformNames(q).map(escAttr).join(', ')+'</b></div>'
+    : '';
   if (!list.length) {
-    listEl.innerHTML = q
+    listEl.innerHTML = matchLabel + (q
       ? '<div class="empty"><div class="empty-icon">&#128269;</div>No shows match "'+escAttr(q)+'".</div>'
-      : '<div class="empty"><div class="empty-icon">&#128225;</div>No ratings yet across ShowUp.</div>';
+      : '<div class="empty"><div class="empty-icon">&#128225;</div>No ratings yet across ShowUp.</div>');
     return;
   }
-  listEl.innerHTML = list.map(function(s, i){
+  listEl.innerHTML = matchLabel + list.map(function(s, i){
     var rank = i+1; var isGold = rank<=3;
     var thumb = s.poster_path
       ? '<img src="'+TMDB_IMG+s.poster_path+'" style="width:46px;height:46px;border-radius:8px;object-fit:cover;flex-shrink:0;margin-right:12px;" />'
