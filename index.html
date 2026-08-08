@@ -2125,10 +2125,13 @@ async function loadPrimeTimeData() {
 function buildPrimeTimeLeaderboard(data) {
   var peopleById = {};
   (data.people||[]).forEach(function(p){ peopleById[p.id] = p; });
+  var networkSet = {};
+  (data.network_ids||[]).forEach(function(id){ networkSet[id] = true; });
   function nameFor(id) {
     if (state.user && id === state.user.id) return 'You';
+    if (!networkSet[id]) return 'Neighbor'; // not in any room you belong to -- anonymized
     var p = peopleById[id];
-    return p ? (p.first_name + (p.last_initial ? ' ' + p.last_initial + '.' : '')) : 'Someone';
+    return p ? (p.first_name + (p.last_initial ? ' ' + p.last_initial + '.' : '')) : 'Neighbor';
   }
   var shows = {};
   (data.shows||[]).forEach(function(s){
@@ -2139,25 +2142,37 @@ function buildPrimeTimeLeaderboard(data) {
     if (!shows[key].tmdb_id && s.tmdb_id) shows[key].tmdb_id = s.tmdb_id;
     if (shows[key].raters.some(function(r){ return r.id === s.user_id; })) return; // one rating per person per show
     shows[key].ratings.push(s.rating);
-    shows[key].raters.push({ id: s.user_id, name: nameFor(s.user_id), rating: s.rating });
+    shows[key].raters.push({ id: s.user_id, name: nameFor(s.user_id), rating: s.rating, isMe: s.user_id===(state.user&&state.user.id), inNetwork: !!networkSet[s.user_id] });
   });
   var MIN_RATERS = 2;
   var list = Object.values(shows).filter(function(s){ return s.ratings.length >= MIN_RATERS; }).map(function(s){
     var avg = s.ratings.reduce(function(a,b){ return a+b; }, 0) / s.ratings.length;
-    return { title: s.title, platform: s.platform, avg: Math.round(avg*10)/10, count: s.ratings.length, poster_path: s.poster_path, tmdb_id: s.tmdb_id };
+    return { title: s.title, platform: s.platform, avg: Math.round(avg*10)/10, count: s.ratings.length, poster_path: s.poster_path, tmdb_id: s.tmdb_id, raters: s.raters };
   });
   list.sort(function(a,b){ return b.avg - a.avg || b.count - a.count; });
   return list.slice(0, 25);
 }
 
+var _primeTimeListCache = [];
+var _primeTimeScrollY = 0;
+var _primeTimeAddIdx = null;
+
 window.openPrimeTimeModal = async function() {
   var body = document.getElementById('prime-time-list');
   body.innerHTML = '<div class="empty"><div class="empty-icon">&#8987;</div>Loading&hellip;</div>';
+  document.getElementById('prime-time-detail').style.display = 'none';
+  body.style.display = 'block';
   document.getElementById('prime-time-modal').classList.add('active');
   var data = await loadPrimeTimeData();
+  renderPrimeTimeList(data);
+};
+
+function renderPrimeTimeList(data) {
+  var body = document.getElementById('prime-time-list');
   var list = buildPrimeTimeLeaderboard(data);
+  _primeTimeListCache = list;
   if (!list.length) {
-    body.innerHTML = '<div class="empty"><div class="empty-icon">&#127909;</div>No ratings yet across your rooms.</div>';
+    body.innerHTML = '<div class="empty"><div class="empty-icon">&#128225;</div>No ratings yet across your rooms.</div>';
     return;
   }
   body.innerHTML = list.map(function(s, i){
@@ -2165,7 +2180,7 @@ window.openPrimeTimeModal = async function() {
     var thumb = s.poster_path
       ? '<img src="'+TMDB_IMG+s.poster_path+'" style="width:46px;height:46px;border-radius:8px;object-fit:cover;flex-shrink:0;margin-right:12px;" />'
       : '<div style="width:46px;height:46px;border-radius:8px;background:var(--olive);flex-shrink:0;margin-right:12px;display:flex;align-items:center;justify-content:center;font-size:18px;">&#128252;</div>';
-    return '<div class="rank-card">'
+    return '<div class="rank-card" onclick="showPrimeTimeDetail('+i+')">'
       +'<span class="rank-badge'+(isGold?' gold':'')+'">#'+rank+'</span>'
       +thumb
       +'<div class="rank-info">'
@@ -2177,7 +2192,64 @@ window.openPrimeTimeModal = async function() {
       +'</div></div>'
       +'</div>';
   }).join('');
+}
+
+window.showPrimeTimeDetail = function(idx){
+  _primeTimeScrollY = window.scrollY;
+  var s=_primeTimeListCache[idx];
+  if(!s)return;
+  var panel=document.getElementById('prime-time-detail');
+  var remotes=''; for(var n=1;n<=5;n++){var lit=n<=Math.floor(s.avg);remotes+='<span style="opacity:'+(lit?'1':'0.18')+';display:inline-block;">'+remoteIcon(16,lit)+'</span>';}
+  var rows=s.raters.slice().sort(function(a,b){return (b.isMe?1:0)-(a.isMe?1:0)||b.rating-a.rating;}).map(function(r){
+    var rR=''; for(var n=1;n<=5;n++){rR+='<span style="opacity:'+(n<=r.rating?'1':'0.18')+';display:inline-block;">'+remoteIcon(13,n<=r.rating)+'</span>';}
+    return '<div class="rank-detail-row"><div class="rank-detail-av" style="background:#888">'+(r.isMe?(state.user.initials||'Y'):'?')+'</div><div class="rank-detail-name">'+escAttr(r.name)+'</div><div style="display:flex;gap:2px;">'+rR+'</div></div>';
+  }).join('');
+  var thumb=s.poster_path
+    ? '<img src="'+TMDB_IMG+s.poster_path+'" style="width:84px;height:84px;border-radius:10px;object-fit:cover;flex-shrink:0;" />'
+    : '<div style="width:84px;height:84px;border-radius:10px;background:var(--olive);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:30px;">&#128252;</div>';
+  panel.innerHTML='<button class="rank-close" onclick="backToPrimeTimeList()">← Back to Prime Time</button>'
+    +'<div class="rank-detail">'
+    +'<div style="display:flex;gap:12px;align-items:flex-start;margin-bottom:4px;">'
+    +thumb
+    +'<div style="flex:1;min-width:0;">'
+    +'<div class="rank-detail-title">'+escAttr(s.title)+'</div>'
+    +(s.platform?'<span class="rank-platform" style="margin:0 0 6px 0;display:inline-block;">'+escAttr(s.platform)+'</span>':'')
+    +'<div>'
+    +'<button onclick="handlePrimeTimeAdd('+idx+')" style="display:inline-flex;align-items:center;gap:4px;background:none;border:1px solid var(--terra);color:var(--terra);border-radius:8px;padding:2px 8px;font-family:var(--sans);font-size:11px;font-weight:700;cursor:pointer;line-height:1.6;white-space:nowrap;">&#10133; Add</button>'
+    +'</div>'
+    +'</div></div>'
+    +'<div style="display:flex;align-items:baseline;gap:10px;margin-bottom:4px;">'
+    +'<span class="rank-detail-avg">'+s.avg.toFixed(1)+'</span>'
+    +'<div style="display:flex;gap:2px;">'+remotes+'</div>'
+    +'</div>'
+    +'<div class="rank-detail-sub">rated by '+s.count+' across ShowUp</div>'
+    +rows+'</div>';
+  document.getElementById('prime-time-list').style.display='none';
+  panel.style.display='block';
 };
+
+window.backToPrimeTimeList = function(){
+  document.getElementById('prime-time-detail').style.display='none';
+  document.getElementById('prime-time-list').style.display='block';
+};
+
+window.handlePrimeTimeAdd = function(idx){
+  var s=_primeTimeListCache[idx];
+  if(!s)return;
+  var existing=findMyShowByTitle(s.title);
+  if(existing){
+    showToast('Already on your list — '+(ADD_LIST_LABELS[existing.list]||'My Lists')+'.');
+    return;
+  }
+  _currentShowDetails = {
+    tmdb_id: s.tmdb_id||null, title: s.title, poster_path: s.poster_path||null, platform: s.platform||null,
+    genre: null, original_network: null, first_air_year: null,
+    number_of_seasons: null, show_status: null, overview: null, vote_average: null,
+  };
+  _primeTimeAddIdx = idx;
+  openAddPicker();
+};
+
 window.closePrimeTimeModal = function() {
   document.getElementById('prime-time-modal').classList.remove('active');
 };
@@ -5117,6 +5189,12 @@ window.chooseAddDestination = async function(destKey) {
     }
   }
 
+  if (_primeTimeAddIdx != null) {
+    _primeTimeAddIdx = null;
+    var ptIdx = _primeTimeListCache.findIndex(function(x) { return x.title === info.title; });
+    if (ptIdx >= 0) showPrimeTimeDetail(ptIdx);
+  }
+
   if (ADD_DEST_RATES[destKey]) {
     var heading = isDnf ? "Didn't finish? Rate it anyway" : (isWaiting ? 'Rate it so far' : 'You binged it!');
     var emoji = isDnf ? '🎬' : (isWaiting ? '⏳' : '🍿');
@@ -5256,8 +5334,9 @@ bootstrap();
 <div class="invite-modal-overlay" id="prime-time-modal">
   <div class="invite-modal">
     <div class="invite-modal-title">&#128225; Prime Time</div>
-    <div class="invite-modal-sub">Top-rated shows across every room you're in.</div>
+    <div class="invite-modal-sub">Top-rated shows across all of ShowUp.</div>
     <div id="prime-time-list" style="max-height:320px;overflow-y:auto;margin-bottom:14px;"></div>
+    <div id="prime-time-detail" style="display:none;max-height:400px;overflow-y:auto;margin-bottom:14px;"></div>
     <button class="btn-invite-close" onclick="closePrimeTimeModal()" style="width:100%;">Close</button>
   </div>
 </div>
