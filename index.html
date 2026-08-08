@@ -672,7 +672,7 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
       <div class="page-sub" id="watching-sub"></div>
       <div class="add-form">
         <div class="form-row">
-          <div class="form-group"><label>Show title</label><div class="lr-search-wrap" style="margin-bottom:0;"><input id="w-title" placeholder="Search for a show..." oninput="tmdbSearch('w');toggleSearchClearBtn(this)" autocomplete="off" style="padding-right:34px;" /><button class="lr-search-clear" type="button" aria-label="Clear search" onclick="clearSearchInput('w-title')">&#10005;</button></div><div class="tmdb-dropdown" id="w-tmdb-dd"></div></div>
+          <div class="form-group" style="position:relative;"><label>Show title</label><div class="lr-search-wrap" style="margin-bottom:0;"><input id="w-title" placeholder="Search for a show..." oninput="tmdbSearch('w');toggleSearchClearBtn(this)" autocomplete="off" style="padding-right:34px;" /><button class="lr-search-clear" type="button" aria-label="Clear search" onclick="clearSearchInput('w-title')">&#10005;</button></div><div class="tmdb-dropdown" id="w-tmdb-dd"></div></div>
           <div class="form-group" style="max-width:210px"><label>Streaming on</label><select id="w-platform"><option value="">Platform...</option></select></div>
           <button class="btn-add" onclick="addShow('watching')">+ Add</button>
         </div>
@@ -684,7 +684,7 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
       <div class="page-sub">Save your next binge.</div>
       <div class="add-form">
         <div class="form-row">
-          <div class="form-group"><label>Show title</label><div class="lr-search-wrap" style="margin-bottom:0;"><input id="wl-title" placeholder="Search for a show..." oninput="tmdbSearch('wl');toggleSearchClearBtn(this)" autocomplete="off" style="padding-right:34px;" /><button class="lr-search-clear" type="button" aria-label="Clear search" onclick="clearSearchInput('wl-title')">&#10005;</button></div><div class="tmdb-dropdown" id="wl-tmdb-dd"></div></div>
+          <div class="form-group" style="position:relative;"><label>Show title</label><div class="lr-search-wrap" style="margin-bottom:0;"><input id="wl-title" placeholder="Search for a show..." oninput="tmdbSearch('wl');toggleSearchClearBtn(this)" autocomplete="off" style="padding-right:34px;" /><button class="lr-search-clear" type="button" aria-label="Clear search" onclick="clearSearchInput('wl-title')">&#10005;</button></div><div class="tmdb-dropdown" id="wl-tmdb-dd"></div></div>
           <div class="form-group" style="max-width:210px"><label>Streaming on</label><select id="wl-platform"><option value="">Platform...</option></select></div>
           <button class="btn-add" onclick="addShow('watchlist')">+ Add</button>
         </div>
@@ -698,7 +698,7 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
         <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--muted);margin-bottom:10px;">&#127942; Top 5 Shows of All Time <span style="font-weight:400;text-transform:none;">— Visible to friends in your Living Room</span></div>
         <div id="binged-top5-list" style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px;"></div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;">
-          <div class="form-group" style="flex:2;min-width:140px;margin:0;">
+          <div class="form-group" style="position:relative;flex:2;min-width:140px;margin:0;">
             <div class="lr-search-wrap" style="margin-bottom:0;"><input id="bt5-title" placeholder="Search for a show..." oninput="tmdbSearch('bt5');toggleSearchClearBtn(this)" autocomplete="off" style="width:100%;background:white;border:1px solid var(--border);border-radius:8px;padding:9px 34px 9px 12px;font-family:var(--sans);font-size:14px;color:var(--charcoal);outline:none;box-sizing:border-box;" /><button class="lr-search-clear" type="button" aria-label="Clear search" onclick="clearSearchInput('bt5-title')">&#10005;</button></div>
             <div class="tmdb-dropdown" id="bt5-tmdb-dd"></div>
           </div>
@@ -708,7 +708,7 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
       </div>
       <div class="add-form">
         <div class="form-row">
-          <div class="form-group"><label>Show title</label><div class="lr-search-wrap" style="margin-bottom:0;"><input id="wd-title" placeholder="Search for a show..." oninput="tmdbSearch('wd');toggleSearchClearBtn(this)" autocomplete="off" style="padding-right:34px;" /><button class="lr-search-clear" type="button" aria-label="Clear search" onclick="clearSearchInput('wd-title')">&#10005;</button></div><div class="tmdb-dropdown" id="wd-tmdb-dd"></div></div>
+          <div class="form-group" style="position:relative;"><label>Show title</label><div class="lr-search-wrap" style="margin-bottom:0;"><input id="wd-title" placeholder="Search for a show..." oninput="tmdbSearch('wd');toggleSearchClearBtn(this)" autocomplete="off" style="padding-right:34px;" /><button class="lr-search-clear" type="button" aria-label="Clear search" onclick="clearSearchInput('wd-title')">&#10005;</button></div><div class="tmdb-dropdown" id="wd-tmdb-dd"></div></div>
           <div class="form-group" style="max-width:210px"><label>Streaming on</label><select id="wd-platform"><option value="">Platform...</option></select></div>
           <button class="btn-add" onclick="addShow('watched')">+ Add</button>
         </div>
@@ -716,7 +716,7 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
       <div class="add-form" style="border-left:3px solid #c0392b;">
         <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:#c0392b;margin-bottom:8px;">&#128683; Didn't finish something?</div>
         <div class="form-row">
-          <div class="form-group"><label>Show title</label><div class="lr-search-wrap" style="margin-bottom:0;"><input id="dnf-title" placeholder="Search for a show..." oninput="tmdbSearch('dnf');toggleSearchClearBtn(this)" autocomplete="off" style="padding-right:34px;" /><button class="lr-search-clear" type="button" aria-label="Clear search" onclick="clearSearchInput('dnf-title')">&#10005;</button></div><div class="tmdb-dropdown" id="dnf-tmdb-dd"></div></div>
+          <div class="form-group" style="position:relative;"><label>Show title</label><div class="lr-search-wrap" style="margin-bottom:0;"><input id="dnf-title" placeholder="Search for a show..." oninput="tmdbSearch('dnf');toggleSearchClearBtn(this)" autocomplete="off" style="padding-right:34px;" /><button class="lr-search-clear" type="button" aria-label="Clear search" onclick="clearSearchInput('dnf-title')">&#10005;</button></div><div class="tmdb-dropdown" id="dnf-tmdb-dd"></div></div>
           <div class="form-group" style="max-width:210px"><label>Streaming on</label><select id="dnf-platform"><option value="">Platform...</option></select></div>
           <button class="btn-add" onclick="addDirectDNF()">+ Add</button>
         </div>
@@ -826,7 +826,7 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
       <div class="ob-label" style="margin-bottom:4px;">&#127942; Top 5 Shows of All Time <span style="font-weight:400;text-transform:none;font-size:11px;color:var(--muted);">Visible to friends in your Living Room</span></div>
       <div id="top5-list" style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px;"></div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;">
-        <div class="form-group" style="flex:2;min-width:140px;margin:0;">
+        <div class="form-group" style="position:relative;flex:2;min-width:140px;margin:0;">
           <div class="lr-search-wrap" style="margin-bottom:0;"><input class="ob-input" id="t5p-title" placeholder="Search for a show..." oninput="tmdbSearch('t5p');toggleSearchClearBtn(this)" autocomplete="off" style="width:100%;box-sizing:border-box;padding-right:34px;" /><button class="lr-search-clear" type="button" aria-label="Clear search" onclick="clearSearchInput('t5p-title')">&#10005;</button></div>
           <div class="tmdb-dropdown" id="t5p-tmdb-dd"></div>
         </div>
