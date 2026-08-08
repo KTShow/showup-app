@@ -2054,6 +2054,77 @@ function renderSharedTasteList(friendId){
   }).join('');
 }
 
+// A search that names a real streaming platform ("Netflix") switches Your
+// Crowd from a friend list into a show list -- "who has something on
+// Netflix" is far less useful than "what's actually on Netflix across the
+// room". Requires 3+ chars so a stray "n" doesn't trigger it accidentally.
+function isPlatformQuery(q){
+  if(!q || q.length<3) return false;
+  return PLATFORMS.some(function(p){ return p!=='None' && p!=='Other' && p.toLowerCase().indexOf(q)!==-1; });
+}
+
+function buildShowsByPlatform(q){
+  var shows={};
+  function addShow(s, ownerName, isMe){
+    if(!s || !s.title || !s.platform) return;
+    if(!isMe && s.hidden) return;
+    if(s.platform.toLowerCase().indexOf(q)===-1) return;
+    var key=s.title.toLowerCase().trim();
+    if(!shows[key]) shows[key]={title:s.title,platform:s.platform,poster_path:s.poster_path,tmdb_id:s.tmdb_id,people:[]};
+    if(!shows[key].poster_path && s.poster_path) shows[key].poster_path=s.poster_path;
+    shows[key].people.push({name:isMe?'You':ownerName, rating:s.rating||0});
+  }
+  if (!state.currentRoomIsAdminView) [state.watching,state.watchlist,state.watched].forEach(function(arr){ (arr||[]).forEach(function(s){ addShow(s,'You',true); }); });
+  (state.friends||[]).forEach(function(f){
+    if(!f) return;
+    [f.watching,f.watchlist,f.watched].forEach(function(arr){ (arr||[]).forEach(function(s){ addShow(s,f.name,false); }); });
+  });
+  var list=Object.values(shows);
+  list.sort(function(a,b){ return a.title.toLowerCase().localeCompare(b.title.toLowerCase()); });
+  return list;
+}
+
+var _platformShowsCache=[];
+
+function renderShowsByPlatform(q){
+  var list=buildShowsByPlatform(q);
+  _platformShowsCache=list;
+  var el=document.getElementById('friends-grid');
+  if(!list.length){
+    el.innerHTML='<div class="empty" style="grid-column:1/-1;"><div class="empty-icon">&#128269;</div>No shows on a platform matching "'+escAttr(q)+'".</div>';
+    return;
+  }
+  el.innerHTML=list.map(function(s,i){
+    var thumb=s.poster_path
+      ? '<img src="'+TMDB_IMG+s.poster_path+'" style="width:100%;aspect-ratio:1;border-radius:8px;object-fit:cover;" />'
+      : '<div style="width:100%;aspect-ratio:1;border-radius:8px;background:var(--olive);display:flex;align-items:center;justify-content:center;font-size:22px;">&#128252;</div>';
+    var ratings=s.people.filter(function(p){return p.rating>0;});
+    var avg=ratings.length ? (ratings.reduce(function(a,b){return a+b.rating;},0)/ratings.length) : null;
+    var ratingLine = avg ? ('&#9733;'+avg.toFixed(1)+' &middot; '+ratings.length+' rated') : 'Not yet rated';
+    var haveIt = s.people.some(function(p){return p.name==='You';});
+    var addBtn = haveIt ? '' : '<button onclick="event.stopPropagation();handlePlatformShowAdd('+i+')" style="display:inline-flex;align-items:center;gap:4px;background:none;border:1px solid var(--terra);color:var(--terra);border-radius:8px;padding:2px 8px;font-family:var(--sans);font-size:11px;font-weight:700;cursor:pointer;margin-top:4px;">&#10133; Add</button>';
+    return '<div class="friend-card">'+thumb
+      +'<div class="friend-name" style="margin-top:6px;">'+escAttr(s.title)+'</div>'
+      +'<div class="friend-city">'+escAttr(s.platform)+'</div>'
+      +'<div class="friend-count">'+ratingLine+' &middot; '+s.people.length+' '+(s.people.length===1?'person has':'people have')+' it</div>'
+      +addBtn
+      +'</div>';
+  }).join('');
+}
+
+window.handlePlatformShowAdd = function(idx){
+  var s=_platformShowsCache[idx];
+  if(!s) return;
+  var existing=findMyShowByTitle(s.title);
+  if(existing){ showToast('Already on your list — '+(ADD_LIST_LABELS[existing.list]||'My Lists')+'.'); return; }
+  _currentShowDetails = {
+    tmdb_id: s.tmdb_id||null, title: s.title, poster_path: s.poster_path||null, platform: s.platform||null,
+    genre: null, original_network: null, first_air_year: null,
+    number_of_seasons: null, show_status: null, overview: null, vote_average: null,
+  };
+  openAddPicker();
+};
+
 function renderFriends() {
   renderTop5Banner();
   renderTastemakersBanner();
@@ -2072,9 +2143,13 @@ function renderFriends() {
     return;
   }
   var q=((document.getElementById('crew-search')||{}).value||'').trim().toLowerCase();
+  // A platform-looking query ("Netflix") surfaces shows on that platform,
+  // not people -- that's a fundamentally different, more useful result
+  // than "which friends happen to have something on Netflix".
+  if (isPlatformQuery(q)) { renderShowsByPlatform(q); updateConversationsBadge(); return; }
   var sorted=state.friends.slice().sort(function(a,b){return a.name.localeCompare(b.name);});
-  // Search matches friend name, OR any show title/platform they have --
-  // "search by title/platform, see who has it" without a separate screen.
+  // Search matches friend name, OR any show title they have -- "search by
+  // title, see who has it" without a separate screen.
   var matchedShowByFriendId={};
   if(q) sorted=sorted.filter(function(f){
     if(f.name.toLowerCase().indexOf(q)!==-1) return true;
@@ -2084,7 +2159,7 @@ function renderFriends() {
       for(var j=0;j<arr.length;j++){
         var s=arr[j];
         if(s.hidden) continue;
-        if((s.title||'').toLowerCase().indexOf(q)!==-1 || (s.platform||'').toLowerCase().indexOf(q)!==-1){
+        if((s.title||'').toLowerCase().indexOf(q)!==-1){
           matchedShowByFriendId[f.id]=s;
           return true;
         }
@@ -2102,7 +2177,7 @@ function renderFriends() {
     var fInitials=f.name.split(' ').map(function(x){return x[0];}).join('');
     var fFirst=f.name.split(' ')[0];
     var matchedShow=matchedShowByFriendId[f.id];
-    var matchDetail=matchedShow?'<div class="friend-new-detail">Has: '+escAttr(matchedShow.title)+(matchedShow.platform?' ('+escAttr(matchedShow.platform)+')':'')+'</div>':'';
+    var matchDetail=matchedShow?'<div class="friend-new-detail">Has: '+escAttr(matchedShow.title)+'</div>':'';
     return '<div class="friend-card'+(f.muted?' is-muted':'')+'" onclick="showFriend(\''+f.id+'\')">'
       +'<div class="friend-top-row"><div class="friend-av" style="background:'+fColor+';font-weight:700;font-family:var(--sans);">'+fInitials+'</div><div class="friend-name">'+fFirst+(f.muted?'<span class="muted-badge">Muted</span>':'')+'</div></div>'
       +'<div class="friend-city">'+f.city+'</div>'
