@@ -2052,7 +2052,7 @@ async function loadAndRenderRoomPicker() {
 function renderRoomPicker() {
   var grid = document.getElementById('room-picker-grid');
   if (!grid) return;
-  var tiles = state.myRooms.map(function(r) {
+  var tiles = state.myRooms.slice().sort(function(a,b){ return a.name.localeCompare(b.name); }).map(function(r) {
     return '<div class="room-tile" onclick="enterLivingRoom(\''+r.id+'\')"><div class="room-tile-name">'+escAttr(r.name)+'</div><div class="room-tile-meta">'+r.member_count+' member'+(r.member_count===1?'':'s')+'</div></div>';
   }).join('');
   grid.innerHTML = tiles + '<div class="room-tile-create" onclick="openCreateRoomModal()">+ Create New Room</div>';
