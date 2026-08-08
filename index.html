@@ -726,7 +726,7 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
         <div class="page-title">&#127968;&nbsp; Your Living Rooms</div>
         <div class="page-sub">Pick a room to enter, or start a new one.</div>
         <div class="tastemakers-banner" onclick="openPrimeTimeModal()" style="margin-bottom:16px;">
-          <div class="tastemakers-banner-icon">&#127909;</div>
+          <div class="tastemakers-banner-icon">&#128225;</div>
           <div class="tastemakers-banner-text">
             <div class="tastemakers-banner-title">Prime Time</div>
             <div class="tastemakers-banner-sub">See what your crowd loves most, across every room</div>
@@ -1178,7 +1178,7 @@ function renderTastemakersBanner() {
       : leader.name + ' leads with ' + leader.count + ' recommendation' + (leader.count===1?'':'s') + ' accepted';
   }
   wrap.innerHTML = '<div class="tastemakers-banner" onclick="openTastemakersModal()">'
-    + '<div class="tastemakers-banner-icon">&#128225;</div>'
+    + '<div class="tastemakers-banner-icon">&#127942;</div>'
     + '<div class="tastemakers-banner-text">'
     + '<div class="tastemakers-banner-title">Tastemakers</div>'
     + '<div class="tastemakers-banner-sub">'+escAttr(subtext)+'</div>'
@@ -5255,7 +5255,7 @@ bootstrap();
 <!-- PRIME TIME LEADERBOARD -->
 <div class="invite-modal-overlay" id="prime-time-modal">
   <div class="invite-modal">
-    <div class="invite-modal-title">&#127909; Prime Time</div>
+    <div class="invite-modal-title">&#128225; Prime Time</div>
     <div class="invite-modal-sub">Top-rated shows across every room you're in.</div>
     <div id="prime-time-list" style="max-height:320px;overflow-y:auto;margin-bottom:14px;"></div>
     <button class="btn-invite-close" onclick="closePrimeTimeModal()" style="width:100%;">Close</button>
