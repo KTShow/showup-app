@@ -762,7 +762,7 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
         </div>
         <div id="lr-crew-view">
           <div id="tastemakers-banner-wrap"></div>
-          <div id="room-ticker" class="room-ticker" style="display:none"></div>
+          <div id="room-ticker" class="room-ticker" style="display:none;cursor:pointer;" onclick="openNewThisWeekModal()" title="See what's new this week"></div>
           <div id="top5-banner-wrap"></div>
           <div class="lr-search-wrap"><input type="text" id="crew-search" class="lr-search-input" placeholder="Search friends..." oninput="renderFriends()" autocomplete="off" /></div>
           <div class="friends-grid" id="friends-grid"></div>
@@ -1867,6 +1867,106 @@ function renderRoomTicker() {
     }, 4500);
   }
 }
+
+// ============================================================
+// NEW THIS WEEK — tapping the room ticker opens a real list of what was
+// added in the last 7 days (own + friends' shows in this room), with the
+// usual rate (own shows) / add-to-my-list (friends' shows) actions.
+// ============================================================
+
+var _newThisWeekCache = [];
+
+function buildNewThisWeekList(){
+  var cutoff = Date.now() - 7*24*60*60*1000;
+  var items = [];
+  (state.friends||[]).forEach(function(f){
+    if(!f) return;
+    ['watching','watchlist','watched'].forEach(function(lk){
+      (f[lk]||[]).forEach(function(s){
+        if(s.hidden) return;
+        if(s.added_at && new Date(s.added_at).getTime() > cutoff){
+          items.push({mine:false, friendName:f.name, list:lk, showId:s.id, title:s.title, platform:s.platform, poster_path:s.poster_path, tmdb_id:s.tmdb_id, rating:s.rating||0, addedAt:s.added_at});
+        }
+      });
+    });
+  });
+  ['watching','watchlist','watched'].forEach(function(lk){
+    (state[lk]||[]).forEach(function(s){
+      if(s.addedAt && new Date(s.addedAt).getTime() > cutoff){
+        items.push({mine:true, list:lk, showId:s.id, title:s.title, platform:s.platform, poster_path:s.poster_path, tmdb_id:s.tmdb_id, rating:s.rating||0, addedAt:s.addedAt});
+      }
+    });
+  });
+  items.sort(function(a,b){ return new Date(b.addedAt) - new Date(a.addedAt); });
+  return items;
+}
+
+window.openNewThisWeekModal = function(){
+  document.getElementById('new-this-week-modal').classList.add('active');
+  renderNewThisWeekList();
+};
+
+window.closeNewThisWeekModal = function(){
+  document.getElementById('new-this-week-modal').classList.remove('active');
+};
+
+function renderNewThisWeekList(){
+  var el = document.getElementById('new-this-week-list');
+  if (!el) return;
+  var items = buildNewThisWeekList();
+  _newThisWeekCache = items;
+  if (!items.length){
+    el.innerHTML = '<div class="empty"><div class="empty-icon">&#127881;</div>Nothing new in the last 7 days.</div>';
+    return;
+  }
+  el.innerHTML = items.map(function(item, i){
+    var thumb = item.poster_path
+      ? '<img src="'+TMDB_IMG+item.poster_path+'" style="width:46px;height:46px;border-radius:8px;object-fit:cover;flex-shrink:0;margin-right:12px;" />'
+      : '<div style="width:46px;height:46px;border-radius:8px;background:var(--olive);flex-shrink:0;margin-right:12px;display:flex;align-items:center;justify-content:center;font-size:18px;">&#128252;</div>';
+    var subLine = item.mine ? 'You added this' : (escAttr(item.friendName)+' added this');
+    var ratingHTML;
+    if (item.mine) {
+      var stars=''; for(var n=1;n<=5;n++){var lit=n<=item.rating;stars+='<button class="remote-btn" style="opacity:'+(lit?'1':'0.22')+'" onclick="rateNewThisWeek('+i+','+n+')">'+remoteIcon(15,lit)+'</button>';}
+      ratingHTML = '<div style="display:flex;gap:4px;">'+stars+'</div>';
+    } else {
+      ratingHTML = item.rating ? remoteStatic(item.rating) : '<span style="font-size:11px;color:var(--muted);">Not yet rated</span>';
+    }
+    var addBtn = item.mine ? '' : '<button onclick="handleNewThisWeekAdd('+i+')" style="display:inline-flex;align-items:center;gap:4px;background:none;border:1px solid var(--terra);color:var(--terra);border-radius:8px;padding:2px 8px;font-family:var(--sans);font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;margin-left:8px;">&#10133; Add</button>';
+    return '<div class="show-card"><div class="show-card-top">'+thumb
+      +'<div class="show-info"><div class="show-title">'+escAttr(item.title)+'</div>'
+      +(item.platform?'<span class="rank-platform">'+escAttr(item.platform)+'</span>':'')
+      +'<div style="font-size:11px;color:var(--muted);margin-top:2px;">'+subLine+'</div></div>'
+      +'<div class="show-actions" style="display:flex;align-items:center;">'+ratingHTML+addBtn+'</div>'
+      +'</div></div>';
+  }).join('');
+}
+
+window.rateNewThisWeek = async function(idx, n){
+  var item = _newThisWeekCache[idx];
+  if(!item || !item.mine) return;
+  item.rating = (item.rating===n) ? 0 : n;
+  renderNewThisWeekList();
+  var s = (state[item.list]||[]).find(function(x){ return x.id===item.showId; });
+  if(s) s.rating = item.rating;
+  renderList(item.list);
+  try { await updateShowRating(item.showId, item.rating); } catch(e){ console.error('rateNewThisWeek error:', e); }
+};
+
+window.handleNewThisWeekAdd = function(idx){
+  var item = _newThisWeekCache[idx];
+  if(!item) return;
+  var existing = findMyShowByTitle(item.title);
+  if(existing){
+    showToast('Already on your list — '+(ADD_LIST_LABELS[existing.list]||'My Lists')+'.');
+    return;
+  }
+  _currentShowDetails = {
+    tmdb_id: item.tmdb_id||null, title: item.title, poster_path: item.poster_path||null, platform: item.platform||null,
+    genre: null, original_network: null, first_air_year: null,
+    number_of_seasons: null, show_status: null, overview: null, vote_average: null,
+  };
+  openAddPicker();
+};
 
 function renderFriends() {
   renderTop5Banner();
@@ -5567,6 +5667,16 @@ bootstrap();
     <div class="invite-modal-sub">All-time leaderboard &mdash; recommendations your crowd accepted into Watching or My List.</div>
     <div id="tastemakers-list" style="max-height:320px;overflow-y:auto;margin-bottom:14px;"></div>
     <button class="btn-invite-close" onclick="closeTastemakersModal()" style="width:100%;">Close</button>
+  </div>
+</div>
+
+<!-- NEW THIS WEEK -->
+<div class="invite-modal-overlay" id="new-this-week-modal">
+  <div class="invite-modal">
+    <div class="invite-modal-title">&#127881; New This Week</div>
+    <div class="invite-modal-sub">Added in the last 7 days, in this room.</div>
+    <div id="new-this-week-list" style="max-height:400px;overflow-y:auto;margin-bottom:14px;"></div>
+    <button class="btn-invite-close" onclick="closeNewThisWeekModal()" style="width:100%;">Close</button>
   </div>
 </div>
 
