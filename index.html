@@ -2030,6 +2030,8 @@ window.closeSharedTasteModal = function(){
 function renderSharedTasteList(friendId){
   var el = document.getElementById('shared-taste-list');
   if (!el) return;
+  var f = (state.friends||[]).find(function(x){ return x.id===friendId; });
+  var friendFirstName = f ? f.name.split(' ')[0] : 'Them';
   var list = buildSharedTasteList(friendId);
   if (!list.length){
     el.innerHTML = '<div class="empty"><div class="empty-icon">&#128156;</div>No overlap yet &mdash; nothing you both have.</div>';
@@ -2046,8 +2048,8 @@ function renderSharedTasteList(friendId){
       +(s.platform?'<span class="rank-platform">'+escAttr(s.platform)+'</span>':'')
       +'</div></div>'
       +'<div style="display:flex;justify-content:space-between;margin-top:8px;font-size:12px;gap:12px;">'
-      +'<div><div style="color:var(--muted);margin-bottom:2px;">You &mdash; '+escAttr(s.myStatus)+'</div>'+myR+'</div>'
-      +'<div style="text-align:right;"><div style="color:var(--muted);margin-bottom:2px;">'+escAttr(s.theirStatus)+'</div>'+theirR+'</div>'
+      +'<div><div style="color:var(--fig);font-weight:700;margin-bottom:2px;">You &mdash; '+escAttr(s.myStatus)+'</div>'+myR+'</div>'
+      +'<div style="text-align:right;"><div style="color:var(--terra);font-weight:700;margin-bottom:2px;">'+escAttr(friendFirstName)+' &mdash; '+escAttr(s.theirStatus)+'</div>'+theirR+'</div>'
       +'</div></div>';
   }).join('');
 }
