@@ -971,6 +971,7 @@ var state = {
   currentRoomName: '',
   currentRoomIsOwner: false,
   currentRoomIsAdminView: false, // viewing as admin, not a genuine owner/member -- read-only, no self-tile
+  currentRoomConversationsLastSeen: null, // per-room, from room_last_seen -- set by getFriendsWithShows()
   influencerNames: {},   // who-recommended-what, resolved independent of room (see loadInfluencerNames)
   myRooms: [],           // rooms the user owns or belongs to, for the room picker
   myRoomsLoaded: false,
@@ -2108,7 +2109,16 @@ window.enterLivingRoom = async function(roomId, roomName, isOwner, isAdminView) 
   updateInviteLinks();
 };
 
-window.backToRoomPicker = function() { showRoomPicker(); };
+window.backToRoomPicker = function() {
+  // Same "mark seen on genuine exit" rule as showTab() -- switching rooms
+  // (not just leaving the Living Room tab entirely) should also mark the
+  // room you're leaving as seen, now that each room tracks this separately.
+  if (_conversationsViewed) {
+    markConversationsSeen();
+    _conversationsViewed = false;
+  }
+  showRoomPicker();
+};
 
 window.openCreateRoomModal = async function() {
   var name = prompt('Name your new Living Room:');
@@ -2404,7 +2414,7 @@ function timeAgo(iso){
 }
 
 function buildConversationsFeed(){
-  var lastSeen = state.user && state.user.conversationsLastSeenAt ? new Date(state.user.conversationsLastSeenAt) : null;
+  var lastSeen = state.currentRoomConversationsLastSeen ? new Date(state.currentRoomConversationsLastSeen) : null;
   var myId = state.user ? state.user.id : null;
   function isNew(ts){ return !!ts && (!lastSeen || new Date(ts) > lastSeen); }
   var events=[];
@@ -2845,13 +2855,15 @@ function updateConversationsBadge(){
 }
 
 window.markConversationsSeen = async function(){
+  if (!state.currentRoomId) return;
   var now=new Date().toISOString();
-  if(state.user) state.user.conversationsLastSeenAt = now;
+  state.currentRoomConversationsLastSeen = now;
   updateConversationsBadge();
   try {
     const { data: { user } } = await sb.auth.getUser();
     if (!user) return;
-    await sb.from('users').update({ conversations_last_seen_at: now }).eq('id', user.id);
+    await sb.from('room_last_seen')
+      .upsert({ user_id: user.id, living_room_id: state.currentRoomId, last_seen_at: now });
   } catch(e) { console.error('markConversationsSeen error:', e); }
 };
 
@@ -3598,6 +3610,9 @@ async function getFriendsWithShows(roomId) {
   const { data: bundle, error: bundleErr } = await sb.rpc('get_living_room_data', { p_room_id: roomId });
   if (bundleErr) throw bundleErr;
   if (!bundle) return [];
+
+  // Per-room "since you last looked" -- see room_last_seen table.
+  state.currentRoomConversationsLastSeen = bundle.conversations_last_seen_at || null;
 
   var allUsers = bundle.friends || [];
   if (!allUsers.length) return [];
