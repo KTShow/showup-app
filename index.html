@@ -733,11 +733,19 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
           </div>
           <div class="tastemakers-banner-arrow">&#8250;</div>
         </div>
+        <div class="tastemakers-banner" id="admin-browse-banner" onclick="openAdminRoomsModal()" style="display:none;margin-bottom:16px;background:linear-gradient(135deg,#555,#222);">
+          <div class="tastemakers-banner-icon">&#128065;</div>
+          <div class="tastemakers-banner-text">
+            <div class="tastemakers-banner-title">Browse All Rooms</div>
+            <div class="tastemakers-banner-sub">Admin view &mdash; read-only, every room in ShowUp</div>
+          </div>
+          <div class="tastemakers-banner-arrow">&#8250;</div>
+        </div>
         <div class="room-picker-grid" id="room-picker-grid"></div>
       </div>
       <div id="friends-view" style="display:none">
         <div class="page-title"><button class="nav-back" onclick="backToRoomPicker()" style="margin-right:6px;">&#8592;</button>&#127968;&nbsp; <span id="current-room-name">The Living Room</span><button id="rename-room-btn" onclick="renameCurrentRoom()" style="display:none;background:none;border:none;cursor:pointer;font-size:14px;margin-left:6px;color:var(--muted);vertical-align:middle;" title="Rename this room">&#9998;&#65049;</button><button id="delete-room-btn" onclick="deleteCurrentRoom()" style="display:none;background:none;border:none;cursor:pointer;font-size:14px;margin-left:6px;color:var(--muted);vertical-align:middle;" title="Delete this room">&#128465;&#65049;</button><button id="leave-room-btn" onclick="leaveCurrentRoom()" style="display:none;background:none;border:none;cursor:pointer;font-size:14px;margin-left:6px;color:var(--muted);vertical-align:middle;" title="Leave this room">&#128075; Leave Room</button></div>
-        <div class="page-sub">Your Crowd &mdash; see what everyone's watching &mdash; <a href="#" onclick="openInviteModal();return false;" style="color:var(--terra);font-weight:600;">Invite someone</a></div>
+        <div class="page-sub">Your Crowd &mdash; see what everyone's watching &mdash; <a href="#" id="invite-someone-link" onclick="openInviteModal();return false;" style="color:var(--terra);font-weight:600;">Invite someone</a></div>
         <div id="recommendations-banner"></div>
         <div class="lr-toggle">
           <button class="lr-toggle-btn active" id="toggle-crew" onclick="switchLRView('crew')"><span class="toggle-icon">🛋️</span>Your Crowd</button>
@@ -955,6 +963,7 @@ var state = {
   currentRoomId: null,   // which Living Room the user has entered, if any
   currentRoomName: '',
   currentRoomIsOwner: false,
+  currentRoomIsAdminView: false, // viewing as admin, not a genuine owner/member -- read-only, no self-tile
   influencerNames: {},   // who-recommended-what, resolved independent of room (see loadInfluencerNames)
   myRooms: [],           // rooms the user owns or belongs to, for the room picker
   myRoomsLoaded: false,
@@ -1854,9 +1863,9 @@ function renderFriends() {
   renderTop5Banner();
   renderTastemakersBanner();
   renderRoomTicker();
-  renderRecommendationBanners();
+  if (!state.currentRoomIsAdminView) renderRecommendationBanners();
   var selfTile='';
-  if(state.user){
+  if(state.user && !state.currentRoomIsAdminView){
     var myColor=ROOMS[state.user.room||'tuscany']?ROOMS[state.user.room||'tuscany'].color:'#C4622D';
     selfTile='<div class="friend-card" onclick="showFriend(\''+state.user.id+'\')">'
       +'<div class="friend-top-row"><div class="friend-av" style="background:'+myColor+';font-weight:700;font-family:var(--sans);">'+(state.user.initials||'Y')+'</div><div class="friend-name">YOU</div></div>'
@@ -2028,7 +2037,10 @@ async function showRoomPicker() {
   state.currentRoomId = null;
   state.currentRoomName = '';
   state.currentRoomIsOwner = false;
+  state.currentRoomIsAdminView = false;
   state.friendsLoaded = false;
+  var adminBanner = document.getElementById('admin-browse-banner');
+  if (adminBanner) adminBanner.style.display = (state.user && state.user.isAdmin) ? 'flex' : 'none';
   await loadAndRenderRoomPicker();
 }
 
@@ -2058,7 +2070,7 @@ function renderRoomPicker() {
   grid.innerHTML = tiles + '<div class="room-tile-create" onclick="openCreateRoomModal()">+ Create New Room</div>';
 }
 
-window.enterLivingRoom = async function(roomId, roomName, isOwner) {
+window.enterLivingRoom = async function(roomId, roomName, isOwner, isAdminView) {
   if (!roomName || isOwner === undefined) {
     var room = state.myRooms.find(function(r) { return r.id === roomId; });
     if (!roomName) roomName = room ? room.name : 'The Living Room';
@@ -2067,19 +2079,22 @@ window.enterLivingRoom = async function(roomId, roomName, isOwner) {
   state.currentRoomId = roomId;
   state.currentRoomName = roomName;
   state.currentRoomIsOwner = isOwner;
+  state.currentRoomIsAdminView = !!isAdminView;
   state.friendsLoaded = false;
   state.friends = [];
   document.getElementById('room-picker-view').style.display = 'none';
   document.getElementById('friends-view').style.display = 'block';
   document.getElementById('friend-detail-view').style.display = 'none';
   var nameEl = document.getElementById('current-room-name');
-  if (nameEl) nameEl.textContent = roomName;
+  if (nameEl) nameEl.textContent = roomName + (isAdminView ? ' 👁️ Admin View' : '');
   var renameBtn = document.getElementById('rename-room-btn');
   if (renameBtn) renameBtn.style.display = isOwner ? 'inline' : 'none';
   var deleteBtn = document.getElementById('delete-room-btn');
   if (deleteBtn) deleteBtn.style.display = isOwner ? 'inline' : 'none';
   var leaveBtn = document.getElementById('leave-room-btn');
-  if (leaveBtn) leaveBtn.style.display = isOwner ? 'none' : 'inline';
+  if (leaveBtn) leaveBtn.style.display = (isOwner || isAdminView) ? 'none' : 'inline';
+  var inviteLink = document.getElementById('invite-someone-link');
+  if (inviteLink) inviteLink.style.display = isAdminView ? 'none' : 'inline';
   switchLRView('crew');
   renderFriends();
   await loadAndRenderFriends();
@@ -2264,6 +2279,50 @@ window.handlePrimeTimeAdd = function(idx){
 
 window.closePrimeTimeModal = function() {
   document.getElementById('prime-time-modal').classList.remove('active');
+};
+
+// ============================================================
+// ADMIN: BROWSE ALL ROOMS — read-only, gated server-side by is_admin
+// (see get_all_living_rooms_admin()/user_is_admin() -- this UI only
+// controls whether the entry point is shown, not the actual access).
+// ============================================================
+
+var _adminRoomsCache = [];
+
+window.openAdminRoomsModal = async function() {
+  if (!state.user || !state.user.isAdmin) return;
+  var body = document.getElementById('admin-rooms-list');
+  body.innerHTML = '<div class="empty"><div class="empty-icon">&#8987;</div>Loading&hellip;</div>';
+  document.getElementById('admin-rooms-modal').classList.add('active');
+  try {
+    const { data, error } = await sb.rpc('get_all_living_rooms_admin');
+    if (error) throw error;
+    _adminRoomsCache = data || [];
+    if (!_adminRoomsCache.length) {
+      body.innerHTML = '<div class="empty"><div class="empty-icon">&#128065;</div>No rooms exist yet.</div>';
+      return;
+    }
+    body.innerHTML = _adminRoomsCache.map(function(r){
+      return '<div class="rank-card" onclick="enterRoomAsAdmin(\''+r.id+'\')">'
+        +'<div class="rank-info">'
+        +'<div class="rank-title-text">'+escAttr(r.name)+'</div>'
+        +'<div class="rank-meta-line"><span class="rank-platform">Owner: '+escAttr(r.owner_name||'?')+'</span><span class="rank-count-inline">'+r.member_count+' member'+(r.member_count===1?'':'s')+'</span></div>'
+        +'</div></div>';
+    }).join('');
+  } catch(e) {
+    console.error('get_all_living_rooms_admin error:', e);
+    body.innerHTML = '<div class="empty"><div class="empty-icon">&#9888;&#65039;</div>Could not load rooms.</div>';
+  }
+};
+
+window.closeAdminRoomsModal = function() {
+  document.getElementById('admin-rooms-modal').classList.remove('active');
+};
+
+window.enterRoomAsAdmin = function(roomId) {
+  var room = _adminRoomsCache.find(function(r){ return r.id === roomId; });
+  closeAdminRoomsModal();
+  enterLivingRoom(roomId, room ? room.name : 'The Living Room', false, true);
 };
 
 window.renameCurrentRoom = async function() {
@@ -3647,6 +3706,7 @@ async function loadUserIntoState(profile) {
     discovery: profile.discovery || [],
     sessionCount: profile.session_count || 0,
     conversationsLastSeenAt: profile.conversations_last_seen_at || null,
+    isAdmin: profile.is_admin || false,
   };
 
   // Fire all three independent loads at once instead of waiting on each in turn —
@@ -5356,7 +5416,7 @@ function updateInviteLinks() {
 }
 
 window.openInviteModal = function() {
-  if (!state.currentRoomId) return;
+  if (!state.currentRoomId || state.currentRoomIsAdminView) return;
   var roomName = state.currentRoomName || 'your Living Room';
   document.getElementById('invite-modal-title').textContent = 'Invite to "' + roomName + '"';
   document.getElementById('invite-modal-sub').textContent = 'Copy the message below and send it however you like — text, email, whatever’s easiest.';
@@ -5481,6 +5541,16 @@ bootstrap();
     <div id="prime-time-list" style="max-height:320px;overflow-y:auto;margin-bottom:14px;"></div>
     <div id="prime-time-detail" style="display:none;max-height:400px;overflow-y:auto;margin-bottom:14px;"></div>
     <button class="btn-invite-close" onclick="closePrimeTimeModal()" style="width:100%;">Close</button>
+  </div>
+</div>
+
+<!-- ADMIN: BROWSE ALL ROOMS -->
+<div class="invite-modal-overlay" id="admin-rooms-modal">
+  <div class="invite-modal">
+    <div class="invite-modal-title">&#128065; Browse All Rooms</div>
+    <div class="invite-modal-sub">Read-only. Tap a room to view its activity.</div>
+    <div id="admin-rooms-list" style="max-height:400px;overflow-y:auto;margin-bottom:14px;"></div>
+    <button class="btn-invite-close" onclick="closeAdminRoomsModal()" style="width:100%;">Close</button>
   </div>
 </div>
 
