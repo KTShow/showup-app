@@ -978,8 +978,16 @@ var LIVING_ROOM_THEMES = {
   tuscany: ROOMS.tuscany,
   sheshed:     {name:'She Shed',              color:'#C2477A', desc:'Blush & Rattan',    emoji:'🌸🪴'},
   botanicals:  {name:'Blush & Botanicals',    color:'#7A9B6E', desc:'Soft Pink & Sage',  emoji:'🌷🍃'},
-  glam:        {name:'Glam Night In',         color:'#8B5FBF', desc:'Velvet & Gold',     emoji:'✨🍷'},
+  godogs:      {name:'Go Dogs',               color:'#BA0C2F', color2:'#1C1C1C', desc:'Black & Red',        emoji:'🐾'},
+  tiger:       {name:'Tiger',                 color:'#4169E1', color2:'#F07800', desc:'Royal Blue & Orange', emoji:'🐯'},
 };
+
+// Some room themes use two colors (e.g. team colors) instead of one --
+// this returns whichever background value (flat color or gradient) a
+// given theme should render with.
+function themeBg(theme){
+  return theme.color2 ? 'linear-gradient(135deg,'+theme.color+','+theme.color2+')' : theme.color;
+}
 
 var state = {
   user: null,
@@ -2642,7 +2650,7 @@ function renderRoomThemeBanner(){
   var el = document.getElementById('room-theme-banner');
   if (!el) return;
   var theme = LIVING_ROOM_THEMES[state.currentRoomTheme] || LIVING_ROOM_THEMES.tuscany;
-  el.style.cssText = 'display:flex;align-items:center;gap:10px;background:'+theme.color+';color:white;padding:10px 16px;border-radius:10px;margin-bottom:14px;';
+  el.style.cssText = 'display:flex;align-items:center;gap:10px;background:'+themeBg(theme)+';color:white;padding:10px 16px;border-radius:10px;margin-bottom:14px;';
   el.innerHTML = '<div><div style="font-weight:700;font-size:13px;">'+escAttr(theme.name)+'</div>'+(theme.desc?'<div style="font-size:11px;opacity:0.9;">'+escAttr(theme.desc)+'</div>':'')+'</div>';
 }
 
@@ -2667,7 +2675,7 @@ function renderThemeGrid(containerId, selectedKey, onSelectFnName){
     var r = LIVING_ROOM_THEMES[k];
     var isSelected = k === selectedKey;
     return '<button type="button" class="room-btn'+(isSelected?' selected':'')+'" onclick="'+onSelectFnName+'(\''+k+'\')" style="border-color:'+(isSelected?r.color:'')+';">'
-      + '<div style="width:40px;height:40px;border-radius:50%;background:'+r.color+';margin:0 auto;display:flex;align-items:center;justify-content:center;font-size:18px;">'+r.emoji+'</div>'
+      + '<div style="width:40px;height:40px;border-radius:50%;background:'+themeBg(r)+';margin:0 auto;display:flex;align-items:center;justify-content:center;font-size:18px;">'+r.emoji+'</div>'
       + '<div class="room-btn-name">'+escAttr(r.name)+'</div>'
       + '</button>';
   }).join('');
