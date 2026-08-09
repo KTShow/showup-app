@@ -2517,7 +2517,7 @@ function renderRoomPicker() {
   if (!grid) return;
   var tiles = state.myRooms.slice().sort(function(a,b){ return a.name.localeCompare(b.name); }).map(function(r) {
     var theme = LIVING_ROOM_THEMES[r.theme] || LIVING_ROOM_THEMES.tuscany;
-    return '<div class="room-tile" onclick="enterLivingRoom(\''+r.id+'\')" style="border-left:4px solid '+theme.color+';"><div class="room-tile-name">'+theme.emoji+' '+escAttr(r.name)+'</div><div class="room-tile-meta">'+r.member_count+' member'+(r.member_count===1?'':'s')+'</div></div>';
+    return '<div class="room-tile" onclick="enterLivingRoom(\''+r.id+'\')" style="border-left:4px solid '+theme.color+';"><div class="room-tile-name">'+escAttr(r.name)+'</div><div class="room-tile-meta">'+r.member_count+' member'+(r.member_count===1?'':'s')+'</div></div>';
   }).join('');
   grid.innerHTML = tiles + '<div class="room-tile-create" onclick="openCreateRoomModal()">+ Create New Room</div>';
 }
@@ -2643,7 +2643,7 @@ function renderRoomThemeBanner(){
   if (!el) return;
   var theme = LIVING_ROOM_THEMES[state.currentRoomTheme] || LIVING_ROOM_THEMES.tuscany;
   el.style.cssText = 'display:flex;align-items:center;gap:10px;background:'+theme.color+';color:white;padding:10px 16px;border-radius:10px;margin-bottom:14px;';
-  el.innerHTML = '<span style="font-size:20px;">'+theme.emoji+'</span><div><div style="font-weight:700;font-size:13px;">'+escAttr(theme.name)+'</div>'+(theme.desc?'<div style="font-size:11px;opacity:0.9;">'+escAttr(theme.desc)+'</div>':'')+'</div>';
+  el.innerHTML = '<div><div style="font-weight:700;font-size:13px;">'+escAttr(theme.name)+'</div>'+(theme.desc?'<div style="font-size:11px;opacity:0.9;">'+escAttr(theme.desc)+'</div>':'')+'</div>';
 }
 
 window.backToRoomPicker = function() {
