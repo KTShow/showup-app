@@ -978,7 +978,7 @@ var LIVING_ROOM_THEMES = {
   tuscany: ROOMS.tuscany,
   sheshed:     {name:'She Shed',              color:'#C2477A', desc:'Blush & Rattan',    emoji:'🌸🪴'},
   botanicals:  {name:'Blush & Botanicals',    color:'#7A9B6E', desc:'Soft Pink & Sage',  emoji:'🌷🍃'},
-  godogs:      {name:'Go Dogs',               color:'#BA0C2F', color2:'#1C1C1C', desc:'Black & Red',        emoji:'🐾'},
+  godogs:      {name:'Go Dogs',               color:'#CE2029', color2:'#FFFFFF', color3:'#1C1C1C', desc:'Red, White & Black', emoji:'🐶'},
   tiger:       {name:'Tiger',                 color:'#4169E1', color2:'#F07800', desc:'Royal Blue & Orange', emoji:'🐯'},
 };
 
@@ -986,7 +986,9 @@ var LIVING_ROOM_THEMES = {
 // this returns whichever background value (flat color or gradient) a
 // given theme should render with.
 function themeBg(theme){
-  return theme.color2 ? 'linear-gradient(135deg,'+theme.color+','+theme.color2+')' : theme.color;
+  if (theme.color3) return 'linear-gradient(135deg,'+theme.color+','+theme.color2+','+theme.color3+')';
+  if (theme.color2) return 'linear-gradient(135deg,'+theme.color+','+theme.color2+')';
+  return theme.color;
 }
 
 var state = {
