@@ -109,6 +109,11 @@ begin
 end;
 $$;
 
+-- member_count > 0 filter is load-bearing: it hides every beta1 user's
+-- empty auto-created personal room from Admin Browse All Rooms. This
+-- function has been accidentally rewritten from a stale, unfiltered copy
+-- of this exact file twice already (see fix_admin_browse_empty_rooms_regression.sql)
+-- -- keep the filter here so re-running this migration can't drop it again.
 create or replace function get_all_living_rooms_admin()
 returns jsonb
 language plpgsql
@@ -119,16 +124,19 @@ begin
   end if;
   return (
     select coalesce(jsonb_agg(jsonb_build_object(
-      'id', r.id,
-      'name', r.name,
-      'owner_name', u.first_name,
-      'member_count', (
-        select count(*) from living_room_members m
-        where m.living_room_id = r.id and m.status = 'active' and m.user_id <> r.owner_id
-      )
-    ) order by r.name), '[]'::jsonb)
-    from living_rooms r
-    join users u on u.id = r.owner_id
+      'id', room_id,
+      'name', room_name,
+      'owner_name', owner_name,
+      'member_count', member_count
+    ) order by room_name), '[]'::jsonb)
+    from (
+      select r.id as room_id, r.name as room_name, u.first_name as owner_name,
+             (select count(*) from living_room_members m
+              where m.living_room_id = r.id and m.status = 'active' and m.user_id <> r.owner_id) as member_count
+      from living_rooms r
+      join users u on u.id = r.owner_id
+    ) x
+    where member_count > 0
   );
 end;
 $$;
