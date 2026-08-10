@@ -755,9 +755,8 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
         <div id="prime-time-detail-view" style="display:none"></div>
       </div>
       <div id="friends-view" style="display:none">
-        <div class="page-title"><button class="nav-back" onclick="backToRoomPicker()" style="margin-right:6px;">&#8592;</button>&#127968;&nbsp; <span id="current-room-name">The Living Room</span><button id="rename-room-btn" onclick="renameCurrentRoom()" style="display:none;background:none;border:none;cursor:pointer;font-size:14px;margin-left:6px;color:var(--muted);vertical-align:middle;" title="Rename this room">&#9998;&#65049;</button><button id="theme-room-btn" onclick="openRoomThemeModal()" style="display:none;background:none;border:none;cursor:pointer;font-size:14px;margin-left:6px;color:var(--muted);vertical-align:middle;" title="Change this room's theme">&#127912;</button><button id="delete-room-btn" onclick="deleteCurrentRoom()" style="display:none;background:none;border:none;cursor:pointer;font-size:14px;margin-left:6px;color:var(--muted);vertical-align:middle;" title="Delete this room">&#128465;&#65049;</button><button id="leave-room-btn" onclick="leaveCurrentRoom()" style="display:none;background:none;border:none;cursor:pointer;font-size:14px;margin-left:6px;color:var(--muted);vertical-align:middle;" title="Leave this room">&#128075; Leave Room</button></div>
+        <div class="page-title"><button class="nav-back" onclick="backToRoomPicker()" style="margin-right:6px;">&#8592;</button>&#127968;&nbsp; <span id="current-room-name">The Living Room</span><button id="rename-room-btn" onclick="renameCurrentRoom()" style="display:none;background:none;border:none;cursor:pointer;font-size:14px;margin-left:6px;color:var(--muted);vertical-align:middle;" title="Rename this room">&#9998;&#65049;</button><button id="delete-room-btn" onclick="deleteCurrentRoom()" style="display:none;background:none;border:none;cursor:pointer;font-size:14px;margin-left:6px;color:var(--muted);vertical-align:middle;" title="Delete this room">&#128465;&#65049;</button><button id="leave-room-btn" onclick="leaveCurrentRoom()" style="display:none;background:none;border:none;cursor:pointer;font-size:14px;margin-left:6px;color:var(--muted);vertical-align:middle;" title="Leave this room">&#128075; Leave Room</button></div>
         <div class="page-sub">Your Crowd &mdash; see what everyone's watching &mdash; <a href="#" id="invite-someone-link" onclick="openInviteModal();return false;" style="color:var(--terra);font-weight:600;">Invite someone</a></div>
-        <div id="room-theme-banner" style="display:none;"></div>
         <div id="recommendations-banner"></div>
         <div class="lr-toggle">
           <button class="lr-toggle-btn active" id="toggle-crew" onclick="switchLRView('crew')"><span class="toggle-icon">🛋️</span>Your Crowd</button>
@@ -2633,28 +2632,17 @@ window.enterLivingRoom = async function(roomId, roomName, isOwner, isAdminView, 
   if (nameEl) nameEl.textContent = roomName + (isAdminView ? ' 👁️ Admin View' : '');
   var renameBtn = document.getElementById('rename-room-btn');
   if (renameBtn) renameBtn.style.display = isOwner ? 'inline' : 'none';
-  var themeBtn = document.getElementById('theme-room-btn');
-  if (themeBtn) themeBtn.style.display = isOwner ? 'inline' : 'none';
   var deleteBtn = document.getElementById('delete-room-btn');
   if (deleteBtn) deleteBtn.style.display = isOwner ? 'inline' : 'none';
   var leaveBtn = document.getElementById('leave-room-btn');
   if (leaveBtn) leaveBtn.style.display = (isOwner || isAdminView) ? 'none' : 'inline';
   var inviteLink = document.getElementById('invite-someone-link');
   if (inviteLink) inviteLink.style.display = isAdminView ? 'none' : 'inline';
-  renderRoomThemeBanner();
   switchLRView('crew');
   renderFriends();
   await loadAndRenderFriends();
   updateInviteLinks();
 };
-
-function renderRoomThemeBanner(){
-  var el = document.getElementById('room-theme-banner');
-  if (!el) return;
-  var theme = LIVING_ROOM_THEMES[state.currentRoomTheme] || LIVING_ROOM_THEMES.tuscany;
-  el.style.cssText = 'display:flex;align-items:center;gap:10px;background:'+themeBg(theme)+';color:white;padding:10px 16px;border-radius:10px;margin-bottom:14px;';
-  el.innerHTML = '<div><div style="font-weight:700;font-size:13px;">'+escAttr(theme.name)+'</div>'+(theme.desc?'<div style="font-size:11px;opacity:0.9;">'+escAttr(theme.desc)+'</div>':'')+'</div>';
-}
 
 window.backToRoomPicker = function() {
   // Same "mark seen on genuine exit" rule as showTab() -- switching rooms
@@ -2713,36 +2701,6 @@ window.submitCreateRoom = async function(){
   } catch(e) {
     console.error('create_living_room error:', e);
     alert('Could not create the room, please try again.');
-  }
-};
-
-var _editRoomThemeKey = null;
-
-window.openRoomThemeModal = function(){
-  if (!state.currentRoomId || !state.currentRoomIsOwner) return;
-  _editRoomThemeKey = state.currentRoomTheme || 'tuscany';
-  renderThemeGrid('room-theme-edit-grid', _editRoomThemeKey, 'selectEditRoomTheme');
-  document.getElementById('room-theme-modal').classList.add('active');
-};
-window.closeRoomThemeModal = function(){
-  document.getElementById('room-theme-modal').classList.remove('active');
-};
-window.selectEditRoomTheme = function(key){
-  _editRoomThemeKey = key;
-  renderThemeGrid('room-theme-edit-grid', _editRoomThemeKey, 'selectEditRoomTheme');
-};
-window.submitRoomTheme = async function(){
-  if (!state.currentRoomId || !state.currentRoomIsOwner) return;
-  try {
-    const { error } = await sb.rpc('update_living_room_theme', { p_room_id: state.currentRoomId, p_theme: _editRoomThemeKey });
-    if (error) throw error;
-    state.currentRoomTheme = _editRoomThemeKey;
-    state.myRoomsLoaded = false;
-    renderRoomThemeBanner();
-    closeRoomThemeModal();
-  } catch(e) {
-    console.error('update_living_room_theme error:', e);
-    alert('Could not update the theme, please try again.');
   }
 };
 
@@ -6220,19 +6178,6 @@ bootstrap();
     <div style="display:flex;gap:8px;">
       <button class="btn-invite-close" onclick="closeCreateRoomModal()" style="flex:1;">Cancel</button>
       <button onclick="submitCreateRoom()" style="flex:1;background:var(--terra);color:white;border:none;border-radius:8px;padding:11px 14px;font-family:var(--sans);font-size:14px;font-weight:700;cursor:pointer;">Create Room</button>
-    </div>
-  </div>
-</div>
-
-<!-- CHANGE ROOM THEME -->
-<div class="invite-modal-overlay" id="room-theme-modal">
-  <div class="invite-modal">
-    <div class="invite-modal-title">&#127912; Change Room Theme</div>
-    <div class="invite-modal-sub">Pick a new personality for this room.</div>
-    <div class="room-grid" id="room-theme-edit-grid" style="margin:6px 0 16px;"></div>
-    <div style="display:flex;gap:8px;">
-      <button class="btn-invite-close" onclick="closeRoomThemeModal()" style="flex:1;">Cancel</button>
-      <button onclick="submitRoomTheme()" style="flex:1;background:var(--terra);color:white;border:none;border-radius:8px;padding:11px 14px;font-family:var(--sans);font-size:14px;font-weight:700;cursor:pointer;">Save</button>
     </div>
   </div>
 </div>
