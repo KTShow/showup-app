@@ -1300,23 +1300,22 @@ function completeOnboard_OLD() {
 }
 
 var _conversationsViewed = false;
-var _skipConversationsMarkSeen = false;
 
 function showTab(tab, btn) {
-  // A genuine, deliberate move away from Living Room (not a feed click that
-  // happens to route through here, e.g. "comment on your own show" jumping
-  // to that tab -- see goToOwnTab) is what marks the Conversations feed
-  // seen, so a single click doesn't quietly clear items still unread.
+  // A genuine, deliberate move away from Living Room -- switching to a
+  // different bottom tab -- is what marks the Conversations feed seen.
+  // Clicking a conversation item never routes through here: every item,
+  // including your own shows, opens in place via showFriend() without
+  // leaving Living Room (see renderConversations).
   var leavingLivingRoom = document.getElementById('tab-living-room').style.display==='block' && tab!=='living-room';
   document.querySelectorAll('.tab-pane').forEach(function(t){ t.style.display='none'; });
   document.querySelectorAll('.nav-tab').forEach(function(t){ t.classList.remove('active'); });
   document.getElementById('tab-'+tab).style.display='block';
   btn.classList.add('active');
-  if (leavingLivingRoom && _conversationsViewed && !_skipConversationsMarkSeen) {
+  if (leavingLivingRoom && _conversationsViewed) {
     markConversationsSeen();
     _conversationsViewed = false;
   }
-  _skipConversationsMarkSeen = false;
   if (tab==='living-room') { showRoomPicker(); }
   if (tab==='watched') { renderBingedTop5(); }
   if (tab!=='living-room') state.lastViewedFriend = null;
@@ -3083,7 +3082,10 @@ function renderConversations(){
   }
   el.innerHTML=events.map(function(e){
     var icon=e.type==='added'?'&#127881;':'&#128172;';
-    var nav=e.friendId?'showFriend(\''+e.friendId+'\')':(e.list?'goToOwnTab(\''+e.list+'\')':'');
+    // Own-show events reuse showFriend's self-view (same as the self tile
+    // in Your Crowd) instead of jumping to a different bottom tab -- every
+    // conversation item opens in place, never leaving Living Room.
+    var nav=e.friendId?'showFriend(\''+e.friendId+'\')':(e.list&&state.user?'showFriend(\''+state.user.id+'\')':'');
     var click=nav?' onclick="'+nav+(e.showId?';scrollToShowCard(\''+e.showId+'\')':'')+'"':'';
     if (e.type==='comment' && e.reactionId && _conversationsEditingId===e.reactionId) {
       var editInpId='edit-conv-'+e.reactionId;
@@ -3422,12 +3424,6 @@ window.submitShowTalkReact = async function(idx){
     var data=await dbAddReaction(showRec.id,txt,sentiment);
     if(data&&data.id) showRec.reactions[showRec.reactions.length-1].id=data.id;
   }catch(e){ console.error('showtalk reaction error:',e); }
-};
-
-window.goToOwnTab = function(list){
-  _skipConversationsMarkSeen = true;
-  var btn = document.getElementById('btab-'+list);
-  if (btn) showTab(list, btn);
 };
 
 window.scrollToShowCard = function(showId){
