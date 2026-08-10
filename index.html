@@ -1865,21 +1865,27 @@ function getNewestActivity(f) {
   return newest;
 }
 
-// Earliest-ever add timestamp per title across all friends' lists — lets
-// us tell a genuinely new-to-the-room show apart from someone re-adding
-// a title that's already established elsewhere in the room.
+// Earliest-ever add timestamp per title across the whole room (you and all
+// friends) — lets us tell a genuinely new-to-the-room show apart from
+// someone re-adding a title that's already established elsewhere in the
+// room. Must include your own shows, not just friends', or a title you
+// added long ago looks brand-new the moment a friend adds it too.
 function getEarliestRoomAddByTitle() {
   var earliest = {};
+  function consider(title, ts) {
+    if(!title || !ts) return;
+    var key = title.toLowerCase().trim();
+    var t = new Date(ts).getTime();
+    if(!earliest[key] || t < earliest[key]) earliest[key] = t;
+  }
   (state.friends||[]).forEach(function(f) {
     if(!f) return;
     [f.watching, f.watchlist, f.watched].forEach(function(arr) {
-      (arr||[]).forEach(function(s) {
-        if(!s || !s.title || !s.added_at) return;
-        var key = s.title.toLowerCase().trim();
-        var t = new Date(s.added_at).getTime();
-        if(!earliest[key] || t < earliest[key]) earliest[key] = t;
-      });
+      (arr||[]).forEach(function(s) { if(s) consider(s.title, s.added_at); });
     });
+  });
+  [state.watching, state.watchlist, state.watched].forEach(function(arr) {
+    (arr||[]).forEach(function(s) { if(s) consider(s.title, s.addedAt); });
   });
   return earliest;
 }
@@ -1938,23 +1944,30 @@ var _newThisWeekCache = [];
 
 function buildNewThisWeekList(){
   var cutoff = Date.now() - 7*24*60*60*1000;
+  // A title counts as "new" only once, credited to whichever add is the
+  // room's earliest for that title -- otherwise a title you already had
+  // shows up again the moment a friend (re-)adds it, or vice versa.
+  var earliestByTitle = getEarliestRoomAddByTitle();
   var items = [];
   (state.friends||[]).forEach(function(f){
     if(!f) return;
     ['watching','watchlist','watched'].forEach(function(lk){
       (f[lk]||[]).forEach(function(s){
-        if(s.hidden) return;
-        if(s.added_at && new Date(s.added_at).getTime() > cutoff){
-          items.push({mine:false, friendName:f.name, list:lk, showId:s.id, title:s.title, platform:s.platform, poster_path:s.poster_path, tmdb_id:s.tmdb_id, rating:s.rating||0, addedAt:s.added_at});
-        }
+        if(s.hidden || !s.title || !s.added_at) return;
+        var key = s.title.toLowerCase().trim();
+        var t = new Date(s.added_at).getTime();
+        if(t <= cutoff || earliestByTitle[key] !== t) return;
+        items.push({mine:false, friendName:f.name, list:lk, showId:s.id, title:s.title, platform:s.platform, poster_path:s.poster_path, tmdb_id:s.tmdb_id, rating:s.rating||0, addedAt:s.added_at});
       });
     });
   });
   ['watching','watchlist','watched'].forEach(function(lk){
     (state[lk]||[]).forEach(function(s){
-      if(s.addedAt && new Date(s.addedAt).getTime() > cutoff){
-        items.push({mine:true, list:lk, showId:s.id, title:s.title, platform:s.platform, poster_path:s.poster_path, tmdb_id:s.tmdb_id, rating:s.rating||0, addedAt:s.addedAt});
-      }
+      if(!s.title || !s.addedAt) return;
+      var key = s.title.toLowerCase().trim();
+      var t = new Date(s.addedAt).getTime();
+      if(t <= cutoff || earliestByTitle[key] !== t) return;
+      items.push({mine:true, list:lk, showId:s.id, title:s.title, platform:s.platform, poster_path:s.poster_path, tmdb_id:s.tmdb_id, rating:s.rating||0, addedAt:s.addedAt});
     });
   });
   items.sort(function(a,b){ return new Date(b.addedAt) - new Date(a.addedAt); });
