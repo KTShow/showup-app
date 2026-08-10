@@ -418,7 +418,8 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
 
 <!-- DONE WATCHING MODAL -->
 <div id="dwm-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:600;align-items:center;justify-content:center;padding:20px;box-sizing:border-box;">
-  <div style="background:white;border-radius:20px;padding:28px 24px;max-width:360px;width:100%;text-align:center;box-shadow:0 12px 48px rgba(0,0,0,0.2);">
+  <div style="background:white;border-radius:20px;padding:28px 24px;max-width:360px;width:100%;text-align:center;box-shadow:0 12px 48px rgba(0,0,0,0.2);position:relative;">
+    <button id="dwm-cancel-btn" onclick="cancelDoneWatching()" title="Wrong button? Put it back" style="display:none;position:absolute;top:14px;right:14px;background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer;line-height:1;">&#x2715;</button>
     <div id="dwm-emoji" style="font-size:36px;margin-bottom:6px;">🍿</div>
     <div id="dwm-heading" style="font-family:var(--serif);font-size:21px;font-weight:700;color:var(--terra);margin-bottom:4px;">You binged it!</div>
     <div id="dwm-title" style="font-size:14px;color:var(--muted);margin-bottom:22px;"></div>
@@ -4936,17 +4937,40 @@ window.confirmAddShow = async function() {
 
 var _dwmPending = null;
 var _dwmRating = 0;
+var _dwmUndo = null; // how to put the show back if this was opened by mistake -- see cancelDoneWatching
 
-function openDWM(show, heading, emoji) {
+function openDWM(show, heading, emoji, undo) {
   _dwmPending = show;
   _dwmRating = 0;
+  _dwmUndo = undo || null;
   document.getElementById('dwm-emoji').textContent = emoji || '🍿';
   document.getElementById('dwm-heading').textContent = heading || 'You binged it!';
   document.getElementById('dwm-title').textContent = show.title;
   document.getElementById('dwm-comment').value = '';
+  document.getElementById('dwm-cancel-btn').style.display = undo ? 'block' : 'none';
   renderDWMRemotes();
   document.getElementById('dwm-overlay').style.display = 'flex';
 }
+
+// Undoes the status move that already happened when the "Finished" /
+// "Didn't Finish" / "Waiting for New Season" button was clicked -- unlike
+// Save/Skip, this actually reverses the action, so a mis-click doesn't
+// require manually moving the show back yourself.
+window.cancelDoneWatching = async function(){
+  var show = _dwmPending;
+  var undo = _dwmUndo;
+  document.getElementById('dwm-overlay').style.display = 'none';
+  _dwmPending = null; _dwmRating = 0; _dwmUndo = null;
+  if (!show || !undo) return;
+  var idx = state[undo.currentList].findIndex(function(x){ return x.id === show.id; });
+  if (idx === -1) return;
+  var s = state[undo.currentList].splice(idx, 1)[0];
+  Object.assign(s, undo.restoreFields);
+  state[undo.originalList].push(s);
+  renderList(undo.currentList); renderList(undo.originalList);
+  showToast('Moved back to ' + (ADD_LIST_LABELS[undo.originalList] || 'your list') + '.');
+  try { await updateShowStatus(show.id, undo.dbStatus, undo.dbExtra); } catch(e) { console.error('cancelDoneWatching error:', e); }
+};
 
 window.markWatched = async function(id) {
   var idx = state.watching.findIndex(function(x) { return x.id === id; });
@@ -4957,7 +4981,7 @@ window.markWatched = async function(id) {
   launchConfetti();
   renderList('watching'); renderList('watched');
   try { await updateShowStatus(id, 'watched', { moved_to_binged_at: new Date().toISOString() }); } catch(e) { console.error('markWatched error:', e); }
-  openDWM(show);
+  openDWM(show, null, null, { currentList: 'watched', originalList: 'watching', restoreFields: { status: 'watching' }, dbStatus: 'watching', dbExtra: { moved_to_binged_at: null } });
 };
 
 function renderDWMRemotes() {
@@ -5008,12 +5032,14 @@ window.submitDoneWatching = async function() {
   }
   _dwmPending = null;
   _dwmRating = 0;
+  _dwmUndo = null;
 };
 
 window.skipDoneWatching = function() {
   document.getElementById('dwm-overlay').style.display = 'none';
   _dwmPending = null;
   _dwmRating = 0;
+  _dwmUndo = null;
 };
 
 window.markDNF = async function(id) {
@@ -5024,7 +5050,7 @@ window.markDNF = async function(id) {
   state.watched.push(show);
   renderList('watching'); renderList('watched');
   try { await updateShowStatus(id, 'dnf', { dnf: true }); } catch(e) { console.error('markDNF error:', e); }
-  openDWM(show, "Didn't finish? Rate it anyway", '🎬');
+  openDWM(show, "Didn't finish? Rate it anyway", '🎬', { currentList: 'watched', originalList: 'watching', restoreFields: { dnf: false }, dbStatus: 'watching', dbExtra: { dnf: false } });
 };
 
 window.markDNFFromWaiting = async function(id) {
@@ -5036,7 +5062,7 @@ window.markDNFFromWaiting = async function(id) {
   state.watched.push(show);
   renderList('watchlist'); renderList('watched');
   try { await updateShowStatus(id, 'dnf', { dnf: true, waiting_for_season: false }); } catch(e) { console.error('markDNFFromWaiting error:', e); }
-  openDWM(show, "Didn't finish? Rate it anyway", '🎬');
+  openDWM(show, "Didn't finish? Rate it anyway", '🎬', { currentList: 'watched', originalList: 'watchlist', restoreFields: { dnf: false, waitingForSeason: true }, dbStatus: 'watchlist', dbExtra: { dnf: false, waiting_for_season: true } });
 };
 
 window.markWaiting = async function(id) {
@@ -5047,7 +5073,7 @@ window.markWaiting = async function(id) {
   state.watchlist.push(s);
   renderList('watching'); renderList('watchlist');
   try { await updateShowStatus(id, 'watchlist', { waiting_for_season: true }); } catch(e) { console.error('markWaiting error:', e); }
-  openDWM(s, 'Caught up for now?', '⏳');
+  openDWM(s, 'Caught up for now?', '⏳', { currentList: 'watchlist', originalList: 'watching', restoreFields: { waitingForSeason: false }, dbStatus: 'watching', dbExtra: { waiting_for_season: false } });
 };
 
 // Marks a not-yet-started My List item as waiting in place — unlike
