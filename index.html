@@ -1535,6 +1535,11 @@ function sectionToggleControls(list){
 // of every show. Keys are namespaced 'frv:<personId>:<section>:<platform>'
 // so collapse state doesn't collide between different people's rooms, and
 // re-render goes through showFriend() instead of renderList().
+// Unlike the own-screen version, these default to COLLAPSED: a key that's
+// never been toggled reads as collapsed (isCollapsed = value !== false,
+// so undefined -> true), and toggleFriendSection flips off that effective
+// default rather than off raw undefined/falsy. Once a group is expanded/
+// collapsed by hand, that explicit choice persists per person+platform.
 function resolveFriendById(fid){
   if (state.user && fid===state.user.id) {
     return { id: state.user.id, name:'You', city: state.user.city, room: state.user.room, watching: state.watching, watchlist: state.watchlist, watched: state.watched, top5: state.user.top5 };
@@ -1549,7 +1554,8 @@ function friendSectionItems(f, sectionKey){
   return [];
 }
 window.toggleFriendSection = function(key, fid){
-  _collapsedSections[key] = !_collapsedSections[key];
+  var isCollapsed = _collapsedSections[key] !== false;
+  _collapsedSections[key] = !isCollapsed;
   saveCollapsedSections();
   showFriend(fid);
 };
@@ -2424,7 +2430,7 @@ function showFriend(id) {
     var svcs=Object.keys(groups).sort(); var html='';
     svcs.forEach(function(svc){
       var key='frv:'+f.id+':'+sectionKey+':'+svc;
-      var isCollapsed=!!_collapsedSections[key];
+      var isCollapsed=_collapsedSections[key]!==false;
       html+='<div class="service-group'+(isCollapsed?' collapsed':'')+'"><div class="service-divider" onclick="toggleFriendSection(\''+key+'\',\''+f.id+'\')"><span class="service-divider-text">'+(isCollapsed?'&#9656;':'&#9662;')+' '+svc+' <span class="service-count">('+groups[svc].length+')</span></span></div><div class="shows-grid">';
       groups[svc].sort(function(a,b){return a.title.localeCompare(b.title);}).forEach(function(s){
         var rHTML=reactionsHTML(s.reactions, lk, s.id, f.id);
@@ -2467,7 +2473,7 @@ function showFriend(id) {
   var bingedItems=friendSectionItems(f,'binged');
   var dnfItems=(f.watched||[]).filter(function(x){return x.dnf;});
   var dnfKey='frv:'+f.id+':dnf';
-  var dnfCollapsed=!!_collapsedSections[dnfKey];
+  var dnfCollapsed=_collapsedSections[dnfKey]!==false;
   dv.innerHTML='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;"><button class="back-btn" onclick="backToFriends()">&#8592; Back to Living Room</button><div style="display:flex;gap:8px;">'+sharedTasteBtn+muteBtn+removeBtn+'</div></div>'
     +'<div class="friend-header"><div class="friend-header-av" style="background:'+fColor+';font-size:18px;font-weight:700;font-family:var(--sans);">'+fInitials+'</div>'
     +'<div><div style="font-family:Georgia,serif;font-size:20px;font-weight:700">'+roomTitle+'</div>'
