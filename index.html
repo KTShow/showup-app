@@ -5636,6 +5636,24 @@ var TMDB_IMG = 'https://image.tmdb.org/t/p/w92';
 var _tmdbPending = {};
 var _tmdbResults = {};
 var _tmdbTimers = {};
+// Bumped on every keystroke per field; a fetch only renders if it's still
+// the most recent one requested. Without this, slow responses to an early
+// keystroke can land after (and overwrite) a faster response to a later
+// keystroke, which reads as results flickering on/off while typing.
+var _tmdbSeq = {};
+
+// TMDB sorts matches by popularity, not by closeness to what was typed --
+// a loosely-matching but more popular show can outrank the obvious title
+// match. Re-rank client-side so title/word-start matches float to the top;
+// ties keep TMDB's original (popularity) order since Array.sort is stable.
+function tmdbMatchScore(name, q) {
+  var n = (name || '').toLowerCase();
+  var query = q.toLowerCase();
+  if (n === query) return 3;
+  if (n.indexOf(query) === 0) return 2;
+  if (n.indexOf(' ' + query) !== -1) return 1;
+  return 0;
+}
 
 var PLATFORM_SELECT_ID = { w:'w-platform', wl:'wl-platform', wd:'wd-platform', dnf:'dnf-platform', bt5:'binged-top5-platform', t5p:'top5-platform' };
 
@@ -5758,12 +5776,17 @@ window.tmdbSearch = function(prefix) {
   var q = inp ? inp.value.trim() : '';
   _tmdbPending = {};
   if (_tmdbTimers[prefix]) clearTimeout(_tmdbTimers[prefix]);
+  var mySeq = (_tmdbSeq[prefix] || 0) + 1;
+  _tmdbSeq[prefix] = mySeq;
   if (q.length < 2) { if (dd) { dd.innerHTML = ''; dd.classList.remove('open'); } return; }
   _tmdbTimers[prefix] = setTimeout(async function() {
     try {
       var res = await fetch('https://api.themoviedb.org/3/search/tv?query=' + encodeURIComponent(q) + '&api_key=' + TMDB_KEY + '&language=en-US&page=1');
       var data = await res.json();
-      var results = (data.results || []).filter(function(r) { return r.name; }).slice(0, 6);
+      if (_tmdbSeq[prefix] !== mySeq) return; // a newer keystroke has already superseded this request
+      var results = (data.results || []).filter(function(r) { return r.name; })
+        .sort(function(a, b) { return tmdbMatchScore(b.name, q) - tmdbMatchScore(a.name, q); })
+        .slice(0, 6);
       _tmdbResults[prefix] = results;
       if (!results.length) {
         dd.innerHTML = '<div style="padding:10px 12px;font-size:13px;color:var(--muted);">No results found</div>';
