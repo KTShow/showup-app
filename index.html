@@ -2668,37 +2668,18 @@ window.backToRoomPicker = function() {
   showRoomPicker();
 };
 
-// Shared swatch-grid renderer for both the create-room and change-theme
-// modals -- reuses the .room-grid/.room-btn styling already built for the
-// personal profile theme picker (renderRoomGrid, above).
-function renderThemeGrid(containerId, selectedKey, onSelectFnName){
-  var grid = document.getElementById(containerId);
-  if (!grid) return;
-  grid.innerHTML = Object.keys(LIVING_ROOM_THEMES).map(function(k){
-    var r = LIVING_ROOM_THEMES[k];
-    var isSelected = k === selectedKey;
-    return '<button type="button" class="room-btn'+(isSelected?' selected':'')+'" onclick="'+onSelectFnName+'(\''+k+'\')" style="border-color:'+(isSelected?r.color:'')+';">'
-      + '<div style="width:40px;height:40px;border-radius:50%;background:'+themeBg(r)+';margin:0 auto;display:flex;align-items:center;justify-content:center;font-size:18px;">'+r.emoji+'</div>'
-      + '<div class="room-btn-name">'+escAttr(r.name)+'</div>'
-      + '</button>';
-  }).join('');
-}
-
+// New rooms no longer let the creator pick a theme (removed 2026-08-13) --
+// they're all created with this default. LIVING_ROOM_THEMES itself stays,
+// since existing rooms still carry a theme used for tile border colors.
 var _createRoomThemeKey = 'tuscany';
 
 window.openCreateRoomModal = function(){
-  _createRoomThemeKey = 'tuscany';
   var nameEl = document.getElementById('create-room-name');
   if (nameEl) nameEl.value = '';
-  renderThemeGrid('create-room-theme-grid', _createRoomThemeKey, 'selectCreateRoomTheme');
   document.getElementById('create-room-modal').classList.add('active');
 };
 window.closeCreateRoomModal = function(){
   document.getElementById('create-room-modal').classList.remove('active');
-};
-window.selectCreateRoomTheme = function(key){
-  _createRoomThemeKey = key;
-  renderThemeGrid('create-room-theme-grid', _createRoomThemeKey, 'selectCreateRoomTheme');
 };
 window.submitCreateRoom = async function(){
   var nameEl = document.getElementById('create-room-name');
@@ -6206,10 +6187,8 @@ bootstrap();
 <div class="invite-modal-overlay" id="create-room-modal">
   <div class="invite-modal">
     <div class="invite-modal-title">&#127968; Create a Living Room</div>
-    <div class="invite-modal-sub">Give it a name and a personality.</div>
+    <div class="invite-modal-sub">Give it a name.</div>
     <div class="form-group" style="margin-bottom:14px;"><label>Room name</label><input type="text" id="create-room-name" placeholder="e.g. The Prosecco Room" autocomplete="off" /></div>
-    <label style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;">Theme</label>
-    <div class="room-grid" id="create-room-theme-grid" style="margin:6px 0 16px;"></div>
     <div style="display:flex;gap:8px;">
       <button class="btn-invite-close" onclick="closeCreateRoomModal()" style="flex:1;">Cancel</button>
       <button onclick="submitCreateRoom()" style="flex:1;background:var(--terra);color:white;border:none;border-radius:8px;padding:11px 14px;font-family:var(--sans);font-size:14px;font-weight:700;cursor:pointer;">Create Room</button>
