@@ -955,7 +955,7 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
 <script>
 window._mark('cdn-script-loaded');
 
-var PLATFORMS = ['None','Amazon Prime','Apple TV+','BritBox','Discovery+','Disney+','ESPN+','HBO Max','Hulu','Netflix','Paramount+','PBS Passport','Peacock','Pluto TV','Showtime','Starz','Tubi','Other'];
+var PLATFORMS = ['None','Acorn TV','AMC+','Amazon Prime','Apple TV+','BritBox','Discovery+','Disney+','ESPN+','HBO Max','Hulu','Netflix','Paramount+','PBS Passport','Peacock','Pluto TV','Showtime','Starz','Tubi','Other'];
 var CONFETTI_COLORS = ['#C4622D','#6B2D4E','#C49A3C','#5C6B3A','#F5EFE6','#D4734E'];
 
 var ROOMS = {
@@ -5660,6 +5660,8 @@ var PLATFORM_SELECT_ID = { w:'w-platform', wl:'wl-platform', wd:'wd-platform', d
 // Maps TMDB/JustWatch US watch-provider names (which vary/rebrand over time,
 // e.g. "HBO Max" -> "Max") to this app's fixed PLATFORMS dropdown values.
 var PROVIDER_NAME_MAP = {
+  'acorn tv': 'Acorn TV',
+  'amc plus': 'AMC+',
   'netflix': 'Netflix',
   'hulu': 'Hulu',
   'disney plus': 'Disney+',
@@ -5694,6 +5696,7 @@ var PROVIDER_NAME_MAP = {
 // Standard with Ads" or "Max Amazon Channel" — matched on a whole word
 // so it doesn't misfire (e.g. "max" won't match "Cinemax").
 var PROVIDER_KEYWORD_FALLBACK = [
+  ['acorn tv', 'Acorn TV'], ['amc plus', 'AMC+'],
   ['netflix', 'Netflix'], ['hulu', 'Hulu'], ['disney plus', 'Disney+'],
   ['amazon prime video', 'Amazon Prime'], ['amazon video', 'Amazon Prime'],
   ['apple tv plus', 'Apple TV+'], ['hbo max', 'HBO Max'], ['max', 'HBO Max'],
