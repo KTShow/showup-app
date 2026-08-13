@@ -674,7 +674,7 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
       <div class="add-form">
         <div class="form-row">
           <div class="form-group" style="position:relative;"><label>Show title</label><div class="lr-search-wrap" style="margin-bottom:0;"><input id="w-title" placeholder="Search for a show..." oninput="tmdbSearch('w');toggleSearchClearBtn(this)" autocomplete="off" style="padding-right:34px;" /><button class="lr-search-clear" type="button" aria-label="Clear search" onclick="clearSearchInput('w-title')">&#10005;</button></div><div class="tmdb-dropdown" id="w-tmdb-dd"></div></div>
-          <div class="form-group" style="max-width:210px"><label>Streaming on</label><select id="w-platform"><option value="">Platform...</option></select></div>
+          <div class="form-group" style="max-width:210px"><label>Streaming on</label><select id="w-platform" onchange="togglePlatformOther('w-platform')"><option value="">Platform...</option></select><input type="text" id="w-platform-other" placeholder="Which platform?" style="display:none;margin-top:6px;width:100%;box-sizing:border-box;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-family:var(--sans);font-size:13px;" /></div>
           <button class="btn-add" onclick="addShow('watching')">+ Add</button>
         </div>
       </div>
@@ -686,7 +686,7 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
       <div class="add-form">
         <div class="form-row">
           <div class="form-group" style="position:relative;"><label>Show title</label><div class="lr-search-wrap" style="margin-bottom:0;"><input id="wl-title" placeholder="Search for a show..." oninput="tmdbSearch('wl');toggleSearchClearBtn(this)" autocomplete="off" style="padding-right:34px;" /><button class="lr-search-clear" type="button" aria-label="Clear search" onclick="clearSearchInput('wl-title')">&#10005;</button></div><div class="tmdb-dropdown" id="wl-tmdb-dd"></div></div>
-          <div class="form-group" style="max-width:210px"><label>Streaming on</label><select id="wl-platform"><option value="">Platform...</option></select></div>
+          <div class="form-group" style="max-width:210px"><label>Streaming on</label><select id="wl-platform" onchange="togglePlatformOther('wl-platform')"><option value="">Platform...</option></select><input type="text" id="wl-platform-other" placeholder="Which platform?" style="display:none;margin-top:6px;width:100%;box-sizing:border-box;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-family:var(--sans);font-size:13px;" /></div>
           <button class="btn-add" onclick="addShow('watchlist')">+ Add</button>
         </div>
       </div>
@@ -703,14 +703,15 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
             <div class="lr-search-wrap" style="margin-bottom:0;"><input id="bt5-title" placeholder="Search for a show..." oninput="tmdbSearch('bt5');toggleSearchClearBtn(this)" autocomplete="off" style="width:100%;background:white;border:1px solid var(--border);border-radius:8px;padding:9px 34px 9px 12px;font-family:var(--sans);font-size:14px;color:var(--charcoal);outline:none;box-sizing:border-box;" /><button class="lr-search-clear" type="button" aria-label="Clear search" onclick="clearSearchInput('bt5-title')">&#10005;</button></div>
             <div class="tmdb-dropdown" id="bt5-tmdb-dd"></div>
           </div>
-          <select id="binged-top5-platform" style="flex:1;min-width:150px;background:white;border:1px solid var(--border);border-radius:8px;padding:9px 12px;font-family:var(--sans);font-size:14px;color:var(--charcoal);outline:none;"><option value="">Platform...</option></select>
+          <select id="binged-top5-platform" style="flex:1;min-width:150px;background:white;border:1px solid var(--border);border-radius:8px;padding:9px 12px;font-family:var(--sans);font-size:14px;color:var(--charcoal);outline:none;" onchange="togglePlatformOther('binged-top5-platform')"><option value="">Platform...</option></select>
+          <input type="text" id="binged-top5-platform-other" placeholder="Which platform?" style="display:none;flex-basis:100%;box-sizing:border-box;background:white;border:1px solid var(--border);border-radius:8px;padding:9px 12px;font-family:var(--sans);font-size:14px;color:var(--charcoal);outline:none;" />
           <button onclick="addBingedTop5()" style="background:var(--terra);color:white;border:none;border-radius:8px;padding:9px 14px;font-family:var(--sans);font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;">+ Add</button>
         </div>
       </div>
       <div class="add-form">
         <div class="form-row">
           <div class="form-group" style="position:relative;"><label>Show title</label><div class="lr-search-wrap" style="margin-bottom:0;"><input id="wd-title" placeholder="Search for a show..." oninput="tmdbSearch('wd');toggleSearchClearBtn(this)" autocomplete="off" style="padding-right:34px;" /><button class="lr-search-clear" type="button" aria-label="Clear search" onclick="clearSearchInput('wd-title')">&#10005;</button></div><div class="tmdb-dropdown" id="wd-tmdb-dd"></div></div>
-          <div class="form-group" style="max-width:210px"><label>Streaming on</label><select id="wd-platform"><option value="">Platform...</option></select></div>
+          <div class="form-group" style="max-width:210px"><label>Streaming on</label><select id="wd-platform" onchange="togglePlatformOther('wd-platform')"><option value="">Platform...</option></select><input type="text" id="wd-platform-other" placeholder="Which platform?" style="display:none;margin-top:6px;width:100%;box-sizing:border-box;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-family:var(--sans);font-size:13px;" /></div>
           <button class="btn-add" onclick="addShow('watched')">+ Add</button>
         </div>
       </div>
@@ -718,7 +719,7 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
         <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:#c0392b;margin-bottom:8px;">&#128683; Didn't finish something?</div>
         <div class="form-row">
           <div class="form-group" style="position:relative;"><label>Show title</label><div class="lr-search-wrap" style="margin-bottom:0;"><input id="dnf-title" placeholder="Search for a show..." oninput="tmdbSearch('dnf');toggleSearchClearBtn(this)" autocomplete="off" style="padding-right:34px;" /><button class="lr-search-clear" type="button" aria-label="Clear search" onclick="clearSearchInput('dnf-title')">&#10005;</button></div><div class="tmdb-dropdown" id="dnf-tmdb-dd"></div></div>
-          <div class="form-group" style="max-width:210px"><label>Streaming on</label><select id="dnf-platform"><option value="">Platform...</option></select></div>
+          <div class="form-group" style="max-width:210px"><label>Streaming on</label><select id="dnf-platform" onchange="togglePlatformOther('dnf-platform')"><option value="">Platform...</option></select><input type="text" id="dnf-platform-other" placeholder="Which platform?" style="display:none;margin-top:6px;width:100%;box-sizing:border-box;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-family:var(--sans);font-size:13px;" /></div>
           <button class="btn-add" onclick="addDirectDNF()">+ Add</button>
         </div>
       </div>
@@ -837,7 +838,8 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
           <div class="lr-search-wrap" style="margin-bottom:0;"><input class="ob-input" id="t5p-title" placeholder="Search for a show..." oninput="tmdbSearch('t5p');toggleSearchClearBtn(this)" autocomplete="off" style="width:100%;box-sizing:border-box;padding-right:34px;" /><button class="lr-search-clear" type="button" aria-label="Clear search" onclick="clearSearchInput('t5p-title')">&#10005;</button></div>
           <div class="tmdb-dropdown" id="t5p-tmdb-dd"></div>
         </div>
-        <select class="ob-select" id="top5-platform" style="flex:1;min-width:150px;"><option value="">Platform...</option></select>
+        <select class="ob-select" id="top5-platform" style="flex:1;min-width:150px;" onchange="togglePlatformOther('top5-platform')"><option value="">Platform...</option></select>
+        <input type="text" id="top5-platform-other" placeholder="Which platform?" style="display:none;flex-basis:100%;box-sizing:border-box;padding:9px 12px;border:1px solid var(--border);border-radius:8px;font-family:var(--sans);font-size:14px;" />
         <button onclick="addTop5()" style="background:var(--terra);color:white;border:none;border-radius:8px;padding:9px 14px;font-family:var(--sans);font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;">+ Add</button>
       </div>
     </div>
@@ -4794,7 +4796,7 @@ window.addShow = function(list) {
   var tEl = document.getElementById(tId);
   var pEl = document.getElementById(pId);
   var title = tEl.value.trim();
-  var platform = pEl.value;
+  var platform = resolvedPlatformValue(pId);
   if (!title || !platform) {
     tEl.style.borderColor = '#C4622D';
     setTimeout(function() { tEl.style.borderColor = ''; }, 900);
@@ -4822,7 +4824,7 @@ window.addDirectDNF = function() {
   var tEl = document.getElementById('dnf-title');
   var pEl = document.getElementById('dnf-platform');
   var title = tEl.value.trim();
-  var platform = pEl.value;
+  var platform = resolvedPlatformValue('dnf-platform');
   if (!title || !platform) {
     tEl.style.borderColor = '#C4622D';
     setTimeout(function() { tEl.style.borderColor = ''; }, 900);
@@ -4881,7 +4883,7 @@ window.confirmAddShow = async function() {
     state[destList].push(s);
     renderList(srcList);
     renderList(destList);
-    if (tEl) tEl.value = ''; if (pEl) pEl.value = '';
+    if (tEl) tEl.value = ''; if (pEl) pEl.value = ''; resetPlatformOther(pending.pId);
     _tmdbPending = {};
     _addConfirmPending = null;
     var destLabel = ADD_DEST_DISPLAY_LABELS[list];
@@ -4904,7 +4906,7 @@ window.confirmAddShow = async function() {
       source: src, influencedBy: inf, addedAt: show.added_at, reactions: [], showReact: false,
       poster_path: tmdb.poster_path || null, tmdb_id: tmdb.tmdb_id || null };
     state[destList].push(newShow);
-    if (tEl) tEl.value = ''; if (pEl) pEl.value = '';
+    if (tEl) tEl.value = ''; if (pEl) pEl.value = ''; resetPlatformOther(pending.pId);
     _tmdbPending = {};
     _addConfirmPending = null;
     renderList(destList);
@@ -5565,10 +5567,11 @@ window.addBingedTop5 = async function() {
   }
   var tmdb = _tmdbPending || {};
   var title = inp.value.trim();
-  var platform = (plt && plt.value) ? plt.value : 'Other';
+  var platform = resolvedPlatformValue('binged-top5-platform') || 'Other';
   state.user.top5.push({ title: title, platform: platform, poster_path: tmdb.poster_path || null, tmdb_id: tmdb.tmdb_id || null });
   inp.value = '';
   if (plt) plt.value = '';
+  resetPlatformOther('binged-top5-platform');
   _tmdbPending = {};
   renderBingedTop5();
   renderTop5();
@@ -5589,10 +5592,11 @@ window.addTop5 = async function() {
   }
   var tmdb = _tmdbPending || {};
   var title = inp.value.trim();
-  var platform = plt ? plt.value : '';
+  var platform = resolvedPlatformValue('top5-platform');
   state.user.top5.push({ title: title, platform: platform, poster_path: tmdb.poster_path || null, tmdb_id: tmdb.tmdb_id || null });
   inp.value = '';
   if (plt) plt.value = '';
+  resetPlatformOther('top5-platform');
   _tmdbPending = {};
   renderTop5();
   try { await saveTop5(state.user.top5); } catch(e) { console.error('Error saving top5:', e); }
@@ -5656,6 +5660,31 @@ function tmdbMatchScore(name, q) {
 }
 
 var PLATFORM_SELECT_ID = { w:'w-platform', wl:'wl-platform', wd:'wd-platform', dnf:'dnf-platform', bt5:'binged-top5-platform', t5p:'top5-platform' };
+
+// Every platform dropdown includes "Other" as a catch-all so adding a show
+// is never blocked by a missing option, but picking it used to throw away
+// which platform it actually was (see the None/Other DB cleanup this
+// replaces the need for). This reveals a same-named text field to name it;
+// resolvedPlatformValue() prefers that name over the literal word "Other"
+// when saving. Left blank, it still saves as "Other" -- no new blocking.
+window.togglePlatformOther = function(selectId) {
+  var sel = document.getElementById(selectId);
+  var other = document.getElementById(selectId + '-other');
+  if (!sel || !other) return;
+  var isOther = sel.value === 'Other';
+  other.style.display = isOther ? 'block' : 'none';
+  if (isOther) other.focus(); else other.value = '';
+};
+function resolvedPlatformValue(selectId) {
+  var sel = document.getElementById(selectId);
+  var other = document.getElementById(selectId + '-other');
+  if (sel && sel.value === 'Other' && other && other.value.trim()) return other.value.trim();
+  return sel ? sel.value : '';
+}
+function resetPlatformOther(selectId) {
+  var other = document.getElementById(selectId + '-other');
+  if (other) { other.value = ''; other.style.display = 'none'; }
+}
 
 // Maps TMDB/JustWatch US watch-provider names (which vary/rebrand over time,
 // e.g. "HBO Max" -> "Max") to this app's fixed PLATFORMS dropdown values.
