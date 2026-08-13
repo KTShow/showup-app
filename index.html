@@ -3327,7 +3327,7 @@ function showShowTalkDetail(idx){
     var nameAttr = (!c.isMe && c.reactorId) ? ' class="rank-detail-name rank-detail-name-link" onclick="showFriend(\''+c.reactorId+'\')"' : ' class="rank-detail-name"';
     var actionBtns = c.isMe
       ? '<button class="btn-edit-react" onclick="toggleEditShowTalkComment('+idx+','+ci+')">&#9998;</button><button class="btn-delete-react" onclick="deleteShowTalkComment('+idx+','+ci+')">&#x2715;</button>'
-      : '';
+      : '<button class="btn-edit-react" onclick="replyToShowTalkComment('+idx+','+ci+')" title="Reply to '+escAttr(c.name)+'">&#8617;</button>';
     return '<div class="rank-detail-row" style="align-items:flex-start;">'
       +'<div class="rank-detail-av" style="background:'+c.color+'">'+c.initials+'</div>'
       +'<div style="flex:1;min-width:0;">'
@@ -3474,6 +3474,21 @@ window.submitShowTalkReact = async function(idx){
     var data=await dbAddReaction(showRec.id,txt,sentiment);
     if(data&&data.id) showRec.reactions[showRec.reactions.length-1].id=data.id;
   }catch(e){ console.error('showtalk reaction error:',e); }
+};
+
+// Lightweight "reply" -- not real threading (no parent-comment link in the
+// DB), just focuses the existing per-show comment box and prefills who
+// it's aimed at, so answering a specific person's take doesn't require
+// leaving Show Talk to find their page.
+window.replyToShowTalkComment = function(idx, ci){
+  var s = _showTalkListCache[idx];
+  var c = s && s.comments[ci];
+  var inp = document.getElementById('showtalk-react-'+idx);
+  if (!c || !inp) return;
+  inp.value = '@'+c.name+' ';
+  inp.focus();
+  inp.setSelectionRange(inp.value.length, inp.value.length);
+  inp.scrollIntoView({behavior:'smooth', block:'center'});
 };
 
 window.scrollToShowCard = function(showId){
