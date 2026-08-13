@@ -2327,6 +2327,18 @@ window.handlePlatformShowAdd = function(idx){
   openAddPicker();
 };
 
+// Tile counts intentionally exclude Waiting for New Season and Didn't
+// Finish -- those render as their own separately-labeled sections inside
+// the room (with their own counts), so folding them into "list"/"binged"
+// here made the tile total look wrong when checked against what's visibly
+// grouped by platform on the way in.
+function crewTileCounts(w, wl, wd){
+  return {
+    watching: w.length,
+    list: wl.filter(function(x){return !x.waitingForSeason;}).length,
+    binged: wd.filter(function(x){return !x.dnf;}).length
+  };
+}
 function renderFriends() {
   renderTop5Banner();
   renderTastemakersBanner();
@@ -2335,9 +2347,10 @@ function renderFriends() {
   var selfTile='';
   if(state.user && !state.currentRoomIsAdminView){
     var myColor=ROOMS[state.user.room||'tuscany']?ROOMS[state.user.room||'tuscany'].color:'#C4622D';
+    var myCounts=crewTileCounts(state.watching, state.watchlist, state.watched);
     selfTile='<div class="friend-card" onclick="showFriend(\''+state.user.id+'\')">'
       +'<div class="friend-top-row"><div class="friend-av" style="background:'+myColor+';font-weight:700;font-family:var(--sans);">'+(state.user.initials||'Y')+'</div><div class="friend-name">YOU</div></div>'
-      +'<div class="friend-count">'+state.watching.length+' watching &middot; '+state.watchlist.length+' list &middot; '+state.watched.length+' binged</div>'
+      +'<div class="friend-count">'+myCounts.watching+' watching &middot; '+myCounts.list+' list &middot; '+myCounts.binged+' binged</div>'
       +'</div>';
   }
   if (!state.friendsLoaded) {
@@ -2385,10 +2398,11 @@ function renderFriends() {
     var fFirst=f.name.split(' ')[0];
     var matchedShow=matchedShowByFriendId[f.id];
     var matchDetail=matchedShow?'<div class="friend-new-detail">Has: '+escAttr(matchedShow.title)+'</div>':'';
+    var fCounts=crewTileCounts(f.watching, f.watchlist, f.watched);
     return '<div class="friend-card'+(f.muted?' is-muted':'')+'" onclick="showFriend(\''+f.id+'\')">'
       +'<div class="friend-top-row"><div class="friend-av" style="background:'+fColor+';font-weight:700;font-family:var(--sans);">'+fInitials+'</div><div class="friend-name">'+fFirst+(f.muted?'<span class="muted-badge">Muted</span>':'')+'</div></div>'
       +'<div class="friend-city">'+f.city+'</div>'
-      +'<div class="friend-count">'+f.watching.length+' watching &middot; '+f.watchlist.length+' list &middot; '+f.watched.length+' binged</div>'
+      +'<div class="friend-count">'+fCounts.watching+' watching &middot; '+fCounts.list+' list &middot; '+fCounts.binged+' binged</div>'
       +matchDetail
       +'</div>';
   }).join('');
