@@ -1528,6 +1528,43 @@ function sectionToggleControls(list){
   if(getServiceKeysForList(list).length<2) return '';
   return '<div class="section-toggle-all"><span onclick="setAllSections(\''+list+'\',true)">Collapse all</span> &middot; <span onclick="setAllSections(\''+list+'\',false)">Expand all</span></div>';
 }
+
+// Same collapsible-by-platform pattern as the own Watching/My List/Binged
+// tabs (see toggleServiceSection/setAllSections above), reused for viewing
+// someone else's Living Room -- long crowded rooms were an unbroken scroll
+// of every show. Keys are namespaced 'frv:<personId>:<section>:<platform>'
+// so collapse state doesn't collide between different people's rooms, and
+// re-render goes through showFriend() instead of renderList().
+function resolveFriendById(fid){
+  if (state.user && fid===state.user.id) {
+    return { id: state.user.id, name:'You', city: state.user.city, room: state.user.room, watching: state.watching, watchlist: state.watchlist, watched: state.watched, top5: state.user.top5 };
+  }
+  return (state.friends||[]).find(function(x){return x.id===fid;});
+}
+function friendSectionItems(f, sectionKey){
+  if (sectionKey==='on') return (f.watching||[]).filter(function(x){return !x.hidden;});
+  if (sectionKey==='seat') return (f.watchlist||[]).filter(function(x){return !x.hidden&&!x.waitingForSeason;});
+  if (sectionKey==='waiting') return (f.watchlist||[]).filter(function(x){return x.waitingForSeason&&!x.hidden;});
+  if (sectionKey==='binged') return (f.watched||[]).filter(function(x){return !x.dnf&&!x.hidden;});
+  return [];
+}
+window.toggleFriendSection = function(key, fid){
+  _collapsedSections[key] = !_collapsedSections[key];
+  saveCollapsedSections();
+  showFriend(fid);
+};
+window.setAllFriendSections = function(fid, sectionKey, collapse){
+  var f = resolveFriendById(fid);
+  if (!f) return;
+  var groups = groupByService(friendSectionItems(f, sectionKey));
+  Object.keys(groups).forEach(function(svc){ _collapsedSections['frv:'+fid+':'+sectionKey+':'+svc] = collapse; });
+  saveCollapsedSections();
+  showFriend(fid);
+};
+function frvSectionToggleControls(fid, sectionKey, arr){
+  if (Object.keys(groupByService(arr)).length < 2) return '';
+  return '<div class="section-toggle-all"><span onclick="setAllFriendSections(\''+fid+'\',\''+sectionKey+'\',true)">Collapse all</span> &middot; <span onclick="setAllFriendSections(\''+fid+'\',\''+sectionKey+'\',false)">Expand all</span></div>';
+}
 function renderServiceGroup(key, svc, shows, list){
   var isCollapsed = !!_collapsedSections[key];
   var cardsHTML = shows.map(function(s){ return buildCard(s,list); }).join('');
@@ -2381,12 +2418,14 @@ function showFriend(id) {
   var fRoom=f.room||'tuscany'; var fColor=ROOMS[fRoom]?ROOMS[fRoom].color:f.color;
   var fInitials=isSelf?(state.user.initials||'Y'):f.name.split(' ').map(function(x){return x[0]||'';}).join('').toUpperCase();
 
-  function fGrouped(arr,lk){
+  function fGrouped(arr,lk,sectionKey){
     var groups={};
     arr.forEach(function(s){if(!groups[s.platform])groups[s.platform]=[];groups[s.platform].push(s);});
     var svcs=Object.keys(groups).sort(); var html='';
     svcs.forEach(function(svc){
-      html+='<div class="service-group"><div class="service-divider"><span class="service-divider-text">'+svc+'</span></div><div class="shows-grid">';
+      var key='frv:'+f.id+':'+sectionKey+':'+svc;
+      var isCollapsed=!!_collapsedSections[key];
+      html+='<div class="service-group'+(isCollapsed?' collapsed':'')+'"><div class="service-divider" onclick="toggleFriendSection(\''+key+'\',\''+f.id+'\')"><span class="service-divider-text">'+(isCollapsed?'&#9656;':'&#9662;')+' '+svc+' <span class="service-count">('+groups[svc].length+')</span></span></div><div class="shows-grid">';
       groups[svc].sort(function(a,b){return a.title.localeCompare(b.title);}).forEach(function(s){
         var rHTML=reactionsHTML(s.reactions, lk, s.id, f.id);
         var inpId='finp-'+lk+'-'+f.id+'-'+s.id;
@@ -2422,20 +2461,27 @@ function showFriend(id) {
   var sharedTasteBtn=isSelf?'':'<button class="btn-remove-friend" onclick="openSharedTasteModal(\''+f.id+'\')">&#128156; Shared Taste</button>';
   var roomTitle=isSelf?'Your Living Room':f.name+"'s Living Room";
   var cityLine=isSelf?'':'<div style="font-size:13px;color:var(--muted)">'+f.city+'</div>';
+  var onItems=friendSectionItems(f,'on');
+  var seatItems=friendSectionItems(f,'seat');
+  var waitingItems=friendSectionItems(f,'waiting');
+  var bingedItems=friendSectionItems(f,'binged');
+  var dnfItems=(f.watched||[]).filter(function(x){return x.dnf;});
+  var dnfKey='frv:'+f.id+':dnf';
+  var dnfCollapsed=!!_collapsedSections[dnfKey];
   dv.innerHTML='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;"><button class="back-btn" onclick="backToFriends()">&#8592; Back to Living Room</button><div style="display:flex;gap:8px;">'+sharedTasteBtn+muteBtn+removeBtn+'</div></div>'
     +'<div class="friend-header"><div class="friend-header-av" style="background:'+fColor+';font-size:18px;font-weight:700;font-family:var(--sans);">'+fInitials+'</div>'
     +'<div><div style="font-family:Georgia,serif;font-size:20px;font-weight:700">'+roomTitle+'</div>'
     +cityLine+'</div></div>'
-    +'<div style="margin:24px 0 12px;background:var(--fig);color:white;padding:10px 18px;border-radius:8px;font-family:var(--serif);font-size:15px;font-weight:700;letter-spacing:0.2px;display:flex;align-items:center;gap:8px;">&#128250; On Right Now</div>'+fGrouped(f.watching.filter(function(x){return !x.hidden;}),'w')
-    +'<div style="margin:24px 0 12px;background:var(--fig);color:white;padding:10px 18px;border-radius:8px;font-family:var(--serif);font-size:15px;font-weight:700;letter-spacing:0.2px;display:flex;align-items:center;gap:8px;">🛋️ Saving a Seat</div>'+fGrouped(f.watchlist.filter(function(x){return !x.hidden&&!x.waitingForSeason;}),'wl')
-  +(f.watchlist&&f.watchlist.filter(function(x){return x.waitingForSeason&&!x.hidden;}).length
-    ? '<div style="margin:24px 0 12px;background:var(--fig);color:white;padding:10px 18px;border-radius:8px;font-family:var(--serif);font-size:15px;font-weight:700;letter-spacing:0.2px;display:flex;align-items:center;gap:8px;">&#8987; Waiting for New Season</div>'+fGrouped(f.watchlist.filter(function(x){return x.waitingForSeason&&!x.hidden;}),'wl')
+    +'<div style="margin:24px 0 12px;background:var(--fig);color:white;padding:10px 18px;border-radius:8px;font-family:var(--serif);font-size:15px;font-weight:700;letter-spacing:0.2px;display:flex;align-items:center;gap:8px;">&#128250; On Right Now</div>'+frvSectionToggleControls(f.id,'on',onItems)+fGrouped(onItems,'w','on')
+    +'<div style="margin:24px 0 12px;background:var(--fig);color:white;padding:10px 18px;border-radius:8px;font-family:var(--serif);font-size:15px;font-weight:700;letter-spacing:0.2px;display:flex;align-items:center;gap:8px;">🛋️ Saving a Seat</div>'+frvSectionToggleControls(f.id,'seat',seatItems)+fGrouped(seatItems,'wl','seat')
+  +(waitingItems.length
+    ? '<div style="margin:24px 0 12px;background:var(--fig);color:white;padding:10px 18px;border-radius:8px;font-family:var(--serif);font-size:15px;font-weight:700;letter-spacing:0.2px;display:flex;align-items:center;gap:8px;">&#8987; Waiting for New Season</div>'+frvSectionToggleControls(f.id,'waiting',waitingItems)+fGrouped(waitingItems,'wl','waiting')
     : '')
   +(f.watched&&f.watched.length
-    ? '<div style="margin:24px 0 12px;background:var(--fig);color:white;padding:10px 18px;border-radius:8px;font-family:var(--serif);font-size:15px;font-weight:700;letter-spacing:0.2px;display:flex;align-items:center;gap:8px;">&#128252; Already Binged</div>'+fGrouped(f.watched.filter(function(x){return !x.dnf&&!x.hidden;}),'wd')
-      +(f.watched.filter(function(x){return x.dnf;}).length
-        ? '<div class="dnf-section"><div class="dnf-header">&#128683; Didn&#39;t Finish</div>'
-          + f.watched.filter(function(x){return x.dnf;}).sort(function(a,b){return a.title.localeCompare(b.title);}).map(function(s){
+    ? '<div style="margin:24px 0 12px;background:var(--fig);color:white;padding:10px 18px;border-radius:8px;font-family:var(--serif);font-size:15px;font-weight:700;letter-spacing:0.2px;display:flex;align-items:center;gap:8px;">&#128252; Already Binged</div>'+frvSectionToggleControls(f.id,'binged',bingedItems)+fGrouped(bingedItems,'wd','binged')
+      +(dnfItems.length
+        ? '<div class="dnf-section'+(dnfCollapsed?' collapsed':'')+'"><div class="dnf-header" onclick="toggleFriendSection(\''+dnfKey+'\',\''+f.id+'\')">'+(dnfCollapsed?'&#9656;':'&#9662;')+' &#128683; Didn&#39;t Finish <span class="service-count">('+dnfItems.length+')</span></div>'
+          + '<div class="shows-grid">' + dnfItems.sort(function(a,b){return a.title.localeCompare(b.title);}).map(function(s){
               var rHTML=reactionsHTML(s.reactions,'wd',s.id,f.id);
               var inpId='finp-wd-'+f.id+'-'+s.id;
               var reactToggle=isSelf?'':('<div class="inline-react"><input class="react-input" id="'+inpId+'" placeholder="What did you think? 😊" /><button class="btn-send" onclick="submitFR(\''+f.id+'\',\'wd\',\''+s.id+'\')">Send</button><button class="btn-cancel" onclick="document.getElementById(\''+inpId+'\').value=\'\'">Cancel</button></div>'
@@ -2449,7 +2495,7 @@ function showFriend(id) {
                 +'</div>'+(dnfActions?'<div class="show-actions">'+dnfActions+'</div>':'')+'</div>'
                 +'<div class="react-area">'+rHTML+reactToggle+'</div>'
                 +'</div>';
-            }).join('')+'</div>'
+            }).join('') + '</div></div>'
         : '')
     : '')
   + top5HTML
