@@ -2664,9 +2664,10 @@ function renderRoomPickerSearch() {
     return;
   }
   resultsEl.innerHTML = matchLabel + '<div class="room-picker-grid">' + list.map(function(s, i) {
+    var clickAttr = s.tmdb_id ? ' class="poster-clickable" onclick="openAllRoomsSearchDetails(' + i + ')"' : '';
     var thumb = s.poster_path
-      ? '<img src="' + TMDB_IMG + s.poster_path + '" style="width:100%;aspect-ratio:1;border-radius:8px;object-fit:cover;" />'
-      : '<div style="width:100%;aspect-ratio:1;border-radius:8px;background:var(--olive);display:flex;align-items:center;justify-content:center;font-size:22px;">&#128252;</div>';
+      ? '<img' + clickAttr + ' src="' + TMDB_IMG + s.poster_path + '" style="width:100%;aspect-ratio:1;border-radius:8px;object-fit:cover;" />'
+      : '<div' + clickAttr + ' style="width:100%;aspect-ratio:1;border-radius:8px;background:var(--olive);display:flex;align-items:center;justify-content:center;font-size:22px;">&#128252;</div>';
     var ratings = s.people.filter(function(p) { return p.rating > 0; });
     var avg = ratings.length ? (ratings.reduce(function(a, b) { return a + b.rating; }, 0) / ratings.length) : null;
     var ratingLine = avg ? ('&#9733;' + avg.toFixed(1) + ' &middot; ' + ratings.length + ' rated') : 'Not yet rated';
@@ -2676,12 +2677,18 @@ function renderRoomPickerSearch() {
     return '<div class="friend-card">' + thumb
       + '<div class="friend-name" style="margin-top:6px;">' + escAttr(s.title) + '</div>'
       + '<div class="friend-city">' + escAttr(s.platform || '') + '</div>'
-      + '<div class="friend-count">' + ratingLine + ' &middot; ' + s.people.length + ' ' + (s.people.length === 1 ? 'person has' : 'people have') + ' it</div>'
+      + '<div class="friend-count">' + ratingLine + '</div>'
       + roomTag
       + addBtn
       + '</div>';
   }).join('') + '</div>';
 }
+
+window.openAllRoomsSearchDetails = function(idx) {
+  var s = _allRoomsSearchCache[idx];
+  if (!s || !s.tmdb_id) return;
+  openShowDetails(s.tmdb_id, s.people);
+};
 
 window.handleAllRoomsSearchAdd = function(idx) {
   var s = _allRoomsSearchCache[idx];
@@ -5973,7 +5980,7 @@ var TMDB_CAST_IMG = 'https://image.tmdb.org/t/p/w185';
 
 var _currentShowDetails = null;
 
-window.openShowDetails = async function(tmdbId) {
+window.openShowDetails = async function(tmdbId, friendRatings) {
   if (!tmdbId) return;
   var overlay = document.getElementById('sd-overlay');
   var body = document.getElementById('sd-body');
@@ -6009,6 +6016,16 @@ window.openShowDetails = async function(tmdbId) {
           }).join('')
         + '</div>'
       : '';
+    var rated = (friendRatings || []).filter(function(p) { return p.rating > 0; });
+    var friendRatingsHTML = rated.length
+      ? '<div class="section-label" style="margin-top:18px;">Ratings in your rooms</div>'
+        + '<div style="display:flex;flex-direction:column;gap:4px;margin-top:6px;">'
+        + rated.map(function(p) {
+            return '<div style="display:flex;justify-content:space-between;font-size:13px;color:var(--charcoal);">'
+              + '<span>' + escAttr(p.name || '') + '</span><span style="color:var(--terra);font-weight:700;">&#9733; ' + p.rating + '</span></div>';
+          }).join('')
+        + '</div>'
+      : '';
     body.innerHTML = '<div style="display:flex;gap:16px;text-align:left;">'
       + poster
       + '<div style="flex:1;min-width:0;">'
@@ -6017,6 +6034,7 @@ window.openShowDetails = async function(tmdbId) {
       + (rating ? '<div style="font-size:13px;color:var(--terra);font-weight:700;margin-bottom:8px;">' + rating + '</div>' : '')
       + (d.overview ? '<div style="font-size:13px;color:var(--charcoal);line-height:1.5;">' + d.overview + '</div>' : '')
       + '</div></div>'
+      + friendRatingsHTML
       + castHTML;
     _currentShowDetails = {
       tmdb_id: tmdbId, title: d.name || '', poster_path: d.poster_path || null,
