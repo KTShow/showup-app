@@ -2628,7 +2628,11 @@ function buildAllRoomsSearchResults(q) {
     });
   });
   var list = Object.values(shows);
-  list.sort(function(a, b) { return a.title.toLowerCase().localeCompare(b.title.toLowerCase()); });
+  list.sort(function(a, b) {
+    var scoreDiff = tmdbMatchScore(b.title, q) - tmdbMatchScore(a.title, q);
+    if (scoreDiff !== 0) return scoreDiff;
+    return a.title.toLowerCase().localeCompare(b.title.toLowerCase());
+  });
   return list;
 }
 
