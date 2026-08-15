@@ -2738,12 +2738,16 @@ window.enterLivingRoom = async function(roomId, roomName, isOwner, isAdminView, 
   updateInviteLinks();
 };
 
-window.backToRoomPicker = function() {
+window.backToRoomPicker = async function() {
   // Same "mark seen on genuine exit" rule as showTab() -- switching rooms
   // (not just leaving the Living Room tab entirely) should also mark the
   // room you're leaving as seen, now that each room tracks this separately.
+  // Must await this -- showRoomPicker() clears state.currentRoomId, and
+  // markConversationsSeen() reads that same field after its own await, so
+  // firing it without waiting raced the two and always saved a null room id
+  // (silently rejected by the DB, never actually persisting anything).
   if (_conversationsViewed) {
-    markConversationsSeen();
+    await markConversationsSeen();
     _conversationsViewed = false;
   }
   showRoomPicker();
