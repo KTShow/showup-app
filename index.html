@@ -4910,6 +4910,7 @@ function goToExistingShow(existing) {
   var list = existing.list, showId = existing.show.id;
   showTab(list, document.getElementById(TAB_BTN_ID[list]));
   scrollToShowCard(showId);
+  showToast('Already in ' + (ADD_LIST_LABELS[list] || 'My Lists') + ' — here it is.');
 }
 
 window.addShow = function(list) {
