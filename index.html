@@ -165,6 +165,8 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
 .conversation-time{font-size:11px;color:var(--muted);white-space:nowrap;flex-shrink:0;}
 .conversation-row.type-added{border-left:3px solid var(--terra);}
 .conversation-row.type-comment{border-left:3px solid var(--fig);}
+.conversation-row.is-new{background:#FBF3E0;}
+.conv-new-tag{display:inline-block;font-size:9px;font-weight:800;color:white;background:var(--gold);padding:1px 6px;border-radius:6px;letter-spacing:0.4px;margin-right:6px;vertical-align:middle;}
 @keyframes flashHighlight{0%{box-shadow:0 0 0 3px var(--terra);}100%{box-shadow:var(--shadow);}}
 .flash-highlight{animation:flashHighlight 1.8s ease-out;}
 .btn-recommend{background:var(--sand);border:none;cursor:pointer;padding:6px 9px;font-size:15px;color:var(--charcoal);border-radius:7px;line-height:1;transition:all 0.2s;}
@@ -3062,10 +3064,21 @@ function timeAgo(iso){
   return Math.floor(day/7)+'w ago';
 }
 
+// Feed window: always shows the last 30 days of activity, regardless of
+// last_seen -- last_seen only decides which of those get the "new" tag.
+// Previously the same last_seen check gated both inclusion AND newness, so
+// a room you checked often would shrink to almost nothing on every visit
+// (see conversations retention discussion, 2026-08-15). Underlying rows in
+// `reactions`/`shows` are never deleted either way -- this only changes
+// what's rendered.
+var CONVERSATIONS_WINDOW_MS = 30 * 24 * 60 * 60 * 1000;
+
 function buildConversationsFeed(){
   var lastSeen = state.currentRoomConversationsLastSeen ? new Date(state.currentRoomConversationsLastSeen) : null;
+  var windowCutoff = new Date(Date.now() - CONVERSATIONS_WINDOW_MS);
   var myId = state.user ? state.user.id : null;
   function isNew(ts){ return !!ts && (!lastSeen || new Date(ts) > lastSeen); }
+  function inWindow(ts){ return !!ts && new Date(ts) > windowCutoff; }
   var events=[];
 
   var friendsById={};
@@ -3089,15 +3102,15 @@ function buildConversationsFeed(){
     if(!f)return;
     ['watching','watchlist','watched'].forEach(function(lk){
       (f[lk]||[]).forEach(function(s){
-        if(isNew(s.added_at)){
+        if(inWindow(s.added_at)){
           var titleKey=(s.title||'').toLowerCase().trim();
           var isNewToRoom = titleKey && earliestByTitle[titleKey]===new Date(s.added_at).getTime();
           var addedPrefix = isNewToRoom ? '&#127381; <b>New to the room</b> &mdash; ' : '';
-          events.push({type:'added',friendId:f.id,showId:s.id,text:addedPrefix+'<b>'+escAttr(f.name)+'</b> added '+escAttr(s.title),ts:s.added_at});
+          events.push({type:'added',friendId:f.id,showId:s.id,text:addedPrefix+'<b>'+escAttr(f.name)+'</b> added '+escAttr(s.title),ts:s.added_at,isNew:isNew(s.added_at)});
         }
         (s.reactions||[]).forEach(function(r){
-          if(r.reactorId && isNew(r.reactedAt)){
-            events.push({type:'comment',friendId:f.id,list:lk,showId:s.id,reactionId:r.id,isMine:r.reactorId===myId,commentText:r.text,text:'<b>'+escAttr(nameFor(r.reactorId))+'</b> commented on '+escAttr(s.title)+': &#8220;'+escAttr(r.text)+'&#8221;',ts:r.reactedAt});
+          if(r.reactorId && inWindow(r.reactedAt)){
+            events.push({type:'comment',friendId:f.id,list:lk,showId:s.id,reactionId:r.id,isMine:r.reactorId===myId,commentText:r.text,text:'<b>'+escAttr(nameFor(r.reactorId))+'</b> commented on '+escAttr(s.title)+': &#8220;'+escAttr(r.text)+'&#8221;',ts:r.reactedAt,isNew:isNew(r.reactedAt)});
           }
         });
       });
@@ -3112,10 +3125,10 @@ function buildConversationsFeed(){
   // observing, not actually a member of.
   (state.currentRoomIsAdminView ? [] : ['watching','watchlist','watched']).forEach(function(lk){
     (state[lk]||[]).forEach(function(s){
-      if(isNew(s.addedAt)) events.push({type:'added',list:lk,showId:s.id,text:'<b>You</b> added '+escAttr(s.title),ts:s.addedAt});
+      if(inWindow(s.addedAt)) events.push({type:'added',list:lk,showId:s.id,text:'<b>You</b> added '+escAttr(s.title),ts:s.addedAt,isNew:isNew(s.addedAt)});
       (s.reactions||[]).forEach(function(r){
-        if(r.reactorId && isNew(r.reactedAt) && (r.reactorId===myId || friendsById[r.reactorId])){
-          events.push({type:'comment',list:lk,showId:s.id,reactionId:r.id,isMine:r.reactorId===myId,commentText:r.text,text:'<b>'+escAttr(nameFor(r.reactorId))+'</b> commented on your '+escAttr(s.title)+': &#8220;'+escAttr(r.text)+'&#8221;',ts:r.reactedAt});
+        if(r.reactorId && inWindow(r.reactedAt) && (r.reactorId===myId || friendsById[r.reactorId])){
+          events.push({type:'comment',list:lk,showId:s.id,reactionId:r.id,isMine:r.reactorId===myId,commentText:r.text,text:'<b>'+escAttr(nameFor(r.reactorId))+'</b> commented on your '+escAttr(s.title)+': &#8220;'+escAttr(r.text)+'&#8221;',ts:r.reactedAt,isNew:isNew(r.reactedAt)});
         }
       });
     });
@@ -3124,8 +3137,8 @@ function buildConversationsFeed(){
   // Closing the loop on recommendations you sent that got added -- your
   // own recommendations, so skip in admin-view mode same as above.
   if (!state.currentRoomIsAdminView) (state.recommendations||[]).forEach(function(r){
-    if(r.from_user_id===myId && r.status==='added' && isNew(r.resolved_at)){
-      events.push({type:'comment',text:'<b>'+escAttr(nameFor(r.to_user_id))+'</b> added your recommendation, '+escAttr(r.title),ts:r.resolved_at});
+    if(r.from_user_id===myId && r.status==='added' && inWindow(r.resolved_at)){
+      events.push({type:'comment',text:'<b>'+escAttr(nameFor(r.to_user_id))+'</b> added your recommendation, '+escAttr(r.title),ts:r.resolved_at,isNew:isNew(r.resolved_at)});
     }
   });
 
@@ -3138,11 +3151,12 @@ function renderConversations(){
   if(!el)return;
   var events=buildConversationsFeed();
   if(!events.length){
-    el.innerHTML='<div class="empty"><div class="empty-icon">&#128172;</div>Nothing new since you last looked.</div>';
+    el.innerHTML='<div class="empty"><div class="empty-icon">&#128172;</div>No activity in this room in the last 30 days.</div>';
     return;
   }
   el.innerHTML=events.map(function(e){
     var icon=e.type==='added'?'&#127881;':'&#128172;';
+    var newTag=e.isNew?'<span class="conv-new-tag">NEW</span>':'';
     // Own-show events reuse showFriend's self-view (same as the self tile
     // in Your Crowd) instead of jumping to a different bottom tab -- every
     // conversation item opens in place, never leaving Living Room.
@@ -3162,7 +3176,7 @@ function renderConversations(){
       actionBtns='<button class="btn-edit-react" onclick="event.stopPropagation();toggleEditConversationComment('+actArgs+')">&#9998;</button>'
         +'<button class="btn-delete-react" onclick="event.stopPropagation();deleteConversationComment('+actArgs+')">&#x2715;</button>';
     }
-    return '<div class="conversation-row type-'+e.type+'"'+click+'><div class="conversation-icon">'+icon+'</div><div class="conversation-text">'+e.text+'</div><div class="conversation-time">'+timeAgo(e.ts)+'</div>'+actionBtns+'</div>';
+    return '<div class="conversation-row type-'+e.type+(e.isNew?' is-new':'')+'"'+click+'><div class="conversation-icon">'+icon+'</div><div class="conversation-text">'+newTag+e.text+'</div><div class="conversation-time">'+timeAgo(e.ts)+'</div>'+actionBtns+'</div>';
   }).join('');
 }
 
@@ -3515,7 +3529,7 @@ window.scrollToShowCard = function(showId){
 function updateConversationsBadge(){
   var badge=document.getElementById('conv-badge');
   if(!badge)return;
-  var count=buildConversationsFeed().length;
+  var count=buildConversationsFeed().filter(function(e){ return e.isNew; }).length;
   badge.style.display=count?'inline-block':'none';
   badge.textContent=count>99?'99+':String(count);
 }
