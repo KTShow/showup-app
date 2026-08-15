@@ -4900,6 +4900,18 @@ function addConfirmSubtext(list, title, platform) {
   return 'Add to ' + destLabel + ' — ' + platform + '?';
 }
 
+// Jumps straight to a show that's already on one of the three lists,
+// instead of routing through the "Already in X — move/update?" confirm
+// modal -- re-adding a title you already have is almost always someone
+// checking whether/where it's tracked, not a deliberate status change
+// (that's what each card's own move menu is for).
+var TAB_BTN_ID = { watching: 'btab-watching', watchlist: 'btab-watchlist', watched: 'btab-watched' };
+function goToExistingShow(existing) {
+  var list = existing.list, showId = existing.show.id;
+  showTab(list, document.getElementById(TAB_BTN_ID[list]));
+  scrollToShowCard(showId);
+}
+
 window.addShow = function(list) {
   var tId = list==='watching'?'w-title':list==='watchlist'?'wl-title':'wd-title';
   var pId = list==='watching'?'w-platform':list==='watchlist'?'wl-platform':'wd-platform';
@@ -4910,6 +4922,13 @@ window.addShow = function(list) {
   if (!title || !platform) {
     tEl.style.borderColor = '#C4622D';
     setTimeout(function() { tEl.style.borderColor = ''; }, 900);
+    return;
+  }
+  var existing = findMyShowByTitle(title);
+  if (existing) {
+    tEl.value = ''; pEl.value = ''; resetPlatformOther(pId);
+    _tmdbPending = {};
+    goToExistingShow(existing);
     return;
   }
   _addConfirmPending = { list: list, title: title, platform: platform, tId: tId, pId: pId };
@@ -4938,6 +4957,13 @@ window.addDirectDNF = function() {
   if (!title || !platform) {
     tEl.style.borderColor = '#C4622D';
     setTimeout(function() { tEl.style.borderColor = ''; }, 900);
+    return;
+  }
+  var existingDnf = findMyShowByTitle(title);
+  if (existingDnf) {
+    tEl.value = ''; pEl.value = ''; resetPlatformOther('dnf-platform');
+    _tmdbPending = {};
+    goToExistingShow(existingDnf);
     return;
   }
   _addConfirmPending = { list: 'dnf', title: title, platform: platform, tId: 'dnf-title', pId: 'dnf-platform' };
