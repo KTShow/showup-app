@@ -2514,9 +2514,18 @@ async function logImpressions(friendId, showIds) {
   } catch(e) { console.error('Impression log error:', e); }
 }
 
-function showFriend(id) {
+async function showFriend(id) {
   state.lastViewedFriend=id;
   var isSelf = !!(state.user && id === state.user.id);
+  // Someone clicked in from outside Living Room browsing (e.g. a Show Talk
+  // commenter) who isn't in whatever room is currently entered -- jump into
+  // a room they're actually in first, so the rest of this can find them.
+  if (!isSelf && !(state.friends||[]).some(function(x){return x.id===id;})) {
+    var cross = (state.allFriendsAcrossRooms||[]).find(function(x){return x.id===id;});
+    if (cross && cross._roomId && cross._roomId !== state.currentRoomId) {
+      await enterLivingRoom(cross._roomId);
+    }
+  }
   var f = isSelf
     ? { id: state.user.id, name: 'You', city: state.user.city, room: state.user.room, watching: state.watching, watchlist: state.watchlist, watched: state.watched, top5: state.user.top5 }
     : state.friends.find(function(x){return x.id===id;});
@@ -5742,7 +5751,13 @@ async function preloadFriendsInBackground() {
       return getFriendsWithShows(room.id).catch(function(e) { console.error('preload room friends error:', room.id, e); return []; });
     }));
     var merged = {};
-    results.forEach(function(list) { (list || []).forEach(function(f) { if (f && !merged[f.id]) merged[f.id] = f; }); });
+    results.forEach(function(list, i) {
+      // Tag each friend with a room they're actually in -- lets showFriend()
+      // jump into the right room when someone's clicked from outside the
+      // room currently entered (e.g. a Show Talk commenter). First room
+      // found wins; any shared room works equally well for this purpose.
+      (list || []).forEach(function(f) { if (f && !merged[f.id]) { f._roomId = data[i].id; merged[f.id] = f; } });
+    });
     state.allFriendsAcrossRooms = Object.values(merged);
     renderList('watching'); renderList('watchlist'); renderList('watched');
   } catch(e) { console.error('Background friends preload error:', e); }
