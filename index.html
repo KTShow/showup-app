@@ -2451,7 +2451,7 @@ function showFriend(id) {
       groups[svc].sort(function(a,b){return a.title.localeCompare(b.title);}).forEach(function(s){
         var rHTML=reactionsHTML(s.reactions, lk, s.id, f.id);
         var inpId='finp-'+lk+'-'+f.id+'-'+s.id;
-        var reactToggle=isSelf?'':('<div class="inline-react"><input class="react-input" id="'+inpId+'" placeholder="What did you think? 😊" /><button class="btn-send" onclick="submitFR(\''+f.id+'\',\''+lk+'\',\''+s.id+'\')">Send</button><button class="btn-cancel" onclick="document.getElementById(\''+inpId+'\').value=\'\'">Cancel</button></div>'
+        var reactToggle=('<div class="inline-react"><input class="react-input" id="'+inpId+'" placeholder="What did you think? 😊" /><button class="btn-send" onclick="submitFR(\''+f.id+'\',\''+lk+'\',\''+s.id+'\')">Send</button><button class="btn-cancel" onclick="document.getElementById(\''+inpId+'\').value=\'\'">Cancel</button></div>'
           + quickReactRow('quickReactFR', "'"+f.id+"','"+lk+"','"+s.id+"'"));
         var actions=(lk==='w'||lk==='wd')?remoteStatic(s.rating):'';
         actions+='<button class="btn-recommend" onclick="openRecommendPicker(\''+s.id+'\')" title="Recommend to a friend">&#127919;</button>';
@@ -2506,7 +2506,7 @@ function showFriend(id) {
           + '<div class="shows-grid">' + dnfItems.sort(function(a,b){return a.title.localeCompare(b.title);}).map(function(s){
               var rHTML=reactionsHTML(s.reactions,'wd',s.id,f.id);
               var inpId='finp-wd-'+f.id+'-'+s.id;
-              var reactToggle=isSelf?'':('<div class="inline-react"><input class="react-input" id="'+inpId+'" placeholder="What did you think? 😊" /><button class="btn-send" onclick="submitFR(\''+f.id+'\',\'wd\',\''+s.id+'\')">Send</button><button class="btn-cancel" onclick="document.getElementById(\''+inpId+'\').value=\'\'">Cancel</button></div>'
+              var reactToggle=('<div class="inline-react"><input class="react-input" id="'+inpId+'" placeholder="What did you think? 😊" /><button class="btn-send" onclick="submitFR(\''+f.id+'\',\'wd\',\''+s.id+'\')">Send</button><button class="btn-cancel" onclick="document.getElementById(\''+inpId+'\').value=\'\'">Cancel</button></div>'
                 + quickReactRow('quickReactFR', "'"+f.id+"','wd','"+s.id+"'"));
               var dnfActions=isSelf?'':'<button class="btn-recommend" onclick="addFromFriendCard(\''+s.id+'\')" title="Add to my list">&#10133;</button>';
               return '<div class="dnf-card" id="card-'+s.id+'"><div class="show-card-top">'+showTile(s)
