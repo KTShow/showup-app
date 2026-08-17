@@ -1016,6 +1016,7 @@ var state = {
   myRoomsLoaded: false,
   allRoomsSearchData: [], // everyone you share ANY room with + their shows, for cross-room search
   allRoomsSearchLoaded: false,
+  allFriendsAcrossRooms: [], // everyone you share ANY room with, full show+reaction data -- powers card-level ratings/comment pooling (see preloadFriendsInBackground)
   crewShowsByPlatform: false, // Your Crowd view mode: friend tiles (false) vs. shows grouped by platform (true)
 };
 
@@ -1386,10 +1387,10 @@ function friendRatingsFor(title, excludeId) {
   var key=(title||'').toLowerCase().trim();
   if(!key) return [];
   var out=[];
-  var people=[{id:state.user&&state.user.id,name:'You'}].concat((state.friends||[]).map(function(f){return {id:f.id,name:f.name};}));
+  var people=[{id:state.user&&state.user.id,name:'You'}].concat((state.allFriendsAcrossRooms||[]).map(function(f){return {id:f.id,name:f.name};}));
   people.forEach(function(p){
     if(!p.id||p.id===excludeId)return;
-    var src=p.name==='You'?{watching:state.watching,watchlist:state.watchlist,watched:state.watched}:(state.friends||[]).find(function(f){return f.id===p.id;});
+    var src=p.name==='You'?{watching:state.watching,watchlist:state.watchlist,watched:state.watched}:(state.allFriendsAcrossRooms||[]).find(function(f){return f.id===p.id;});
     if(!src)return;
     var match=null;
     ['watching','watchlist','watched'].forEach(function(lk){
@@ -1416,17 +1417,18 @@ function friendRatingsHTML(title, excludeId) {
   return '<details style="margin:4px 0;"><summary style="cursor:pointer;">'+summary+'</summary>'+individual+'</details>';
 }
 
-// Pools comments for the same show title across everyone in the room (self +
-// friends) -- e.g. a self-comment someone left on their own copy of a show
-// still surfaces here, not just on their own card.
+// Pools comments for the same show title across everyone the user shares
+// ANY room with (self + all cross-room friends) -- e.g. a self-comment
+// someone left on their own copy of a show still surfaces here, not just
+// on their own card, regardless of which room that person is in.
 function titleCommentsPool(title) {
   var key=(title||'').toLowerCase().trim();
   if(!key) return [];
   var myId = state.user ? state.user.id : null;
-  var friendsById={}; (state.friends||[]).forEach(function(f){ if(f) friendsById[f.id]=f; });
+  var friendsById={}; (state.allFriendsAcrossRooms||[]).forEach(function(f){ if(f) friendsById[f.id]=f; });
   function nameFor(reactorId){ if(reactorId===myId) return 'You'; return friendsById[reactorId] ? friendsById[reactorId].name : 'Someone'; }
   var comments=[];
-  var sources=[{watching:state.watching,watchlist:state.watchlist,watched:state.watched}].concat(state.friends||[]);
+  var sources=[{watching:state.watching,watchlist:state.watchlist,watched:state.watched}].concat(state.allFriendsAcrossRooms||[]);
   sources.forEach(function(src){
     if(!src) return;
     ['watching','watchlist','watched'].forEach(function(lk){
@@ -5721,27 +5723,28 @@ async function loadAndRenderFriends() {
   }
 }
 
-// Fire-and-forget: loads the user's default room + friends data quietly in
-// the background right after boot, instead of only on-demand when Living
-// Room is opened. Needed so cross-friend info on the Watching/My List/
-// Binged/DNF tabs (ratings, comment previews) isn't empty on first paint --
-// previously state.friends stayed [] until the user tapped into Living
-// Room. Skips entirely if the user has already opened Living Room
-// themselves by the time this resolves (enterLivingRoom takes precedence).
+// Fire-and-forget: loads ratings/comment data for everyone the user shares
+// ANY room with, quietly in the background right after boot, instead of
+// only on-demand when Living Room is opened. Needed so the cross-friend
+// info on show cards (ratings, comment previews) isn't empty on first
+// paint, and isn't siloed to whichever single room happens to be "current"
+// -- same "everything relevant to you in one place" principle Conversations
+// was designed around, rather than the room-by-room Living Room browsing
+// experience. Doesn't touch state.currentRoomId/state.friends -- Living
+// Room's own room-picker flow is unrelated and stays exactly as it was.
 async function preloadFriendsInBackground() {
   try {
     const { data, error } = await sb.rpc('get_my_living_rooms');
     if (error || !data || !data.length) return;
     state.myRooms = data;
     state.myRoomsLoaded = true;
-    if (state.currentRoomId) return;
-    var room = data[0];
-    state.currentRoomId = room.id;
-    state.currentRoomName = room.name;
-    state.currentRoomIsOwner = !!room.is_owner;
-    state.currentRoomIsAdminView = false;
-    state.currentRoomTheme = (room.theme && LIVING_ROOM_THEMES[room.theme]) ? room.theme : 'tuscany';
-    await loadAndRenderFriends();
+    var results = await Promise.all(data.map(function(room) {
+      return getFriendsWithShows(room.id).catch(function(e) { console.error('preload room friends error:', room.id, e); return []; });
+    }));
+    var merged = {};
+    results.forEach(function(list) { (list || []).forEach(function(f) { if (f && !merged[f.id]) merged[f.id] = f; }); });
+    state.allFriendsAcrossRooms = Object.values(merged);
+    renderList('watching'); renderList('watchlist'); renderList('watched');
   } catch(e) { console.error('Background friends preload error:', e); }
 }
 
