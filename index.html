@@ -1400,15 +1400,73 @@ function friendRatingsFor(title, excludeId) {
   return out;
 }
 
+// Compact average by default (tap to expand into each person's individual
+// rating) so cards with several raters don't grow tall.
 function friendRatingsHTML(title, excludeId) {
   var raters=friendRatingsFor(title,excludeId);
   if(!raters.length) return '';
-  return '<div style="display:flex;flex-direction:column;gap:3px;margin:4px 0;">'
+  var avg=Math.round((raters.reduce(function(a,r){return a+r.rating;},0)/raters.length)*10)/10;
+  var summary='<span style="display:inline-flex;align-items:center;gap:6px;">'+remoteStatic(Math.round(avg))
+    + '<span style="font-size:12px;color:var(--muted);">'+avg.toFixed(1)+' ('+raters.length+' friend'+(raters.length===1?'':'s')+')</span></span>';
+  var individual='<div style="display:flex;flex-direction:column;gap:3px;margin:6px 0 0 2px;">'
     + raters.map(function(r){
         return '<div style="display:flex;align-items:center;gap:6px;"><span style="font-size:11px;font-weight:600;color:var(--charcoal);">'+escAttr(r.name)+'</span>'+remoteStatic(r.rating)+'</div>';
       }).join('')
     + '</div>';
+  return '<details style="margin:4px 0;"><summary style="cursor:pointer;">'+summary+'</summary>'+individual+'</details>';
 }
+
+// Pools comments for the same show title across everyone in the room (self +
+// friends) -- e.g. a self-comment someone left on their own copy of a show
+// still surfaces here, not just on their own card.
+function titleCommentsPool(title) {
+  var key=(title||'').toLowerCase().trim();
+  if(!key) return [];
+  var myId = state.user ? state.user.id : null;
+  var friendsById={}; (state.friends||[]).forEach(function(f){ if(f) friendsById[f.id]=f; });
+  function nameFor(reactorId){ if(reactorId===myId) return 'You'; return friendsById[reactorId] ? friendsById[reactorId].name : 'Someone'; }
+  var comments=[];
+  var sources=[{watching:state.watching,watchlist:state.watchlist,watched:state.watched}].concat(state.friends||[]);
+  sources.forEach(function(src){
+    if(!src) return;
+    ['watching','watchlist','watched'].forEach(function(lk){
+      (src[lk]||[]).forEach(function(s){
+        if(!s||(s.title||'').toLowerCase().trim()!==key||!s.reactions||!s.reactions.length) return;
+        s.reactions.forEach(function(r){
+          if(!r.reactorId||!r.text) return;
+          var isMe=r.reactorId===myId;
+          if(!isMe && !friendsById[r.reactorId]) return;
+          comments.push({name:nameFor(r.reactorId),text:r.text,reactedAt:r.reactedAt});
+        });
+      });
+    });
+  });
+  comments.sort(function(a,b){return new Date(b.reactedAt)-new Date(a.reactedAt);});
+  return comments;
+}
+
+function talkPreviewHTML(title) {
+  var comments=titleCommentsPool(title);
+  if(!comments.length) return '';
+  var preview=comments.slice(0,3);
+  return '<div style="display:flex;flex-direction:column;gap:4px;margin:4px 0;">'
+    + preview.map(function(c){
+        return '<div style="font-size:12px;color:var(--charcoal);line-height:1.35;"><span style="font-weight:600;">'+escAttr(c.name)+':</span> '+escAttr(c.text)+'</div>';
+      }).join('')
+    + '</div><div style="display:inline-flex;align-items:center;gap:4px;font-size:11px;color:var(--fig);font-weight:600;cursor:pointer;" onclick="openShowTalkFor(\''+escAttr(title).replace(/'/g,"\\'")+'\')">&#128172; '+comments.length+' '+(comments.length===1?'person':'people')+' talking about this — see full thread</div>';
+}
+
+// Jumps to this show's Show Talk detail panel from anywhere in the app.
+window.openShowTalkFor = function(title) {
+  var lrBtn = document.getElementById('btab-living-room');
+  if (lrBtn) showTab('living-room', lrBtn);
+  backToFriends();
+  switchLRView('showtalk');
+  var list = buildShowTalk();
+  var key = (title||'').toLowerCase().trim();
+  var idx = list.findIndex(function(s){ return s.title.toLowerCase().trim()===key; });
+  if (idx>=0) showShowTalkDetail(idx);
+};
 
 function escAttr(str) {
   return (str || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -1712,7 +1770,7 @@ function buildDNFCard(s) {
     + menuHTML
     + '</div>'
     + '<div class="show-move"><button class="btn-start" onclick="startWatchingFromDNF(\''+sid+'\')">Start Watching</button></div>'
-    + '<div class="react-area">' + reactionsHTML(s.reactions, 'watched', s.id) + reactToggle + '</div>'
+    + '<div class="react-area">' + talkPreviewHTML(s.title) + reactToggle + '</div>'
     + '</div>';
 }
 
@@ -1738,13 +1796,12 @@ function buildWatchingCard(s) {
   var inpId='inp-watching-'+sid;
   var reactToggle='<div class="inline-react"><input class="react-input" id="'+inpId+'" placeholder="What did you think? 😊" /><button class="btn-send" onclick="submitReact(\'watching\',\''+sid+'\')">Send</button><button class="btn-cancel" onclick="document.getElementById(\''+inpId+'\').value=\'\'">Cancel</button></div>'
     + quickReactRow('quickReact', "'watching','"+sid+"'");
-  var hasReact=reactionsHTML(s.reactions,'watching',sid)||reactToggle;
   var platformRow=s.editingPlatform?platformSelect('watching',sid,s.platform):'';
   var otherRatingsW=friendRatingsHTML(s.title);
 
   return '<div class="show-card'+(s.hidden?' is-hidden':'')+'" id="card-'+sid+'"><div class="show-card-top">'+showTile(s)+'<div class="show-info"><div class="show-title">'+s.title+(s.hidden?'<span class="hidden-badge">Hidden from friends</span>':'')+'</div>'+platformRow+(otherRatingsW?'<div style="margin-top:4px;">'+otherRatingsW+'</div>':'')+'</div><div class="show-actions">'+remoteRating('watching',sid,s.rating)+'</div>'+recommendBtn(sid)+menuHTML+'</div>'
     + '<div class="show-move">'+primaryHTML+dnfHTML+'</div>'
-    + (hasReact?'<div class="react-area">'+reactionsHTML(s.reactions,'watching',sid)+reactToggle+'</div>':'')
+    + '<div class="react-area">'+talkPreviewHTML(s.title)+reactToggle+'</div>'
     + '</div>';
 }
 
@@ -1762,14 +1819,13 @@ function buildWaitingCard(s) {
   var inpId='inp-watchlist-'+sid;
   var reactToggle='<div class="inline-react"><input class="react-input" id="'+inpId+'" placeholder="What did you think? 😊" /><button class="btn-send" onclick="submitReact(\'watchlist\',\''+sid+'\')">Send</button><button class="btn-cancel" onclick="document.getElementById(\''+inpId+'\').value=\'\'">Cancel</button></div>'
     + quickReactRow('quickReact', "'watchlist','"+sid+"'");
-  var hasReact=reactionsHTML(s.reactions,'watchlist',sid)||reactToggle;
   var platformRow=s.editingPlatform?platformSelect('watchlist',sid,s.platform):'';
   var otherRatingsWait=friendRatingsHTML(s.title);
 
   var newSeasonBadge = s.newSeasonAvailable ? '<span class="new-season-badge" onclick="tapNewSeasonBadge(\''+sid+'\')">&#127881; New season!</span>' : '';
   return '<div class="show-card'+(s.hidden?' is-hidden':'')+'" id="card-'+sid+'"><div class="show-card-top">'+showTile(s)+'<div class="show-info"><div class="show-title">'+s.title+(s.hidden?'<span class="hidden-badge">Hidden from friends</span>':'')+newSeasonBadge+'</div>'+platformRow+(otherRatingsWait?'<div style="margin-top:4px;">'+otherRatingsWait+'</div>':'')+'</div><div class="show-actions">'+remoteRating('watchlist',sid,s.rating)+'</div>'+recommendBtn(sid)+menuHTML+'</div>'
     + '<div class="show-move"><button class="resume-watching-btn" onclick="resumeWatching(\''+sid+'\')">Resume Watching &#9654;</button><button class="didnt-finish-btn" onclick="markDNFFromWaiting(\''+sid+'\')">Didn&#39;t Finish</button></div>'
-    + (hasReact?'<div class="react-area">'+reactionsHTML(s.reactions,'watchlist',sid)+reactToggle+'</div>':'')
+    + '<div class="react-area">'+talkPreviewHTML(s.title)+reactToggle+'</div>'
     + '</div>';
 }
 
@@ -1787,7 +1843,6 @@ function buildWatchlistCard(s) {
   var inpId='inp-watchlist-'+sid;
   var reactToggle='<div class="inline-react"><input class="react-input" id="'+inpId+'" placeholder="What did you think? 😊" /><button class="btn-send" onclick="submitReact(\'watchlist\',\''+sid+'\')">Send</button><button class="btn-cancel" onclick="document.getElementById(\''+inpId+'\').value=\'\'">Cancel</button></div>'
     + quickReactRow('quickReact', "'watchlist','"+sid+"'");
-  var hasReact=reactionsHTML(s.reactions,'watchlist',sid)||reactToggle;
   var platformRow=s.editingPlatform?platformSelect('watchlist',sid,s.platform):'';
   var recommendedBadge='';
   if(s.source==='recommendation'&&s.influencedBy){
@@ -1805,7 +1860,7 @@ function buildWatchlistCard(s) {
 
   return '<div class="show-card'+(s.hidden?' is-hidden':'')+'" id="card-'+sid+'"><div class="show-card-top">'+showTile(s)+'<div class="show-info"><div class="show-title">'+s.title+(s.hidden?'<span class="hidden-badge">Hidden from friends</span>':'')+'</div>'+platformRow+recommendedBadge+watchedByBadge+(otherRatingsList?'<div style="margin-top:4px;">'+otherRatingsList+'</div>':'')+'</div>'+recommendBtn(sid)+menuHTML+'</div>'
     + '<div class="show-move"><button class="btn-start" onclick="moveToWatching(\''+sid+'\')">Watch Now</button><button class="waiting-season-btn" onclick="markWaitingFromList(\''+sid+'\')">Waiting for New Season &#8987;</button></div>'
-    + (hasReact?'<div class="react-area">'+reactionsHTML(s.reactions,'watchlist',sid)+reactToggle+'</div>':'')
+    + '<div class="react-area">'+talkPreviewHTML(s.title)+reactToggle+'</div>'
     + '</div>';
 }
 
@@ -1846,11 +1901,11 @@ function buildBingedCard(s) {
   var inpId='inp-watched-'+sid;
   var reactToggle='<div class="inline-react"><input class="react-input" id="'+inpId+'" placeholder="What did you think? 😊" /><button class="btn-send" onclick="submitReact(\'watched\',\''+sid+'\')">Send</button><button class="btn-cancel" onclick="document.getElementById(\''+inpId+'\').value=\'\'">Cancel</button></div>'
     + quickReactRow('quickReact', "'watched','"+sid+"'");
-  var hasReact=reactionsHTML(s.reactions,'watched',sid)||reactToggle;
   var platformRow=s.editingPlatform?platformSelect('watched',sid,s.platform):'';
+  var otherRatingsB=friendRatingsHTML(s.title);
 
-  return '<div class="show-card'+(s.hidden?' is-hidden':'')+'" id="card-'+sid+'"><div class="show-card-top">'+showTile(s)+'<div class="show-info"><div class="show-title">'+s.title+(s.hidden?'<span class="hidden-badge">Hidden from friends</span>':'')+'</div>'+platformRow+'</div><div class="show-actions">'+remoteRating('watched',sid,s.rating)+'</div>'+recommendBtn(sid)+menuHTML+'</div>'
-    + (hasReact?'<div class="react-area">'+reactionsHTML(s.reactions,'watched',sid)+reactToggle+'</div>':'')
+  return '<div class="show-card'+(s.hidden?' is-hidden':'')+'" id="card-'+sid+'"><div class="show-card-top">'+showTile(s)+'<div class="show-info"><div class="show-title">'+s.title+(s.hidden?'<span class="hidden-badge">Hidden from friends</span>':'')+'</div>'+platformRow+(otherRatingsB?'<div style="margin-top:4px;">'+otherRatingsB+'</div>':'')+'</div><div class="show-actions">'+remoteRating('watched',sid,s.rating)+'</div>'+recommendBtn(sid)+menuHTML+'</div>'
+    + '<div class="react-area">'+talkPreviewHTML(s.title)+reactToggle+'</div>'
     + '</div>';
 }
 
@@ -2485,7 +2540,6 @@ function showFriend(id) {
       var isCollapsed=_collapsedSections[key]!==false;
       html+='<div class="service-group'+(isCollapsed?' collapsed':'')+'"><div class="service-divider" onclick="toggleFriendSection(\''+key+'\',\''+f.id+'\')"><span class="service-divider-text">'+(isCollapsed?'&#9656;':'&#9662;')+' '+svc+' <span class="service-count">('+groups[svc].length+')</span></span></div><div class="shows-grid">';
       groups[svc].sort(function(a,b){return a.title.localeCompare(b.title);}).forEach(function(s){
-        var rHTML=reactionsHTML(s.reactions, lk, s.id, f.id);
         var inpId='finp-'+lk+'-'+f.id+'-'+s.id;
         var reactToggle=('<div class="inline-react"><input class="react-input" id="'+inpId+'" placeholder="What did you think? 😊" /><button class="btn-send" onclick="submitFR(\''+f.id+'\',\''+lk+'\',\''+s.id+'\')">Send</button><button class="btn-cancel" onclick="document.getElementById(\''+inpId+'\').value=\'\'">Cancel</button></div>'
           + quickReactRow('quickReactFR', "'"+f.id+"','"+lk+"','"+s.id+"'"));
@@ -2494,7 +2548,7 @@ function showFriend(id) {
         if(!isSelf) actions+='<button class="btn-recommend" onclick="addFromFriendCard(\''+s.id+'\')" title="Add to my list">&#10133;</button>';
         var watchedBadge=lk==='wd'?'<span style="font-size:11px;color:var(--fig);font-weight:600;">&#10003; Binged</span>':'';
         var otherRatings=friendRatingsHTML(s.title,f.id);
-        html+='<div class="show-card" id="card-'+s.id+'"><div class="show-card-top">'+showTile(s)+'<div class="show-info"><div class="show-title">'+s.title+'</div>'+(watchedBadge?'<div style="margin-top:2px;">'+watchedBadge+'</div>':'')+(otherRatings?'<div style="margin-top:4px;">'+otherRatings+'</div>':'')+'</div><div class="show-actions">'+actions+'</div></div><div class="react-area">'+rHTML+reactToggle+'</div></div>';
+        html+='<div class="show-card" id="card-'+s.id+'"><div class="show-card-top">'+showTile(s)+'<div class="show-info"><div class="show-title">'+s.title+'</div>'+(watchedBadge?'<div style="margin-top:2px;">'+watchedBadge+'</div>':'')+(otherRatings?'<div style="margin-top:4px;">'+otherRatings+'</div>':'')+'</div><div class="show-actions">'+actions+'</div></div><div class="react-area">'+talkPreviewHTML(s.title)+reactToggle+'</div></div>';
       });
       html+='</div></div>';
     });
@@ -2541,7 +2595,6 @@ function showFriend(id) {
       +(dnfItems.length
         ? '<div class="dnf-section'+(dnfCollapsed?' collapsed':'')+'"><div class="dnf-header" onclick="toggleFriendSection(\''+dnfKey+'\',\''+f.id+'\')">'+(dnfCollapsed?'&#9656;':'&#9662;')+' &#128683; Didn&#39;t Finish <span class="service-count">('+dnfItems.length+')</span></div>'
           + '<div class="shows-grid">' + dnfItems.sort(function(a,b){return a.title.localeCompare(b.title);}).map(function(s){
-              var rHTML=reactionsHTML(s.reactions,'wd',s.id,f.id);
               var inpId='finp-wd-'+f.id+'-'+s.id;
               var reactToggle=('<div class="inline-react"><input class="react-input" id="'+inpId+'" placeholder="What did you think? 😊" /><button class="btn-send" onclick="submitFR(\''+f.id+'\',\'wd\',\''+s.id+'\')">Send</button><button class="btn-cancel" onclick="document.getElementById(\''+inpId+'\').value=\'\'">Cancel</button></div>'
                 + quickReactRow('quickReactFR', "'"+f.id+"','wd','"+s.id+"'"));
@@ -2553,7 +2606,7 @@ function showFriend(id) {
                 +'</div>'+(s.rating?'<div style="margin-top:5px;">'+remoteStatic(s.rating)+'</div>':'')
                 +(friendRatingsHTML(s.title,f.id)?'<div style="margin-top:4px;">'+friendRatingsHTML(s.title,f.id)+'</div>':'')
                 +'</div>'+(dnfActions?'<div class="show-actions">'+dnfActions+'</div>':'')+'</div>'
-                +'<div class="react-area">'+rHTML+reactToggle+'</div>'
+                +'<div class="react-area">'+talkPreviewHTML(s.title)+reactToggle+'</div>'
                 +'</div>';
             }).join('') + '</div></div>'
         : '')
