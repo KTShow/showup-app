@@ -1379,6 +1379,37 @@ function remoteStatic(rating) {
   return html+'</div>';
 }
 
+// Pools ratings for the same show title across everyone in the room (self +
+// friends), excluding the person whose card is being rendered (their own
+// rating already shows via the card's own remote-rating control).
+function friendRatingsFor(title, excludeId) {
+  var key=(title||'').toLowerCase().trim();
+  if(!key) return [];
+  var out=[];
+  var people=[{id:state.user&&state.user.id,name:'You'}].concat((state.friends||[]).map(function(f){return {id:f.id,name:f.name};}));
+  people.forEach(function(p){
+    if(!p.id||p.id===excludeId)return;
+    var src=p.name==='You'?{watching:state.watching,watchlist:state.watchlist,watched:state.watched}:(state.friends||[]).find(function(f){return f.id===p.id;});
+    if(!src)return;
+    var match=null;
+    ['watching','watchlist','watched'].forEach(function(lk){
+      (src[lk]||[]).forEach(function(s){ if(!match&&s.rating&&(s.title||'').toLowerCase().trim()===key) match=s; });
+    });
+    if(match) out.push({name:p.name,rating:match.rating});
+  });
+  return out;
+}
+
+function friendRatingsHTML(title, excludeId) {
+  var raters=friendRatingsFor(title,excludeId);
+  if(!raters.length) return '';
+  return '<div style="display:flex;flex-direction:column;gap:3px;margin:4px 0;">'
+    + raters.map(function(r){
+        return '<div style="display:flex;align-items:center;gap:6px;"><span style="font-size:11px;font-weight:600;color:var(--charcoal);">'+escAttr(r.name)+'</span>'+remoteStatic(r.rating)+'</div>';
+      }).join('')
+    + '</div>';
+}
+
 function escAttr(str) {
   return (str || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
@@ -2457,7 +2488,8 @@ function showFriend(id) {
         actions+='<button class="btn-recommend" onclick="openRecommendPicker(\''+s.id+'\')" title="Recommend to a friend">&#127919;</button>';
         if(!isSelf) actions+='<button class="btn-recommend" onclick="addFromFriendCard(\''+s.id+'\')" title="Add to my list">&#10133;</button>';
         var watchedBadge=lk==='wd'?'<span style="font-size:11px;color:var(--fig);font-weight:600;">&#10003; Binged</span>':'';
-        html+='<div class="show-card" id="card-'+s.id+'"><div class="show-card-top">'+showTile(s)+'<div class="show-info"><div class="show-title">'+s.title+'</div>'+(watchedBadge?'<div style="margin-top:2px;">'+watchedBadge+'</div>':'')+'</div><div class="show-actions">'+actions+'</div></div><div class="react-area">'+rHTML+reactToggle+'</div></div>';
+        var otherRatings=friendRatingsHTML(s.title,f.id);
+        html+='<div class="show-card" id="card-'+s.id+'"><div class="show-card-top">'+showTile(s)+'<div class="show-info"><div class="show-title">'+s.title+'</div>'+(watchedBadge?'<div style="margin-top:2px;">'+watchedBadge+'</div>':'')+(otherRatings?'<div style="margin-top:4px;">'+otherRatings+'</div>':'')+'</div><div class="show-actions">'+actions+'</div></div><div class="react-area">'+rHTML+reactToggle+'</div></div>';
       });
       html+='</div></div>';
     });
@@ -2514,6 +2546,7 @@ function showFriend(id) {
                 +'<div style="margin-top:3px;"><span class="dnf-badge">Didn&#39;t Finish</span>'
                 +'<span style="font-size:11px;color:var(--muted);margin-left:6px;">'+s.platform+'</span>'
                 +'</div>'+(s.rating?'<div style="margin-top:5px;">'+remoteStatic(s.rating)+'</div>':'')
+                +(friendRatingsHTML(s.title,f.id)?'<div style="margin-top:4px;">'+friendRatingsHTML(s.title,f.id)+'</div>':'')
                 +'</div>'+(dnfActions?'<div class="show-actions">'+dnfActions+'</div>':'')+'</div>'
                 +'<div class="react-area">'+rHTML+reactToggle+'</div>'
                 +'</div>';
