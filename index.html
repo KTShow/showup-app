@@ -4561,6 +4561,7 @@ async function loadUserIntoState(profile) {
   init();
   showScreen('app');
   renderAll();
+  preloadFriendsInBackground(); // fire-and-forget, see function comment
 }
 
 // ============================================================
@@ -5718,6 +5719,30 @@ async function loadAndRenderFriends() {
       grid.innerHTML = '<div class="empty"><div class="empty-icon">&#128531;</div>Couldn\'t load your crew right now.</div>';
     }
   }
+}
+
+// Fire-and-forget: loads the user's default room + friends data quietly in
+// the background right after boot, instead of only on-demand when Living
+// Room is opened. Needed so cross-friend info on the Watching/My List/
+// Binged/DNF tabs (ratings, comment previews) isn't empty on first paint --
+// previously state.friends stayed [] until the user tapped into Living
+// Room. Skips entirely if the user has already opened Living Room
+// themselves by the time this resolves (enterLivingRoom takes precedence).
+async function preloadFriendsInBackground() {
+  try {
+    const { data, error } = await sb.rpc('get_my_living_rooms');
+    if (error || !data || !data.length) return;
+    state.myRooms = data;
+    state.myRoomsLoaded = true;
+    if (state.currentRoomId) return;
+    var room = data[0];
+    state.currentRoomId = room.id;
+    state.currentRoomName = room.name;
+    state.currentRoomIsOwner = !!room.is_owner;
+    state.currentRoomIsAdminView = false;
+    state.currentRoomTheme = (room.theme && LIVING_ROOM_THEMES[room.theme]) ? room.theme : 'tuscany';
+    await loadAndRenderFriends();
+  } catch(e) { console.error('Background friends preload error:', e); }
 }
 
 // ============================================================
