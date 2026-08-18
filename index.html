@@ -458,6 +458,20 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
   </div>
 </div>
 
+<!-- INSTALL / ADD-TO-HOME-SCREEN GUIDE -->
+<div class="invite-modal-overlay" id="install-guide-modal">
+  <div class="invite-modal">
+    <div class="invite-modal-title">📲 Save ShowUp to Your Home Screen</div>
+    <div class="invite-modal-sub">Add ShowUp as an app icon so it's always one tap away — no browser, no hunting for the link.</div>
+    <div style="display:flex;gap:8px;margin-bottom:14px;">
+      <button class="install-guide-tab" id="install-tab-ios" onclick="switchInstallGuidePlatform('ios')" style="flex:1;background:var(--sand);border:2px solid var(--border);border-radius:10px;padding:10px;font-family:var(--sans);font-size:13px;font-weight:700;color:var(--muted);cursor:pointer;">📱 iPhone</button>
+      <button class="install-guide-tab" id="install-tab-android" onclick="switchInstallGuidePlatform('android')" style="flex:1;background:var(--sand);border:2px solid var(--border);border-radius:10px;padding:10px;font-family:var(--sans);font-size:13px;font-weight:700;color:var(--muted);cursor:pointer;">🤖 Android</button>
+    </div>
+    <div id="install-guide-steps"></div>
+    <button class="btn-invite-close" onclick="closeInstallGuide()" style="width:100%;margin-top:6px;">Got it</button>
+  </div>
+</div>
+
 <!-- LOGIN SCREEN -->
 <div id="screen-login" class="screen">
   <div class="login-wrap">
@@ -895,6 +909,15 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
         </button>
         <button class="settings-row" onclick="goToTellMore()">
           <span class="settings-row-icon">🛋️</span><span class="settings-row-label">Update My Preferences</span><span class="settings-row-arrow">&#8250;</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="settings-section">
+      <div class="settings-section-label">App</div>
+      <div class="settings-card">
+        <button class="settings-row" onclick="openInstallGuide()">
+          <span class="settings-row-icon">&#128241;</span><span class="settings-row-label">Add ShowUp to Home Screen</span><span class="settings-row-arrow">&#8250;</span>
         </button>
       </div>
     </div>
@@ -4840,6 +4863,7 @@ window.saveTellMore = async function() {
     renderAll();
     var lrBtn = document.getElementById('btab-living-room');
     if (lrBtn) showTab('living-room', lrBtn);
+    openInstallGuide();
   } else {
     showScreen('settings');
     renderAll();
@@ -6252,6 +6276,65 @@ window.openAddPicker = function() {
 
 window.closeAddPicker = function() {
   var el = document.getElementById('add-picker-modal');
+  if (el) el.classList.remove('active');
+};
+
+// ============================================================
+// INSTALL GUIDE — "Add to Home Screen" walkthrough
+// ============================================================
+
+function detectDevicePlatform() {
+  var ua = navigator.userAgent || '';
+  var isIOS = /iPad|iPhone|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  if (isIOS) return 'ios';
+  if (/Android/.test(ua)) return 'android';
+  return 'ios'; // default guess for desktop/unknown -- iOS is the harder case to explain, so lead with it
+}
+
+var _installGuidePlatform = detectDevicePlatform();
+
+function installStepRow(num, html) {
+  return '<div style="display:flex;gap:12px;align-items:flex-start;background:var(--sand);border-radius:10px;padding:12px 14px;margin-bottom:8px;">'
+    + '<div style="flex-shrink:0;width:24px;height:24px;border-radius:50%;background:var(--terra);color:white;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;">'+num+'</div>'
+    + '<div style="font-size:14px;color:var(--charcoal);line-height:1.5;">'+html+'</div>'
+    + '</div>';
+}
+
+function renderInstallGuideSteps() {
+  var stepsEl = document.getElementById('install-guide-steps');
+  if (!stepsEl) return;
+  var iosTab = document.getElementById('install-tab-ios');
+  var androidTab = document.getElementById('install-tab-android');
+  [iosTab, androidTab].forEach(function(t) { if (t) { t.style.background = 'var(--sand)'; t.style.borderColor = 'var(--border)'; t.style.color = 'var(--muted)'; } });
+  var activeTab = _installGuidePlatform === 'ios' ? iosTab : androidTab;
+  if (activeTab) { activeTab.style.background = 'var(--terra)'; activeTab.style.borderColor = 'var(--terra)'; activeTab.style.color = 'white'; }
+
+  if (_installGuidePlatform === 'ios') {
+    stepsEl.innerHTML = installStepRow(1, 'Open this page in <b>Safari</b> (not Chrome or another app browser).')
+      + installStepRow(2, 'Tap the <b>Share</b> button &#128272; &mdash; the square with an arrow pointing up, usually at the bottom of the screen.')
+      + installStepRow(3, 'Scroll down and tap <b>&#8220;Add to Home Screen.&#8221;</b>')
+      + installStepRow(4, 'Tap <b>&#8220;Add&#8221;</b> in the top right corner. That&#39;s it &mdash; ShowUp is now an icon on your Home Screen.');
+  } else {
+    stepsEl.innerHTML = installStepRow(1, 'Open this page in <b>Chrome</b>.')
+      + installStepRow(2, 'Tap the <b>&#8942;</b> menu in the top right corner.')
+      + installStepRow(3, 'Tap <b>&#8220;Add to Home screen&#8221;</b> (or <b>&#8220;Install app&#8221;</b>).')
+      + installStepRow(4, 'Tap <b>&#8220;Add&#8221;</b> or <b>&#8220;Install&#8221;</b> to confirm. That&#39;s it &mdash; ShowUp is now an icon on your Home Screen.');
+  }
+}
+
+window.switchInstallGuidePlatform = function(platform) {
+  _installGuidePlatform = platform;
+  renderInstallGuideSteps();
+};
+
+window.openInstallGuide = function() {
+  renderInstallGuideSteps();
+  var el = document.getElementById('install-guide-modal');
+  if (el) el.classList.add('active');
+};
+
+window.closeInstallGuide = function() {
+  var el = document.getElementById('install-guide-modal');
   if (el) el.classList.remove('active');
 };
 
