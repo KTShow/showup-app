@@ -779,7 +779,7 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
         <div class="lr-toggle">
           <button class="lr-toggle-btn active" id="toggle-crew" onclick="switchLRView('crew')"><span class="toggle-icon">🛋️</span>Your Crowd</button>
           <button class="lr-toggle-btn" id="toggle-picks" onclick="switchLRView('picks')"><span class="toggle-icon">&#127942;</span>Friends' Favorites</button>
-          <button class="lr-toggle-btn" id="toggle-showtalk" onclick="switchLRView('showtalk')"><span class="toggle-icon">&#128483;&#65039;</span>Show Talk</button>
+          <button class="lr-toggle-btn" id="toggle-showtalk" onclick="_showTalkScope='room';switchLRView('showtalk')"><span class="toggle-icon">&#128483;&#65039;</span>Show Talk</button>
           <button class="lr-toggle-btn" id="toggle-conversations" onclick="switchLRView('conversations')"><span class="toggle-icon">&#128172;</span>Conversations<span class="conv-badge" id="conv-badge" style="display:none;"></span></button>
         </div>
         <div id="lr-crew-view">
@@ -1403,17 +1403,21 @@ function remoteStatic(rating) {
   return html+'</div>';
 }
 
-// Pools ratings for the same show title across everyone in the room (self +
-// friends), excluding the person whose card is being rendered (their own
-// rating already shows via the card's own remote-rating control).
-function friendRatingsFor(title, excludeId) {
+// Pools ratings for the same show title, excluding the person whose card is
+// being rendered (their own rating already shows via the card's own
+// remote-rating control). `pool` picks the scope: pass state.friends for a
+// room-bounded view (Living Room), or omit it to pool across every room the
+// viewer belongs to (state.allFriendsAcrossRooms -- used on the personal
+// Watching/My List/Binged/DNF tabs, which aren't tied to any one room).
+function friendRatingsFor(title, excludeId, pool) {
   var key=(title||'').toLowerCase().trim();
   if(!key) return [];
+  var friendPool = pool || state.allFriendsAcrossRooms || [];
   var out=[];
-  var people=[{id:state.user&&state.user.id,name:'You'}].concat((state.allFriendsAcrossRooms||[]).map(function(f){return {id:f.id,name:f.name};}));
+  var people=[{id:state.user&&state.user.id,name:'You'}].concat(friendPool.map(function(f){return {id:f.id,name:f.name};}));
   people.forEach(function(p){
     if(!p.id||p.id===excludeId)return;
-    var src=p.name==='You'?{watching:state.watching,watchlist:state.watchlist,watched:state.watched}:(state.allFriendsAcrossRooms||[]).find(function(f){return f.id===p.id;});
+    var src=p.name==='You'?{watching:state.watching,watchlist:state.watchlist,watched:state.watched}:friendPool.find(function(f){return f.id===p.id;});
     if(!src)return;
     var match=null;
     ['watching','watchlist','watched'].forEach(function(lk){
@@ -1426,8 +1430,8 @@ function friendRatingsFor(title, excludeId) {
 
 // Compact average by default (tap to expand into each person's individual
 // rating) so cards with several raters don't grow tall.
-function friendRatingsHTML(title, excludeId) {
-  var raters=friendRatingsFor(title,excludeId);
+function friendRatingsHTML(title, excludeId, pool) {
+  var raters=friendRatingsFor(title,excludeId,pool);
   if(!raters.length) return '';
   var avg=Math.round((raters.reduce(function(a,r){return a+r.rating;},0)/raters.length)*10)/10;
   var summary='<span style="display:inline-flex;align-items:center;gap:6px;">'+remoteStatic(Math.round(avg))
@@ -1440,18 +1444,20 @@ function friendRatingsHTML(title, excludeId) {
   return '<details style="margin:4px 0;"><summary style="cursor:pointer;">'+summary+'</summary>'+individual+'</details>';
 }
 
-// Pools comments for the same show title across everyone the user shares
-// ANY room with (self + all cross-room friends) -- e.g. a self-comment
-// someone left on their own copy of a show still surfaces here, not just
-// on their own card, regardless of which room that person is in.
-function titleCommentsPool(title) {
+// Pools comments for the same show title. `pool` picks the scope, same as
+// friendRatingsFor -- pass state.friends for room-bounded (Living Room),
+// omit for cross-room (personal tabs). Cross-room mode also surfaces a
+// self-comment someone left on their own copy of a show, not just on
+// whichever of their rows you happen to be viewing.
+function titleCommentsPool(title, pool) {
   var key=(title||'').toLowerCase().trim();
   if(!key) return [];
+  var friendPool = pool || state.allFriendsAcrossRooms || [];
   var myId = state.user ? state.user.id : null;
-  var friendsById={}; (state.allFriendsAcrossRooms||[]).forEach(function(f){ if(f) friendsById[f.id]=f; });
+  var friendsById={}; friendPool.forEach(function(f){ if(f) friendsById[f.id]=f; });
   function nameFor(reactorId){ if(reactorId===myId) return 'You'; return friendsById[reactorId] ? friendsById[reactorId].name : 'Someone'; }
   var comments=[];
-  var sources=[{watching:state.watching,watchlist:state.watchlist,watched:state.watched}].concat(state.allFriendsAcrossRooms||[]);
+  var sources=[{watching:state.watching,watchlist:state.watchlist,watched:state.watched}].concat(friendPool);
   sources.forEach(function(src){
     if(!src) return;
     ['watching','watchlist','watched'].forEach(function(lk){
@@ -1470,19 +1476,25 @@ function titleCommentsPool(title) {
   return comments;
 }
 
-function talkPreviewHTML(title) {
-  var comments=titleCommentsPool(title);
+function talkPreviewHTML(title, pool) {
+  var comments=titleCommentsPool(title, pool);
   if(!comments.length) return '';
   var preview=comments.slice(0,3);
+  var scope = pool ? 'room' : 'all';
   return '<div style="display:flex;flex-direction:column;gap:4px;margin:4px 0;">'
     + preview.map(function(c){
         return '<div style="font-size:12px;color:var(--charcoal);line-height:1.35;"><span style="font-weight:600;">'+escAttr(c.name)+':</span> '+escAttr(c.text)+'</div>';
       }).join('')
-    + '</div><div style="display:inline-flex;align-items:center;gap:4px;font-size:11px;color:var(--fig);font-weight:600;cursor:pointer;" onclick="openShowTalkFor(\''+escAttr(title).replace(/'/g,"\\'")+'\')">&#128172; '+comments.length+' '+(comments.length===1?'person':'people')+' talking about this — see full thread</div>';
+    + '</div><div style="display:inline-flex;align-items:center;gap:4px;font-size:11px;color:var(--fig);font-weight:600;cursor:pointer;" onclick="openShowTalkFor(\''+escAttr(title).replace(/'/g,"\\'")+'\',\''+scope+'\')">&#128172; '+comments.length+' '+(comments.length===1?'person':'people')+' talking about this — see full thread</div>';
 }
 
 // Jumps to this show's Show Talk detail panel from anywhere in the app.
-window.openShowTalkFor = function(title) {
+// scope: 'room' keeps Show Talk bounded to whichever room is currently
+// entered (matches a room-scoped card's own counts); 'all' (default, used
+// from the room-independent personal tabs) pools across every room the
+// viewer belongs to -- see _showTalkScope / buildShowTalk.
+window.openShowTalkFor = function(title, scope) {
+  _showTalkScope = scope === 'room' ? 'room' : 'all';
   var lrBtn = document.getElementById('btab-living-room');
   if (lrBtn) showTab('living-room', lrBtn);
   backToFriends();
@@ -2581,8 +2593,8 @@ async function showFriend(id) {
         actions+='<button class="btn-recommend" onclick="openRecommendPicker(\''+s.id+'\')" title="Recommend to a friend">&#127919;</button>';
         if(!isSelf) actions+='<button class="btn-recommend" onclick="addFromFriendCard(\''+s.id+'\')" title="Add to my list">&#10133;</button>';
         var watchedBadge=lk==='wd'?'<span style="font-size:11px;color:var(--fig);font-weight:600;">&#10003; Binged</span>':'';
-        var otherRatings=friendRatingsHTML(s.title,f.id);
-        html+='<div class="show-card" id="card-'+s.id+'"><div class="show-card-top">'+showTile(s)+'<div class="show-info"><div class="show-title">'+s.title+'</div>'+(watchedBadge?'<div style="margin-top:2px;">'+watchedBadge+'</div>':'')+(otherRatings?'<div style="margin-top:4px;">'+otherRatings+'</div>':'')+'</div><div class="show-actions">'+actions+'</div></div><div class="react-area">'+talkPreviewHTML(s.title)+reactToggle+'</div></div>';
+        var otherRatings=friendRatingsHTML(s.title,f.id,state.friends);
+        html+='<div class="show-card" id="card-'+s.id+'"><div class="show-card-top">'+showTile(s)+'<div class="show-info"><div class="show-title">'+s.title+'</div>'+(watchedBadge?'<div style="margin-top:2px;">'+watchedBadge+'</div>':'')+(otherRatings?'<div style="margin-top:4px;">'+otherRatings+'</div>':'')+'</div><div class="show-actions">'+actions+'</div></div><div class="react-area">'+talkPreviewHTML(s.title,state.friends)+reactToggle+'</div></div>';
       });
       html+='</div></div>';
     });
@@ -2638,9 +2650,9 @@ async function showFriend(id) {
                 +'<div style="margin-top:3px;"><span class="dnf-badge">Didn&#39;t Finish</span>'
                 +'<span style="font-size:11px;color:var(--muted);margin-left:6px;">'+s.platform+'</span>'
                 +'</div>'+(s.rating?'<div style="margin-top:5px;">'+remoteStatic(s.rating)+'</div>':'')
-                +(friendRatingsHTML(s.title,f.id)?'<div style="margin-top:4px;">'+friendRatingsHTML(s.title,f.id)+'</div>':'')
+                +(friendRatingsHTML(s.title,f.id,state.friends)?'<div style="margin-top:4px;">'+friendRatingsHTML(s.title,f.id,state.friends)+'</div>':'')
                 +'</div>'+(dnfActions?'<div class="show-actions">'+dnfActions+'</div>':'')+'</div>'
-                +'<div class="react-area">'+talkPreviewHTML(s.title)+reactToggle+'</div>'
+                +'<div class="react-area">'+talkPreviewHTML(s.title,state.friends)+reactToggle+'</div>'
                 +'</div>';
             }).join('') + '</div></div>'
         : '')
@@ -3365,8 +3377,9 @@ window.deleteConversationComment = async function(list, showId, friendId, reacti
 
 function buildShowTalk(){
   var shows={};
+  var friendPool = _showTalkScope === 'all' ? (state.allFriendsAcrossRooms||[]) : (state.friends||[]);
   var friendsById={};
-  (state.allFriendsAcrossRooms||[]).forEach(function(f){ if(f) friendsById[f.id]=f; });
+  friendPool.forEach(function(f){ if(f) friendsById[f.id]=f; });
   var myId = state.user ? state.user.id : null;
   function nameFor(reactorId){
     if (reactorId===myId) return 'You';
@@ -3406,7 +3419,7 @@ function buildShowTalk(){
         id:r.id, list:owner.list, showId:s.id, friendId:(owner.type==='friend'?owner.friendId:null)});
     });
   }
-  (state.allFriendsAcrossRooms||[]).forEach(function(f){
+  friendPool.forEach(function(f){
     if(!f)return;
     ['watching','watchlist','watched'].forEach(function(lk){ (f[lk]||[]).forEach(function(s){ addShow(s,{type:'friend',friendId:f.id,list:lk}); }); });
   });
@@ -3425,6 +3438,13 @@ function buildShowTalk(){
 
 var _showTalkListCache = [];
 var _showTalkAddIdx = null;
+// 'room' = whichever room is currently entered (state.friends), matching a
+// room-scoped card's own counts. 'all' = pooled across every room the
+// viewer belongs to (state.allFriendsAcrossRooms), used when Show Talk is
+// reached from a room-independent personal-tab card. Set by
+// switchLRView('showtalk') (the normal in-room toggle -> 'room') and by
+// openShowTalkFor's scope argument (a card bubble jump).
+var _showTalkScope = 'room';
 function renderShowTalk(){
   var el=document.getElementById('showtalk-list');
   if(!el)return;
@@ -3533,7 +3553,8 @@ function backToShowTalk(){document.getElementById('showtalk-detail-panel').style
 function findShowForShowTalkComment(c){
   var arr;
   if (c.friendId) {
-    var f = (state.allFriendsAcrossRooms||[]).find(function(x){ return x.id === c.friendId; });
+    var pool = _showTalkScope === 'all' ? (state.allFriendsAcrossRooms||[]) : (state.friends||[]);
+    var f = pool.find(function(x){ return x.id === c.friendId; });
     if (!f) return null;
     arr = c.list==='watching'?f.watching:c.list==='watchlist'?f.watchlist:f.watched;
   } else {
@@ -3616,7 +3637,8 @@ window.submitShowTalkReact = async function(idx){
   if(target.mine){
     showRec=(state[target.list]||[]).find(function(x){return x.id===target.id;});
   } else {
-    var f=(state.allFriendsAcrossRooms||[]).find(function(x){return x.id===target.friendId;});
+    var pool = _showTalkScope === 'all' ? (state.allFriendsAcrossRooms||[]) : (state.friends||[]);
+    var f=pool.find(function(x){return x.id===target.friendId;});
     showRec=f?(f[target.list]||[]).find(function(x){return x.id===target.id;}):null;
   }
   if(!showRec)return;
