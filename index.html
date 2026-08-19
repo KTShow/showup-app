@@ -44,7 +44,7 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
 
 .bottom-nav{position:fixed;bottom:0;left:0;right:0;background:#EDE8DC;border-top:1px solid var(--border);display:flex;justify-content:space-around;align-items:center;height:60px;z-index:100;padding-bottom:env(safe-area-inset-bottom);}
 .nav-tab{background:none;border:none;display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 10px;font-family:var(--sans);font-size:10px;color:var(--muted);cursor:pointer;transition:all 0.2s;flex:1;}
-.nav-tab.active{color:var(--terra);background:rgba(196,98,45,0.08);border-radius:10px;}
+.nav-tab.active{color:white;background:var(--terra);border-radius:10px;box-shadow:0 2px 8px rgba(196,98,45,0.4);}
 .nav-tab:hover{color:var(--fig);}
 .nav-tab-icon{font-size:20px;line-height:1;}
 .nav-tab-label{font-size:10px;font-weight:600;letter-spacing:0.02em;white-space:nowrap;}
@@ -167,8 +167,9 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
 .conversation-row.type-comment{border-left:3px solid var(--fig);}
 .conversation-row.is-new{background:#FBF3E0;}
 .conv-new-tag{display:inline-block;font-size:9px;font-weight:800;color:white;background:var(--gold);padding:1px 6px;border-radius:6px;letter-spacing:0.4px;margin-right:6px;vertical-align:middle;}
-@keyframes flashHighlight{0%{box-shadow:0 0 0 4px var(--terra);background:#FBEAD3;}20%{box-shadow:0 0 0 4px var(--terra);background:#FBEAD3;}45%{box-shadow:0 0 0 0 var(--terra);background:var(--cream);}60%{box-shadow:0 0 0 4px var(--terra);background:#FBEAD3;}85%{box-shadow:0 0 0 0 var(--terra);background:var(--cream);}100%{box-shadow:var(--shadow);background:var(--cream);}}
-.flash-highlight{animation:flashHighlight 2.4s ease-out;}
+@keyframes flashPulse{0%,100%{box-shadow:0 0 0 5px var(--terra);background:#FBEAD3;}50%{box-shadow:0 0 0 0 var(--terra);background:var(--cream);}}
+.flash-pulse{animation:flashPulse 0.5s ease-in-out 5;}
+.flash-settled{box-shadow:0 0 0 4px var(--terra);background:#FBEAD3;}
 .btn-recommend{background:var(--sand);border:none;cursor:pointer;padding:6px 9px;font-size:15px;color:var(--charcoal);border-radius:7px;line-height:1;transition:all 0.2s;}
 .btn-add-prominent{background:var(--terra);color:white;border:none;cursor:pointer;padding:7px 14px;font-size:13px;font-weight:700;border-radius:7px;line-height:1;white-space:nowrap;box-shadow:0 2px 6px rgba(196,98,45,0.35);transition:all 0.2s;}
 .btn-add-prominent:hover{transform:translateY(-1px);box-shadow:0 3px 9px rgba(196,98,45,0.45);}
@@ -3726,8 +3727,14 @@ window.scrollToShowCard = function(showId){
     }
     if (reopened) saveCollapsedSections();
     el.scrollIntoView({behavior:'smooth', block:'center'});
-    el.classList.add('flash-highlight');
-    setTimeout(function(){ el.classList.remove('flash-highlight'); }, 2400);
+    // Pulses 5x, then settles into a held highlight that stays put (no
+    // auto-fade) -- it only goes away once you navigate elsewhere and the
+    // card gets torn down/re-rendered without these classes.
+    el.classList.add('flash-pulse');
+    setTimeout(function(){
+      el.classList.remove('flash-pulse');
+      el.classList.add('flash-settled');
+    }, 2500);
   }, 60);
 };
 
@@ -5250,6 +5257,7 @@ window.confirmAddShow = async function() {
     _tmdbPending = {};
     _addConfirmPending = null;
     renderList(destList);
+    showToast('Added "' + title + '" to ' + ADD_DEST_DISPLAY_LABELS[list] + '.');
     if (isDnf) openDWM(newShow, "Didn't finish? Rate it anyway", '🎬');
     else if (list === 'watched') openDWM(newShow);
   } catch(e) {
@@ -5457,6 +5465,7 @@ async function _doMoveToWaiting(list, id) {
   state.watchlist.push(s);
   renderList(list);
   renderList('watchlist');
+  showToast('Moved "' + s.title + '" to ' + ADD_DEST_DISPLAY_LABELS.waiting + '.');
   try { await updateShowStatus(id, 'watchlist', { waiting_for_season: true, dnf: false }); } catch(e) { console.error('moveToWaiting error:', e); }
 }
 
@@ -5478,6 +5487,7 @@ async function _doMoveDNFToBinged(id) {
   if (!s) return;
   s.dnf = false;
   renderList('watched');
+  showToast('Moved "' + s.title + '" to ' + ADD_DEST_DISPLAY_LABELS.watched + '.');
   try { await updateShowStatus(id, 'watched', { dnf: false }); } catch(e) { console.error('moveDNFToBinged error:', e); }
 }
 
@@ -5510,6 +5520,7 @@ async function _doMoveToWatchingAgain(list, id) {
   state.watching.push(s);
   renderList(list);
   renderList('watching');
+  showToast('Moved "' + s.title + '" to ' + ADD_DEST_DISPLAY_LABELS.watching + '.');
   try { await updateShowStatus(id, 'watching', { dnf: false, waiting_for_season: false }); } catch(e) { console.error('moveToWatchingAgain error:', e); }
 }
 
@@ -5519,6 +5530,7 @@ window.moveToWatching = async function(id) {
   var show = state.watchlist.splice(idx, 1)[0];
   state.watching.push(show);
   renderList('watchlist'); renderList('watching');
+  showToast('Moved "' + show.title + '" to ' + ADD_DEST_DISPLAY_LABELS.watching + '.');
   try { await updateShowStatus(id, 'watching'); } catch(e) { console.error('moveToWatching error:', e); }
 };
 
@@ -6490,6 +6502,7 @@ window.chooseAddDestination = async function(destKey) {
       };
       state[destList].push(resultShow);
       renderList(destList);
+      showToast('Added "' + info.title + '" to ' + ADD_DEST_DISPLAY_LABELS[destKey] + '.');
     } catch(e) {
       console.error('chooseAddDestination add error:', e);
       alert('Error adding show. Please try again.');
