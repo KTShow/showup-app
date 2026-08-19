@@ -757,6 +757,14 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
           </div>
           <div class="tastemakers-banner-arrow">&#8250;</div>
         </div>
+        <div class="tastemakers-banner" onclick="openShowTalkHub()" style="margin-bottom:16px;background:linear-gradient(135deg,var(--fig),#8a4a6b);">
+          <div class="tastemakers-banner-icon">&#128483;&#65039;</div>
+          <div class="tastemakers-banner-text">
+            <div class="tastemakers-banner-title">Show Talk</div>
+            <div class="tastemakers-banner-sub">See what your crowd's saying, across every room</div>
+          </div>
+          <div class="tastemakers-banner-arrow">&#8250;</div>
+        </div>
         <div class="tastemakers-banner" id="admin-browse-banner" onclick="openAdminRoomsModal()" style="display:none;margin-bottom:16px;background:linear-gradient(135deg,#555,#222);">
           <div class="tastemakers-banner-icon">&#128065;</div>
           <div class="tastemakers-banner-text">
@@ -775,6 +783,13 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
         <div class="lr-search-wrap" id="prime-time-search-wrap"><input type="text" id="prime-time-search" class="lr-search-input" placeholder="Search shows or platforms..." oninput="renderPrimeTimeList();toggleSearchClearBtn(this)" autocomplete="off" /><button class="lr-search-clear" type="button" aria-label="Clear search" onclick="clearSearchInput('prime-time-search')">&#10005;</button></div>
         <div id="prime-time-list-view"></div>
         <div id="prime-time-detail-view" style="display:none"></div>
+      </div>
+      <div id="showtalk-hub-view" style="display:none">
+        <div class="page-title"><button class="nav-back" onclick="backFromShowTalkHub()" style="margin-right:6px;">&#8592;</button>&#128483;&#65039;&nbsp; Show Talk</div>
+        <div class="page-sub">What your crowd's saying, across every room.</div>
+        <div class="lr-search-wrap" id="showtalk-hub-search-wrap"><input type="text" id="showtalk-hub-search" class="lr-search-input" placeholder="Search shows or platforms..." oninput="renderShowTalk();toggleSearchClearBtn(this)" autocomplete="off" /><button class="lr-search-clear" type="button" aria-label="Clear search" onclick="clearSearchInput('showtalk-hub-search')">&#10005;</button></div>
+        <div id="showtalk-hub-list"></div>
+        <div id="showtalk-hub-detail-panel" style="display:none"></div>
       </div>
       <div id="friends-view" style="display:none">
         <div class="page-title"><button class="nav-back" onclick="backToRoomPicker()" style="margin-right:6px;">&#8592;</button>&#127968;&nbsp; <span id="current-room-name">The Living Room</span><button id="rename-room-btn" onclick="renameCurrentRoom()" style="display:none;background:none;border:none;cursor:pointer;font-size:14px;margin-left:6px;color:var(--muted);vertical-align:middle;" title="Rename this room">&#9998;&#65049;</button><button id="delete-room-btn" onclick="deleteCurrentRoom()" style="display:none;background:none;border:none;cursor:pointer;font-size:14px;margin-left:6px;color:var(--muted);vertical-align:middle;" title="Delete this room">&#128465;&#65049;</button><button id="leave-room-btn" onclick="leaveCurrentRoom()" style="display:none;background:none;border:none;cursor:pointer;font-size:14px;margin-left:6px;color:var(--muted);vertical-align:middle;" title="Leave this room">&#128075; Leave Room</button></div>
@@ -1512,11 +1527,16 @@ function talkPreviewHTML(title, pool) {
 // from the room-independent personal tabs) pools across every room the
 // viewer belongs to -- see _showTalkScope / buildShowTalk.
 window.openShowTalkFor = function(title, scope) {
-  _showTalkScope = scope === 'room' ? 'room' : 'all';
   var lrBtn = document.getElementById('btab-living-room');
   if (lrBtn) showTab('living-room', lrBtn);
-  backToFriends();
-  switchLRView('showtalk');
+  if (scope === 'room') {
+    _showTalkScope = 'room';
+    _showTalkHubMode = false;
+    backToFriends();
+    switchLRView('showtalk');
+  } else {
+    openShowTalkHub();
+  }
   var list = buildShowTalk();
   var key = (title||'').toLowerCase().trim();
   var idx = list.findIndex(function(s){ return s.title.toLowerCase().trim()===key; });
@@ -2590,6 +2610,7 @@ async function showFriend(id) {
     (f.watched||[]).filter(function(s){return !s.hidden;}).forEach(function(s){visibleIds.push(s.id);});
     logImpressions(f.id, visibleIds);
   }
+  hideLivingRoomTopPanels();
   document.getElementById('friends-view').style.display='none';
   var dv=document.getElementById('friend-detail-view'); dv.style.display='block';
   var fRoom=f.room||'tuscany'; var fColor=ROOMS[fRoom]?ROOMS[fRoom].color:f.color;
@@ -2711,7 +2732,7 @@ function switchLRView(view){
   document.getElementById('toggle-showtalk').classList.toggle('active',view==='showtalk');
   document.getElementById('toggle-conversations').classList.toggle('active',view==='conversations');
   if(view==='picks'){document.getElementById('rankings-list').style.display='block';document.getElementById('rank-detail-panel').style.display='none';renderRankings();}
-  if(view==='showtalk'){document.getElementById('showtalk-list').style.display='block';document.getElementById('showtalk-detail-panel').style.display='none';renderShowTalk();}
+  if(view==='showtalk'){_showTalkHubMode=false;document.getElementById('showtalk-list').style.display='block';document.getElementById('showtalk-detail-panel').style.display='none';renderShowTalk();}
   // Doesn't mark seen here on open — marking happens when the user actually
   // leaves Living Room (see showTab), so browsing several items in one visit
   // (clicking into a friend's room and back, more than once) doesn't quietly
@@ -2877,6 +2898,17 @@ window.handleAllRoomsSearchAdd = function(idx) {
   openAddPicker();
 };
 
+// Living Room has several room-independent top-level panels that sit
+// alongside a specific room's friends-view (room picker, Prime Time, the
+// Show Talk hub) -- anything that jumps into a specific room/friend needs
+// to hide all of them first, not just whichever one happened to trigger
+// the jump, or two panels end up visible at once.
+function hideLivingRoomTopPanels(){
+  ['room-picker-view','prime-time-view','showtalk-hub-view'].forEach(function(id){
+    var el = document.getElementById(id);
+    if (el) el.style.display = 'none';
+  });
+}
 window.enterLivingRoom = async function(roomId, roomName, isOwner, isAdminView, theme) {
   if (!roomName || isOwner === undefined) {
     var room = state.myRooms.find(function(r) { return r.id === roomId; });
@@ -2891,7 +2923,7 @@ window.enterLivingRoom = async function(roomId, roomName, isOwner, isAdminView, 
   state.currentRoomTheme = (theme && LIVING_ROOM_THEMES[theme]) ? theme : 'tuscany';
   state.friendsLoaded = false;
   state.friends = [];
-  document.getElementById('room-picker-view').style.display = 'none';
+  hideLivingRoomTopPanels();
   document.getElementById('friends-view').style.display = 'block';
   document.getElementById('friend-detail-view').style.display = 'none';
   var nameEl = document.getElementById('current-room-name');
@@ -3032,6 +3064,29 @@ window.openPrimeTimeView = async function() {
 window.backFromPrimeTimeView = function() {
   document.getElementById('prime-time-view').style.display = 'none';
   document.getElementById('room-picker-view').style.display = 'block';
+};
+
+// Room-independent Show Talk, reached straight from the room picker --
+// same data/rendering as the in-room toggle (see stIds/_showTalkHubMode),
+// just pooled across every room from the start instead of needing a
+// specific room entered first.
+window.openShowTalkHub = function() {
+  hideLivingRoomTopPanels();
+  document.getElementById('friends-view').style.display = 'none';
+  document.getElementById('friend-detail-view').style.display = 'none';
+  document.getElementById('showtalk-hub-view').style.display = 'block';
+  document.getElementById('showtalk-hub-detail-panel').style.display = 'none';
+  var listEl = document.getElementById('showtalk-hub-list');
+  listEl.style.display = 'block';
+  _showTalkHubMode = true;
+  _showTalkScope = 'all';
+  renderShowTalk();
+};
+
+window.backFromShowTalkHub = function() {
+  document.getElementById('showtalk-hub-view').style.display = 'none';
+  document.getElementById('room-picker-view').style.display = 'block';
+  _showTalkHubMode = false;
 };
 
 function renderPrimeTimeList() {
@@ -3479,13 +3534,25 @@ var _showTalkAddIdx = null;
 // switchLRView('showtalk') (the normal in-room toggle -> 'room') and by
 // openShowTalkFor's scope argument (a card bubble jump).
 var _showTalkScope = 'room';
+// The exact same Show Talk list/detail/search markup renders into two
+// different homes: nested inside a specific room (the in-room toggle) or
+// standalone at the room-picker level, room-independent (the hub -- see
+// openShowTalkHub). Rather than duplicate all the render/edit/reply/delete
+// logic, everything just resolves which set of element ids to target here.
+var _showTalkHubMode = false;
+function stIds(){
+  return _showTalkHubMode
+    ? { list:'showtalk-hub-list', detail:'showtalk-hub-detail-panel', searchWrap:'showtalk-hub-search-wrap', search:'showtalk-hub-search' }
+    : { list:'showtalk-list', detail:'showtalk-detail-panel', searchWrap:'showtalk-search-wrap', search:'showtalk-search' };
+}
 function renderShowTalk(){
-  var el=document.getElementById('showtalk-list');
+  var ids=stIds();
+  var el=document.getElementById(ids.list);
   if(!el)return;
-  var searchWrap=document.getElementById('showtalk-search-wrap');
+  var searchWrap=document.getElementById(ids.searchWrap);
   if(searchWrap)searchWrap.style.display='block';
   var list=buildShowTalk();
-  var q=((document.getElementById('showtalk-search')||{}).value||'').trim().toLowerCase();
+  var q=((document.getElementById(ids.search)||{}).value||'').trim().toLowerCase();
   if(q) list=list.filter(function(s){return s.title.toLowerCase().indexOf(q)!==-1;});
   _showTalkListCache=list;
   if(!list.length){
@@ -3496,8 +3563,8 @@ function renderShowTalk(){
   }
   el.innerHTML=list.map(function(s,i){
     var thumb=s.poster_path
-      ? '<img src="'+TMDB_IMG+s.poster_path+'" style="width:46px;height:46px;border-radius:8px;object-fit:cover;flex-shrink:0;margin-right:12px;" />'
-      : '<div style="width:46px;height:46px;border-radius:8px;background:var(--olive);flex-shrink:0;margin-right:12px;display:flex;align-items:center;justify-content:center;font-size:18px;">&#128252;</div>';
+      ? '<img src="'+TMDB_IMG+s.poster_path+'" onclick="event.stopPropagation();jumpToShowTalkThumb('+i+')" title="Go to this show" style="width:46px;height:46px;border-radius:8px;object-fit:cover;flex-shrink:0;margin-right:12px;cursor:pointer;" />'
+      : '<div onclick="event.stopPropagation();jumpToShowTalkThumb('+i+')" title="Go to this show" style="width:46px;height:46px;border-radius:8px;background:var(--olive);flex-shrink:0;margin-right:12px;display:flex;align-items:center;justify-content:center;font-size:18px;cursor:pointer;">&#128252;</div>';
     var remotesHTML='';
     if(s.avgRating){
       var lit=Math.floor(s.avgRating);
@@ -3505,6 +3572,7 @@ function renderShowTalk(){
       remotesHTML='<div style="display:flex;gap:2px;flex-shrink:0;margin-left:10px;">'+remotes+'</div>';
     }
     return '<div class="rank-card" onclick="showShowTalkDetail('+i+')">'
+      +'<span class="rank-badge">'+(i+1)+'</span>'
       +thumb
       +'<div class="rank-info">'
       +'<div class="rank-title-text">'+(s.title||'')+'</div>'
@@ -3523,7 +3591,8 @@ function showShowTalkDetail(idx){
   _showTalkScrollY = window.scrollY;
   var s=_showTalkListCache[idx];
   if(!s)return;
-  var panel=document.getElementById('showtalk-detail-panel');
+  var ids=stIds();
+  var panel=document.getElementById(ids.detail);
   var rows=s.comments.map(function(c, ci){
     if (c.isMe && c.editing) {
       var editInpId = 'edit-st-'+idx+'-'+ci;
@@ -3572,13 +3641,13 @@ function showShowTalkDetail(idx){
     +reactHTML
     +'<div class="rank-detail-sub">'+s.comments.length+' comment'+(s.comments.length===1?'':'s')+'</div>'
     +rows+'</div>';
-  document.getElementById('showtalk-list').style.display='none';
-  var searchWrap=document.getElementById('showtalk-search-wrap');
+  document.getElementById(ids.list).style.display='none';
+  var searchWrap=document.getElementById(ids.searchWrap);
   if(searchWrap)searchWrap.style.display='none';
   panel.scrollIntoView({behavior:'smooth'});
 }
 
-function backToShowTalk(){document.getElementById('showtalk-detail-panel').style.display='none';document.getElementById('showtalk-list').style.display='block';var searchWrap=document.getElementById('showtalk-search-wrap');if(searchWrap)searchWrap.style.display='block';window.scrollTo(0,_showTalkScrollY);}
+function backToShowTalk(){var ids=stIds();document.getElementById(ids.detail).style.display='none';document.getElementById(ids.list).style.display='block';var searchWrap=document.getElementById(ids.searchWrap);if(searchWrap)searchWrap.style.display='block';window.scrollTo(0,_showTalkScrollY);}
 
 // Finds the actual show object (own or a friend's copy) a Show Talk comment
 // came from, so edit/delete can mutate the same state everywhere else reads
@@ -3638,6 +3707,29 @@ window.deleteShowTalkComment = async function(idx, ci){
   if (s.comments.length) { showShowTalkDetail(idx); }
   else { backToShowTalk(); renderShowTalk(); }
   try { await dbDeleteReaction(c.id); } catch(e) { console.error('deleteShowTalkComment error:', e); }
+};
+
+// Small list-row thumbnail is its own click target (event.stopPropagation
+// in the row markup) -- jumps straight to wherever this show actually
+// lives (your own tab, or a friend's Living Room card), same landing/
+// highlight treatment as everywhere else, instead of opening the Show
+// Talk comment thread like the rest of the row does.
+window.jumpToShowTalkThumb = async function(idx){
+  var s=_showTalkListCache[idx];
+  if(!s||!s.target)return;
+  var t=s.target;
+  if(t.mine){
+    showTab(t.list, document.getElementById(TAB_BTN_ID[t.list]));
+    scrollToShowCard(t.id);
+  } else {
+    var lrBtn=document.getElementById('btab-living-room');
+    if(lrBtn) showTab('living-room', lrBtn);
+    // The hub pools friends from every room, unlike same-room jumps
+    // elsewhere -- showFriend() may need to await a cross-room entry
+    // first, so this has to wait for it too or the card won't exist yet.
+    await showFriend(t.friendId);
+    scrollToShowCard(t.id);
+  }
 };
 
 // Lightweight add straight from Show Talk — skips the TMDB detail fetch
@@ -6512,7 +6604,7 @@ window.chooseAddDestination = async function(destKey) {
 
   if (_showTalkAddIdx != null) {
     _showTalkAddIdx = null;
-    var stWasDetail = document.getElementById('showtalk-detail-panel').style.display === 'block';
+    var stWasDetail = document.getElementById(stIds().detail).style.display === 'block';
     renderShowTalk();
     if (stWasDetail) {
       var stIdx = _showTalkListCache.findIndex(function(x) { return x.title === info.title; });
