@@ -3718,8 +3718,8 @@ window.scrollToShowCard = function(showId){
         _collapsedSections[ancestor.getAttribute('data-ckey')] = false;
         reopened = true;
         var chevronEl = ancestor.querySelector('.service-divider-text, .dnf-header');
-        if (chevronEl && chevronEl.textContent.charAt(0) === '▶') {
-          chevronEl.textContent = '▼' + chevronEl.textContent.slice(1);
+        if (chevronEl && chevronEl.textContent.charCodeAt(0) === 9656) {
+          chevronEl.textContent = String.fromCharCode(9662) + chevronEl.textContent.slice(1);
         }
       }
       ancestor = ancestor.parentElement;
