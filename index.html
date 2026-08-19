@@ -167,9 +167,12 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
 .conversation-row.type-comment{border-left:3px solid var(--fig);}
 .conversation-row.is-new{background:#FBF3E0;}
 .conv-new-tag{display:inline-block;font-size:9px;font-weight:800;color:white;background:var(--gold);padding:1px 6px;border-radius:6px;letter-spacing:0.4px;margin-right:6px;vertical-align:middle;}
-@keyframes flashHighlight{0%{box-shadow:0 0 0 3px var(--terra);}100%{box-shadow:var(--shadow);}}
-.flash-highlight{animation:flashHighlight 1.8s ease-out;}
+@keyframes flashHighlight{0%{box-shadow:0 0 0 4px var(--terra);background:#FBEAD3;}20%{box-shadow:0 0 0 4px var(--terra);background:#FBEAD3;}45%{box-shadow:0 0 0 0 var(--terra);background:var(--cream);}60%{box-shadow:0 0 0 4px var(--terra);background:#FBEAD3;}85%{box-shadow:0 0 0 0 var(--terra);background:var(--cream);}100%{box-shadow:var(--shadow);background:var(--cream);}}
+.flash-highlight{animation:flashHighlight 2.4s ease-out;}
 .btn-recommend{background:var(--sand);border:none;cursor:pointer;padding:6px 9px;font-size:15px;color:var(--charcoal);border-radius:7px;line-height:1;transition:all 0.2s;}
+.btn-add-prominent{background:var(--terra);color:white;border:none;cursor:pointer;padding:7px 14px;font-size:13px;font-weight:700;border-radius:7px;line-height:1;white-space:nowrap;box-shadow:0 2px 6px rgba(196,98,45,0.35);transition:all 0.2s;}
+.btn-add-prominent:hover{transform:translateY(-1px);box-shadow:0 3px 9px rgba(196,98,45,0.45);}
+.on-list-badge{font-size:11px;font-weight:700;color:var(--fig);white-space:nowrap;}
 .rec-banner{background:linear-gradient(135deg,var(--fig),#8a4a6b);border-radius:var(--radius);padding:14px 16px;margin-bottom:12px;box-shadow:0 4px 14px rgba(107,45,78,0.3);}
 .rec-banner-top{display:flex;gap:12px;align-items:flex-start;}
 .rec-banner-body{flex:1;min-width:0;}
@@ -1397,6 +1400,20 @@ function remoteRating(list, id, rating) {
   return html+'</div>';
 }
 
+// Rating from inside a Living Room card (your own self-tile, or a friend's
+// card for a show you already have too) -- same as rate(), but also
+// re-renders the friend-detail view afterward since that HTML was built
+// once at showFriend() time and won't otherwise pick up the new opacity.
+window.rateFromLivingRoomCard = function(list, id, n, viewingId){
+  window.rate(list, id, n);
+  showFriend(viewingId);
+};
+function remoteRatingLR(list, id, rating, viewingId) {
+  var html='<div style="display:flex;gap:4px;">';
+  for(var n=1;n<=5;n++){var isLit=n<=rating;html+='<button class="remote-btn" style="opacity:'+(isLit?'1':'0.22')+'" onclick="rateFromLivingRoomCard(\''+list+'\',\''+id+'\','+n+',\''+viewingId+'\')">'+remoteIcon(15,isLit)+'</button>';}
+  return html+'</div>';
+}
+
 function remoteStatic(rating) {
   var html='<div style="display:flex;gap:3px;">';
   for(var n=1;n<=5;n++){html+='<span style="opacity:'+(n<=rating?'1':'0.18')+';display:inline-block;">'+remoteIcon(13,n<=rating)+'</span>';}
@@ -1702,7 +1719,7 @@ function frvSectionToggleControls(fid, sectionKey, arr){
 function renderServiceGroup(key, svc, shows, list){
   var isCollapsed = !!_collapsedSections[key];
   var cardsHTML = shows.map(function(s){ return buildCard(s,list); }).join('');
-  return '<div class="service-group'+(isCollapsed?' collapsed':'')+'">'
+  return '<div class="service-group'+(isCollapsed?' collapsed':'')+'" data-ckey="'+key+'">'
     + '<div class="service-divider" onclick="toggleServiceSection(\''+key+'\')">'
     + '<span class="service-divider-text">'+(isCollapsed?'&#9656;':'&#9662;')+' '+svc+' <span class="service-count">('+shows.length+')</span></span>'
     + '</div>'
@@ -1732,7 +1749,7 @@ function renderList(list) {
     if (dnf.length) {
       var dnfCollapsed=!!_collapsedSections['watched:dnf'];
       dnf.sort(function(a,b){return a.title.localeCompare(b.title);});
-      html+='<div class="dnf-section'+(dnfCollapsed?' collapsed':'')+'">'
+      html+='<div class="dnf-section'+(dnfCollapsed?' collapsed':'')+'" data-ckey="watched:dnf">'
         + '<div class="dnf-header" onclick="toggleServiceSection(\'watched:dnf\')">'+(dnfCollapsed?'&#9656;':'&#9662;')+' &#128683; Didn&#39;t Finish <span class="service-count">('+dnf.length+')</span></div>'
         + '<div class="shows-grid">' + dnf.map(function(s){ return buildDNFCard(s); }).join('') + '</div>'
         + '</div>';
@@ -2584,14 +2601,22 @@ async function showFriend(id) {
     svcs.forEach(function(svc){
       var key='frv:'+f.id+':'+sectionKey+':'+svc;
       var isCollapsed=_collapsedSections[key]!==false;
-      html+='<div class="service-group'+(isCollapsed?' collapsed':'')+'"><div class="service-divider" onclick="toggleFriendSection(\''+key+'\',\''+f.id+'\')"><span class="service-divider-text">'+(isCollapsed?'&#9656;':'&#9662;')+' '+svc+' <span class="service-count">('+groups[svc].length+')</span></span></div><div class="shows-grid">';
+      html+='<div class="service-group'+(isCollapsed?' collapsed':'')+'" data-ckey="'+key+'" data-cfid="'+f.id+'"><div class="service-divider" onclick="toggleFriendSection(\''+key+'\',\''+f.id+'\')"><span class="service-divider-text">'+(isCollapsed?'&#9656;':'&#9662;')+' '+svc+' <span class="service-count">('+groups[svc].length+')</span></span></div><div class="shows-grid">';
       groups[svc].sort(function(a,b){return a.title.localeCompare(b.title);}).forEach(function(s){
         var inpId='finp-'+lk+'-'+f.id+'-'+s.id;
         var reactToggle=('<div class="inline-react"><input class="react-input" id="'+inpId+'" placeholder="What did you think? 😊" /><button class="btn-send" onclick="submitFR(\''+f.id+'\',\''+lk+'\',\''+s.id+'\')">Send</button><button class="btn-cancel" onclick="document.getElementById(\''+inpId+'\').value=\'\'">Cancel</button></div>'
           + quickReactRow('quickReactFR', "'"+f.id+"','"+lk+"','"+s.id+"'"));
-        var actions=(lk==='w'||lk==='wd')?remoteStatic(s.rating):'';
+        var mineExisting = isSelf ? null : findMyShowByTitle(s.title);
+        var actions='';
+        if (lk==='w'||lk==='wd') {
+          actions = isSelf ? remoteRatingLR(lk==='w'?'watching':'watched', s.id, s.rating, f.id)
+            : mineExisting ? remoteRatingLR(mineExisting.list, mineExisting.show.id, mineExisting.show.rating, f.id)
+            : remoteStatic(s.rating);
+        }
         actions+='<button class="btn-recommend" onclick="openRecommendPicker(\''+s.id+'\')" title="Recommend to a friend">&#127919;</button>';
-        if(!isSelf) actions+='<button class="btn-recommend" onclick="addFromFriendCard(\''+s.id+'\')" title="Add to my list">&#10133;</button>';
+        if(!isSelf) actions+= mineExisting
+          ? '<span class="on-list-badge">&#10003; On your list</span>'
+          : '<button class="btn-add-prominent" onclick="addFromFriendCard(\''+s.id+'\')" title="Add to my list">+ Add</button>';
         var watchedBadge=lk==='wd'?'<span style="font-size:11px;color:var(--fig);font-weight:600;">&#10003; Binged</span>':'';
         var otherRatings=friendRatingsHTML(s.title,f.id,state.friends);
         html+='<div class="show-card" id="card-'+s.id+'"><div class="show-card-top">'+showTile(s)+'<div class="show-info"><div class="show-title">'+s.title+'</div>'+(watchedBadge?'<div style="margin-top:2px;">'+watchedBadge+'</div>':'')+(otherRatings?'<div style="margin-top:4px;">'+otherRatings+'</div>':'')+'</div><div class="show-actions">'+actions+'</div></div><div class="react-area">'+talkPreviewHTML(s.title,state.friends)+reactToggle+'</div></div>';
@@ -2639,17 +2664,25 @@ async function showFriend(id) {
   +(f.watched&&f.watched.length
     ? '<div style="margin:24px 0 12px;background:var(--fig);color:white;padding:10px 18px;border-radius:8px;font-family:var(--serif);font-size:15px;font-weight:700;letter-spacing:0.2px;display:flex;align-items:center;gap:8px;">&#128252; Already Binged</div>'+frvSectionToggleControls(f.id,'binged',bingedItems)+fGrouped(bingedItems,'wd','binged')
       +(dnfItems.length
-        ? '<div class="dnf-section'+(dnfCollapsed?' collapsed':'')+'"><div class="dnf-header" onclick="toggleFriendSection(\''+dnfKey+'\',\''+f.id+'\')">'+(dnfCollapsed?'&#9656;':'&#9662;')+' &#128683; Didn&#39;t Finish <span class="service-count">('+dnfItems.length+')</span></div>'
+        ? '<div class="dnf-section'+(dnfCollapsed?' collapsed':'')+'" data-ckey="'+dnfKey+'" data-cfid="'+f.id+'"><div class="dnf-header" onclick="toggleFriendSection(\''+dnfKey+'\',\''+f.id+'\')">'+(dnfCollapsed?'&#9656;':'&#9662;')+' &#128683; Didn&#39;t Finish <span class="service-count">('+dnfItems.length+')</span></div>'
           + '<div class="shows-grid">' + dnfItems.sort(function(a,b){return a.title.localeCompare(b.title);}).map(function(s){
               var inpId='finp-wd-'+f.id+'-'+s.id;
               var reactToggle=('<div class="inline-react"><input class="react-input" id="'+inpId+'" placeholder="What did you think? 😊" /><button class="btn-send" onclick="submitFR(\''+f.id+'\',\'wd\',\''+s.id+'\')">Send</button><button class="btn-cancel" onclick="document.getElementById(\''+inpId+'\').value=\'\'">Cancel</button></div>'
                 + quickReactRow('quickReactFR', "'"+f.id+"','wd','"+s.id+"'"));
-              var dnfActions=isSelf?'':'<button class="btn-recommend" onclick="addFromFriendCard(\''+s.id+'\')" title="Add to my list">&#10133;</button>';
+              var dnfMineExisting = isSelf ? null : findMyShowByTitle(s.title);
+              var dnfRatingRow = isSelf
+                ? '<div style="margin-top:5px;">'+remoteRatingLR('watched', s.id, s.rating, f.id)+'</div>'
+                : dnfMineExisting
+                  ? '<div style="margin-top:5px;">'+remoteRatingLR(dnfMineExisting.list, dnfMineExisting.show.id, dnfMineExisting.show.rating, f.id)+'</div>'
+                  : (s.rating ? '<div style="margin-top:5px;">'+remoteStatic(s.rating)+'</div>' : '');
+              var dnfActions=isSelf?'':(dnfMineExisting
+                ? '<span class="on-list-badge">&#10003; On your list</span>'
+                : '<button class="btn-add-prominent" onclick="addFromFriendCard(\''+s.id+'\')" title="Add to my list">+ Add</button>');
               return '<div class="dnf-card" id="card-'+s.id+'"><div class="show-card-top">'+showTile(s)
                 +'<div class="show-info"><div class="show-title">'+s.title+'</div>'
                 +'<div style="margin-top:3px;"><span class="dnf-badge">Didn&#39;t Finish</span>'
                 +'<span style="font-size:11px;color:var(--muted);margin-left:6px;">'+s.platform+'</span>'
-                +'</div>'+(s.rating?'<div style="margin-top:5px;">'+remoteStatic(s.rating)+'</div>':'')
+                +'</div>'+dnfRatingRow
                 +(friendRatingsHTML(s.title,f.id,state.friends)?'<div style="margin-top:4px;">'+friendRatingsHTML(s.title,f.id,state.friends)+'</div>':'')
                 +'</div>'+(dnfActions?'<div class="show-actions">'+dnfActions+'</div>':'')+'</div>'
                 +'<div class="react-area">'+talkPreviewHTML(s.title,state.friends)+reactToggle+'</div>'
@@ -3668,13 +3701,33 @@ window.replyToShowTalkComment = function(idx, ci){
   inp.scrollIntoView({behavior:'smooth', block:'center'});
 };
 
+// Landing on a show that's tucked inside a collapsed streaming-service (or
+// Didn't Finish) group used to silently fail: the card is still in the DOM,
+// scrollIntoView/flash just ran on a display:none element with nothing
+// visible to show for it. Force-expand every collapsed ancestor first, and
+// persist that as an explicit un-collapse (data-ckey) so it doesn't spring
+// back shut on the next render.
 window.scrollToShowCard = function(showId){
   setTimeout(function(){
     var el = document.getElementById('card-'+showId);
     if (!el) return;
+    var ancestor = el.parentElement, reopened = false;
+    while (ancestor) {
+      if (ancestor.classList && ancestor.classList.contains('collapsed') && ancestor.hasAttribute('data-ckey')) {
+        ancestor.classList.remove('collapsed');
+        _collapsedSections[ancestor.getAttribute('data-ckey')] = false;
+        reopened = true;
+        var chevronEl = ancestor.querySelector('.service-divider-text, .dnf-header');
+        if (chevronEl && chevronEl.textContent.charAt(0) === '▶') {
+          chevronEl.textContent = '▼' + chevronEl.textContent.slice(1);
+        }
+      }
+      ancestor = ancestor.parentElement;
+    }
+    if (reopened) saveCollapsedSections();
     el.scrollIntoView({behavior:'smooth', block:'center'});
     el.classList.add('flash-highlight');
-    setTimeout(function(){ el.classList.remove('flash-highlight'); }, 1800);
+    setTimeout(function(){ el.classList.remove('flash-highlight'); }, 2400);
   }, 60);
 };
 
