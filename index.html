@@ -757,19 +757,19 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
           </div>
           <div class="tastemakers-banner-arrow">&#8250;</div>
         </div>
-        <div class="tastemakers-banner" onclick="openShowTalkHub()" style="margin-bottom:16px;background:linear-gradient(135deg,var(--fig),#8a4a6b);">
-          <div class="tastemakers-banner-icon">&#128483;&#65039;</div>
-          <div class="tastemakers-banner-text">
-            <div class="tastemakers-banner-title">Show Talk</div>
-            <div class="tastemakers-banner-sub">See what your crowd's saying, across every room</div>
-          </div>
-          <div class="tastemakers-banner-arrow">&#8250;</div>
-        </div>
         <div class="tastemakers-banner" onclick="openFullLineupView()" style="margin-bottom:16px;background:linear-gradient(135deg,#3b6e8f,#2c4f66);">
           <div class="tastemakers-banner-icon">&#128220;</div>
           <div class="tastemakers-banner-text">
             <div class="tastemakers-banner-title">The Full Lineup</div>
             <div class="tastemakers-banner-sub">Every show on ShowUp, and how it's rated</div>
+          </div>
+          <div class="tastemakers-banner-arrow">&#8250;</div>
+        </div>
+        <div class="tastemakers-banner" onclick="openShowTalkHub()" style="margin-bottom:16px;background:linear-gradient(135deg,var(--fig),#8a4a6b);">
+          <div class="tastemakers-banner-icon">&#128483;&#65039;</div>
+          <div class="tastemakers-banner-text">
+            <div class="tastemakers-banner-title">Show Talk</div>
+            <div class="tastemakers-banner-sub">See what your crowd is saying across each of your living rooms</div>
           </div>
           <div class="tastemakers-banner-arrow">&#8250;</div>
         </div>
@@ -1448,6 +1448,14 @@ function remoteStatic(rating) {
   var html='<div style="display:flex;gap:3px;">';
   for(var n=1;n<=5;n++){html+='<span style="opacity:'+(n<=rating?'1':'0.18')+';display:inline-block;">'+remoteIcon(13,n<=rating)+'</span>';}
   return html+'</div>';
+}
+
+// A single small lit remote, inline with a number -- the compact
+// "average rating" label used in list/summary rows (Rankings, Prime
+// Time, Full Lineup, search results, etc.) everywhere a plain star
+// character used to stand in for our own 1-5 rating system.
+function remoteAvgLabel(numText) {
+  return '<span style="display:inline-flex;align-items:center;gap:3px;vertical-align:middle;">'+remoteIcon(12,true)+numText+'</span>';
 }
 
 // Pools ratings for the same show title, excluding the person whose card is
@@ -2408,7 +2416,7 @@ function renderShowsByPlatform(q){
       : '<div style="width:100%;aspect-ratio:1;border-radius:8px;background:var(--olive);display:flex;align-items:center;justify-content:center;font-size:22px;">&#128252;</div>';
     var ratings=s.people.filter(function(p){return p.rating>0;});
     var avg=ratings.length ? (ratings.reduce(function(a,b){return a+b.rating;},0)/ratings.length) : null;
-    var ratingLine = avg ? ('&#9733;'+avg.toFixed(1)+' &middot; '+ratings.length+' rated') : 'Not yet rated';
+    var ratingLine = avg ? (remoteAvgLabel(avg.toFixed(1))+' &middot; '+ratings.length+' rated') : 'Not yet rated';
     var haveIt = s.people.some(function(p){return p.name==='You';});
     var addBtn = haveIt ? '' : '<button onclick="event.stopPropagation();handlePlatformShowAdd('+i+')" style="display:inline-flex;align-items:center;gap:4px;background:none;border:1px solid var(--terra);color:var(--terra);border-radius:8px;padding:2px 8px;font-family:var(--sans);font-size:11px;font-weight:700;cursor:pointer;margin-top:4px;">&#10133; Add</button>';
     return '<div class="friend-card">'+thumb
@@ -2489,7 +2497,7 @@ function renderCrewGroupedByPlatform(q){
     var shows = groups[plat].slice().sort(function(a,b){ return a.title.toLowerCase().localeCompare(b.title.toLowerCase()); });
     return '<div class="service-group"><div class="service-divider"><span class="service-divider-text">'+escAttr(plat)+'</span></div><div class="shows-grid">'
       + shows.map(function(s){
-          var ratingLine = s.rating ? ('&#9733;'+s.rating) : '';
+          var ratingLine = s.rating ? remoteAvgLabel(String(s.rating)) : '';
           return '<div class="show-card"><div class="show-card-top">'+showTile(s)+'<div class="show-info"><div class="show-title">'+escAttr(s.title)+'</div><div style="font-size:11px;color:var(--muted);margin-top:2px;">'+escAttr(s.ownerName)+(ratingLine?' &middot; '+ratingLine:'')+'</div></div></div></div>';
         }).join('')
       + '</div></div>';
@@ -2879,7 +2887,7 @@ function renderRoomPickerSearch() {
       : '<div' + clickAttr + ' style="width:100%;aspect-ratio:1;border-radius:8px;background:var(--olive);display:flex;align-items:center;justify-content:center;font-size:22px;">&#128252;</div>';
     var ratings = s.people.filter(function(p) { return p.rating > 0; });
     var avg = ratings.length ? (ratings.reduce(function(a, b) { return a + b.rating; }, 0) / ratings.length) : null;
-    var ratingLine = avg ? ('&#9733;' + avg.toFixed(1) + ' &middot; ' + ratings.length + ' rated') : 'Not yet rated';
+    var ratingLine = avg ? (remoteAvgLabel(avg.toFixed(1)) + ' &middot; ' + ratings.length + ' rated') : 'Not yet rated';
     var haveIt = (state.watching || []).concat(state.watchlist || [], state.watched || []).some(function(x) { return (x.title || '').toLowerCase().trim() === s.title.toLowerCase().trim(); });
     var addBtn = haveIt ? '' : '<button onclick="event.stopPropagation();handleAllRoomsSearchAdd(' + i + ')" style="display:inline-flex;align-items:center;gap:4px;background:none;border:1px solid var(--terra);color:var(--terra);border-radius:8px;padding:2px 8px;font-family:var(--sans);font-size:11px;font-weight:700;cursor:pointer;margin-top:4px;">&#10133; Add</button>';
     var roomTag = s.roomNames.length ? '<div style="font-size:11px;color:var(--muted);margin-top:2px;">Seen in: ' + s.roomNames.map(escAttr).join(', ') + '</div>' : '';
@@ -3164,7 +3172,7 @@ function renderFullLineup(){
       ? '<img src="'+TMDB_IMG+s.poster_path+'" style="width:46px;height:46px;border-radius:8px;object-fit:cover;flex-shrink:0;margin-right:12px;" />'
       : '<div style="width:46px;height:46px;border-radius:8px;background:var(--olive);flex-shrink:0;margin-right:12px;display:flex;align-items:center;justify-content:center;font-size:18px;">&#128252;</div>';
     var ratingHTML = s.avg_rating
-      ? '<span style="font-size:13px;color:var(--muted);flex-shrink:0;margin-left:10px;white-space:nowrap;">&#9733; '+Number(s.avg_rating).toFixed(1)+'</span>'
+      ? '<span style="font-size:13px;color:var(--muted);flex-shrink:0;margin-left:10px;white-space:nowrap;">'+remoteAvgLabel(Number(s.avg_rating).toFixed(1))+'</span>'
       : '<span style="font-size:11px;color:var(--muted);flex-shrink:0;margin-left:10px;white-space:nowrap;">Not yet rated</span>';
     var mine = findMyShowByTitle(s.title);
     var actionHTML = mine
@@ -3222,7 +3230,7 @@ function renderPrimeTimeList() {
       +'<div class="rank-title-text">'+escAttr(s.title)+'</div>'
       +'<div class="rank-meta-line">'
       +(s.platform?'<span class="rank-platform">'+escAttr(s.platform)+'</span>':'')
-      +'<span class="rank-avg-inline">&#9733;'+s.avg.toFixed(1)+'</span>'
+      +'<span class="rank-avg-inline">'+remoteAvgLabel(s.avg.toFixed(1))+'</span>'
       +'<span class="rank-count-inline">'+s.count+' rated</span>'
       +'</div></div>'
       +'</div>';
@@ -4196,7 +4204,7 @@ function renderRankings(){
       +'<div class="rank-title-text">'+(s.title||'')+'</div>'
       +'<div class="rank-meta-line">'
       +(s.platform?'<span class="rank-platform">'+s.platform+'</span>':'')
-      +'<span class="rank-avg-inline">&#9733;'+s.avg.toFixed(1)+'</span>'
+      +'<span class="rank-avg-inline">'+remoteAvgLabel(s.avg.toFixed(1))+'</span>'
       +'<span class="rank-count-inline">'+s.count+' rated</span>'
       +'</div></div>'
       +'<button onclick="event.stopPropagation();handleRankAdd('+i+')" style="display:inline-flex;align-items:center;gap:4px;background:none;border:1px solid var(--terra);color:var(--terra);border-radius:8px;padding:2px 8px;font-family:var(--sans);font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;flex-shrink:0;margin-left:10px;">&#10133; Add</button>'
@@ -6510,7 +6518,7 @@ window.openShowDetails = async function(tmdbId, friendRatings) {
         + '<div style="display:flex;flex-direction:column;gap:4px;margin-top:6px;">'
         + rated.map(function(p) {
             return '<div style="display:flex;justify-content:space-between;font-size:13px;color:var(--charcoal);">'
-              + '<span>' + escAttr(p.name || '') + '</span><span style="color:var(--terra);font-weight:700;">&#9733; ' + p.rating + '</span></div>';
+              + '<span>' + escAttr(p.name || '') + '</span><span style="color:var(--terra);font-weight:700;">' + remoteAvgLabel(String(p.rating)) + '</span></div>';
           }).join('')
         + '</div>'
       : '';
