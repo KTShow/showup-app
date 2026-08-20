@@ -3274,7 +3274,9 @@ function renderPrimeTimeList() {
       ? '<img src="'+TMDB_IMG+s.poster_path+'"'+thumbClick+'width:46px;height:46px;border-radius:8px;object-fit:cover;flex-shrink:0;margin-right:12px;" />'
       : '<div'+thumbClick+'width:46px;height:46px;border-radius:8px;background:var(--olive);flex-shrink:0;margin-right:12px;display:flex;align-items:center;justify-content:center;font-size:18px;">&#128252;</div>';
     var mine = findMyShowByTitle(s.title);
-    var mineBadge = mine ? '<span class="on-list-badge" style="margin-left:10px;">&#10003; '+(ADD_LIST_LABELS[mine.list]||'On your list')+'</span>' : '';
+    var mineBadge = mine
+      ? '<span class="on-list-badge" style="margin-left:10px;">&#10003; '+(ADD_LIST_LABELS[mine.list]||'On your list')+'</span>'
+      : '<button onclick="event.stopPropagation();handlePrimeTimeAdd('+i+')" style="display:inline-flex;align-items:center;gap:4px;background:none;border:1px solid var(--terra);color:var(--terra);border-radius:8px;padding:2px 8px;font-family:var(--sans);font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;flex-shrink:0;margin-left:10px;">&#10133; Add</button>';
     return '<div class="rank-card" onclick="showPrimeTimeDetail('+i+')">'
       +'<span class="rank-badge'+(isGold?' gold':'')+'">#'+rank+'</span>'
       +thumb
