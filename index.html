@@ -3623,9 +3623,21 @@ function buildShowTalk(){
     return f&&f.name ? f.name.split(' ').map(function(x){return x[0]||'';}).join('') : '?';
   }
   function addShow(s,owner){
-    if(!s||!s.title||!(s.reactions&&s.reactions.length))return;
+    if(!s||!s.title)return;
+    var hasReactions = !!(s.reactions && s.reactions.length);
     var key=s.title.toLowerCase().trim();
-    if(!shows[key])shows[key]={title:s.title,platform:s.platform,poster_path:s.poster_path,tmdb_id:s.tmdb_id,comments:[],ratings:[]};
+    // A title only ever ENTERS Show Talk because someone commented on some
+    // copy of it -- so a reaction-less copy can't create a new entry. But if
+    // the entry already exists (created by a friend's copy that does have
+    // comments), a reaction-less copy of your own still needs to update the
+    // target below -- otherwise a title you already own, but haven't
+    // commented on, incorrectly looks unowned (shows "+Add" instead of your
+    // list, and a new comment you post would attach to the friend's copy
+    // instead of yours).
+    if(!shows[key]){
+      if(!hasReactions) return;
+      shows[key]={title:s.title,platform:s.platform,poster_path:s.poster_path,tmdb_id:s.tmdb_id,comments:[],ratings:[]};
+    }
     if(!shows[key].poster_path&&s.poster_path)shows[key].poster_path=s.poster_path;
     if(!shows[key].tmdb_id&&s.tmdb_id)shows[key].tmdb_id=s.tmdb_id;
     if(s.rating) shows[key].ratings.push(s.rating);
@@ -3635,6 +3647,7 @@ function buildShowTalk(){
     if(owner&&(!shows[key].target||owner.type==='self')){
       shows[key].target = owner.type==='self' ? {mine:true,list:owner.list,id:s.id} : {mine:false,friendId:owner.friendId,list:owner.list,id:s.id};
     }
+    if(!hasReactions) return;
     (s.reactions||[]).forEach(function(r){
       if(!r.reactorId||!r.text)return;
       var isMe=r.reactorId===myId;
@@ -3720,9 +3733,9 @@ function renderShowTalk(){
       +'<span class="rank-count-inline">'+s.comments.length+' comment'+(s.comments.length===1?'':'s')+'</span>'
       +'</div></div>'
       +remotesHTML
-      +(s.target && s.target.mine
-        ? '<span class="on-list-badge" style="margin-left:10px;">&#10003; '+(ADD_LIST_LABELS[s.target.list]||'On your list')+'</span>'
-        : '<button onclick="event.stopPropagation();handleShowTalkAdd('+i+')" style="display:inline-flex;align-items:center;gap:4px;background:none;border:1px solid var(--terra);color:var(--terra);border-radius:8px;padding:2px 8px;font-family:var(--sans);font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;flex-shrink:0;margin-left:10px;">&#10133; Add</button>')
+      +(function(){ var mine=findMyShowByTitle(s.title); return mine
+        ? '<span class="on-list-badge" style="margin-left:10px;">&#10003; '+(ADD_LIST_LABELS[mine.list]||'On your list')+'</span>'
+        : '<button onclick="event.stopPropagation();handleShowTalkAdd('+i+')" style="display:inline-flex;align-items:center;gap:4px;background:none;border:1px solid var(--terra);color:var(--terra);border-radius:8px;padding:2px 8px;font-family:var(--sans);font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;flex-shrink:0;margin-left:10px;">&#10133; Add</button>'; })()
       +'</div>';
   }).join('');
 }
@@ -3856,8 +3869,9 @@ window.deleteShowTalkComment = async function(idx, ci){
 window.handleShowTalkAdd = function(idx){
   var s=_showTalkListCache[idx];
   if(!s)return;
-  if(s.target && s.target.mine){
-    showToast('Already on your list — '+(ADD_LIST_LABELS[s.target.list]||'My Lists')+'.');
+  var existing=findMyShowByTitle(s.title);
+  if(existing){
+    showToast('Already on your list — '+(ADD_LIST_LABELS[existing.list]||'My Lists')+'.');
     return;
   }
   _currentShowDetails = {
