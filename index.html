@@ -2252,15 +2252,20 @@ function renderNewThisWeekList(){
 window.rateNewThisWeek = async function(idx, n){
   var item = _newThisWeekCache[idx];
   if(!item || !item.mine) return;
-  item.rating = (item.rating===n) ? 0 : n;
-  renderNewThisWeekList();
+  var newRating = (item.rating===n) ? 0 : n;
+  // Update the real state (and re-render the owning tab) BEFORE rebuilding
+  // the New This Week cache -- buildNewThisWeekList() reads straight from
+  // state[list], so rebuilding first would bake in the pre-update rating
+  // and make the very next click compare against stale data (clicking the
+  // same remote twice re-applied the rating instead of toggling it off).
   var s = (state[item.list]||[]).find(function(x){ return x.id===item.showId; });
-  if(s) s.rating = item.rating;
+  if(s) s.rating = newRating;
   renderList(item.list);
-  showToast(item.rating > 0
-    ? 'Rated "'+item.title+'" '+item.rating+' remote'+(item.rating===1?'':'s')+'.'
+  renderNewThisWeekList();
+  showToast(newRating > 0
+    ? 'Rated "'+item.title+'" '+newRating+' remote'+(newRating===1?'':'s')+'.'
     : 'Rating removed for "'+item.title+'".');
-  try { await updateShowRating(item.showId, item.rating); } catch(e){ console.error('rateNewThisWeek error:', e); }
+  try { await updateShowRating(item.showId, newRating); } catch(e){ console.error('rateNewThisWeek error:', e); }
 };
 
 // Same landing/highlight treatment as everywhere else -- but this list
