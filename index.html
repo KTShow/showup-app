@@ -170,7 +170,11 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
 @keyframes flashPulse{0%,100%{box-shadow:0 0 0 5px var(--terra);background:#FBEAD3;}50%{box-shadow:0 0 0 0 var(--terra);background:var(--cream);}}
 .flash-pulse{animation:flashPulse 0.5s ease-in-out 5;}
 .show-card.flash-settled,.dnf-card.flash-settled{box-shadow:0 0 0 4px var(--terra);background:#FBEAD3;}
-.btn-recommend{background:var(--sand);border:none;cursor:pointer;padding:6px 9px;font-size:15px;color:var(--charcoal);border-radius:7px;line-height:1;transition:all 0.2s;}
+.btn-recommend{background:var(--sand);border:none;cursor:pointer;padding:6px 9px;font-size:15px;color:var(--charcoal);border-radius:7px;line-height:1;transition:all 0.2s;flex-shrink:0;}
+.fr-disclosure{flex-shrink:0;}
+.fr-toggle-btn{display:inline-flex;align-items:center;gap:6px;background:none;border:none;padding:0;cursor:pointer;font-family:var(--sans);}
+.fr-chevron{font-size:10px;color:var(--muted);display:inline-block;width:9px;}
+.show-secondary-row{display:flex;align-items:center;flex-wrap:wrap;gap:10px;margin-top:8px;}
 .btn-add-prominent{background:var(--terra);color:white;border:none;cursor:pointer;padding:7px 14px;font-size:13px;font-weight:700;border-radius:7px;line-height:1;white-space:nowrap;box-shadow:0 2px 6px rgba(196,98,45,0.35);transition:all 0.2s;}
 .btn-add-prominent:hover{transform:translateY(-1px);box-shadow:0 3px 9px rgba(196,98,45,0.45);}
 .on-list-badge{font-size:11px;font-weight:700;color:var(--fig);white-space:nowrap;}
@@ -315,7 +319,7 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
 .btn-platform-edit:hover{background:var(--fig);color:white;}
 .btn-waiting{background:var(--sand);border:none;cursor:pointer;padding:6px 9px;font-size:15px;color:var(--fig);border-radius:7px;line-height:1;transition:all 0.2s;}
 .btn-waiting:hover{background:var(--fig);color:white;}
-.card-menu-wrap{position:relative;display:inline-flex;}
+.card-menu-wrap{position:relative;display:inline-flex;flex-shrink:0;}
 .btn-more{background:var(--sand);border:none;cursor:pointer;padding:6px 10px;font-size:16px;color:var(--charcoal);border-radius:7px;line-height:1;transition:all 0.2s;}
 .btn-more:hover{background:var(--fig);color:white;}
 .card-menu{position:absolute;top:100%;right:0;background:white;border:1px solid var(--border);border-radius:10px;box-shadow:0 6px 24px rgba(0,0,0,0.12);z-index:300;display:none;margin-top:4px;min-width:190px;overflow:hidden;}
@@ -1485,19 +1489,36 @@ function friendRatingsFor(title, excludeId, pool) {
 
 // Compact average by default (tap to expand into each person's individual
 // rating) so cards with several raters don't grow tall.
+// Custom expand/collapse instead of a native <details>/<summary> -- the
+// browser's own disclosure marker has no layout guarantees and can end up
+// stacked above the content instead of beside it once the row gets tight
+// (exactly what was happening on narrow cards). Plain DOM toggle, no
+// re-render needed, same pattern as toggleCardMenu.
 function friendRatingsHTML(title, excludeId, pool) {
   var raters=friendRatingsFor(title,excludeId,pool);
   if(!raters.length) return '';
   var avg=Math.round((raters.reduce(function(a,r){return a+r.rating;},0)/raters.length)*10)/10;
-  var summary='<span style="display:inline-flex;align-items:center;gap:6px;">'+remoteStatic(Math.round(avg))
-    + '<span style="font-size:12px;color:var(--muted);">'+avg.toFixed(1)+' ('+raters.length+' friend'+(raters.length===1?'':'s')+')</span></span>';
-  var individual='<div style="display:flex;flex-direction:column;gap:3px;margin:6px 0 0 2px;">'
+  var summaryBtn='<button type="button" onclick="toggleFriendRatingsDisclosure(this)" class="fr-toggle-btn">'
+    + '<span class="fr-chevron">&#9656;</span>'
+    + remoteStatic(Math.round(avg))
+    + '<span style="font-size:12px;color:var(--muted);">'+avg.toFixed(1)+' ('+raters.length+' friend'+(raters.length===1?'':'s')+')</span>'
+    + '</button>';
+  var individual='<div class="fr-individual" style="display:none;flex-direction:column;gap:3px;margin:6px 0 0 2px;">'
     + raters.map(function(r){
         return '<div style="display:flex;align-items:center;gap:6px;"><span style="font-size:11px;font-weight:600;color:var(--charcoal);">'+escAttr(r.name)+'</span>'+remoteStatic(r.rating)+'</div>';
       }).join('')
     + '</div>';
-  return '<details style="margin:4px 0;"><summary style="cursor:pointer;">'+summary+'</summary>'+individual+'</details>';
+  return '<div class="fr-disclosure">'+summaryBtn+individual+'</div>';
 }
+window.toggleFriendRatingsDisclosure = function(btn){
+  var wrap = btn.closest('.fr-disclosure');
+  if(!wrap) return;
+  var indiv = wrap.querySelector('.fr-individual');
+  var chevron = wrap.querySelector('.fr-chevron');
+  var isOpen = indiv.style.display !== 'none';
+  indiv.style.display = isOpen ? 'none' : 'flex';
+  chevron.innerHTML = isOpen ? '&#9656;' : '&#9662;';
+};
 
 // Pools comments for the same show title. `pool` picks the scope, same as
 // friendRatingsFor -- pass state.friends for room-bounded (Living Room),
@@ -1896,7 +1917,9 @@ function buildWatchingCard(s) {
   var platformRow=s.editingPlatform?platformSelect('watching',sid,s.platform):'';
   var otherRatingsW=friendRatingsHTML(s.title);
 
-  return '<div class="show-card'+(s.hidden?' is-hidden':'')+'" id="card-'+sid+'"><div class="show-card-top">'+showTile(s)+'<div class="show-info"><div class="show-title">'+s.title+(s.hidden?'<span class="hidden-badge">Hidden from friends</span>':'')+'</div>'+platformRow+(otherRatingsW?'<div style="margin-top:4px;">'+otherRatingsW+'</div>':'')+'</div><div class="show-actions">'+remoteRating('watching',sid,s.rating)+'</div>'+recommendBtn(sid)+menuHTML+'</div>'
+  return '<div class="show-card'+(s.hidden?' is-hidden':'')+'" id="card-'+sid+'">'
+    + '<div class="show-card-top">'+showTile(s)+'<div class="show-info"><div class="show-title">'+s.title+(s.hidden?'<span class="hidden-badge">Hidden from friends</span>':'')+'</div>'+platformRow+'</div>'+menuHTML+'</div>'
+    + '<div class="show-secondary-row"><div class="show-actions">'+remoteRating('watching',sid,s.rating)+'</div>'+otherRatingsW+recommendBtn(sid)+'</div>'
     + '<div class="show-move">'+primaryHTML+dnfHTML+'</div>'
     + '<div class="react-area">'+talkPreviewHTML(s.title)+reactToggle+'</div>'
     + '</div>';
