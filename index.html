@@ -975,6 +975,15 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
       <div class="room-grid" id="room-grid"></div>
     </div>
 
+    <div class="settings-section" id="settings-admin-section" style="display:none;">
+      <div class="settings-section-label">Admin</div>
+      <div class="settings-card">
+        <button class="settings-row" onclick="openEditAnnouncementModal()">
+          <span class="settings-row-icon">&#128226;</span><span class="settings-row-label">Edit Announcement Banner</span><span class="settings-row-arrow">&#8250;</span>
+        </button>
+      </div>
+    </div>
+
     <div class="settings-section">
       <div class="settings-section-label">Coming Soon</div>
       <div class="settings-card">
@@ -2856,6 +2865,57 @@ window.dismissAnnouncement = function(){
   }
   var el = document.getElementById('announcement-banner');
   if (el) el.style.display = 'none';
+};
+
+// Admin-only editor (Settings > Admin > Edit Announcement Banner) -- no
+// SQL required day-to-day; RLS restricts the actual update to admins
+// (see add_app_announcement.sql), this is just the UI for it.
+window.openEditAnnouncementModal = function(){
+  if (!state.user || !state.user.isAdmin) return;
+  document.getElementById('announcement-edit-emoji').value = (_announcementData && _announcementData.emoji) || '';
+  document.getElementById('announcement-edit-message').value = (_announcementData && _announcementData.message) || '';
+  document.getElementById('edit-announcement-modal').classList.add('active');
+};
+window.closeEditAnnouncementModal = function(){
+  document.getElementById('edit-announcement-modal').classList.remove('active');
+};
+window.saveAnnouncementEdit = async function(){
+  var msg = document.getElementById('announcement-edit-message').value.trim();
+  var emoji = document.getElementById('announcement-edit-emoji').value.trim();
+  if (!msg) { alert('Please enter a message.'); return; }
+  try {
+    const { data, error } = await sb.from('app_announcements')
+      .update({ message: msg, emoji: emoji || null, updated_at: new Date().toISOString() })
+      .eq('id', 1)
+      .select()
+      .single();
+    if (error) throw error;
+    _announcementData = data;
+    renderAnnouncementBanner();
+    closeEditAnnouncementModal();
+    showToast('Announcement updated for everyone.');
+  } catch(e) {
+    console.error('saveAnnouncementEdit error:', e);
+    alert('Could not save the announcement. Please try again.');
+  }
+};
+window.clearAnnouncementBanner = async function(){
+  if (!confirm('Hide the announcement banner for everyone?')) return;
+  try {
+    const { data, error } = await sb.from('app_announcements')
+      .update({ message: '', updated_at: new Date().toISOString() })
+      .eq('id', 1)
+      .select()
+      .single();
+    if (error) throw error;
+    _announcementData = data;
+    renderAnnouncementBanner();
+    closeEditAnnouncementModal();
+    showToast('Announcement cleared.');
+  } catch(e) {
+    console.error('clearAnnouncementBanner error:', e);
+    alert('Could not clear the announcement. Please try again.');
+  }
 };
 
 // ============================================================
@@ -5350,7 +5410,12 @@ window.backFromProfile = function() {
   showScreen(from);
   if (from === 'settings') renderRoomGrid();
 };
-window.goToSettings = function() { showScreen('settings'); renderRoomGrid(); };
+window.goToSettings = function() {
+  showScreen('settings');
+  renderRoomGrid();
+  var adminSection = document.getElementById('settings-admin-section');
+  if (adminSection) adminSection.style.display = (state.user && state.user.isAdmin) ? 'block' : 'none';
+};
 window.backFromSettings = function() { showScreen('app'); };
 
 // ============================================================
@@ -6944,6 +7009,21 @@ bootstrap();
 
 <!-- TOAST -->
 <div class="toast" id="toast"></div>
+
+<!-- EDIT ANNOUNCEMENT (admin only) -->
+<div class="invite-modal-overlay" id="edit-announcement-modal">
+  <div class="invite-modal">
+    <div class="invite-modal-title">Edit Announcement Banner</div>
+    <div class="invite-modal-sub">Shown to everyone at the top of Living Room.</div>
+    <input type="text" id="announcement-edit-emoji" placeholder="Emoji (optional)" maxlength="4" style="width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:8px;font-family:var(--sans);font-size:14px;margin-bottom:10px;box-sizing:border-box;" />
+    <input type="text" id="announcement-edit-message" placeholder="e.g. Rate 3 shows this week" maxlength="120" style="width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:8px;font-family:var(--sans);font-size:14px;margin-bottom:14px;box-sizing:border-box;" />
+    <div style="display:flex;gap:10px;">
+      <button class="btn-invite-copy" onclick="saveAnnouncementEdit()" style="flex:1;">Save &amp; Notify Everyone</button>
+      <button class="btn-invite-close" onclick="closeEditAnnouncementModal()" style="flex:1;">Cancel</button>
+    </div>
+    <button class="settings-row" onclick="clearAnnouncementBanner()" style="margin-top:14px;color:#c0392b;justify-content:center;">Clear banner (hide for everyone)</button>
+  </div>
+</div>
 
 <!-- ADD-SHOW CONFIRM MODAL -->
 <div class="invite-modal-overlay" id="add-confirm-modal">
