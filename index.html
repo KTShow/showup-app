@@ -291,6 +291,11 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
 .tastemakers-banner-text{flex:1;min-width:0;}
 .tastemakers-banner-title{font-size:14px;font-weight:700;color:white;margin-bottom:3px;}
 .tastemakers-banner-sub{font-size:12px;color:rgba(255,255,255,0.85);line-height:1.4;}
+.announcement-banner{background:var(--fig);border-radius:10px;padding:10px 14px;margin-bottom:16px;display:flex;align-items:center;gap:10px;box-shadow:var(--shadow);}
+.announcement-icon{font-size:16px;flex-shrink:0;}
+.announcement-text{flex:1;min-width:0;color:white;font-size:13px;font-weight:600;line-height:1.4;}
+.announcement-dismiss{background:none;border:none;color:rgba(255,255,255,0.75);cursor:pointer;font-size:13px;padding:2px 4px;flex-shrink:0;line-height:1;}
+.announcement-dismiss:hover{color:white;}
 .tastemakers-banner-arrow{font-size:20px;color:rgba(255,255,255,0.7);flex-shrink:0;}
 .tastemakers-row{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border);}
 .tastemakers-row:last-child{border-bottom:none;}
@@ -751,6 +756,11 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
     </div>
     <div id="tab-living-room" class="tab-pane" style="display:none">
       <div id="room-picker-view">
+        <div class="announcement-banner" id="announcement-banner" style="display:none;">
+          <span class="announcement-icon" id="announcement-icon">&#128226;</span>
+          <span class="announcement-text" id="announcement-text"></span>
+          <button class="announcement-dismiss" onclick="dismissAnnouncement()" title="Dismiss" aria-label="Dismiss">&#10005;</button>
+        </div>
         <div class="page-title">&#127968;&nbsp; Your Living Rooms</div>
         <div class="page-sub">Pick a room to enter, or start a new one.</div>
         <div class="tastemakers-banner" onclick="openPrimeTimeView()" style="margin-bottom:16px;">
@@ -2809,6 +2819,46 @@ function switchLRView(view){
 }
 
 // ============================================================
+// ANNOUNCEMENT BANNER — a single founder-editable message at the top of
+// the room picker (e.g. "Rate 3 shows this week"). Backed by a one-row
+// table (app_announcements) that founders update directly via the
+// Supabase SQL editor -- no admin UI. Dismissed per-device via
+// localStorage, keyed to the message's updated_at, so a new message
+// reappears for everyone but a dismissed one doesn't nag again.
+// ============================================================
+
+var _announcementData = null;
+async function loadAndRenderAnnouncement(){
+  try {
+    const { data, error } = await sb.from('app_announcements').select('*').eq('id', 1).maybeSingle();
+    if (error) throw error;
+    _announcementData = data;
+  } catch(e) {
+    console.error('loadAndRenderAnnouncement error:', e);
+    _announcementData = null;
+  }
+  renderAnnouncementBanner();
+}
+function renderAnnouncementBanner(){
+  var el = document.getElementById('announcement-banner');
+  if (!el) return;
+  if (!_announcementData || !_announcementData.message) { el.style.display = 'none'; return; }
+  var seenAt = null;
+  try { seenAt = localStorage.getItem('showup_announcement_seen'); } catch(e) {}
+  if (seenAt && seenAt === _announcementData.updated_at) { el.style.display = 'none'; return; }
+  document.getElementById('announcement-text').textContent = _announcementData.message;
+  document.getElementById('announcement-icon').textContent = _announcementData.emoji || '📢';
+  el.style.display = 'flex';
+}
+window.dismissAnnouncement = function(){
+  if (_announcementData) {
+    try { localStorage.setItem('showup_announcement_seen', _announcementData.updated_at); } catch(e) {}
+  }
+  var el = document.getElementById('announcement-banner');
+  if (el) el.style.display = 'none';
+};
+
+// ============================================================
 // ROOM PICKER — entry point for the Living Room tab. Users can own/belong
 // to any number of rooms; this lists them and lets you enter one or create
 // a new one, before the existing Your Crowd/Favorites/Show Talk/Conversations
@@ -2826,6 +2876,7 @@ async function showRoomPicker() {
   state.friendsLoaded = false;
   var adminBanner = document.getElementById('admin-browse-banner');
   if (adminBanner) adminBanner.style.display = (state.user && state.user.isAdmin) ? 'flex' : 'none';
+  loadAndRenderAnnouncement();
   await loadAndRenderRoomPicker();
 }
 
