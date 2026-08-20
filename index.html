@@ -1881,12 +1881,11 @@ function buildDNFCard(s) {
     + '<div class="show-info"><div class="show-title">' + s.title + (s.hidden?'<span class="hidden-badge">Hidden from friends</span>':'') + '</div>'
     + '<div style="margin-top:3px;font-size:11px;color:var(--muted);">' + s.platform + '</div>'
     + platformRow
-    + (otherRatingsDNF?'<div style="margin-top:4px;">'+otherRatingsDNF+'</div>':'')
     + '</div>'
-    + '<div class="show-actions">' + remoteRating('watched', s.id, s.rating) + '</div>'
-    + recommendBtn(sid)
     + menuHTML
     + '</div>'
+    + '<div class="show-secondary-row"><div class="show-actions">' + remoteRating('watched', s.id, s.rating) + '</div>' + recommendBtn(sid) + '</div>'
+    + otherRatingsDNF
     + '<div class="show-move"><button class="btn-start" onclick="startWatchingFromDNF(\''+sid+'\')">Start Watching</button></div>'
     + '<div class="react-area">' + talkPreviewHTML(s.title) + reactToggle + '</div>'
     + '</div>';
@@ -1944,7 +1943,9 @@ function buildWaitingCard(s) {
   var otherRatingsWait=friendRatingsHTML(s.title);
 
   var newSeasonBadge = s.newSeasonAvailable ? '<span class="new-season-badge" onclick="tapNewSeasonBadge(\''+sid+'\')">&#127881; New season!</span>' : '';
-  return '<div class="show-card'+(s.hidden?' is-hidden':'')+'" id="card-'+sid+'"><div class="show-card-top">'+showTile(s)+'<div class="show-info"><div class="show-title">'+s.title+(s.hidden?'<span class="hidden-badge">Hidden from friends</span>':'')+newSeasonBadge+'</div>'+platformRow+(otherRatingsWait?'<div style="margin-top:4px;">'+otherRatingsWait+'</div>':'')+'</div><div class="show-actions">'+remoteRating('watchlist',sid,s.rating)+'</div>'+recommendBtn(sid)+menuHTML+'</div>'
+  return '<div class="show-card'+(s.hidden?' is-hidden':'')+'" id="card-'+sid+'"><div class="show-card-top">'+showTile(s)+'<div class="show-info"><div class="show-title">'+s.title+(s.hidden?'<span class="hidden-badge">Hidden from friends</span>':'')+newSeasonBadge+'</div>'+platformRow+'</div>'+menuHTML+'</div>'
+    + '<div class="show-secondary-row"><div class="show-actions">'+remoteRating('watchlist',sid,s.rating)+'</div>'+recommendBtn(sid)+'</div>'
+    + otherRatingsWait
     + '<div class="show-move"><button class="resume-watching-btn" onclick="resumeWatching(\''+sid+'\')">Resume Watching &#9654;</button><button class="didnt-finish-btn" onclick="markDNFFromWaiting(\''+sid+'\')">Didn&#39;t Finish</button></div>'
     + '<div class="react-area">'+talkPreviewHTML(s.title)+reactToggle+'</div>'
     + '</div>';
@@ -1979,7 +1980,9 @@ function buildWatchlistCard(s) {
   }
   var otherRatingsList=friendRatingsHTML(s.title);
 
-  return '<div class="show-card'+(s.hidden?' is-hidden':'')+'" id="card-'+sid+'"><div class="show-card-top">'+showTile(s)+'<div class="show-info"><div class="show-title">'+s.title+(s.hidden?'<span class="hidden-badge">Hidden from friends</span>':'')+'</div>'+platformRow+recommendedBadge+watchedByBadge+(otherRatingsList?'<div style="margin-top:4px;">'+otherRatingsList+'</div>':'')+'</div><div class="show-actions">'+remoteRating('watchlist',sid,s.rating)+'</div>'+recommendBtn(sid)+menuHTML+'</div>'
+  return '<div class="show-card'+(s.hidden?' is-hidden':'')+'" id="card-'+sid+'"><div class="show-card-top">'+showTile(s)+'<div class="show-info"><div class="show-title">'+s.title+(s.hidden?'<span class="hidden-badge">Hidden from friends</span>':'')+'</div>'+platformRow+recommendedBadge+watchedByBadge+'</div>'+menuHTML+'</div>'
+    + '<div class="show-secondary-row"><div class="show-actions">'+remoteRating('watchlist',sid,s.rating)+'</div>'+recommendBtn(sid)+'</div>'
+    + otherRatingsList
     + '<div class="show-move"><button class="btn-start" onclick="moveToWatching(\''+sid+'\')">Watch Now</button><button class="waiting-season-btn" onclick="markWaitingFromList(\''+sid+'\')">Waiting for New Season &#8987;</button></div>'
     + '<div class="react-area">'+talkPreviewHTML(s.title)+reactToggle+'</div>'
     + '</div>';
@@ -2025,7 +2028,9 @@ function buildBingedCard(s) {
   var platformRow=s.editingPlatform?platformSelect('watched',sid,s.platform):'';
   var otherRatingsB=friendRatingsHTML(s.title);
 
-  return '<div class="show-card'+(s.hidden?' is-hidden':'')+'" id="card-'+sid+'"><div class="show-card-top">'+showTile(s)+'<div class="show-info"><div class="show-title">'+s.title+(s.hidden?'<span class="hidden-badge">Hidden from friends</span>':'')+'</div>'+platformRow+(otherRatingsB?'<div style="margin-top:4px;">'+otherRatingsB+'</div>':'')+'</div><div class="show-actions">'+remoteRating('watched',sid,s.rating)+'</div>'+recommendBtn(sid)+menuHTML+'</div>'
+  return '<div class="show-card'+(s.hidden?' is-hidden':'')+'" id="card-'+sid+'"><div class="show-card-top">'+showTile(s)+'<div class="show-info"><div class="show-title">'+s.title+(s.hidden?'<span class="hidden-badge">Hidden from friends</span>':'')+'</div>'+platformRow+'</div>'+menuHTML+'</div>'
+    + '<div class="show-secondary-row"><div class="show-actions">'+remoteRating('watched',sid,s.rating)+'</div>'+recommendBtn(sid)+'</div>'
+    + otherRatingsB
     + '<div class="react-area">'+talkPreviewHTML(s.title)+reactToggle+'</div>'
     + '</div>';
 }
