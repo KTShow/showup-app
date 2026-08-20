@@ -2192,7 +2192,7 @@ function buildNewThisWeekList(){
         var key = s.title.toLowerCase().trim();
         var t = new Date(s.added_at).getTime();
         if(t <= cutoff || earliestByTitle[key] !== t) return;
-        items.push({mine:false, friendId:f.id, friendName:f.name, list:lk, showId:s.id, title:s.title, platform:s.platform, poster_path:s.poster_path, tmdb_id:s.tmdb_id, rating:s.rating||0, addedAt:s.added_at});
+        items.push({mine:false, friendId:f.id, friendName:f.name, list:lk, dnf:!!s.dnf, waitingForSeason:!!s.waitingForSeason, showId:s.id, title:s.title, platform:s.platform, poster_path:s.poster_path, tmdb_id:s.tmdb_id, rating:s.rating||0, addedAt:s.added_at});
       });
     });
   });
@@ -2202,7 +2202,7 @@ function buildNewThisWeekList(){
       var key = s.title.toLowerCase().trim();
       var t = new Date(s.addedAt).getTime();
       if(t <= cutoff || earliestByTitle[key] !== t) return;
-      items.push({mine:true, list:lk, showId:s.id, title:s.title, platform:s.platform, poster_path:s.poster_path, tmdb_id:s.tmdb_id, rating:s.rating||0, addedAt:s.addedAt});
+      items.push({mine:true, list:lk, dnf:!!s.dnf, waitingForSeason:!!s.waitingForSeason, showId:s.id, title:s.title, platform:s.platform, poster_path:s.poster_path, tmdb_id:s.tmdb_id, rating:s.rating||0, addedAt:s.addedAt});
     });
   });
   items.sort(function(a,b){ return new Date(b.addedAt) - new Date(a.addedAt); });
@@ -2228,10 +2228,13 @@ function renderNewThisWeekList(){
     return;
   }
   el.innerHTML = items.map(function(item, i){
+    var thumbClick = item.tmdb_id ? ' onclick="openShowDetails('+item.tmdb_id+')" title="Show details" style="cursor:pointer;' : ' style="';
     var thumb = item.poster_path
-      ? '<img src="'+TMDB_IMG+item.poster_path+'" onclick="jumpToNewThisWeekThumb('+i+')" title="Go to this show" style="width:46px;height:46px;border-radius:8px;object-fit:cover;flex-shrink:0;margin-right:12px;cursor:pointer;" />'
-      : '<div onclick="jumpToNewThisWeekThumb('+i+')" title="Go to this show" style="width:46px;height:46px;border-radius:8px;background:var(--olive);flex-shrink:0;margin-right:12px;display:flex;align-items:center;justify-content:center;font-size:18px;cursor:pointer;">&#128252;</div>';
-    var subLine = item.mine ? 'You added this' : (escAttr(item.friendName)+' added this');
+      ? '<img src="'+TMDB_IMG+item.poster_path+'"'+thumbClick+'width:46px;height:46px;border-radius:8px;object-fit:cover;flex-shrink:0;margin-right:12px;" />'
+      : '<div'+thumbClick+'width:46px;height:46px;border-radius:8px;background:var(--olive);flex-shrink:0;margin-right:12px;display:flex;align-items:center;justify-content:center;font-size:18px;">&#128252;</div>';
+    var destKey = item.list==='watched' ? (item.dnf?'dnf':'watched') : item.list==='watchlist' ? (item.waitingForSeason?'waiting':'watchlist') : 'watching';
+    var statusLabel = ADD_DEST_DISPLAY_LABELS[destKey] || '';
+    var subLine = (item.mine ? 'You added this' : (escAttr(item.friendName)+' added this')) + (statusLabel ? ' &middot; '+statusLabel : '');
     var ratingHTML;
     if (item.mine) {
       var stars=''; for(var n=1;n<=5;n++){var lit=n<=item.rating;stars+='<button class="remote-btn" style="opacity:'+(lit?'1':'0.22')+'" onclick="rateNewThisWeek('+i+','+n+')">'+remoteIcon(15,lit)+'</button>';}
@@ -2239,7 +2242,10 @@ function renderNewThisWeekList(){
     } else {
       ratingHTML = item.rating ? remoteStatic(item.rating) : '<span style="font-size:11px;color:var(--muted);">Not yet rated</span>';
     }
-    var addBtn = item.mine ? '' : '<button onclick="handleNewThisWeekAdd('+i+')" style="display:inline-flex;align-items:center;gap:4px;background:none;border:1px solid var(--terra);color:var(--terra);border-radius:8px;padding:2px 8px;font-family:var(--sans);font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;margin-left:8px;">&#10133; Add</button>';
+    var myOwnCopy = item.mine ? null : findMyShowByTitle(item.title);
+    var addBtn = item.mine ? '' : (myOwnCopy
+      ? '<span class="on-list-badge" style="margin-left:8px;">&#10003; '+(ADD_LIST_LABELS[myOwnCopy.list]||'On your list')+'</span>'
+      : '<button onclick="handleNewThisWeekAdd('+i+')" style="display:inline-flex;align-items:center;gap:4px;background:none;border:1px solid var(--terra);color:var(--terra);border-radius:8px;padding:2px 8px;font-family:var(--sans);font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;margin-left:8px;">&#10133; Add</button>');
     return '<div class="show-card"><div class="show-card-top">'+thumb
       +'<div class="show-info"><div class="show-title">'+escAttr(item.title)+'</div>'
       +(item.platform?'<span class="rank-platform">'+escAttr(item.platform)+'</span>':'')
@@ -2266,24 +2272,6 @@ window.rateNewThisWeek = async function(idx, n){
     ? 'Rated "'+item.title+'" '+newRating+' remote'+(newRating===1?'':'s')+'.'
     : 'Rating removed for "'+item.title+'".');
   try { await updateShowRating(item.showId, newRating); } catch(e){ console.error('rateNewThisWeek error:', e); }
-};
-
-// Same landing/highlight treatment as everywhere else -- but this list
-// lives inside a modal, so the modal has to close first or you'd land on
-// the right card with the modal still sitting on top of it.
-window.jumpToNewThisWeekThumb = async function(idx){
-  var item = _newThisWeekCache[idx];
-  if(!item) return;
-  closeNewThisWeekModal();
-  if (item.mine) {
-    showTab(item.list, document.getElementById(TAB_BTN_ID[item.list]));
-    scrollToShowCard(item.showId);
-  } else {
-    var lrBtn=document.getElementById('btab-living-room');
-    if(lrBtn) showTab('living-room', lrBtn);
-    await showFriend(item.friendId);
-    scrollToShowCard(item.showId);
-  }
 };
 
 window.handleNewThisWeekAdd = function(idx){
@@ -2437,9 +2425,10 @@ function renderShowsByPlatform(q){
     return;
   }
   el.innerHTML=matchLabel+list.map(function(s,i){
+    var thumbClick = s.tmdb_id ? ' onclick="openShowDetails('+s.tmdb_id+')" title="Show details" style="cursor:pointer;' : ' style="';
     var thumb=s.poster_path
-      ? '<img src="'+TMDB_IMG+s.poster_path+'" style="width:100%;aspect-ratio:1;border-radius:8px;object-fit:cover;" />'
-      : '<div style="width:100%;aspect-ratio:1;border-radius:8px;background:var(--olive);display:flex;align-items:center;justify-content:center;font-size:22px;">&#128252;</div>';
+      ? '<img src="'+TMDB_IMG+s.poster_path+'"'+thumbClick+'width:100%;aspect-ratio:1;border-radius:8px;object-fit:cover;" />'
+      : '<div'+thumbClick+'width:100%;aspect-ratio:1;border-radius:8px;background:var(--olive);display:flex;align-items:center;justify-content:center;font-size:22px;">&#128252;</div>';
     var ratings=s.people.filter(function(p){return p.rating>0;});
     var avg=ratings.length ? (ratings.reduce(function(a,b){return a+b.rating;},0)/ratings.length) : null;
     var ratingLine = avg ? (remoteAvgLabel(avg.toFixed(1))+' &middot; '+ratings.length+' rated') : 'Not yet rated';
@@ -3282,9 +3271,10 @@ window.showPrimeTimeDetail = function(idx){
     var rR=''; for(var n=1;n<=5;n++){rR+='<span style="opacity:'+(n<=r.rating?'1':'0.18')+';display:inline-block;">'+remoteIcon(13,n<=r.rating)+'</span>';}
     return '<div class="rank-detail-row"><div class="rank-detail-av" style="background:#888">'+escAttr(r.initials||'?')+'</div><div class="rank-detail-name">'+escAttr(r.name)+'</div><div style="display:flex;gap:2px;">'+rR+'</div></div>';
   }).join('');
+  var clickAttr=s.tmdb_id?' class="poster-clickable" onclick="openShowDetails('+s.tmdb_id+')"':'';
   var thumb=s.poster_path
-    ? '<img src="'+TMDB_IMG+s.poster_path+'" style="width:84px;height:84px;border-radius:10px;object-fit:cover;flex-shrink:0;" />'
-    : '<div style="width:84px;height:84px;border-radius:10px;background:var(--olive);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:30px;">&#128252;</div>';
+    ? '<img src="'+TMDB_IMG+s.poster_path+'"'+clickAttr+' style="width:84px;height:84px;border-radius:10px;object-fit:cover;flex-shrink:0;" />'
+    : '<div'+clickAttr+' style="width:84px;height:84px;border-radius:10px;background:var(--olive);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:30px;">&#128252;</div>';
   panel.innerHTML='<button class="rank-close" onclick="backToPrimeTimeList()">← Back to Prime Time</button>'
     +'<div class="rank-detail">'
     +'<div style="display:flex;gap:12px;align-items:flex-start;margin-bottom:4px;">'
@@ -3710,9 +3700,10 @@ function renderShowTalk(){
     return;
   }
   el.innerHTML=list.map(function(s,i){
+    var thumbClick = s.tmdb_id ? ' onclick="event.stopPropagation();openShowDetails('+s.tmdb_id+')" title="Show details" style="cursor:pointer;' : ' style="';
     var thumb=s.poster_path
-      ? '<img src="'+TMDB_IMG+s.poster_path+'" onclick="event.stopPropagation();jumpToShowTalkThumb('+i+')" title="Go to this show" style="width:46px;height:46px;border-radius:8px;object-fit:cover;flex-shrink:0;margin-right:12px;cursor:pointer;" />'
-      : '<div onclick="event.stopPropagation();jumpToShowTalkThumb('+i+')" title="Go to this show" style="width:46px;height:46px;border-radius:8px;background:var(--olive);flex-shrink:0;margin-right:12px;display:flex;align-items:center;justify-content:center;font-size:18px;cursor:pointer;">&#128252;</div>';
+      ? '<img src="'+TMDB_IMG+s.poster_path+'"'+thumbClick+'width:46px;height:46px;border-radius:8px;object-fit:cover;flex-shrink:0;margin-right:12px;" />'
+      : '<div'+thumbClick+'width:46px;height:46px;border-radius:8px;background:var(--olive);flex-shrink:0;margin-right:12px;display:flex;align-items:center;justify-content:center;font-size:18px;">&#128252;</div>';
     var remotesHTML='';
     if(s.avgRating){
       var lit=Math.floor(s.avgRating);
@@ -3857,29 +3848,6 @@ window.deleteShowTalkComment = async function(idx, ci){
   if (s.comments.length) { showShowTalkDetail(idx); }
   else { backToShowTalk(); renderShowTalk(); }
   try { await dbDeleteReaction(c.id); } catch(e) { console.error('deleteShowTalkComment error:', e); }
-};
-
-// Small list-row thumbnail is its own click target (event.stopPropagation
-// in the row markup) -- jumps straight to wherever this show actually
-// lives (your own tab, or a friend's Living Room card), same landing/
-// highlight treatment as everywhere else, instead of opening the Show
-// Talk comment thread like the rest of the row does.
-window.jumpToShowTalkThumb = async function(idx){
-  var s=_showTalkListCache[idx];
-  if(!s||!s.target)return;
-  var t=s.target;
-  if(t.mine){
-    showTab(t.list, document.getElementById(TAB_BTN_ID[t.list]));
-    scrollToShowCard(t.id);
-  } else {
-    var lrBtn=document.getElementById('btab-living-room');
-    if(lrBtn) showTab('living-room', lrBtn);
-    // The hub pools friends from every room, unlike same-room jumps
-    // elsewhere -- showFriend() may need to await a cross-room entry
-    // first, so this has to wait for it too or the card won't exist yet.
-    await showFriend(t.friendId);
-    scrollToShowCard(t.id);
-  }
 };
 
 // Lightweight add straight from Show Talk — skips the TMDB detail fetch
@@ -4111,9 +4079,10 @@ function renderRecommendationBanners(){
   if(!pending.length){ el.innerHTML=''; return; }
   el.innerHTML = pending.map(function(r){
     var senderName = r.fromName || 'Someone';
+    var posterClick = r.tmdb_id ? ' onclick="openShowDetails('+r.tmdb_id+')" title="Show details" style="cursor:pointer;' : ' style="';
     var poster = r.poster_path
-      ? '<img src="https://image.tmdb.org/t/p/w92'+r.poster_path+'" style="width:52px;height:78px;border-radius:8px;object-fit:cover;flex-shrink:0;" />'
-      : '<div style="width:52px;height:78px;border-radius:8px;background:rgba(255,255,255,0.2);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:22px;">&#128252;</div>';
+      ? '<img src="https://image.tmdb.org/t/p/w92'+r.poster_path+'"'+posterClick+'width:52px;height:78px;border-radius:8px;object-fit:cover;flex-shrink:0;" />'
+      : '<div'+posterClick+'width:52px;height:78px;border-radius:8px;background:rgba(255,255,255,0.2);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:22px;">&#128252;</div>';
     return '<div class="rec-banner">'
       + '<div class="rec-banner-top">' + poster
       + '<div class="rec-banner-body"><div class="rec-banner-from">&#127919; '+escAttr(senderName)+' recommended this to you</div>'
@@ -4231,9 +4200,10 @@ function renderRankings(){
   }
   el.innerHTML=list.map(function(s,i){
     var rank=i+1; var isGold=rank<=3;
+    var thumbClick = s.tmdb_id ? ' onclick="event.stopPropagation();openShowDetails('+s.tmdb_id+')" title="Show details" style="cursor:pointer;' : ' style="';
     var thumb=s.poster_path
-      ? '<img src="'+TMDB_IMG+s.poster_path+'" style="width:46px;height:46px;border-radius:8px;object-fit:cover;flex-shrink:0;margin-right:12px;" />'
-      : '<div style="width:46px;height:46px;border-radius:8px;background:var(--olive);flex-shrink:0;margin-right:12px;display:flex;align-items:center;justify-content:center;font-size:18px;">&#128252;</div>';
+      ? '<img src="'+TMDB_IMG+s.poster_path+'"'+thumbClick+'width:46px;height:46px;border-radius:8px;object-fit:cover;flex-shrink:0;margin-right:12px;" />'
+      : '<div'+thumbClick+'width:46px;height:46px;border-radius:8px;background:var(--olive);flex-shrink:0;margin-right:12px;display:flex;align-items:center;justify-content:center;font-size:18px;">&#128252;</div>';
     return '<div class="rank-card" onclick="showRankDetail('+i+')">'
       +'<span class="rank-badge'+(isGold?' gold':'')+'">#'+rank+'</span>'
       +thumb
