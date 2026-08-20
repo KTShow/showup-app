@@ -171,7 +171,7 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
 .flash-pulse{animation:flashPulse 0.5s ease-in-out 5;}
 .show-card.flash-settled,.dnf-card.flash-settled{box-shadow:0 0 0 4px var(--terra);background:#FBEAD3;}
 .btn-recommend{background:var(--sand);border:none;cursor:pointer;padding:6px 9px;font-size:15px;color:var(--charcoal);border-radius:7px;line-height:1;transition:all 0.2s;flex-shrink:0;}
-.fr-disclosure{flex-shrink:0;}
+.fr-disclosure{flex-shrink:0;margin-top:6px;}
 .fr-toggle-btn{display:inline-flex;align-items:center;gap:6px;background:none;border:none;padding:0;cursor:pointer;font-family:var(--sans);}
 .fr-chevron{font-size:10px;color:var(--muted);display:inline-block;width:9px;}
 .show-secondary-row{display:flex;align-items:center;flex-wrap:wrap;gap:10px;margin-top:8px;}
@@ -1919,7 +1919,8 @@ function buildWatchingCard(s) {
 
   return '<div class="show-card'+(s.hidden?' is-hidden':'')+'" id="card-'+sid+'">'
     + '<div class="show-card-top">'+showTile(s)+'<div class="show-info"><div class="show-title">'+s.title+(s.hidden?'<span class="hidden-badge">Hidden from friends</span>':'')+'</div>'+platformRow+'</div>'+menuHTML+'</div>'
-    + '<div class="show-secondary-row"><div class="show-actions">'+remoteRating('watching',sid,s.rating)+'</div>'+otherRatingsW+recommendBtn(sid)+'</div>'
+    + '<div class="show-secondary-row"><div class="show-actions">'+remoteRating('watching',sid,s.rating)+'</div>'+recommendBtn(sid)+'</div>'
+    + otherRatingsW
     + '<div class="show-move">'+primaryHTML+dnfHTML+'</div>'
     + '<div class="react-area">'+talkPreviewHTML(s.title)+reactToggle+'</div>'
     + '</div>';
