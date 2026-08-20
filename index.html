@@ -171,10 +171,9 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
 .flash-pulse{animation:flashPulse 0.5s ease-in-out 5;}
 .show-card.flash-settled,.dnf-card.flash-settled{box-shadow:0 0 0 4px var(--terra);background:#FBEAD3;}
 .btn-recommend{background:var(--sand);border:none;cursor:pointer;padding:6px 9px;font-size:15px;color:var(--charcoal);border-radius:7px;line-height:1;transition:all 0.2s;flex-shrink:0;}
-.fr-disclosure{flex-shrink:0;margin-top:6px;}
+.fr-disclosure{flex-shrink:0;margin-top:8px;}
 .fr-toggle-btn{display:inline-flex;align-items:center;gap:6px;background:none;border:none;padding:0;cursor:pointer;font-family:var(--sans);}
 .fr-chevron{font-size:10px;color:var(--muted);display:inline-block;width:9px;}
-.show-secondary-row{display:flex;align-items:center;flex-wrap:wrap;gap:10px;margin-top:8px;}
 .btn-add-prominent{background:var(--terra);color:white;border:none;cursor:pointer;padding:7px 14px;font-size:13px;font-weight:700;border-radius:7px;line-height:1;white-space:nowrap;box-shadow:0 2px 6px rgba(196,98,45,0.35);transition:all 0.2s;}
 .btn-add-prominent:hover{transform:translateY(-1px);box-shadow:0 3px 9px rgba(196,98,45,0.45);}
 .on-list-badge{font-size:11px;font-weight:700;color:var(--fig);white-space:nowrap;}
@@ -1878,6 +1877,33 @@ function recommendBtn(showId){
   return '<button class="btn-recommend" onclick="openRecommendPicker(\''+showId+'\')" title="Recommend to a friend">&#127919;</button>';
 }
 
+// The one ratings row on your own Watching/My List/Binged/DNF cards.
+// Collapsed: friends' average (or "Not yet rated" if nobody has -- the
+// row/arrow still needs to exist even then, since it's the only way in
+// to rate your own copy). Expanded: your own rating first (interactive,
+// blank remotes if you haven't rated it -- same rate/un-rate toggle as
+// everywhere else), then each friend's individual rating below.
+function ownCardRatingsHTML(title, list, id, myRating) {
+  var raters = friendRatingsFor(title, state.user ? state.user.id : null);
+  var hasFriends = raters.length > 0;
+  var avg = hasFriends ? Math.round((raters.reduce(function(a,r){return a+r.rating;},0)/raters.length)*10)/10 : null;
+  var summaryInner = hasFriends
+    ? remoteStatic(Math.round(avg)) + '<span style="font-size:12px;color:var(--muted);">'+avg.toFixed(1)+' ('+raters.length+' friend'+(raters.length===1?'':'s')+')</span>'
+    : '<span style="font-size:12px;color:var(--muted);">Not yet rated</span>';
+  var summaryBtn = '<button type="button" onclick="toggleFriendRatingsDisclosure(this)" class="fr-toggle-btn">'
+    + '<span class="fr-chevron">&#9656;</span>'
+    + summaryInner
+    + '</button>';
+  var myRow = '<div style="display:flex;align-items:center;gap:6px;"><span style="font-size:11px;font-weight:600;color:var(--charcoal);">You</span>'
+    + remoteRating(list, id, myRating||0)
+    + '</div>';
+  var friendRows = raters.map(function(r){
+      return '<div style="display:flex;align-items:center;gap:6px;"><span style="font-size:11px;font-weight:600;color:var(--charcoal);">'+escAttr(r.name)+'</span>'+remoteStatic(r.rating)+'</div>';
+    }).join('');
+  var individual = '<div class="fr-individual" style="display:none;flex-direction:column;gap:3px;margin:6px 0 0 2px;">'+myRow+friendRows+'</div>';
+  return '<div class="fr-disclosure">'+summaryBtn+individual+'</div>';
+}
+
 function buildDNFCard(s) {
   var inpId = 'inp-watched-' + s.id;
   var sid = s.id;
@@ -1894,16 +1920,16 @@ function buildDNFCard(s) {
     + '<button class="card-menu-item" onclick="togglePlatEdit(\'watched\',\''+sid+'\');closeCardMenus();">Edit streaming service</button>'
     + '<button class="card-menu-item danger" onclick="removeShow(\'watched\',\''+sid+'\');closeCardMenus();">Remove</button>'
     + '</div></div>';
-  var otherRatingsDNF=friendRatingsHTML(s.title, state.user ? state.user.id : null);
+  var otherRatingsDNF=ownCardRatingsHTML(s.title, 'watched', sid, s.rating);
   return '<div class="dnf-card'+(s.hidden?' is-hidden':'')+'" id="card-'+sid+'">'
     + '<div class="show-card-top">' + showTile(s)
     + '<div class="show-info"><div class="show-title">' + s.title + (s.hidden?'<span class="hidden-badge">Hidden from friends</span>':'') + '</div>'
     + '<div style="margin-top:3px;font-size:11px;color:var(--muted);">' + s.platform + '</div>'
     + platformRow
     + '</div>'
+    + recommendBtn(sid)
     + menuHTML
     + '</div>'
-    + '<div class="show-secondary-row"><div class="show-actions">' + remoteRating('watched', s.id, s.rating) + '</div>' + recommendBtn(sid) + '</div>'
     + otherRatingsDNF
     + '<div class="show-move"><button class="btn-start" onclick="startWatchingFromDNF(\''+sid+'\')">Start Watching</button></div>'
     + '<div class="react-area">' + talkPreviewHTML(s.title) + reactToggle + '</div>'
@@ -1933,11 +1959,10 @@ function buildWatchingCard(s) {
   var reactToggle='<div class="inline-react"><input class="react-input" id="'+inpId+'" placeholder="What did you think? 😊" /><button class="btn-send" onclick="submitReact(\'watching\',\''+sid+'\')">Send</button><button class="btn-cancel" onclick="document.getElementById(\''+inpId+'\').value=\'\'">Cancel</button></div>'
     + quickReactRow('quickReact', "'watching','"+sid+"'");
   var platformRow=s.editingPlatform?platformSelect('watching',sid,s.platform):'';
-  var otherRatingsW=friendRatingsHTML(s.title, state.user ? state.user.id : null);
+  var otherRatingsW=ownCardRatingsHTML(s.title, 'watching', sid, s.rating);
 
   return '<div class="show-card'+(s.hidden?' is-hidden':'')+'" id="card-'+sid+'">'
-    + '<div class="show-card-top">'+showTile(s)+'<div class="show-info"><div class="show-title">'+s.title+(s.hidden?'<span class="hidden-badge">Hidden from friends</span>':'')+'</div>'+platformRow+'</div>'+menuHTML+'</div>'
-    + '<div class="show-secondary-row"><div class="show-actions">'+remoteRating('watching',sid,s.rating)+'</div>'+recommendBtn(sid)+'</div>'
+    + '<div class="show-card-top">'+showTile(s)+'<div class="show-info"><div class="show-title">'+s.title+(s.hidden?'<span class="hidden-badge">Hidden from friends</span>':'')+'</div>'+platformRow+'</div>'+recommendBtn(sid)+menuHTML+'</div>'
     + otherRatingsW
     + '<div class="show-move">'+primaryHTML+dnfHTML+'</div>'
     + '<div class="react-area">'+talkPreviewHTML(s.title)+reactToggle+'</div>'
@@ -1959,11 +1984,10 @@ function buildWaitingCard(s) {
   var reactToggle='<div class="inline-react"><input class="react-input" id="'+inpId+'" placeholder="What did you think? 😊" /><button class="btn-send" onclick="submitReact(\'watchlist\',\''+sid+'\')">Send</button><button class="btn-cancel" onclick="document.getElementById(\''+inpId+'\').value=\'\'">Cancel</button></div>'
     + quickReactRow('quickReact', "'watchlist','"+sid+"'");
   var platformRow=s.editingPlatform?platformSelect('watchlist',sid,s.platform):'';
-  var otherRatingsWait=friendRatingsHTML(s.title, state.user ? state.user.id : null);
+  var otherRatingsWait=ownCardRatingsHTML(s.title, 'watchlist', sid, s.rating);
 
   var newSeasonBadge = s.newSeasonAvailable ? '<span class="new-season-badge" onclick="tapNewSeasonBadge(\''+sid+'\')">&#127881; New season!</span>' : '';
-  return '<div class="show-card'+(s.hidden?' is-hidden':'')+'" id="card-'+sid+'"><div class="show-card-top">'+showTile(s)+'<div class="show-info"><div class="show-title">'+s.title+(s.hidden?'<span class="hidden-badge">Hidden from friends</span>':'')+newSeasonBadge+'</div>'+platformRow+'</div>'+menuHTML+'</div>'
-    + '<div class="show-secondary-row"><div class="show-actions">'+remoteRating('watchlist',sid,s.rating)+'</div>'+recommendBtn(sid)+'</div>'
+  return '<div class="show-card'+(s.hidden?' is-hidden':'')+'" id="card-'+sid+'"><div class="show-card-top">'+showTile(s)+'<div class="show-info"><div class="show-title">'+s.title+(s.hidden?'<span class="hidden-badge">Hidden from friends</span>':'')+newSeasonBadge+'</div>'+platformRow+'</div>'+recommendBtn(sid)+menuHTML+'</div>'
     + otherRatingsWait
     + '<div class="show-move"><button class="resume-watching-btn" onclick="resumeWatching(\''+sid+'\')">Resume Watching &#9654;</button><button class="didnt-finish-btn" onclick="markDNFFromWaiting(\''+sid+'\')">Didn&#39;t Finish</button></div>'
     + '<div class="react-area">'+talkPreviewHTML(s.title)+reactToggle+'</div>'
@@ -1997,10 +2021,9 @@ function buildWatchlistCard(s) {
     var extraCount=watchedByNames.length>2?' +'+(watchedByNames.length-2)+' more':'';
     watchedByBadge='<div style="font-size:11px;color:var(--muted);margin-top:2px;">&#128064; Watched or watching: '+shownNames+extraCount+'</div>';
   }
-  var otherRatingsList=friendRatingsHTML(s.title, state.user ? state.user.id : null);
+  var otherRatingsList=ownCardRatingsHTML(s.title, 'watchlist', sid, s.rating);
 
-  return '<div class="show-card'+(s.hidden?' is-hidden':'')+'" id="card-'+sid+'"><div class="show-card-top">'+showTile(s)+'<div class="show-info"><div class="show-title">'+s.title+(s.hidden?'<span class="hidden-badge">Hidden from friends</span>':'')+'</div>'+platformRow+recommendedBadge+watchedByBadge+'</div>'+menuHTML+'</div>'
-    + '<div class="show-secondary-row"><div class="show-actions">'+remoteRating('watchlist',sid,s.rating)+'</div>'+recommendBtn(sid)+'</div>'
+  return '<div class="show-card'+(s.hidden?' is-hidden':'')+'" id="card-'+sid+'"><div class="show-card-top">'+showTile(s)+'<div class="show-info"><div class="show-title">'+s.title+(s.hidden?'<span class="hidden-badge">Hidden from friends</span>':'')+'</div>'+platformRow+recommendedBadge+watchedByBadge+'</div>'+recommendBtn(sid)+menuHTML+'</div>'
     + otherRatingsList
     + '<div class="show-move"><button class="btn-start" onclick="moveToWatching(\''+sid+'\')">Watch Now</button><button class="waiting-season-btn" onclick="markWaitingFromList(\''+sid+'\')">Waiting for New Season &#8987;</button></div>'
     + '<div class="react-area">'+talkPreviewHTML(s.title)+reactToggle+'</div>'
@@ -2045,10 +2068,9 @@ function buildBingedCard(s) {
   var reactToggle='<div class="inline-react"><input class="react-input" id="'+inpId+'" placeholder="What did you think? 😊" /><button class="btn-send" onclick="submitReact(\'watched\',\''+sid+'\')">Send</button><button class="btn-cancel" onclick="document.getElementById(\''+inpId+'\').value=\'\'">Cancel</button></div>'
     + quickReactRow('quickReact', "'watched','"+sid+"'");
   var platformRow=s.editingPlatform?platformSelect('watched',sid,s.platform):'';
-  var otherRatingsB=friendRatingsHTML(s.title, state.user ? state.user.id : null);
+  var otherRatingsB=ownCardRatingsHTML(s.title, 'watched', sid, s.rating);
 
-  return '<div class="show-card'+(s.hidden?' is-hidden':'')+'" id="card-'+sid+'"><div class="show-card-top">'+showTile(s)+'<div class="show-info"><div class="show-title">'+s.title+(s.hidden?'<span class="hidden-badge">Hidden from friends</span>':'')+'</div>'+platformRow+'</div>'+menuHTML+'</div>'
-    + '<div class="show-secondary-row"><div class="show-actions">'+remoteRating('watched',sid,s.rating)+'</div>'+recommendBtn(sid)+'</div>'
+  return '<div class="show-card'+(s.hidden?' is-hidden':'')+'" id="card-'+sid+'"><div class="show-card-top">'+showTile(s)+'<div class="show-info"><div class="show-title">'+s.title+(s.hidden?'<span class="hidden-badge">Hidden from friends</span>':'')+'</div>'+platformRow+'</div>'+recommendBtn(sid)+menuHTML+'</div>'
     + otherRatingsB
     + '<div class="react-area">'+talkPreviewHTML(s.title)+reactToggle+'</div>'
     + '</div>';
