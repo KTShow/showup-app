@@ -1894,7 +1894,7 @@ function buildDNFCard(s) {
     + '<button class="card-menu-item" onclick="togglePlatEdit(\'watched\',\''+sid+'\');closeCardMenus();">Edit streaming service</button>'
     + '<button class="card-menu-item danger" onclick="removeShow(\'watched\',\''+sid+'\');closeCardMenus();">Remove</button>'
     + '</div></div>';
-  var otherRatingsDNF=friendRatingsHTML(s.title);
+  var otherRatingsDNF=friendRatingsHTML(s.title, state.user ? state.user.id : null);
   return '<div class="dnf-card'+(s.hidden?' is-hidden':'')+'" id="card-'+sid+'">'
     + '<div class="show-card-top">' + showTile(s)
     + '<div class="show-info"><div class="show-title">' + s.title + (s.hidden?'<span class="hidden-badge">Hidden from friends</span>':'') + '</div>'
@@ -1933,7 +1933,7 @@ function buildWatchingCard(s) {
   var reactToggle='<div class="inline-react"><input class="react-input" id="'+inpId+'" placeholder="What did you think? 😊" /><button class="btn-send" onclick="submitReact(\'watching\',\''+sid+'\')">Send</button><button class="btn-cancel" onclick="document.getElementById(\''+inpId+'\').value=\'\'">Cancel</button></div>'
     + quickReactRow('quickReact', "'watching','"+sid+"'");
   var platformRow=s.editingPlatform?platformSelect('watching',sid,s.platform):'';
-  var otherRatingsW=friendRatingsHTML(s.title);
+  var otherRatingsW=friendRatingsHTML(s.title, state.user ? state.user.id : null);
 
   return '<div class="show-card'+(s.hidden?' is-hidden':'')+'" id="card-'+sid+'">'
     + '<div class="show-card-top">'+showTile(s)+'<div class="show-info"><div class="show-title">'+s.title+(s.hidden?'<span class="hidden-badge">Hidden from friends</span>':'')+'</div>'+platformRow+'</div>'+menuHTML+'</div>'
@@ -1959,7 +1959,7 @@ function buildWaitingCard(s) {
   var reactToggle='<div class="inline-react"><input class="react-input" id="'+inpId+'" placeholder="What did you think? 😊" /><button class="btn-send" onclick="submitReact(\'watchlist\',\''+sid+'\')">Send</button><button class="btn-cancel" onclick="document.getElementById(\''+inpId+'\').value=\'\'">Cancel</button></div>'
     + quickReactRow('quickReact', "'watchlist','"+sid+"'");
   var platformRow=s.editingPlatform?platformSelect('watchlist',sid,s.platform):'';
-  var otherRatingsWait=friendRatingsHTML(s.title);
+  var otherRatingsWait=friendRatingsHTML(s.title, state.user ? state.user.id : null);
 
   var newSeasonBadge = s.newSeasonAvailable ? '<span class="new-season-badge" onclick="tapNewSeasonBadge(\''+sid+'\')">&#127881; New season!</span>' : '';
   return '<div class="show-card'+(s.hidden?' is-hidden':'')+'" id="card-'+sid+'"><div class="show-card-top">'+showTile(s)+'<div class="show-info"><div class="show-title">'+s.title+(s.hidden?'<span class="hidden-badge">Hidden from friends</span>':'')+newSeasonBadge+'</div>'+platformRow+'</div>'+menuHTML+'</div>'
@@ -1997,7 +1997,7 @@ function buildWatchlistCard(s) {
     var extraCount=watchedByNames.length>2?' +'+(watchedByNames.length-2)+' more':'';
     watchedByBadge='<div style="font-size:11px;color:var(--muted);margin-top:2px;">&#128064; Watched or watching: '+shownNames+extraCount+'</div>';
   }
-  var otherRatingsList=friendRatingsHTML(s.title);
+  var otherRatingsList=friendRatingsHTML(s.title, state.user ? state.user.id : null);
 
   return '<div class="show-card'+(s.hidden?' is-hidden':'')+'" id="card-'+sid+'"><div class="show-card-top">'+showTile(s)+'<div class="show-info"><div class="show-title">'+s.title+(s.hidden?'<span class="hidden-badge">Hidden from friends</span>':'')+'</div>'+platformRow+recommendedBadge+watchedByBadge+'</div>'+menuHTML+'</div>'
     + '<div class="show-secondary-row"><div class="show-actions">'+remoteRating('watchlist',sid,s.rating)+'</div>'+recommendBtn(sid)+'</div>'
@@ -2045,7 +2045,7 @@ function buildBingedCard(s) {
   var reactToggle='<div class="inline-react"><input class="react-input" id="'+inpId+'" placeholder="What did you think? 😊" /><button class="btn-send" onclick="submitReact(\'watched\',\''+sid+'\')">Send</button><button class="btn-cancel" onclick="document.getElementById(\''+inpId+'\').value=\'\'">Cancel</button></div>'
     + quickReactRow('quickReact', "'watched','"+sid+"'");
   var platformRow=s.editingPlatform?platformSelect('watched',sid,s.platform):'';
-  var otherRatingsB=friendRatingsHTML(s.title);
+  var otherRatingsB=friendRatingsHTML(s.title, state.user ? state.user.id : null);
 
   return '<div class="show-card'+(s.hidden?' is-hidden':'')+'" id="card-'+sid+'"><div class="show-card-top">'+showTile(s)+'<div class="show-info"><div class="show-title">'+s.title+(s.hidden?'<span class="hidden-badge">Hidden from friends</span>':'')+'</div>'+platformRow+'</div>'+menuHTML+'</div>'
     + '<div class="show-secondary-row"><div class="show-actions">'+remoteRating('watched',sid,s.rating)+'</div>'+recommendBtn(sid)+'</div>'
