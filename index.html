@@ -195,7 +195,6 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
 .rank-meta-line{display:flex;align-items:center;gap:7px;min-width:0;}
 .rank-platform{font-size:10px;font-weight:700;color:white;background:var(--olive);padding:2px 8px;border-radius:10px;white-space:nowrap;flex-shrink:0;}
 .rank-remotes-inline{display:flex;gap:3px;align-items:center;flex-shrink:0;}
-.rank-avg-inline{font-family:var(--serif);font-size:13px;font-weight:700;color:var(--terra);flex-shrink:0;}
 .rank-count-inline{font-size:11px;color:var(--muted);flex-shrink:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .rank-detail{background:var(--cream);border:1px solid var(--border);border-radius:var(--radius);padding:18px;margin-top:16px;box-shadow:var(--shadow);}
 .rank-detail-title{font-family:var(--serif);font-size:20px;font-weight:700;color:var(--charcoal);margin-bottom:4px;}
@@ -3355,7 +3354,7 @@ function renderFullLineup(){
       : '<div'+thumbClick+'width:46px;height:46px;border-radius:8px;background:var(--olive);flex-shrink:0;margin-right:12px;display:flex;align-items:center;justify-content:center;font-size:18px;">&#128252;</div>';
     var ratingHTML = s.avg_rating
       ? '<span style="font-size:13px;color:var(--muted);flex-shrink:0;margin-left:10px;white-space:nowrap;">'+remoteAvgLabel(Number(s.avg_rating).toFixed(1))+'</span>'
-      : '<span style="font-size:11px;color:var(--muted);flex-shrink:0;margin-left:10px;white-space:nowrap;">Not yet rated</span>';
+      : '';
     var mine = findMyShowByTitle(s.title);
     var actionHTML = mine
       ? '<span class="on-list-badge" style="margin-left:10px;">'+onListBadgeContent(mine)+'</span>'
@@ -3410,6 +3409,7 @@ function renderPrimeTimeList() {
     var mineBadge = mine
       ? '<span class="on-list-badge" style="margin-left:10px;">'+onListBadgeContent(mine)+'</span>'
       : '<button onclick="event.stopPropagation();handlePrimeTimeAdd('+i+')" style="display:inline-flex;align-items:center;gap:4px;background:none;border:1px solid var(--terra);color:var(--terra);border-radius:8px;padding:2px 8px;font-family:var(--sans);font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;flex-shrink:0;margin-left:10px;">&#10133; Add</button>';
+    var ratingHTML = '<span style="font-size:13px;color:var(--muted);flex-shrink:0;margin-left:10px;white-space:nowrap;">'+remoteAvgLabel(s.avg.toFixed(1))+'</span>';
     return '<div class="rank-card" onclick="showPrimeTimeDetail('+i+')">'
       +'<span class="rank-badge'+(isGold?' gold':'')+'">#'+rank+'</span>'
       +thumb
@@ -3417,9 +3417,9 @@ function renderPrimeTimeList() {
       +'<div class="rank-title-text">'+escAttr(s.title)+'</div>'
       +'<div class="rank-meta-line">'
       +(s.platform?'<span class="rank-platform">'+escAttr(s.platform)+'</span>':'')
-      +'<span class="rank-avg-inline">'+remoteAvgLabel(s.avg.toFixed(1))+'</span>'
       +'<span class="rank-count-inline">'+s.count+' rated</span>'
       +'</div></div>'
+      +ratingHTML
       +mineBadge
       +'</div>';
   }).join('');
@@ -3881,12 +3881,9 @@ function renderShowTalk(){
     var thumb=s.poster_path
       ? '<img src="'+TMDB_IMG+s.poster_path+'"'+thumbClick+'width:46px;height:46px;border-radius:8px;object-fit:cover;flex-shrink:0;margin-right:12px;" />'
       : '<div'+thumbClick+'width:46px;height:46px;border-radius:8px;background:var(--olive);flex-shrink:0;margin-right:12px;display:flex;align-items:center;justify-content:center;font-size:18px;">&#128252;</div>';
-    var remotesHTML='';
-    if(s.avgRating){
-      var lit=Math.floor(s.avgRating);
-      var remotes=''; for(var n=1;n<=5;n++){remotes+='<span style="opacity:'+(n<=lit?'1':'0.18')+';display:inline-block;">'+remoteIcon(13,n<=lit)+'</span>';}
-      remotesHTML='<div style="display:flex;gap:2px;flex-shrink:0;margin-left:10px;">'+remotes+'</div>';
-    }
+    var ratingHTML = s.avgRating
+      ? '<span style="font-size:13px;color:var(--muted);flex-shrink:0;margin-left:10px;white-space:nowrap;">'+remoteAvgLabel(s.avgRating.toFixed(1))+'</span>'
+      : '';
     return '<div class="rank-card" onclick="showShowTalkDetail('+i+')">'
       +'<span class="rank-badge">'+(i+1)+'</span>'
       +thumb
@@ -3896,7 +3893,7 @@ function renderShowTalk(){
       +(s.platform?'<span class="rank-platform">'+s.platform+'</span>':'')
       +'<span class="rank-count-inline">'+s.comments.length+' comment'+(s.comments.length===1?'':'s')+'</span>'
       +'</div></div>'
-      +remotesHTML
+      +ratingHTML
       +(function(){ var mine=findMyShowByTitle(s.title); return mine
         ? '<span class="on-list-badge" style="margin-left:10px;">'+onListBadgeContent(mine)+'</span>'
         : '<button onclick="event.stopPropagation();handleShowTalkAdd('+i+')" style="display:inline-flex;align-items:center;gap:4px;background:none;border:1px solid var(--terra);color:var(--terra);border-radius:8px;padding:2px 8px;font-family:var(--sans);font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;flex-shrink:0;margin-left:10px;">&#10133; Add</button>'; })()
@@ -4389,9 +4386,9 @@ function renderRankings(){
       +'<div class="rank-title-text">'+(s.title||'')+'</div>'
       +'<div class="rank-meta-line">'
       +(s.platform?'<span class="rank-platform">'+s.platform+'</span>':'')
-      +'<span class="rank-avg-inline">'+remoteAvgLabel(s.avg.toFixed(1))+'</span>'
       +'<span class="rank-count-inline">'+s.count+' rated</span>'
       +'</div></div>'
+      +'<span style="font-size:13px;color:var(--muted);flex-shrink:0;margin-left:10px;white-space:nowrap;">'+remoteAvgLabel(s.avg.toFixed(1))+'</span>'
       +(function(){ var mine=findMyShowByTitle(s.title); return mine
         ? '<span class="on-list-badge" style="margin-left:10px;">'+onListBadgeContent(mine)+'</span>'
         : '<button onclick="event.stopPropagation();handleRankAdd('+i+')" style="display:inline-flex;align-items:center;gap:4px;background:none;border:1px solid var(--terra);color:var(--terra);border-radius:8px;padding:2px 8px;font-family:var(--sans);font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;flex-shrink:0;margin-left:10px;">&#10133; Add</button>'; })()
