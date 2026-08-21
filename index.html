@@ -5491,8 +5491,10 @@ var ADD_LIST_LABELS = { watching: 'Currently Watching', watchlist: 'My List', wa
 
 // Same icon vocabulary as the nav tabs (watching/watchlist/watched), plus
 // waiting/dnf which aren't tabs -- they're flags layered on watchlist/watched.
-var ON_LIST_BADGE_ICONS = { watching: '&#128250;', watchlist: '&#127871;', watched: '&#128252;', waiting: '&#9203;', dnf: '&#128683;' };
-var ON_LIST_BADGE_LABELS = { watching: 'Currently Watching', watchlist: 'My List', watched: 'Already Binged', waiting: 'WFNS', dnf: "Didn't Finish" };
+var ON_LIST_BADGE_ICONS = { watching: '&#128250;', watchlist: '&#128715;&#65039;', watched: '&#128252;', waiting: '&#9203;', dnf: '&#128683;' };
+// <br> between the two words so a long label wraps under its own icon
+// instead of shoving the rest of the tile's content sideways.
+var ON_LIST_BADGE_LABELS = { watching: 'Currently<br>Watching', watchlist: 'My<br>List', watched: 'Already<br>Binged', waiting: 'WFNS', dnf: "Didn't Finish" };
 function onListBadgeContent(match) {
   if (!match) return '&#10003; On your list';
   var show = match.show || {};
