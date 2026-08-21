@@ -2314,7 +2314,7 @@ function renderNewThisWeekList(){
     }
     var myOwnCopy = item.mine ? null : findMyShowByTitle(item.title);
     var addBtn = item.mine ? '' : (myOwnCopy
-      ? '<span class="on-list-badge" style="margin-left:8px;">&#10003; '+(ADD_LIST_LABELS[myOwnCopy.list]||'On your list')+'</span>'
+      ? '<span class="on-list-badge" style="margin-left:8px;">'+onListBadgeContent(myOwnCopy)+'</span>'
       : '<button onclick="handleNewThisWeekAdd('+i+')" style="display:inline-flex;align-items:center;gap:4px;background:none;border:1px solid var(--terra);color:var(--terra);border-radius:8px;padding:2px 8px;font-family:var(--sans);font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;margin-left:8px;">&#10133; Add</button>');
     return '<div class="show-card"><div class="show-card-top">'+thumb
       +'<div class="show-info"><div class="show-title">'+escAttr(item.title)+'</div>'
@@ -2504,7 +2504,7 @@ function renderShowsByPlatform(q){
     var ratingLine = avg ? (remoteAvgLabel(avg.toFixed(1))+' &middot; '+ratings.length+' rated') : 'Not yet rated';
     var mine = findMyShowByTitle(s.title);
     var addBtn = mine
-      ? '<span class="on-list-badge" style="display:inline-block;margin-top:4px;">&#10003; '+(ADD_LIST_LABELS[mine.list]||'On your list')+'</span>'
+      ? '<span class="on-list-badge" style="display:inline-block;margin-top:4px;">'+onListBadgeContent(mine)+'</span>'
       : '<button onclick="event.stopPropagation();handlePlatformShowAdd('+i+')" style="display:inline-flex;align-items:center;gap:4px;background:none;border:1px solid var(--terra);color:var(--terra);border-radius:8px;padding:2px 8px;font-family:var(--sans);font-size:11px;font-weight:700;cursor:pointer;margin-top:4px;">&#10133; Add</button>';
     return '<div class="friend-card">'+thumb
       +'<div class="friend-name" style="margin-top:6px;">'+escAttr(s.title)+'</div>'
@@ -2746,7 +2746,7 @@ async function showFriend(id) {
         }
         actions+='<button class="btn-recommend" onclick="openRecommendPicker(\''+s.id+'\')" title="Recommend to a friend">&#127919;</button>';
         if(!isSelf) actions+= mineExisting
-          ? '<span class="on-list-badge">&#10003; '+(ADD_LIST_LABELS[mineExisting.list]||'On your list')+'</span>'
+          ? '<span class="on-list-badge">'+onListBadgeContent(mineExisting)+'</span>'
           : '<button class="btn-add-prominent" onclick="addFromFriendCard(\''+s.id+'\')" title="Add to my list">+ Add</button>';
         var watchedBadge=lk==='wd'?'<span style="font-size:11px;color:var(--fig);font-weight:600;">&#10003; Binged</span>':'';
         var otherRatings=friendRatingsHTML(s.title,f.id,state.friends);
@@ -2807,7 +2807,7 @@ async function showFriend(id) {
                   ? '<div style="margin-top:5px;">'+remoteRatingLR(dnfMineExisting.list, dnfMineExisting.show.id, dnfMineExisting.show.rating, f.id)+'</div>'
                   : (s.rating ? '<div style="margin-top:5px;">'+remoteStatic(s.rating)+'</div>' : '');
               var dnfActions=isSelf?'':(dnfMineExisting
-                ? '<span class="on-list-badge">&#10003; '+(ADD_LIST_LABELS[dnfMineExisting.list]||'On your list')+'</span>'
+                ? '<span class="on-list-badge">'+onListBadgeContent(dnfMineExisting)+'</span>'
                 : '<button class="btn-add-prominent" onclick="addFromFriendCard(\''+s.id+'\')" title="Add to my list">+ Add</button>');
               return '<div class="dnf-card" id="card-'+s.id+'"><div class="show-card-top">'+showTile(s)
                 +'<div class="show-info"><div class="show-title">'+s.title+'</div>'
@@ -3069,7 +3069,7 @@ function renderRoomPickerSearch() {
     var ratingLine = avg ? (remoteAvgLabel(avg.toFixed(1)) + ' &middot; ' + ratings.length + ' rated') : 'Not yet rated';
     var mine = findMyShowByTitle(s.title);
     var addBtn = mine
-      ? '<span class="on-list-badge" style="display:inline-block;margin-top:4px;">&#10003; ' + (ADD_LIST_LABELS[mine.list]||'On your list') + '</span>'
+      ? '<span class="on-list-badge" style="display:inline-block;margin-top:4px;">' + onListBadgeContent(mine) + '</span>'
       : '<button onclick="event.stopPropagation();handleAllRoomsSearchAdd(' + i + ')" style="display:inline-flex;align-items:center;gap:4px;background:none;border:1px solid var(--terra);color:var(--terra);border-radius:8px;padding:2px 8px;font-family:var(--sans);font-size:11px;font-weight:700;cursor:pointer;margin-top:4px;">&#10133; Add</button>';
     var roomTag = s.roomNames.length ? '<div style="font-size:11px;color:var(--muted);margin-top:2px;">Seen in: ' + s.roomNames.map(escAttr).join(', ') + '</div>' : '';
     return '<div class="friend-card">' + thumb
@@ -3358,7 +3358,7 @@ function renderFullLineup(){
       : '<span style="font-size:11px;color:var(--muted);flex-shrink:0;margin-left:10px;white-space:nowrap;">Not yet rated</span>';
     var mine = findMyShowByTitle(s.title);
     var actionHTML = mine
-      ? '<span class="on-list-badge" style="margin-left:10px;">&#10003; '+(ADD_LIST_LABELS[mine.list]||'On your list')+'</span>'
+      ? '<span class="on-list-badge" style="margin-left:10px;">'+onListBadgeContent(mine)+'</span>'
       : '<button onclick="handleFullLineupAdd('+i+')" style="display:inline-flex;align-items:center;gap:4px;background:none;border:1px solid var(--terra);color:var(--terra);border-radius:8px;padding:2px 8px;font-family:var(--sans);font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;flex-shrink:0;margin-left:10px;">&#10133; Add</button>';
     return '<div class="rank-card" style="cursor:default;">'
       +'<span class="rank-badge">'+(i+1)+'</span>'
@@ -3408,7 +3408,7 @@ function renderPrimeTimeList() {
       : '<div'+thumbClick+'width:46px;height:46px;border-radius:8px;background:var(--olive);flex-shrink:0;margin-right:12px;display:flex;align-items:center;justify-content:center;font-size:18px;">&#128252;</div>';
     var mine = findMyShowByTitle(s.title);
     var mineBadge = mine
-      ? '<span class="on-list-badge" style="margin-left:10px;">&#10003; '+(ADD_LIST_LABELS[mine.list]||'On your list')+'</span>'
+      ? '<span class="on-list-badge" style="margin-left:10px;">'+onListBadgeContent(mine)+'</span>'
       : '<button onclick="event.stopPropagation();handlePrimeTimeAdd('+i+')" style="display:inline-flex;align-items:center;gap:4px;background:none;border:1px solid var(--terra);color:var(--terra);border-radius:8px;padding:2px 8px;font-family:var(--sans);font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;flex-shrink:0;margin-left:10px;">&#10133; Add</button>';
     return '<div class="rank-card" onclick="showPrimeTimeDetail('+i+')">'
       +'<span class="rank-badge'+(isGold?' gold':'')+'">#'+rank+'</span>'
@@ -3898,7 +3898,7 @@ function renderShowTalk(){
       +'</div></div>'
       +remotesHTML
       +(function(){ var mine=findMyShowByTitle(s.title); return mine
-        ? '<span class="on-list-badge" style="margin-left:10px;">&#10003; '+(ADD_LIST_LABELS[mine.list]||'On your list')+'</span>'
+        ? '<span class="on-list-badge" style="margin-left:10px;">'+onListBadgeContent(mine)+'</span>'
         : '<button onclick="event.stopPropagation();handleShowTalkAdd('+i+')" style="display:inline-flex;align-items:center;gap:4px;background:none;border:1px solid var(--terra);color:var(--terra);border-radius:8px;padding:2px 8px;font-family:var(--sans);font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;flex-shrink:0;margin-left:10px;">&#10133; Add</button>'; })()
       +'</div>';
   }).join('');
@@ -4393,7 +4393,7 @@ function renderRankings(){
       +'<span class="rank-count-inline">'+s.count+' rated</span>'
       +'</div></div>'
       +(function(){ var mine=findMyShowByTitle(s.title); return mine
-        ? '<span class="on-list-badge" style="margin-left:10px;">&#10003; '+(ADD_LIST_LABELS[mine.list]||'On your list')+'</span>'
+        ? '<span class="on-list-badge" style="margin-left:10px;">'+onListBadgeContent(mine)+'</span>'
         : '<button onclick="event.stopPropagation();handleRankAdd('+i+')" style="display:inline-flex;align-items:center;gap:4px;background:none;border:1px solid var(--terra);color:var(--terra);border-radius:8px;padding:2px 8px;font-family:var(--sans);font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;flex-shrink:0;margin-left:10px;">&#10133; Add</button>'; })()
       +'</div>';
   }).join('');
@@ -5491,6 +5491,19 @@ window.setRoomAndSave = async function(roomKey) {
 
 var _addConfirmPending = null;
 var ADD_LIST_LABELS = { watching: 'Currently Watching', watchlist: 'My List', watched: 'Already Binged' };
+
+// Same icon vocabulary as the nav tabs (watching/watchlist/watched), plus
+// waiting/dnf which aren't tabs -- they're flags layered on watchlist/watched.
+var ON_LIST_BADGE_ICONS = { watching: '&#128250;', watchlist: '&#127871;', watched: '&#128252;', waiting: '&#9203;', dnf: '&#128683;' };
+var ON_LIST_BADGE_LABELS = { watching: 'Currently Watching', watchlist: 'My List', watched: 'Already Binged', waiting: 'WFNS', dnf: "Didn't Finish" };
+function onListBadgeContent(match) {
+  if (!match) return '&#10003; On your list';
+  var show = match.show || {};
+  var key = match.list === 'watched' ? (show.dnf ? 'dnf' : 'watched')
+    : match.list === 'watchlist' ? (show.waitingForSeason ? 'waiting' : 'watchlist')
+    : match.list;
+  return (ON_LIST_BADGE_ICONS[key] || '&#10003;') + ' ' + (ON_LIST_BADGE_LABELS[key] || 'On your list');
+}
 
 // Checked up front, before the confirm popup even opens, so a duplicate
 // warning is something the user can act on (Cancel is right there) —
