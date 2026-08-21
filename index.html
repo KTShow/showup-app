@@ -5494,7 +5494,7 @@ var ADD_LIST_LABELS = { watching: 'Currently Watching', watchlist: 'My List', wa
 var ON_LIST_BADGE_ICONS = { watching: '&#128250;', watchlist: '&#128715;&#65039;', watched: '&#128252;', waiting: '&#9203;', dnf: '&#128683;' };
 // <br> between the two words so a long label wraps under its own icon
 // instead of shoving the rest of the tile's content sideways.
-var ON_LIST_BADGE_LABELS = { watching: 'Currently<br>Watching', watchlist: 'My<br>List', watched: 'Already<br>Binged', waiting: 'WFNS', dnf: "Didn't Finish" };
+var ON_LIST_BADGE_LABELS = { watching: 'Currently<br>Watching', watchlist: 'My<br>List', watched: 'Already<br>Binged', waiting: 'WFNS', dnf: 'DNF' };
 function onListBadgeContent(match) {
   if (!match) return '&#10003; On your list';
   var show = match.show || {};
