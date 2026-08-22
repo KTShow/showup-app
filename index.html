@@ -194,10 +194,14 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
 .rank-title-text{font-size:15px;font-weight:600;color:var(--charcoal);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .rank-meta-line{display:flex;align-items:center;gap:7px;min-width:0;}
 /* Fixed-width trailing columns so the rating remote and the on-list-badge
-   icon start at the same x on every row, instead of drifting left/right
-   with each row's own title/rating/label length. */
-.rank-rating-col{flex-shrink:0;width:50px;margin-left:10px;font-size:13px;color:var(--muted);white-space:nowrap;}
-.rank-action-col{flex-shrink:0;width:92px;margin-left:10px;}
+   icon land in the same place on every row, instead of drifting left/right
+   with each row's own title/rating/label length. Right-aligned within their
+   box (not left) so short content (a bare "+ Add", "WFNS") sits flush with
+   the tile's right edge instead of leaving a strip of unused tile between
+   it and the edge -- most visible on narrow/mobile cards where that strip
+   is a much bigger fraction of the card. */
+.rank-rating-col{flex-shrink:0;width:50px;margin-left:10px;font-size:13px;color:var(--muted);white-space:nowrap;text-align:right;}
+.rank-action-col{flex-shrink:0;width:92px;margin-left:10px;text-align:right;}
 .rank-add-btn{display:inline-flex;align-items:center;gap:4px;background:none;border:1px solid var(--terra);color:var(--terra);border-radius:8px;padding:2px 8px;font-family:var(--sans);font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;}
 .rank-platform{font-size:10px;font-weight:700;color:white;background:var(--olive);padding:2px 8px;border-radius:10px;white-space:nowrap;flex-shrink:0;}
 .rank-remotes-inline{display:flex;gap:3px;align-items:center;flex-shrink:0;}
