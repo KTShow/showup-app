@@ -1877,18 +1877,22 @@ function recommendBtn(showId){
 }
 
 // The one ratings row on your own Watching/My List/Binged/DNF cards.
-// Collapsed: friends' average (or "Not yet rated" if nobody has -- the
-// row/arrow still needs to exist even then, since it's the only way in
-// to rate your own copy). Expanded: your own rating first (interactive,
-// blank remotes if you haven't rated it -- same rate/un-rate toggle as
-// everywhere else), then each friend's individual rating below.
+// Collapsed: friends' average; if no friend has rated it yet, fall back to
+// showing your own rating instead (so a show you've genuinely rated never
+// collapses to "Not yet rated" just because nobody else has weighed in).
+// Only truly unrated shows (neither you nor any friend) show "Not yet
+// rated". Expanded: your own rating first (interactive, blank remotes if
+// you haven't rated it -- same rate/un-rate toggle as everywhere else),
+// then each friend's individual rating below.
 function ownCardRatingsHTML(title, list, id, myRating) {
   var raters = friendRatingsFor(title, state.user ? state.user.id : null);
   var hasFriends = raters.length > 0;
   var avg = hasFriends ? Math.round((raters.reduce(function(a,r){return a+r.rating;},0)/raters.length)*10)/10 : null;
   var summaryInner = hasFriends
     ? remoteStatic(Math.round(avg)) + '<span style="font-size:12px;color:var(--muted);">'+avg.toFixed(1)+' ('+raters.length+' friend'+(raters.length===1?'':'s')+')</span>'
-    : '<span style="font-size:12px;color:var(--muted);">Not yet rated</span>';
+    : myRating
+      ? remoteStatic(myRating) + '<span style="font-size:12px;color:var(--muted);">Your rating</span>'
+      : '<span style="font-size:12px;color:var(--muted);">Not yet rated</span>';
   var summaryBtn = '<button type="button" onclick="toggleFriendRatingsDisclosure(this)" class="fr-toggle-btn">'
     + '<span class="fr-chevron">&#9656;</span>'
     + summaryInner
