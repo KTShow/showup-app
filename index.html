@@ -193,6 +193,12 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
 .rank-info{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px;}
 .rank-title-text{font-size:15px;font-weight:600;color:var(--charcoal);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .rank-meta-line{display:flex;align-items:center;gap:7px;min-width:0;}
+/* Fixed-width trailing columns so the rating remote and the on-list-badge
+   icon start at the same x on every row, instead of drifting left/right
+   with each row's own title/rating/label length. */
+.rank-rating-col{flex-shrink:0;width:50px;margin-left:10px;font-size:13px;color:var(--muted);white-space:nowrap;}
+.rank-action-col{flex-shrink:0;width:92px;margin-left:10px;}
+.rank-add-btn{display:inline-flex;align-items:center;gap:4px;background:none;border:1px solid var(--terra);color:var(--terra);border-radius:8px;padding:2px 8px;font-family:var(--sans);font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;}
 .rank-platform{font-size:10px;font-weight:700;color:white;background:var(--olive);padding:2px 8px;border-radius:10px;white-space:nowrap;flex-shrink:0;}
 .rank-remotes-inline{display:flex;gap:3px;align-items:center;flex-shrink:0;}
 .rank-count-inline{font-size:11px;color:var(--muted);flex-shrink:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
@@ -3356,13 +3362,11 @@ function renderFullLineup(){
     var thumb = s.poster_path
       ? '<img src="'+TMDB_IMG+s.poster_path+'"'+thumbClick+'width:46px;height:46px;border-radius:8px;object-fit:cover;flex-shrink:0;margin-right:12px;" />'
       : '<div'+thumbClick+'width:46px;height:46px;border-radius:8px;background:var(--olive);flex-shrink:0;margin-right:12px;display:flex;align-items:center;justify-content:center;font-size:18px;">&#128252;</div>';
-    var ratingHTML = s.avg_rating
-      ? '<span style="font-size:13px;color:var(--muted);flex-shrink:0;margin-left:10px;white-space:nowrap;">'+remoteAvgLabel(Number(s.avg_rating).toFixed(1))+'</span>'
-      : '';
+    var ratingHTML = '<span class="rank-rating-col">' + (s.avg_rating ? remoteAvgLabel(Number(s.avg_rating).toFixed(1)) : '') + '</span>';
     var mine = findMyShowByTitle(s.title);
-    var actionHTML = mine
-      ? '<span class="on-list-badge" style="margin-left:10px;">'+onListBadgeContent(mine)+'</span>'
-      : '<button onclick="handleFullLineupAdd('+i+')" style="display:inline-flex;align-items:center;gap:4px;background:none;border:1px solid var(--terra);color:var(--terra);border-radius:8px;padding:2px 8px;font-family:var(--sans);font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;flex-shrink:0;margin-left:10px;">&#10133; Add</button>';
+    var actionHTML = '<span class="rank-action-col">' + (mine
+      ? '<span class="on-list-badge">'+onListBadgeContent(mine)+'</span>'
+      : '<button onclick="handleFullLineupAdd('+i+')" class="rank-add-btn">&#10133; Add</button>') + '</span>';
     return '<div class="rank-card" style="cursor:default;">'
       +'<span class="rank-badge">'+(i+1)+'</span>'
       +thumb
@@ -3410,10 +3414,10 @@ function renderPrimeTimeList() {
       ? '<img src="'+TMDB_IMG+s.poster_path+'"'+thumbClick+'width:46px;height:46px;border-radius:8px;object-fit:cover;flex-shrink:0;margin-right:12px;" />'
       : '<div'+thumbClick+'width:46px;height:46px;border-radius:8px;background:var(--olive);flex-shrink:0;margin-right:12px;display:flex;align-items:center;justify-content:center;font-size:18px;">&#128252;</div>';
     var mine = findMyShowByTitle(s.title);
-    var mineBadge = mine
-      ? '<span class="on-list-badge" style="margin-left:10px;">'+onListBadgeContent(mine)+'</span>'
-      : '<button onclick="event.stopPropagation();handlePrimeTimeAdd('+i+')" style="display:inline-flex;align-items:center;gap:4px;background:none;border:1px solid var(--terra);color:var(--terra);border-radius:8px;padding:2px 8px;font-family:var(--sans);font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;flex-shrink:0;margin-left:10px;">&#10133; Add</button>';
-    var ratingHTML = '<span style="font-size:13px;color:var(--muted);flex-shrink:0;margin-left:10px;white-space:nowrap;">'+remoteAvgLabel(s.avg.toFixed(1))+'</span>';
+    var mineBadge = '<span class="rank-action-col">' + (mine
+      ? '<span class="on-list-badge">'+onListBadgeContent(mine)+'</span>'
+      : '<button onclick="event.stopPropagation();handlePrimeTimeAdd('+i+')" class="rank-add-btn">&#10133; Add</button>') + '</span>';
+    var ratingHTML = '<span class="rank-rating-col">'+remoteAvgLabel(s.avg.toFixed(1))+'</span>';
     return '<div class="rank-card" onclick="showPrimeTimeDetail('+i+')">'
       +'<span class="rank-badge'+(isGold?' gold':'')+'">#'+rank+'</span>'
       +thumb
@@ -3885,9 +3889,7 @@ function renderShowTalk(){
     var thumb=s.poster_path
       ? '<img src="'+TMDB_IMG+s.poster_path+'"'+thumbClick+'width:46px;height:46px;border-radius:8px;object-fit:cover;flex-shrink:0;margin-right:12px;" />'
       : '<div'+thumbClick+'width:46px;height:46px;border-radius:8px;background:var(--olive);flex-shrink:0;margin-right:12px;display:flex;align-items:center;justify-content:center;font-size:18px;">&#128252;</div>';
-    var ratingHTML = s.avgRating
-      ? '<span style="font-size:13px;color:var(--muted);flex-shrink:0;margin-left:10px;white-space:nowrap;">'+remoteAvgLabel(s.avgRating.toFixed(1))+'</span>'
-      : '';
+    var ratingHTML = '<span class="rank-rating-col">' + (s.avgRating ? remoteAvgLabel(s.avgRating.toFixed(1)) : '') + '</span>';
     return '<div class="rank-card" onclick="showShowTalkDetail('+i+')">'
       +'<span class="rank-badge">'+(i+1)+'</span>'
       +thumb
@@ -3898,9 +3900,9 @@ function renderShowTalk(){
       +'<span class="rank-count-inline">'+s.comments.length+' comment'+(s.comments.length===1?'':'s')+'</span>'
       +'</div></div>'
       +ratingHTML
-      +(function(){ var mine=findMyShowByTitle(s.title); return mine
-        ? '<span class="on-list-badge" style="margin-left:10px;">'+onListBadgeContent(mine)+'</span>'
-        : '<button onclick="event.stopPropagation();handleShowTalkAdd('+i+')" style="display:inline-flex;align-items:center;gap:4px;background:none;border:1px solid var(--terra);color:var(--terra);border-radius:8px;padding:2px 8px;font-family:var(--sans);font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;flex-shrink:0;margin-left:10px;">&#10133; Add</button>'; })()
+      +'<span class="rank-action-col">'+(function(){ var mine=findMyShowByTitle(s.title); return mine
+        ? '<span class="on-list-badge">'+onListBadgeContent(mine)+'</span>'
+        : '<button onclick="event.stopPropagation();handleShowTalkAdd('+i+')" class="rank-add-btn">&#10133; Add</button>'; })()+'</span>'
       +'</div>';
   }).join('');
 }
@@ -4392,10 +4394,10 @@ function renderRankings(){
       +(s.platform?'<span class="rank-platform">'+s.platform+'</span>':'')
       +'<span class="rank-count-inline">'+s.count+' rated</span>'
       +'</div></div>'
-      +'<span style="font-size:13px;color:var(--muted);flex-shrink:0;margin-left:10px;white-space:nowrap;">'+remoteAvgLabel(s.avg.toFixed(1))+'</span>'
-      +(function(){ var mine=findMyShowByTitle(s.title); return mine
-        ? '<span class="on-list-badge" style="margin-left:10px;">'+onListBadgeContent(mine)+'</span>'
-        : '<button onclick="event.stopPropagation();handleRankAdd('+i+')" style="display:inline-flex;align-items:center;gap:4px;background:none;border:1px solid var(--terra);color:var(--terra);border-radius:8px;padding:2px 8px;font-family:var(--sans);font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;flex-shrink:0;margin-left:10px;">&#10133; Add</button>'; })()
+      +'<span class="rank-rating-col">'+remoteAvgLabel(s.avg.toFixed(1))+'</span>'
+      +'<span class="rank-action-col">'+(function(){ var mine=findMyShowByTitle(s.title); return mine
+        ? '<span class="on-list-badge">'+onListBadgeContent(mine)+'</span>'
+        : '<button onclick="event.stopPropagation();handleRankAdd('+i+')" class="rank-add-btn">&#10133; Add</button>'; })()+'</span>'
       +'</div>';
   }).join('');
 }
