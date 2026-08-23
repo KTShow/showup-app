@@ -191,17 +191,24 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
 .rank-badge{display:inline-flex;align-items:center;justify-content:center;background:var(--fig);color:white;font-size:13px;font-weight:800;min-width:38px;height:38px;border-radius:50%;margin-right:12px;flex-shrink:0;}
 .rank-badge.gold{background:var(--gold);}
 .rank-info{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px;}
-.rank-title-text{font-size:15px;font-weight:600;color:var(--charcoal);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+/* Wraps to 2 lines instead of hard-truncating with "..." -- on narrow
+   mobile cards a one-line ellipsis was cutting real show titles down to
+   a few characters (e.g. "2 Bro..."). Capped at 2 lines via line-clamp
+   so row height stays bounded even for long titles. */
+.rank-title-text{font-size:15px;font-weight:600;color:var(--charcoal);display:-webkit-box;-webkit-line-clamp:2;line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;text-overflow:ellipsis;white-space:normal;line-height:1.25;}
 .rank-meta-line{display:flex;align-items:center;gap:7px;min-width:0;}
 /* Fixed-width trailing columns so the rating remote and the on-list-badge
    icon land in the same place on every row, instead of drifting left/right
    with each row's own title/rating/label length. Right-aligned within their
    box (not left) so short content (a bare "+ Add", "WFNS") sits flush with
    the tile's right edge instead of leaving a strip of unused tile between
-   it and the edge -- most visible on narrow/mobile cards where that strip
-   is a much bigger fraction of the card. */
-.rank-rating-col{flex-shrink:0;width:50px;margin-left:10px;font-size:13px;color:var(--muted);white-space:nowrap;text-align:right;}
-.rank-action-col{flex-shrink:0;width:92px;margin-left:10px;text-align:right;}
+   it and the edge. Widths sized to the actual widest content (measured:
+   ~32px for a rating, ~66px for "Currently Watching", the longest badge
+   label) plus a small buffer -- the previous 50px/92px reserved far more
+   than any row actually used, which on a narrow mobile card both showed
+   up as visible dead space AND starved the title column next to it. */
+.rank-rating-col{flex-shrink:0;width:40px;margin-left:8px;font-size:13px;color:var(--muted);white-space:nowrap;text-align:right;}
+.rank-action-col{flex-shrink:0;width:72px;margin-left:8px;text-align:right;}
 .rank-add-btn{display:inline-flex;align-items:center;gap:4px;background:none;border:1px solid var(--terra);color:var(--terra);border-radius:8px;padding:2px 8px;font-family:var(--sans);font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;}
 .rank-platform{font-size:10px;font-weight:700;color:white;background:var(--olive);padding:2px 8px;border-radius:10px;white-space:nowrap;flex-shrink:0;}
 .rank-remotes-inline{display:flex;gap:3px;align-items:center;flex-shrink:0;}
