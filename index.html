@@ -81,7 +81,7 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
 
 .show-card{background:var(--cream);border:1px solid var(--border);border-radius:var(--radius);padding:9px 12px;box-shadow:var(--shadow);transition:box-shadow 0.2s;}
 .show-card:hover{box-shadow:0 4px 20px rgba(100,50,20,0.14);}
-.show-card-top{display:flex;align-items:center;gap:12px;}
+.show-card-top{display:flex;align-items:center;gap:12px;flex-wrap:wrap;}
 .tv-tile{width:46px;height:46px;border-radius:9px;background:var(--olive);display:flex;align-items:center;justify-content:center;flex-shrink:0;}
 .tv-tile svg{width:28px;height:28px;}
 .show-poster{width:51px;height:51px;border-radius:9px;object-fit:cover;flex-shrink:0;}
@@ -92,12 +92,20 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
 .cast-photo-empty{width:70px;height:70px;border-radius:50%;background:var(--sand);display:flex;align-items:center;justify-content:center;font-size:24px;}
 .cast-name{font-size:11px;font-weight:600;color:var(--charcoal);margin-top:4px;line-height:1.25;}
 .cast-role{font-size:10px;color:var(--muted);line-height:1.25;}
-.show-info{flex:1;}
+.show-info{flex:1;min-width:0;}
 .show-title{font-size:14px;font-weight:600;color:var(--charcoal);}
 .show-move{margin-top:8px;display:flex;flex-wrap:wrap;gap:6px;row-gap:8px;}
 .done-watching-btn{background:none;border:1px solid rgba(92,107,58,0.35);color:var(--olive);border-radius:6px;padding:4px 10px;font-family:var(--sans);font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap;}
 .done-watching-btn:hover{background:rgba(92,107,58,0.08);}
-.show-actions{display:flex;gap:6px;align-items:center;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;row-gap:6px;}
+/* Forced onto its own full-width row below the poster/title (flex-basis:100%
+   makes it always wrap, on .show-card-top{flex-wrap:wrap} above) -- a
+   friend's card can carry a full interactive 5-remote rating row PLUS the
+   recommend button PLUS an on-list-badge/Add button, up to ~200px combined,
+   which measured out to genuinely not fit alongside a readable title on a
+   ~350px mobile card. Matches the layout already used on the viewer's own
+   Watching/My List/Binged/DNF cards, where the rating row sits below the
+   top line rather than squeezed into it. */
+.show-actions{display:flex;gap:6px;align-items:center;flex-shrink:0;flex-basis:100%;margin-top:6px;flex-wrap:wrap;justify-content:flex-end;row-gap:6px;}
 .remote-row{display:flex;gap:4px;align-items:center;}
 .remote-btn{background:none;border:none;cursor:pointer;padding:0;display:flex;align-items:center;transition:transform 0.1s;}
 .remote-btn:hover{transform:scale(1.18);}
