@@ -2776,9 +2776,8 @@ async function showFriend(id) {
         if(!isSelf) actions+= mineExisting
           ? '<span class="on-list-badge">'+onListBadgeContent(mineExisting)+'</span>'
           : '<button class="btn-add-prominent" onclick="addFromFriendCard(\''+s.id+'\')" title="Add to my list">+ Add</button>';
-        var watchedBadge=lk==='wd'?'<span style="font-size:11px;color:var(--fig);font-weight:600;">&#10003; Binged</span>':'';
         var otherRatings=friendRatingsHTML(s.title,f.id,state.friends);
-        html+='<div class="show-card" id="card-'+s.id+'"><div class="show-card-top">'+showTile(s)+'<div class="show-info"><div class="show-title">'+s.title+'</div>'+(watchedBadge?'<div style="margin-top:2px;">'+watchedBadge+'</div>':'')+(otherRatings?'<div style="margin-top:4px;">'+otherRatings+'</div>':'')+'</div><div class="show-actions">'+actions+'</div></div><div class="react-area">'+talkPreviewHTML(s.title,state.friends)+reactToggle+'</div></div>';
+        html+='<div class="show-card" id="card-'+s.id+'"><div class="show-card-top">'+showTile(s)+'<div class="show-info"><div class="show-title">'+s.title+'</div>'+(otherRatings?'<div style="margin-top:4px;">'+otherRatings+'</div>':'')+'</div><div class="show-actions">'+actions+'</div></div><div class="react-area">'+talkPreviewHTML(s.title,state.friends)+reactToggle+'</div></div>';
       });
       html+='</div></div>';
     });
