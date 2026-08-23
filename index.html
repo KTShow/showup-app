@@ -1589,7 +1589,7 @@ function titleCommentsPool(title, pool) {
 function talkPreviewHTML(title, pool) {
   var comments=titleCommentsPool(title, pool);
   if(!comments.length) return '';
-  var preview=comments.slice(0,3);
+  var preview=comments.slice(0,2);
   var scope = pool ? 'room' : 'all';
   return '<div style="display:flex;flex-direction:column;gap:4px;margin:4px 0;">'
     + preview.map(function(c){
