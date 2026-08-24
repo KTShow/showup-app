@@ -3789,6 +3789,23 @@ function buildShowTalk(){
     var f=friendsById[reactorId];
     return f&&f.name ? f.name.split(' ').map(function(x){return x[0]||'';}).join('') : '?';
   }
+  // The reaction's own showId (below) is whichever card the comment thread
+  // physically lives on -- often someone else's, since reacting to a
+  // friend's show attaches the comment to THEIR row, not yours. Jumping to a
+  // commenter's own room needs THEIR copy of this title, which is a
+  // different lookup -- a title match against their own lists, same idea as
+  // findMyShowByTitle but for a friend.
+  function theirShowId(reactorId,isMe,title){
+    var key=title.toLowerCase().trim();
+    var lists = isMe ? [state.watching,state.watchlist,state.watched] : (function(){
+      var f=friendsById[reactorId]; return f?[f.watching,f.watchlist,f.watched]:[];
+    })();
+    for (var i=0;i<lists.length;i++){
+      var match=(lists[i]||[]).find(function(x){return x&&x.title&&x.title.toLowerCase().trim()===key;});
+      if(match) return match.id;
+    }
+    return null;
+  }
   function addShow(s,owner){
     if(!s||!s.title)return;
     var hasReactions = !!(s.reactions && s.reactions.length);
@@ -3823,7 +3840,8 @@ function buildShowTalk(){
       // drops reactions from people outside that whole network.
       if(!isMe && !friendsById[r.reactorId])return;
       shows[key].comments.push({name:nameFor(r.reactorId),color:colorFor(r.reactorId,isMe),initials:initialsFor(r.reactorId,isMe),text:r.text,reactedAt:r.reactedAt,isMe:isMe,reactorId:r.reactorId,
-        id:r.id, list:owner.list, showId:s.id, friendId:(owner.type==='friend'?owner.friendId:null)});
+        id:r.id, list:owner.list, showId:s.id, friendId:(owner.type==='friend'?owner.friendId:null),
+        theirShowId: isMe ? null : theirShowId(r.reactorId,isMe,s.title)});
     });
   }
   friendPool.forEach(function(f){
@@ -3918,7 +3936,8 @@ function showShowTalkDetail(idx){
         +'<button class="btn-send" onclick="submitEditShowTalkComment('+idx+','+ci+')">Save</button>'
         +'<button class="btn-cancel" onclick="toggleEditShowTalkComment('+idx+','+ci+')">Cancel</button></div></div>';
     }
-    var nameAttr = (!c.isMe && c.reactorId) ? ' class="rank-detail-name rank-detail-name-link" onclick="showFriend(\''+c.reactorId+'\')"' : ' class="rank-detail-name"';
+    var jump = 'showFriend(\''+c.reactorId+'\')' + (c.theirShowId ? ';scrollToShowCard(\''+c.theirShowId+'\',\'They have hidden this one from their room.\')' : '');
+    var nameAttr = (!c.isMe && c.reactorId) ? ' class="rank-detail-name rank-detail-name-link" onclick="'+jump+'"' : ' class="rank-detail-name"';
     var actionBtns = c.isMe
       ? '<button class="btn-edit-react" onclick="toggleEditShowTalkComment('+idx+','+ci+')">&#9998;</button><button class="btn-delete-react" onclick="deleteShowTalkComment('+idx+','+ci+')">&#x2715;</button>'
       : '<button class="btn-edit-react" onclick="replyToShowTalkComment('+idx+','+ci+')" title="Reply to '+escAttr(c.name)+'">&#8617;</button>';
@@ -4094,10 +4113,10 @@ window.replyToShowTalkComment = function(idx, ci){
 // visible to show for it. Force-expand every collapsed ancestor first, and
 // persist that as an explicit un-collapse (data-ckey) so it doesn't spring
 // back shut on the next render.
-window.scrollToShowCard = function(showId){
+window.scrollToShowCard = function(showId, notFoundMsg){
   setTimeout(function(){
     var el = document.getElementById('card-'+showId);
-    if (!el) return;
+    if (!el) { if (notFoundMsg) showToast(notFoundMsg); return; }
     var ancestor = el.parentElement, reopened = false;
     while (ancestor) {
       if (ancestor.classList && ancestor.classList.contains('collapsed') && ancestor.hasAttribute('data-ckey')) {
@@ -4320,7 +4339,7 @@ function buildRankings(){
   // same shared "group favorites" list for everyone in the room — not a personalized
   // view that excludes whoever happens to be looking at it.
   var shows={};
-  function addRating(id,name,color,initials,title,platform,rating,isMe,posterPath,tmdbId){
+  function addRating(id,name,color,initials,title,platform,rating,isMe,posterPath,tmdbId,showId){
     var key=title.toLowerCase().trim();
     if(!shows[key])shows[key]={title:title,platform:platform||'',ratings:[],raters:[],poster_path:null,tmdb_id:null};
     if(!shows[key].poster_path&&posterPath)shows[key].poster_path=posterPath;
@@ -4331,7 +4350,7 @@ function buildRankings(){
     // two different people rated it.
     if(shows[key].raters.some(function(r){return r.id===id;}))return;
     shows[key].ratings.push(rating);
-    shows[key].raters.push({id:id,name:name,color:color,rating:rating,initials:initials,isMe:!!isMe});
+    shows[key].raters.push({id:id,name:name,color:color,rating:rating,initials:initials,isMe:!!isMe,showId:showId});
   }
   state.friends.forEach(function(f){
     if(!f||!f.name||!f.watched)return;
@@ -4341,14 +4360,14 @@ function buildRankings(){
     // because a show isn't sitting in Binged.
     (f.watched||[]).concat(f.watching||[]).concat(f.watchlist||[]).forEach(function(s){
       if(!s||!s.title||!s.rating||s.rating===0)return;
-      addRating(f.id,f.name,fColor,f.name.split(' ').map(function(x){return x[0]||'';}).join(''),s.title,s.platform,s.rating,false,s.poster_path,s.tmdb_id);
+      addRating(f.id,f.name,fColor,f.name.split(' ').map(function(x){return x[0]||'';}).join(''),s.title,s.platform,s.rating,false,s.poster_path,s.tmdb_id,s.id);
     });
   });
   if(state.user){
     var myColor=ROOMS[state.user.room||'tuscany']?ROOMS[state.user.room||'tuscany'].color:'#C4622D';
     (state.watched||[]).concat(state.watching||[]).concat(state.watchlist||[]).forEach(function(s){
       if(!s||!s.title||!s.rating||s.rating===0)return;
-      addRating(state.user.id,'You',myColor,state.user.initials||'Y',s.title,s.platform,s.rating,true,s.poster_path,s.tmdb_id);
+      addRating(state.user.id,'You',myColor,state.user.initials||'Y',s.title,s.platform,s.rating,true,s.poster_path,s.tmdb_id,s.id);
     });
   }
   var MIN_RATERS=2; // a single 5-star rating shouldn't outrank a show several people agree on
@@ -4407,7 +4426,8 @@ function showRankDetail(idx){
   var remotes=''; for(var n=1;n<=5;n++){var lit=n<=Math.floor(s.avg);remotes+='<span style="opacity:'+(lit?'1':'0.18')+';display:inline-block;">'+remoteIcon(16,lit)+'</span>';}
   var rows=s.raters.slice().sort(function(a,b){return (b.isMe?1:0)-(a.isMe?1:0)||b.rating-a.rating;}).map(function(r){
     var rR=''; for(var n=1;n<=5;n++){rR+='<span style="opacity:'+(n<=r.rating?'1':'0.18')+';display:inline-block;">'+remoteIcon(13,n<=r.rating)+'</span>';}
-    var nameAttr = (!r.isMe && r.id) ? ' class="rank-detail-name rank-detail-name-link" onclick="showFriend(\''+r.id+'\')"' : ' class="rank-detail-name"';
+    var jump = 'showFriend(\''+r.id+'\')' + (r.showId ? ';scrollToShowCard(\''+r.showId+'\',\'They have hidden this one from their room.\')' : '');
+    var nameAttr = (!r.isMe && r.id) ? ' class="rank-detail-name rank-detail-name-link" onclick="'+jump+'"' : ' class="rank-detail-name"';
     return '<div class="rank-detail-row"><div class="rank-detail-av" style="background:'+r.color+'">'+r.initials+'</div><div'+nameAttr+'>'+(r.isMe?'You':r.name)+'</div><div style="display:flex;gap:2px;">'+rR+'</div></div>';
   }).join('');
   var clickAttr=s.tmdb_id?' class="poster-clickable" onclick="openShowDetails('+s.tmdb_id+')"':'';
