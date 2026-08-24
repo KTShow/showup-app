@@ -144,6 +144,9 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
 .muted-badge{font-size:9px;font-weight:700;color:var(--muted);margin-left:5px;text-transform:uppercase;letter-spacing:0.04em;}
 .friend-new-badge{position:absolute;top:8px;right:8px;background:var(--terra);color:#fff;font-size:9px;font-weight:700;letter-spacing:0.04em;padding:2px 6px;border-radius:10px;}
 .friend-new-detail{font-size:10px;color:var(--terra);font-weight:600;margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.friend-match-list{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px;}
+.match-chip{font-family:var(--sans);font-size:10px;font-weight:600;color:var(--terra);background:none;border:1px solid var(--terra);border-radius:10px;padding:2px 8px;cursor:pointer;text-align:left;line-height:1.4;}
+.match-chip:hover{background:var(--terra);color:#fff;}
 .room-ticker{background:linear-gradient(135deg,var(--olive),var(--terra));border-radius:var(--radius);padding:11px 16px;margin-bottom:16px;display:flex;align-items:center;gap:10px;box-shadow:var(--shadow);cursor:pointer;transition:opacity 0.2s;}
 .room-ticker:hover{opacity:0.92;}
 .room-ticker-icon{font-size:17px;flex-shrink:0;}
@@ -2678,22 +2681,25 @@ function renderFriends() {
   var sorted=state.friends.slice().sort(function(a,b){return a.name.localeCompare(b.name);});
   // Search matches friend name, OR any show title they have -- "search by
   // title, see who has it" without a separate screen.
-  var matchedShowByFriendId={};
+  // Collects EVERY matching show per friend, not just the first hit --
+  // a query like "luc" can match multiple different titles (Lucifer,
+  // Lucky Hank), and silently jumping to whichever happened to be first
+  // left no way to tell which show you actually landed on.
+  var matchedShowsByFriendId={};
   if(q) sorted=sorted.filter(function(f){
-    if(f.name.toLowerCase().indexOf(q)!==-1) return true;
+    var nameMatch=f.name.toLowerCase().indexOf(q)!==-1;
+    var matches=[];
     var lists=[f.watching,f.watchlist,f.watched];
     for(var i=0;i<lists.length;i++){
       var arr=lists[i]||[];
       for(var j=0;j<arr.length;j++){
         var s=arr[j];
         if(s.hidden) continue;
-        if((s.title||'').toLowerCase().indexOf(q)!==-1){
-          matchedShowByFriendId[f.id]=s;
-          return true;
-        }
+        if((s.title||'').toLowerCase().indexOf(q)!==-1) matches.push(s);
       }
     }
-    return false;
+    if(matches.length) matchedShowsByFriendId[f.id]=matches;
+    return nameMatch || matches.length>0;
   });
   if(q && !sorted.length){
     document.getElementById('friends-grid').innerHTML=selfTile+'<div class="empty" style="grid-column:1/-1;"><div class="empty-icon">&#128269;</div>No friends match "'+escAttr(q)+'".</div>';
@@ -2704,10 +2710,12 @@ function renderFriends() {
     var fRoom=f.room||'tuscany'; var fColor=ROOMS[fRoom]?ROOMS[fRoom].color:f.color;
     var fInitials=f.name.split(' ').map(function(x){return x[0];}).join('');
     var fFirst=f.name.split(' ')[0];
-    var matchedShow=matchedShowByFriendId[f.id];
-    var matchDetail=matchedShow?'<div class="friend-new-detail">Has: '+escAttr(matchedShow.title)+'</div>':'';
+    var matches=matchedShowsByFriendId[f.id]||[];
+    var matchDetail=matches.length?'<div class="friend-match-list">'+matches.map(function(s){
+        return '<button type="button" class="match-chip" onclick="event.stopPropagation();showFriend(\''+f.id+'\');scrollToShowCard(\''+s.id+'\')">'+escAttr(s.title)+'</button>';
+      }).join('')+'</div>':'';
     var fCounts=crewTileCounts(f.watching, f.watchlist, f.watched);
-    var jump='showFriend(\''+f.id+'\')'+(matchedShow?';scrollToShowCard(\''+matchedShow.id+'\')':'');
+    var jump='showFriend(\''+f.id+'\')'+(matches.length===1?';scrollToShowCard(\''+matches[0].id+'\')':'');
     return '<div class="friend-card'+(f.muted?' is-muted':'')+'" onclick="'+jump+'">'
       +'<div class="friend-top-row"><div class="friend-av" style="background:'+fColor+';font-weight:700;font-family:var(--sans);">'+fInitials+'</div><div class="friend-name">'+fFirst+(f.muted?'<span class="muted-badge">Muted</span>':'')+'</div></div>'
       +'<div class="friend-city">'+f.city+'</div>'
@@ -3039,28 +3047,30 @@ function renderRoomPicker() {
   grid.innerHTML = tiles + '<div class="room-tile-create" onclick="openCreateRoomModal()">+ Create New Room</div>';
 }
 
-function buildAllRoomsSearchResults(q) {
-  var shows = {};
+// Grouped by PERSON, not by show/room -- searching finds the people who
+// have a matching show (or whose name matches), same shape as Your Crowd's
+// crew-search, so the jump-to-room-and-highlight behavior (showFriend +
+// scrollToShowCard) works identically here even though this screen is
+// room-independent. Every match is listed as its own explicit clickable
+// title chip (never a silent first-match guess) -- see match-chip below.
+function buildAllRoomsSearchResultsByPerson(q) {
+  var results = [];
   (state.allRoomsSearchData || []).forEach(function(p) {
+    if (!p || !p.user_id) return;
+    var nameMatch = (p.first_name || '').toLowerCase().indexOf(q) !== -1;
+    var matches = [];
     (p.shows || []).forEach(function(s) {
       if (!s || !s.title) return;
       var matchesTitle = s.title.toLowerCase().indexOf(q) !== -1;
       var matchesPlatform = (s.platform || '').toLowerCase().indexOf(q) !== -1;
-      if (!matchesTitle && !matchesPlatform) return;
-      var key = s.title.toLowerCase().trim();
-      if (!shows[key]) shows[key] = { title: s.title, platform: s.platform, poster_path: s.poster_path, tmdb_id: s.tmdb_id, people: [], roomNames: [] };
-      if (!shows[key].poster_path && s.poster_path) shows[key].poster_path = s.poster_path;
-      shows[key].people.push({ name: p.first_name, rating: s.rating || 0 });
-      (p.room_names || []).forEach(function(rn) { if (shows[key].roomNames.indexOf(rn) === -1) shows[key].roomNames.push(rn); });
+      if (matchesTitle || matchesPlatform) matches.push(s);
     });
+    if (!nameMatch && !matches.length) return;
+    matches.sort(function(a, b) { return a.title.toLowerCase().localeCompare(b.title.toLowerCase()); });
+    results.push({ id: p.user_id, name: p.first_name + (p.last_initial ? ' ' + p.last_initial + '.' : ''), roomNames: p.room_names || [], matches: matches });
   });
-  var list = Object.values(shows);
-  list.sort(function(a, b) {
-    var scoreDiff = tmdbMatchScore(b.title, q) - tmdbMatchScore(a.title, q);
-    if (scoreDiff !== 0) return scoreDiff;
-    return a.title.toLowerCase().localeCompare(b.title.toLowerCase());
-  });
-  return list;
+  results.sort(function(a, b) { return a.name.toLowerCase().localeCompare(b.name.toLowerCase()); });
+  return results;
 }
 
 var _allRoomsSearchCache = [];
@@ -3081,55 +3091,38 @@ function renderRoomPickerSearch() {
     resultsEl.innerHTML = '<div class="empty"><div class="empty-icon">&#8987;</div>Loading&hellip;</div>';
     return;
   }
-  var list = buildAllRoomsSearchResults(q);
+  var list = buildAllRoomsSearchResultsByPerson(q);
   _allRoomsSearchCache = list;
   var matchLabel = isPlatformQuery(q)
     ? '<div style="font-size:12px;color:var(--muted);margin-bottom:8px;">Showing: <b style="color:var(--terra);">' + matchedPlatformNames(q).map(escAttr).join(', ') + '</b></div>'
     : '';
   if (!list.length) {
-    resultsEl.innerHTML = matchLabel + '<div class="empty"><div class="empty-icon">&#128269;</div>No shows match "' + escAttr(q) + '" across your rooms.</div>';
+    resultsEl.innerHTML = matchLabel + '<div class="empty"><div class="empty-icon">&#128269;</div>No one matches "' + escAttr(q) + '" across your rooms.</div>';
     return;
   }
-  resultsEl.innerHTML = matchLabel + '<div class="room-picker-grid">' + list.map(function(s, i) {
-    var clickAttr = s.tmdb_id ? ' class="poster-clickable" onclick="openAllRoomsSearchDetails(' + i + ')"' : '';
-    var thumb = s.poster_path
-      ? '<img' + clickAttr + ' src="' + TMDB_IMG + s.poster_path + '" style="width:100%;aspect-ratio:1;border-radius:8px;object-fit:cover;" />'
-      : '<div' + clickAttr + ' style="width:100%;aspect-ratio:1;border-radius:8px;background:var(--olive);display:flex;align-items:center;justify-content:center;font-size:22px;">&#128252;</div>';
-    var ratings = s.people.filter(function(p) { return p.rating > 0; });
-    var avg = ratings.length ? (ratings.reduce(function(a, b) { return a + b.rating; }, 0) / ratings.length) : null;
-    var ratingLine = avg ? (remoteAvgLabel(avg.toFixed(1)) + ' &middot; ' + ratings.length + ' rated') : 'Not yet rated';
-    var mine = findMyShowByTitle(s.title);
-    var addBtn = mine
-      ? '<span class="on-list-badge" style="display:inline-block;margin-top:4px;">' + onListBadgeContent(mine) + '</span>'
-      : '<button onclick="event.stopPropagation();handleAllRoomsSearchAdd(' + i + ')" style="display:inline-flex;align-items:center;gap:4px;background:none;border:1px solid var(--terra);color:var(--terra);border-radius:8px;padding:2px 8px;font-family:var(--sans);font-size:11px;font-weight:700;cursor:pointer;margin-top:4px;">&#10133; Add</button>';
-    var roomTag = s.roomNames.length ? '<div style="font-size:11px;color:var(--muted);margin-top:2px;">Seen in: ' + s.roomNames.map(escAttr).join(', ') + '</div>' : '';
-    return '<div class="friend-card">' + thumb
-      + '<div class="friend-name" style="margin-top:6px;">' + escAttr(s.title) + '</div>'
-      + '<div class="friend-city">' + escAttr(s.platform || '') + '</div>'
-      + '<div class="friend-count">' + ratingLine + '</div>'
-      + roomTag
-      + addBtn
+  resultsEl.innerHTML = matchLabel + '<div class="friends-grid">' + list.map(function(person, pi) {
+    var initials = person.name.split(' ').map(function(x) { return x[0] || ''; }).join('').toUpperCase();
+    var chips = person.matches.map(function(s, si) {
+      return '<button type="button" class="match-chip" onclick="event.stopPropagation();jumpToAllRoomsSearchMatch(' + pi + ',' + si + ')">' + escAttr(s.title) + '</button>';
+    }).join('');
+    // A single unambiguous match: the whole card jumps straight to it. Zero
+    // matches (name-only hit) or multiple matches: the card just opens their
+    // room -- picking a show has to go through an explicit chip, not a guess.
+    var jump = person.matches.length === 1 ? 'jumpToAllRoomsSearchMatch(' + pi + ',0)' : 'showFriend(\'' + person.id + '\')';
+    return '<div class="friend-card" onclick="' + jump + '">'
+      + '<div class="friend-top-row"><div class="friend-av" style="background:#C4622D;font-weight:700;font-family:var(--sans);">' + initials + '</div><div class="friend-name">' + escAttr(person.name) + '</div></div>'
+      + (person.roomNames.length ? '<div class="friend-city">' + person.roomNames.map(escAttr).join(', ') + '</div>' : '')
+      + (chips ? '<div class="friend-match-list">' + chips + '</div>' : '')
       + '</div>';
   }).join('') + '</div>';
 }
 
-window.openAllRoomsSearchDetails = function(idx) {
-  var s = _allRoomsSearchCache[idx];
-  if (!s || !s.tmdb_id) return;
-  openShowDetails(s.tmdb_id, s.people);
-};
-
-window.handleAllRoomsSearchAdd = function(idx) {
-  var s = _allRoomsSearchCache[idx];
-  if (!s) return;
-  var existing = findMyShowByTitle(s.title);
-  if (existing) { showToast('Already on your list — ' + (ADD_LIST_LABELS[existing.list] || 'My Lists') + '.'); return; }
-  _currentShowDetails = {
-    tmdb_id: s.tmdb_id || null, title: s.title, poster_path: s.poster_path || null, platform: s.platform || null,
-    genre: null, original_network: null, first_air_year: null,
-    number_of_seasons: null, show_status: null, overview: null, vote_average: null,
-  };
-  openAddPicker();
+window.jumpToAllRoomsSearchMatch = function(pi, si) {
+  var person = _allRoomsSearchCache[pi];
+  var s = person && person.matches[si];
+  if (!person) return;
+  showFriend(person.id);
+  if (s) scrollToShowCard(s.id, 'They have hidden this one from their room.');
 };
 
 // Living Room has several room-independent top-level panels that sit
