@@ -2332,19 +2332,19 @@ function renderNewThisWeekList(){
       : '<div'+thumbClick+'width:46px;height:46px;border-radius:8px;background:var(--olive);flex-shrink:0;margin-right:12px;display:flex;align-items:center;justify-content:center;font-size:18px;">&#128252;</div>';
     var destKey = item.list==='watched' ? (item.dnf?'dnf':'watched') : item.list==='watchlist' ? (item.waitingForSeason?'waiting':'watchlist') : 'watching';
     var statusIcon = ON_LIST_BADGE_ICONS[destKey] || '';
-    var subLine = (item.mine ? 'You added this' : (escAttr(item.friendName)+' added this')) + (statusIcon ? ' &middot; '+statusIcon : '');
+    var subLine = item.mine ? 'You added this' : (escAttr(item.friendName)+' added this');
     var ratingHTML = item.mine ? '' : (item.rating ? remoteStatic(item.rating) : '<span style="font-size:11px;color:var(--muted);">Not yet rated</span>');
     var myOwnCopy = item.mine ? null : findMyShowByTitle(item.title);
     var addBtn = item.mine ? '' : (myOwnCopy
-      ? '<span class="on-list-badge" style="margin-left:8px;">'+onListBadgeContent(myOwnCopy)+'</span>'
-      : '<button onclick="handleNewThisWeekAdd('+i+')" style="display:inline-flex;align-items:center;gap:4px;background:none;border:1px solid var(--terra);color:var(--terra);border-radius:8px;padding:2px 8px;font-family:var(--sans);font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;margin-left:8px;">&#10133; Add</button>');
+      ? '<span class="on-list-badge">'+onListBadgeContent(myOwnCopy)+'</span>'
+      : '<button onclick="handleNewThisWeekAdd('+i+')" style="display:inline-flex;align-items:center;gap:4px;background:none;border:1px solid var(--terra);color:var(--terra);border-radius:8px;padding:2px 8px;font-family:var(--sans);font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;">&#10133; Add</button>');
     return '<div class="show-card"><div class="show-card-top">'+thumb
       +'<div class="show-info"><div class="show-title">'+escAttr(item.title)+'</div>'
       +(item.platform?'<span class="rank-platform">'+escAttr(item.platform)+'</span>':'')
       +'<div style="font-size:11px;color:var(--muted);margin-top:2px;">'+subLine+'</div>'
       +(ratingHTML?'<div style="margin-top:4px;">'+ratingHTML+'</div>':'')
       +'</div>'
-      +'<div class="show-actions" style="display:flex;align-items:center;">'+addBtn+'</div>'
+      +'<div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">'+(statusIcon?'<span style="font-size:15px;">'+statusIcon+'</span>':'')+addBtn+'</div>'
       +'</div></div>';
   }).join('');
 }
