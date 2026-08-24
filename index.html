@@ -1329,6 +1329,9 @@ function buildTastemakersLeaderboard() {
 function renderTastemakersBanner() {
   var wrap = document.getElementById('tastemakers-banner-wrap');
   if (!wrap) return;
+  // Same as renderTop5Banner: clear rather than skip, so switching into
+  // admin view doesn't leave the previous room's banner sitting there stale.
+  if (state.currentRoomIsAdminView) { wrap.innerHTML = ''; return; }
   var rows = buildTastemakersLeaderboard();
   var subtext;
   if (!rows.length) {
@@ -2217,7 +2220,10 @@ function getEarliestRoomAddByTitle() {
       (arr||[]).forEach(function(s) { if(s) consider(s.title, s.added_at); });
     });
   });
-  [state.watching, state.watchlist, state.watched].forEach(function(arr) {
+  // Your own personal lists are never part of the room you're viewing in
+  // admin view -- you're peeking in, not a member -- so they shouldn't feed
+  // "what's new in this room" while that flag is set.
+  if (!state.currentRoomIsAdminView) [state.watching, state.watchlist, state.watched].forEach(function(arr) {
     (arr||[]).forEach(function(s) { if(s) consider(s.title, s.addedAt); });
   });
   return earliest;
@@ -2294,7 +2300,10 @@ function buildNewThisWeekList(){
       });
     });
   });
-  ['watching','watchlist','watched'].forEach(function(lk){
+  // Same admin-view exclusion as getEarliestRoomAddByTitle above -- you're
+  // not a member of the room you're viewing in admin view, so your own adds
+  // shouldn't appear as "new in this room" either.
+  if (!state.currentRoomIsAdminView) ['watching','watchlist','watched'].forEach(function(lk){
     (state[lk]||[]).forEach(function(s){
       if(!s.title || !s.addedAt) return;
       var key = s.title.toLowerCase().trim();
@@ -4363,7 +4372,10 @@ function buildRankings(){
       addRating(f.id,f.name,fColor,f.name.split(' ').map(function(x){return x[0]||'';}).join(''),s.title,s.platform,s.rating,false,s.poster_path,s.tmdb_id,s.id);
     });
   });
-  if(state.user){
+  // Admin view is read-only observation of someone else's room, not
+  // membership in it -- your own ratings shouldn't count toward what's
+  // presented as that room's group favorites.
+  if(state.user && !state.currentRoomIsAdminView){
     var myColor=ROOMS[state.user.room||'tuscany']?ROOMS[state.user.room||'tuscany'].color:'#C4622D';
     (state.watched||[]).concat(state.watching||[]).concat(state.watchlist||[]).forEach(function(s){
       if(!s||!s.title||!s.rating||s.rating===0)return;
