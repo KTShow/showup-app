@@ -1555,7 +1555,7 @@ function friendRatingsHTML(title, excludeId, pool) {
     + '</div>';
   return '<div class="fr-disclosure">'+summaryBtn+individual+'</div>';
 }
-window.toggleFriendRatingsDisclosure = function(btn){
+window.toggleFriendRatingsDisclosure = function(btn, id){
   var wrap = btn.closest('.fr-disclosure');
   if(!wrap) return;
   var indiv = wrap.querySelector('.fr-individual');
@@ -1563,6 +1563,7 @@ window.toggleFriendRatingsDisclosure = function(btn){
   var isOpen = indiv.style.display !== 'none';
   indiv.style.display = isOpen ? 'none' : 'flex';
   chevron.innerHTML = isOpen ? '&#9656;' : '&#9662;';
+  if (id) _openRatingDisclosures[id] = !isOpen;
 };
 
 // Pools comments for the same show title. `pool` picks the scope, same as
@@ -1904,6 +1905,14 @@ function recommendBtn(showId){
   return '<button class="btn-recommend" onclick="openRecommendPicker(\''+showId+'\')" title="Recommend to a friend">&#127919;</button>';
 }
 
+// Session-only memory of which cards' ratings disclosures are expanded,
+// keyed by show id -- not persisted anywhere. renderList() rebuilds every
+// card's HTML from scratch on every change (including the rating you just
+// tapped inside this very panel), and without this the fresh markup always
+// started collapsed, so rating a show visually slammed the panel shut before
+// you could see the remote actually light up.
+var _openRatingDisclosures = {};
+
 // The one ratings row on your own Watching/My List/Binged/DNF cards.
 // Collapsed: friends' average; if no friend has rated it yet, fall back to
 // showing your own rating instead (so a show you've genuinely rated never
@@ -1921,8 +1930,9 @@ function ownCardRatingsHTML(title, list, id, myRating) {
     : myRating
       ? remoteStatic(myRating) + '<span style="font-size:12px;color:var(--muted);">Your rating</span>'
       : '<span style="font-size:12px;color:var(--muted);">Not yet rated</span>';
-  var summaryBtn = '<button type="button" onclick="toggleFriendRatingsDisclosure(this)" class="fr-toggle-btn">'
-    + '<span class="fr-chevron">&#9656;</span>'
+  var isOpen = !!_openRatingDisclosures[id];
+  var summaryBtn = '<button type="button" onclick="toggleFriendRatingsDisclosure(this,\''+id+'\')" class="fr-toggle-btn">'
+    + '<span class="fr-chevron">'+(isOpen?'&#9662;':'&#9656;')+'</span>'
     + summaryInner
     + '</button>';
   var myRow = '<div style="display:flex;align-items:center;gap:6px;"><span style="font-size:11px;font-weight:600;color:var(--charcoal);">You</span>'
@@ -1931,7 +1941,7 @@ function ownCardRatingsHTML(title, list, id, myRating) {
   var friendRows = raters.map(function(r){
       return '<div style="display:flex;align-items:center;gap:6px;"><span style="font-size:11px;font-weight:600;color:var(--charcoal);">'+escAttr(r.name)+'</span>'+remoteStatic(r.rating)+'</div>';
     }).join('');
-  var individual = '<div class="fr-individual" style="display:none;flex-direction:column;gap:3px;margin:6px 0 0 2px;">'+myRow+friendRows+'</div>';
+  var individual = '<div class="fr-individual" style="display:'+(isOpen?'flex':'none')+';flex-direction:column;gap:3px;margin:6px 0 0 2px;">'+myRow+friendRows+'</div>';
   return '<div class="fr-disclosure">'+summaryBtn+individual+'</div>';
 }
 
