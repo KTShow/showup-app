@@ -144,7 +144,11 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
 .muted-badge{font-size:9px;font-weight:700;color:var(--muted);margin-left:5px;text-transform:uppercase;letter-spacing:0.04em;}
 .friend-new-badge{position:absolute;top:8px;right:8px;background:var(--terra);color:#fff;font-size:9px;font-weight:700;letter-spacing:0.04em;padding:2px 6px;border-radius:10px;}
 .friend-new-detail{font-size:10px;color:var(--terra);font-weight:600;margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-.room-ticker{background:var(--cream);border:1px solid var(--border);border-radius:var(--radius);padding:10px 14px;margin-bottom:16px;font-size:13px;font-weight:600;color:var(--terra);text-align:center;}
+.room-ticker{background:linear-gradient(135deg,var(--olive),var(--terra));border-radius:var(--radius);padding:11px 16px;margin-bottom:16px;display:flex;align-items:center;gap:10px;box-shadow:var(--shadow);cursor:pointer;transition:opacity 0.2s;}
+.room-ticker:hover{opacity:0.92;}
+.room-ticker-icon{font-size:17px;flex-shrink:0;}
+.room-ticker-text{flex:1;min-width:0;font-size:13px;font-weight:600;color:white;text-align:left;}
+.room-ticker-arrow{font-size:18px;color:rgba(255,255,255,0.7);flex-shrink:0;}
 .friend-card:hover{border-color:var(--terra);transform:translateY(-2px);}
 .friend-top-row{display:flex;align-items:center;gap:6px;margin-bottom:5px;}
 .friend-av{width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;color:white;flex-shrink:0;}
@@ -854,7 +858,7 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
         </div>
         <div id="lr-crew-view">
           <div id="tastemakers-banner-wrap"></div>
-          <div id="room-ticker" class="room-ticker" style="display:none;cursor:pointer;" onclick="openNewThisWeekModal()" title="See what's new this week"></div>
+          <div id="room-ticker" class="room-ticker" style="display:none;" onclick="openNewThisWeekModal()" title="See what's new this week"></div>
           <div id="top5-banner-wrap"></div>
           <div class="lr-search-wrap"><input type="text" id="crew-search" class="lr-search-input" placeholder="Search friends, shows, or platforms..." oninput="renderFriends();toggleSearchClearBtn(this)" autocomplete="off" /><button class="lr-search-clear" type="button" aria-label="Clear search" onclick="clearSearchInput('crew-search')">&#10005;</button></div>
           <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap;">
@@ -2261,8 +2265,8 @@ function buildRoomTickerMessages() {
   var newShows = Object.keys(earliestByTitle).filter(function(k) { return earliestByTitle[k] > cutoff; }).length;
   var activeCount = Object.keys(activeFriends).length;
   var msgs = [];
-  if (newShows > 0) msgs.push('&#127871; ' + newShows + ' new show' + (newShows===1?'':'s') + ' added to the room this week');
-  if (activeCount > 0) msgs.push('&#128075; ' + activeCount + ' friend' + (activeCount===1?'':'s') + ' active in the room this week');
+  if (newShows > 0) msgs.push({icon:'&#127871;', text:newShows + ' new show' + (newShows===1?'':'s') + ' added to the room this week'});
+  if (activeCount > 0) msgs.push({icon:'&#128075;', text:activeCount + ' friend' + (activeCount===1?'':'s') + ' active in the room this week'});
   return msgs;
 }
 
@@ -2272,13 +2276,16 @@ function renderRoomTicker() {
   if (_tickerTimer) { clearInterval(_tickerTimer); _tickerTimer = null; }
   var msgs = buildRoomTickerMessages();
   if (!msgs.length) { el.style.display = 'none'; el.innerHTML = ''; return; }
-  el.style.display = 'block';
+  el.style.display = 'flex';
   var idx = 0;
-  el.innerHTML = msgs[0];
+  function paint(m) {
+    el.innerHTML = '<span class="room-ticker-icon">'+m.icon+'</span><span class="room-ticker-text">'+m.text+'</span><span class="room-ticker-arrow">&#8250;</span>';
+  }
+  paint(msgs[0]);
   if (msgs.length > 1) {
     _tickerTimer = setInterval(function() {
       idx = (idx + 1) % msgs.length;
-      el.innerHTML = msgs[idx];
+      paint(msgs[idx]);
     }, 4500);
   }
 }
