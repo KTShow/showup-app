@@ -2331,15 +2331,9 @@ function renderNewThisWeekList(){
       ? '<img src="'+TMDB_IMG+item.poster_path+'"'+thumbClick+'width:46px;height:46px;border-radius:8px;object-fit:cover;flex-shrink:0;margin-right:12px;" />'
       : '<div'+thumbClick+'width:46px;height:46px;border-radius:8px;background:var(--olive);flex-shrink:0;margin-right:12px;display:flex;align-items:center;justify-content:center;font-size:18px;">&#128252;</div>';
     var destKey = item.list==='watched' ? (item.dnf?'dnf':'watched') : item.list==='watchlist' ? (item.waitingForSeason?'waiting':'watchlist') : 'watching';
-    var statusLabel = ADD_DEST_DISPLAY_LABELS[destKey] || '';
-    var subLine = (item.mine ? 'You added this' : (escAttr(item.friendName)+' added this')) + (statusLabel ? ' &middot; '+statusLabel : '');
-    var ratingHTML;
-    if (item.mine) {
-      var stars=''; for(var n=1;n<=5;n++){var lit=n<=item.rating;stars+='<button class="remote-btn" style="opacity:'+(lit?'1':'0.22')+'" onclick="rateNewThisWeek('+i+','+n+')">'+remoteIcon(15,lit)+'</button>';}
-      ratingHTML = '<div style="display:flex;gap:4px;">'+stars+'</div>';
-    } else {
-      ratingHTML = item.rating ? remoteStatic(item.rating) : '<span style="font-size:11px;color:var(--muted);">Not yet rated</span>';
-    }
+    var statusIcon = ON_LIST_BADGE_ICONS[destKey] || '';
+    var subLine = (item.mine ? 'You added this' : (escAttr(item.friendName)+' added this')) + (statusIcon ? ' &middot; '+statusIcon : '');
+    var ratingHTML = item.mine ? '' : (item.rating ? remoteStatic(item.rating) : '<span style="font-size:11px;color:var(--muted);">Not yet rated</span>');
     var myOwnCopy = item.mine ? null : findMyShowByTitle(item.title);
     var addBtn = item.mine ? '' : (myOwnCopy
       ? '<span class="on-list-badge" style="margin-left:8px;">'+onListBadgeContent(myOwnCopy)+'</span>'
@@ -2352,25 +2346,6 @@ function renderNewThisWeekList(){
       +'</div></div>';
   }).join('');
 }
-
-window.rateNewThisWeek = async function(idx, n){
-  var item = _newThisWeekCache[idx];
-  if(!item || !item.mine) return;
-  var newRating = (item.rating===n) ? 0 : n;
-  // Update the real state (and re-render the owning tab) BEFORE rebuilding
-  // the New This Week cache -- buildNewThisWeekList() reads straight from
-  // state[list], so rebuilding first would bake in the pre-update rating
-  // and make the very next click compare against stale data (clicking the
-  // same remote twice re-applied the rating instead of toggling it off).
-  var s = (state[item.list]||[]).find(function(x){ return x.id===item.showId; });
-  if(s) s.rating = newRating;
-  renderList(item.list);
-  renderNewThisWeekList();
-  showToast(newRating > 0
-    ? 'Rated "'+item.title+'" '+newRating+' remote'+(newRating===1?'':'s')+'.'
-    : 'Rating removed for "'+item.title+'".');
-  try { await updateShowRating(item.showId, newRating); } catch(e){ console.error('rateNewThisWeek error:', e); }
-};
 
 window.handleNewThisWeekAdd = function(idx){
   var item = _newThisWeekCache[idx];
