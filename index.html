@@ -3521,6 +3521,10 @@ window.showPrimeTimeDetail = function(idx){
   var thumb=s.poster_path
     ? '<img src="'+TMDB_IMG+s.poster_path+'"'+clickAttr+' style="width:84px;height:84px;border-radius:10px;object-fit:cover;flex-shrink:0;" />'
     : '<div'+clickAttr+' style="width:84px;height:84px;border-radius:10px;background:var(--olive);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:30px;">&#128252;</div>';
+  var mine=findMyShowByTitle(s.title);
+  var addBtn=mine
+    ? '<span class="on-list-badge">'+onListBadgeContent(mine)+'</span>'
+    : '<button onclick="handlePrimeTimeAdd('+idx+')" style="display:inline-flex;align-items:center;gap:4px;background:none;border:1px solid var(--terra);color:var(--terra);border-radius:8px;padding:2px 8px;font-family:var(--sans);font-size:11px;font-weight:700;cursor:pointer;line-height:1.6;white-space:nowrap;">&#10133; Add</button>';
   panel.innerHTML='<button class="rank-close" onclick="backToPrimeTimeList()">← Back to Prime Time</button>'
     +'<div class="rank-detail">'
     +'<div style="display:flex;gap:12px;align-items:flex-start;margin-bottom:4px;">'
@@ -3528,9 +3532,7 @@ window.showPrimeTimeDetail = function(idx){
     +'<div style="flex:1;min-width:0;">'
     +'<div class="rank-detail-title">'+escAttr(s.title)+'</div>'
     +(s.platform?'<span class="rank-platform" style="margin:0 0 6px 0;display:inline-block;">'+escAttr(s.platform)+'</span>':'')
-    +'<div>'
-    +'<button onclick="handlePrimeTimeAdd('+idx+')" style="display:inline-flex;align-items:center;gap:4px;background:none;border:1px solid var(--terra);color:var(--terra);border-radius:8px;padding:2px 8px;font-family:var(--sans);font-size:11px;font-weight:700;cursor:pointer;line-height:1.6;white-space:nowrap;">&#10133; Add</button>'
-    +'</div>'
+    +'<div>'+addBtn+'</div>'
     +'</div></div>'
     +'<div style="display:flex;align-items:baseline;gap:10px;margin-bottom:4px;">'
     +'<span class="rank-detail-avg">'+s.avg.toFixed(1)+'</span>'
@@ -4037,6 +4039,10 @@ function showShowTalkDetail(idx){
     var remotes=''; for(var n=1;n<=5;n++){var lit=n<=Math.floor(s.avgRating);remotes+='<span style="opacity:'+(lit?'1':'0.18')+';display:inline-block;">'+remoteIcon(16,lit)+'</span>';}
     ratingHTML='<div style="display:flex;align-items:center;gap:6px;margin:2px 0 6px;">'+remotes+'<span style="font-size:13px;color:var(--muted);">'+s.avgRating.toFixed(1)+' ('+s.ratingCount+' rating'+(s.ratingCount===1?'':'s')+')</span></div>';
   }
+  var mine=findMyShowByTitle(s.title);
+  var addBtn=mine
+    ? '<span class="on-list-badge">'+onListBadgeContent(mine)+'</span>'
+    : '<button onclick="handleShowTalkAdd('+idx+')" style="display:inline-flex;align-items:center;gap:4px;background:none;border:1px solid var(--terra);color:var(--terra);border-radius:8px;padding:2px 8px;font-family:var(--sans);font-size:11px;font-weight:700;cursor:pointer;line-height:1.6;white-space:nowrap;flex-shrink:0;">&#10133; Add</button>';
   var reactBoxId='showtalk-react-'+idx;
   var reactHTML='<div class="inline-react" style="margin:4px 0 12px;"><input class="react-input" id="'+reactBoxId+'" placeholder="What did you think? 😊" /><button class="btn-send" onclick="submitShowTalkReact('+idx+')">Send</button><button class="btn-cancel" onclick="document.getElementById(&quot;'+reactBoxId+'&quot;).value=\'\'">Cancel</button></div>';
   panel.style.display='block';
@@ -4048,7 +4054,7 @@ function showShowTalkDetail(idx){
     +'<div class="rank-detail-title">'+s.title+'</div>'
     +'<div style="display:flex;align-items:center;gap:8px;margin:0 0 6px 0;">'
     +(s.platform?'<span class="rank-platform" style="margin:0;display:inline-block;">'+s.platform+'</span>':'')
-    +'<button onclick="handleShowTalkAdd('+idx+')" style="display:inline-flex;align-items:center;gap:4px;background:none;border:1px solid var(--terra);color:var(--terra);border-radius:8px;padding:2px 8px;font-family:var(--sans);font-size:11px;font-weight:700;cursor:pointer;line-height:1.6;white-space:nowrap;flex-shrink:0;">&#10133; Add</button>'
+    +addBtn
     +'</div>'
     +ratingHTML
     +'</div></div>'
@@ -4516,6 +4522,10 @@ function showRankDetail(idx){
   var thumb=s.poster_path
     ? '<img src="'+TMDB_IMG+s.poster_path+'"'+clickAttr+' style="width:84px;height:84px;border-radius:10px;object-fit:cover;flex-shrink:0;" />'
     : '<div'+clickAttr+' style="width:84px;height:84px;border-radius:10px;background:var(--olive);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:30px;">&#128252;</div>';
+  var mine=findMyShowByTitle(s.title);
+  var addBtn=mine
+    ? '<span class="on-list-badge">'+onListBadgeContent(mine)+'</span>'
+    : '<button onclick="handleRankAdd('+idx+')" style="display:inline-flex;align-items:center;gap:4px;background:none;border:1px solid var(--terra);color:var(--terra);border-radius:8px;padding:2px 8px;font-family:var(--sans);font-size:11px;font-weight:700;cursor:pointer;line-height:1.6;white-space:nowrap;">&#10133; Add</button>';
   panel.style.display='block';
   panel.innerHTML='<button class="rank-close" onclick="backToRankings()">\u2190 Back to rankings</button>'
     +'<div class="rank-detail">'
@@ -4524,9 +4534,7 @@ function showRankDetail(idx){
     +'<div style="flex:1;min-width:0;">'
     +'<div class="rank-detail-title">'+s.title+'</div>'
     +(s.platform?'<span class="rank-platform" style="margin:0 0 6px 0;display:inline-block;">'+s.platform+'</span>':'')
-    +'<div>'
-    +'<button onclick="handleRankAdd('+idx+')" style="display:inline-flex;align-items:center;gap:4px;background:none;border:1px solid var(--terra);color:var(--terra);border-radius:8px;padding:2px 8px;font-family:var(--sans);font-size:11px;font-weight:700;cursor:pointer;line-height:1.6;white-space:nowrap;">&#10133; Add</button>'
-    +'</div>'
+    +'<div>'+addBtn+'</div>'
     +'</div></div>'
     +'<div style="display:flex;align-items:baseline;gap:10px;margin-bottom:4px;">'
     +'<span class="rank-detail-avg">'+s.avg.toFixed(1)+'</span>'
