@@ -2707,7 +2707,8 @@ function renderFriends() {
     var matchedShow=matchedShowByFriendId[f.id];
     var matchDetail=matchedShow?'<div class="friend-new-detail">Has: '+escAttr(matchedShow.title)+'</div>':'';
     var fCounts=crewTileCounts(f.watching, f.watchlist, f.watched);
-    return '<div class="friend-card'+(f.muted?' is-muted':'')+'" onclick="showFriend(\''+f.id+'\')">'
+    var jump='showFriend(\''+f.id+'\')'+(matchedShow?';scrollToShowCard(\''+matchedShow.id+'\')':'');
+    return '<div class="friend-card'+(f.muted?' is-muted':'')+'" onclick="'+jump+'">'
       +'<div class="friend-top-row"><div class="friend-av" style="background:'+fColor+';font-weight:700;font-family:var(--sans);">'+fInitials+'</div><div class="friend-name">'+fFirst+(f.muted?'<span class="muted-badge">Muted</span>':'')+'</div></div>'
       +'<div class="friend-city">'+f.city+'</div>'
       +'<div class="friend-count">'+fCounts.watching+' watching &middot; '+fCounts.list+' list &middot; '+fCounts.binged+' binged</div>'
@@ -3266,7 +3267,7 @@ function buildPrimeTimeLeaderboard(data) {
     if (!shows[key].tmdb_id && s.tmdb_id) shows[key].tmdb_id = s.tmdb_id;
     if (shows[key].raters.some(function(r){ return r.id === s.user_id; })) return; // one rating per person per show
     shows[key].ratings.push(s.rating);
-    shows[key].raters.push({ id: s.user_id, name: nameFor(s.user_id), initials: initialsFor(s.user_id), rating: s.rating, isMe: s.user_id===(state.user&&state.user.id), inNetwork: !!networkSet[s.user_id] });
+    shows[key].raters.push({ id: s.user_id, name: nameFor(s.user_id), initials: initialsFor(s.user_id), rating: s.rating, isMe: s.user_id===(state.user&&state.user.id), inNetwork: !!networkSet[s.user_id], showId: s.id });
   });
   var MIN_RATERS = 3; // higher bar than per-room Friends Favorites -- pooled across many more people, so 2 is too easy to hit by coincidence
   var list = Object.values(shows).filter(function(s){ return s.ratings.length >= MIN_RATERS; }).map(function(s){
@@ -3462,7 +3463,9 @@ window.showPrimeTimeDetail = function(idx){
   var remotes=''; for(var n=1;n<=5;n++){var lit=n<=Math.floor(s.avg);remotes+='<span style="opacity:'+(lit?'1':'0.18')+';display:inline-block;">'+remoteIcon(16,lit)+'</span>';}
   var rows=s.raters.slice().sort(function(a,b){return (b.isMe?1:0)-(a.isMe?1:0)||b.rating-a.rating;}).map(function(r){
     var rR=''; for(var n=1;n<=5;n++){rR+='<span style="opacity:'+(n<=r.rating?'1':'0.18')+';display:inline-block;">'+remoteIcon(13,n<=r.rating)+'</span>';}
-    return '<div class="rank-detail-row"><div class="rank-detail-av" style="background:#888">'+escAttr(r.initials||'?')+'</div><div class="rank-detail-name">'+escAttr(r.name)+'</div><div style="display:flex;gap:2px;">'+rR+'</div></div>';
+    var jump = 'showFriend(\''+r.id+'\')' + (r.showId ? ';scrollToShowCard(\''+r.showId+'\',\'They have hidden this one from their room.\')' : '');
+    var nameAttr = (!r.isMe && r.inNetwork && r.id) ? ' class="rank-detail-name rank-detail-name-link" onclick="'+jump+'"' : ' class="rank-detail-name"';
+    return '<div class="rank-detail-row"><div class="rank-detail-av" style="background:#888">'+escAttr(r.initials||'?')+'</div><div'+nameAttr+'>'+escAttr(r.name)+'</div><div style="display:flex;gap:2px;">'+rR+'</div></div>';
   }).join('');
   var clickAttr=s.tmdb_id?' class="poster-clickable" onclick="openShowDetails('+s.tmdb_id+')"':'';
   var thumb=s.poster_path
