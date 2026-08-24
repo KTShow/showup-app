@@ -2341,8 +2341,10 @@ function renderNewThisWeekList(){
     return '<div class="show-card"><div class="show-card-top">'+thumb
       +'<div class="show-info"><div class="show-title">'+escAttr(item.title)+'</div>'
       +(item.platform?'<span class="rank-platform">'+escAttr(item.platform)+'</span>':'')
-      +'<div style="font-size:11px;color:var(--muted);margin-top:2px;">'+subLine+'</div></div>'
-      +'<div class="show-actions" style="display:flex;align-items:center;">'+ratingHTML+addBtn+'</div>'
+      +'<div style="font-size:11px;color:var(--muted);margin-top:2px;">'+subLine+'</div>'
+      +(ratingHTML?'<div style="margin-top:4px;">'+ratingHTML+'</div>':'')
+      +'</div>'
+      +'<div class="show-actions" style="display:flex;align-items:center;">'+addBtn+'</div>'
       +'</div></div>';
   }).join('');
 }
