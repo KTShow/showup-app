@@ -2937,7 +2937,16 @@ window.openEditAnnouncementModal = function(){
   if (!state.user || !state.user.isAdmin) return;
   document.getElementById('announcement-edit-emoji').value = (_announcementData && _announcementData.emoji) || '';
   document.getElementById('announcement-edit-message').value = (_announcementData && _announcementData.message) || '';
+  updateAnnouncementCounter();
   document.getElementById('edit-announcement-modal').classList.add('active');
+};
+window.updateAnnouncementCounter = function(){
+  var ta = document.getElementById('announcement-edit-message');
+  var counter = document.getElementById('announcement-edit-counter');
+  if (!ta || !counter) return;
+  var n = ta.value.length;
+  counter.textContent = n + ' / 240';
+  counter.style.color = n >= 220 ? '#C47818' : 'var(--muted)';
 };
 window.closeEditAnnouncementModal = function(){
   document.getElementById('edit-announcement-modal').classList.remove('active');
@@ -7208,7 +7217,8 @@ bootstrap();
     <div class="invite-modal-title">Edit Announcement Banner</div>
     <div class="invite-modal-sub">Shown to everyone at the top of Living Room.</div>
     <input type="text" id="announcement-edit-emoji" placeholder="Emoji (optional)" maxlength="4" style="width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:8px;font-family:var(--sans);font-size:14px;margin-bottom:10px;box-sizing:border-box;" />
-    <input type="text" id="announcement-edit-message" placeholder="e.g. Rate 3 shows this week" maxlength="120" style="width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:8px;font-family:var(--sans);font-size:14px;margin-bottom:14px;box-sizing:border-box;" />
+    <textarea id="announcement-edit-message" placeholder="e.g. Rate 3 shows this week" maxlength="240" rows="2" oninput="updateAnnouncementCounter()" style="width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:8px;font-family:var(--sans);font-size:14px;margin-bottom:4px;box-sizing:border-box;resize:vertical;"></textarea>
+    <div id="announcement-edit-counter" style="text-align:right;font-size:12px;color:var(--muted);margin-bottom:14px;">0 / 240</div>
     <div style="display:flex;gap:10px;">
       <button class="btn-invite-copy" onclick="saveAnnouncementEdit()" style="flex:1;">Save &amp; Notify Everyone</button>
       <button class="btn-invite-close" onclick="closeEditAnnouncementModal()" style="flex:1;">Cancel</button>
