@@ -2932,7 +2932,7 @@ window.dismissAnnouncement = function(){
 
 // Admin-only editor (Settings > Admin > Edit Announcement Banner) -- no
 // SQL required day-to-day; RLS restricts the actual update to admins
-// (see add_app_announcement.sql), this is just the UI for it.
+// (see sql/add_app_announcement.sql), this is just the UI for it.
 window.openEditAnnouncementModal = function(){
   if (!state.user || !state.user.isAdmin) return;
   document.getElementById('announcement-edit-emoji').value = (_announcementData && _announcementData.emoji) || '';
@@ -3423,7 +3423,7 @@ window.handleFullLineupAdd = function(idx){
 // Same list->detail click-through as Prime Time, deliberately without a
 // rater list: get_full_lineup() pools every show on all of ShowUp (not
 // just your network) and is built to never return rater identity at all
-// (see add_full_lineup_rpc.sql) -- there's no "who rated this" data to
+// (see sql/add_full_lineup_rpc.sql) -- there's no "who rated this" data to
 // show here, just the aggregate blown up bigger with an Add button.
 var _fullLineupScrollY = 0;
 window.showFullLineupDetail = function(idx){
@@ -5054,7 +5054,7 @@ async function getFriendsWithShows(roomId) {
   // get_living_room_data() function runs as the calling user (no elevated
   // privileges) for a SPECIFIC room, so it can only ever return what these
   // same RLS-governed table queries already allowed for that room's members
-  // — see multiroom_phase1_migration.sql.
+  // — see sql/multiroom_phase1_migration.sql.
   const { data: bundle, error: bundleErr } = await sb.rpc('get_living_room_data', { p_room_id: roomId });
   if (bundleErr) throw bundleErr;
   if (!bundle) return [];

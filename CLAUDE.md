@@ -16,6 +16,7 @@ ShowUp is a social TV show tracking web app. Users track what they're watching, 
 - `showup-pitch 0527.html` — pitch/landing page
 - `vercel.json` — Vercel routing (handles /join/:username rewrites)
 - `supabase.js` — dead file, not imported
+- `sql/` — one-off Supabase migration & diagnostic scripts, run by hand in the Supabase SQL editor (not wired into the app)
 
 ## App Structure
 4 tabs: **Watching**, **My List** (watchlist), **Binged** (watched), **Living Room**
