@@ -3529,7 +3529,8 @@ window.showPrimeTimeDetail = function(idx){
     var nR=''; for(var n=1;n<=5;n++){nR+='<span style="opacity:'+(n<=Math.round(nAvg)?'1':'0.18')+';display:inline-block;">'+remoteIcon(13,n<=Math.round(nAvg))+'</span>';}
     rows+='<div class="rank-detail-row"><div class="rank-detail-av" style="background:#888">N</div>'
       +'<div class="rank-detail-name">'+neighbors.length+(neighbors.length===1?' neighbor':' neighbors')+'</div>'
-      +'<div style="display:flex;gap:2px;align-items:center;">'+nR+'<span style="margin-left:6px;font-size:12px;color:var(--muted);">'+(Math.round(nAvg*10)/10).toFixed(1)+'</span></div></div>';
+      +'<span style="font-size:12px;color:var(--muted);margin-right:6px;flex-shrink:0;">'+(Math.round(nAvg*10)/10).toFixed(1)+'</span>'
+      +'<div style="display:flex;gap:2px;">'+nR+'</div></div>';
   }
   var clickAttr=s.tmdb_id?' class="poster-clickable" onclick="openShowDetails('+s.tmdb_id+')"':'';
   var thumb=s.poster_path
