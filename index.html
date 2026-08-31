@@ -4325,12 +4325,22 @@ window.openRecommendPicker = function(showId){
   _recommendSelectedIds = [];
   document.getElementById('rec-picker-title').textContent = found.show.title;
   document.getElementById('rec-picker-note').value = '';
-  var friendsList = (state.friends||[]).filter(function(f){ return f.id !== found.ownerId; })
-    .slice().sort(function(a,b){ return a.name.localeCompare(b.name); });
+  // Recommendations are person-to-person, not room content, and the bullseye
+  // fires from the personal tabs too -- so pull from everyone you share ANY
+  // room with (state.allFriendsAcrossRooms, preloaded at boot), unioned with
+  // the currently-entered room's crowd in case the background preload hasn't
+  // landed yet. Deduped by id, excluding the show's owner.
+  var seen = {};
+  var friendsList = [].concat(state.allFriendsAcrossRooms||[], state.friends||[])
+    .filter(function(f){
+      if(!f || f.id === found.ownerId || seen[f.id]) return false;
+      seen[f.id] = true; return true;
+    })
+    .sort(function(a,b){ return a.name.localeCompare(b.name); });
   var container = document.getElementById('rec-picker-friends');
   container.innerHTML = friendsList.length
     ? friendsList.map(function(f){ return '<button class="picker-option-btn" id="rec-friend-'+f.id+'" onclick="toggleRecommendFriend(\''+f.id+'\')">'+escAttr(f.name)+'</button>'; }).join('')
-    : '<div style="font-size:13px;color:var(--muted);text-align:center;padding:10px 0;">No one else in your Living Room yet.</div>';
+    : '<div style="font-size:13px;color:var(--muted);text-align:center;padding:10px 0;">No one in your crowd yet.</div>';
   document.getElementById('recommend-picker-modal').classList.add('active');
 };
 
@@ -4352,7 +4362,8 @@ window.sendRecommendation = async function(){
   var ids = _recommendSelectedIds.slice();
   if(!pending || !ids.length) return;
   var note = document.getElementById('rec-picker-note').value.trim();
-  var names = ids.map(function(id){ var f=(state.friends||[]).find(function(x){return x.id===id;}); return f?f.name:'them'; });
+  var namePool = [].concat(state.allFriendsAcrossRooms||[], state.friends||[]);
+  var names = ids.map(function(id){ var f=namePool.find(function(x){return x.id===id;}); return f?f.name:'them'; });
   document.getElementById('recommend-picker-modal').classList.remove('active');
   _recommendPending = null;
   _recommendSelectedIds = [];
