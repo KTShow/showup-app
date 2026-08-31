@@ -3511,7 +3511,12 @@ window.showPrimeTimeDetail = function(idx){
   if(!s)return;
   var panel=document.getElementById('prime-time-detail-view');
   var remotes=''; for(var n=1;n<=5;n++){var lit=n<=Math.floor(s.avg);remotes+='<span style="opacity:'+(lit?'1':'0.18')+';display:inline-block;">'+remoteIcon(16,lit)+'</span>';}
-  var rows=s.raters.slice().sort(function(a,b){return (b.isMe?1:0)-(a.isMe?1:0)||b.rating-a.rating;}).map(function(r){
+  // Named raters (you + anyone in one of your rooms) render individually.
+  // Out-of-network raters ("Neighbor") collapse into a single aggregate row
+  // so a show rated by 15 strangers doesn't bury your one or two friends.
+  var named=s.raters.filter(function(r){return r.isMe || r.inNetwork;});
+  var neighbors=s.raters.filter(function(r){return !r.isMe && !r.inNetwork;});
+  var rows=named.slice().sort(function(a,b){return (b.isMe?1:0)-(a.isMe?1:0)||b.rating-a.rating;}).map(function(r){
     var rR=''; for(var n=1;n<=5;n++){rR+='<span style="opacity:'+(n<=r.rating?'1':'0.18')+';display:inline-block;">'+remoteIcon(13,n<=r.rating)+'</span>';}
     var jump = r.showId ? 'jumpToFriendShow(\''+r.id+'\',\''+r.showId+'\',\'They have hidden this one from their room.\')' : 'showFriend(\''+r.id+'\')';
     var isLink = !r.isMe && r.inNetwork && r.id;
@@ -3519,6 +3524,13 @@ window.showPrimeTimeDetail = function(idx){
     var nameHTML = isLink ? '<span class="name-pill">'+escAttr(r.name)+'</span>' : escAttr(r.name);
     return '<div class="rank-detail-row"><div class="rank-detail-av" style="background:#888">'+escAttr(r.initials||'?')+'</div><div'+nameAttr+'>'+nameHTML+'</div><div style="display:flex;gap:2px;">'+rR+'</div></div>';
   }).join('');
+  if(neighbors.length){
+    var nAvg=neighbors.reduce(function(a,r){return a+r.rating;},0)/neighbors.length;
+    var nR=''; for(var n=1;n<=5;n++){nR+='<span style="opacity:'+(n<=Math.round(nAvg)?'1':'0.18')+';display:inline-block;">'+remoteIcon(13,n<=Math.round(nAvg))+'</span>';}
+    rows+='<div class="rank-detail-row"><div class="rank-detail-av" style="background:#888">N</div>'
+      +'<div class="rank-detail-name">'+neighbors.length+(neighbors.length===1?' neighbor':' neighbors')+'</div>'
+      +'<div style="display:flex;gap:2px;align-items:center;">'+nR+'<span style="margin-left:6px;font-size:12px;color:var(--muted);">'+(Math.round(nAvg*10)/10).toFixed(1)+'</span></div></div>';
+  }
   var clickAttr=s.tmdb_id?' class="poster-clickable" onclick="openShowDetails('+s.tmdb_id+')"':'';
   var thumb=s.poster_path
     ? '<img src="'+TMDB_IMG+s.poster_path+'"'+clickAttr+' style="width:84px;height:84px;border-radius:10px;object-fit:cover;flex-shrink:0;" />'
