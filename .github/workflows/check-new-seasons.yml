@@ -17,10 +17,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '20'
+      - uses: actions/checkout@v5
+      # No actions/setup-node: the script has zero npm dependencies and only
+      # uses built-ins (global fetch), so the runner's preinstalled Node is fine.
       - name: Run new-season check
         run: node scripts/check-new-seasons.mjs
         env:
