@@ -5128,6 +5128,7 @@ function normalizeShow(s) {
     hidden: s.hidden || false,
     dnf: s.dnf || false,
     waitingForSeason: s.waiting_for_season || false,
+    waitingSince: s.waiting_since || null,
     newSeasonAvailable: s.new_season_available || false,
     numberOfSeasons: s.number_of_seasons || null,
     show_status: s.show_status || null,
@@ -5965,23 +5966,27 @@ window.markDNFFromWaiting = async function(id) {
   var idx = state.watchlist.findIndex(function(x) { return x.id === id; });
   if (idx === -1) return;
   var show = state.watchlist.splice(idx, 1)[0];
+  var prevWaitingSince = show.waitingSince;
   show.dnf = true;
   show.waitingForSeason = false;
+  show.waitingSince = null;
   state.watched.push(show);
   renderList('watchlist'); renderList('watched');
-  try { await updateShowStatus(id, 'dnf', { dnf: true, waiting_for_season: false }); } catch(e) { console.error('markDNFFromWaiting error:', e); }
-  openDWM(show, "Didn't finish? Rate it anyway", '🎬', { currentList: 'watched', originalList: 'watchlist', restoreFields: { dnf: false, waitingForSeason: true }, dbStatus: 'watchlist', dbExtra: { dnf: false, waiting_for_season: true } });
+  try { await updateShowStatus(id, 'dnf', { dnf: true, waiting_for_season: false, waiting_since: null }); } catch(e) { console.error('markDNFFromWaiting error:', e); }
+  openDWM(show, "Didn't finish? Rate it anyway", '🎬', { currentList: 'watched', originalList: 'watchlist', restoreFields: { dnf: false, waitingForSeason: true, waitingSince: prevWaitingSince }, dbStatus: 'watchlist', dbExtra: { dnf: false, waiting_for_season: true, waiting_since: prevWaitingSince } });
 };
 
 window.markWaiting = async function(id) {
   var idx = state.watching.findIndex(function(x) { return x.id === id; });
   if (idx === -1) return;
   var s = state.watching.splice(idx, 1)[0];
+  var now = new Date().toISOString();
   s.waitingForSeason = true;
+  s.waitingSince = now;
   state.watchlist.push(s);
   renderList('watching'); renderList('watchlist');
-  try { await updateShowStatus(id, 'watchlist', { waiting_for_season: true }); } catch(e) { console.error('markWaiting error:', e); }
-  openDWM(s, 'Caught up for now?', '⏳', { currentList: 'watchlist', originalList: 'watching', restoreFields: { waitingForSeason: false }, dbStatus: 'watching', dbExtra: { waiting_for_season: false } });
+  try { await updateShowStatus(id, 'watchlist', { waiting_for_season: true, waiting_since: now }); } catch(e) { console.error('markWaiting error:', e); }
+  openDWM(s, 'Caught up for now?', '⏳', { currentList: 'watchlist', originalList: 'watching', restoreFields: { waitingForSeason: false, waitingSince: null }, dbStatus: 'watching', dbExtra: { waiting_for_season: false, waiting_since: null } });
 };
 
 // Marks a not-yet-started My List item as waiting in place — unlike
@@ -5990,9 +5995,11 @@ window.markWaiting = async function(id) {
 window.markWaitingFromList = async function(id) {
   var s = state.watchlist.find(function(x) { return x.id === id; });
   if (!s) return;
+  var now = new Date().toISOString();
   s.waitingForSeason = true;
+  s.waitingSince = now;
   renderList('watchlist');
-  try { await updateShowStatus(id, 'watchlist', { waiting_for_season: true }); } catch(e) { console.error('markWaitingFromList error:', e); }
+  try { await updateShowStatus(id, 'watchlist', { waiting_for_season: true, waiting_since: now }); } catch(e) { console.error('markWaitingFromList error:', e); }
 };
 
 window.resumeWatching = async function(id) {
@@ -6000,9 +6007,10 @@ window.resumeWatching = async function(id) {
   if (idx === -1) return;
   var s = state.watchlist.splice(idx, 1)[0];
   s.waitingForSeason = false;
+  s.waitingSince = null;
   state.watching.push(s);
   renderList('watchlist'); renderList('watching');
-  try { await updateShowStatus(id, 'watching', { waiting_for_season: false }); } catch(e) { console.error('resumeWatching error:', e); }
+  try { await updateShowStatus(id, 'watching', { waiting_for_season: false, waiting_since: null }); } catch(e) { console.error('resumeWatching error:', e); }
 };
 
 window.tapNewSeasonBadge = async function(id) {
@@ -6012,10 +6020,11 @@ window.tapNewSeasonBadge = async function(id) {
   if (!confirm('New season of ' + s.title + ' is out! Move to Currently Watching?')) return;
   state.watchlist.splice(idx, 1);
   s.waitingForSeason = false;
+  s.waitingSince = null;
   s.newSeasonAvailable = false;
   state.watching.push(s);
   renderList('watchlist'); renderList('watching');
-  try { await updateShowStatus(id, 'watching', { waiting_for_season: false, new_season_available: false }); } catch(e) { console.error('tapNewSeasonBadge error:', e); }
+  try { await updateShowStatus(id, 'watching', { waiting_for_season: false, waiting_since: null, new_season_available: false }); } catch(e) { console.error('tapNewSeasonBadge error:', e); }
 };
 
 // Shortcut from Binged/DNF/My List straight into the Waiting section,
@@ -6037,13 +6046,15 @@ async function _doMoveToWaiting(list, id) {
   var s = state[list].find(function(x) { return x.id === id; });
   if (!s) return;
   state[list] = state[list].filter(function(x) { return x.id !== id; });
+  var now = new Date().toISOString();
   s.waitingForSeason = true;
+  s.waitingSince = now;
   s.dnf = false;
   state.watchlist.push(s);
   renderList(list);
   renderList('watchlist');
   showToast('Moved "' + s.title + '" to ' + ADD_DEST_DISPLAY_LABELS.waiting + '.');
-  try { await updateShowStatus(id, 'watchlist', { waiting_for_season: true, dnf: false }); } catch(e) { console.error('moveToWaiting error:', e); }
+  try { await updateShowStatus(id, 'watchlist', { waiting_for_season: true, waiting_since: now, dnf: false }); } catch(e) { console.error('moveToWaiting error:', e); }
 }
 
 // Kebab-menu shortcut on a Didn't Finish card, for shows marked DNF by
@@ -6597,6 +6608,19 @@ window.moveTop5Down = async function(idx) {
 
 var TMDB_KEY = 'b1fd269e9a38591e0e4ded8a1b269d12';
 var TMDB_IMG = 'https://image.tmdb.org/t/p/w92';
+
+// TMDB's number_of_seasons counts every season it has a record for, including
+// ones that are announced/in production but haven't aired yet -- using it
+// directly makes the "New season!" badge fire the moment a future season is
+// announced, well before it's actually out. This counts only seasons with a
+// real air date that has already passed, which is what "released" should mean
+// everywhere a season count gets stored or compared.
+function releasedSeasonCount(tmdbShowData) {
+  var today = new Date();
+  return (tmdbShowData.seasons || []).filter(function(season) {
+    return season.season_number > 0 && season.air_date && new Date(season.air_date) <= today;
+  }).length;
+}
 var _tmdbPending = {};
 var _tmdbResults = {};
 var _tmdbTimers = {};
@@ -6705,24 +6729,53 @@ function mapProviderToPlatform(name) {
   return null;
 }
 
-// Background check for "Waiting for New Season" shows: compares the season
-// count captured when each show was added against TMDB's current count.
-// Fires after the watchlist loads, doesn't block anything. Only checks shows
-// not already flagged, so a flag persists (and stops re-checking) until the
-// user acts on it via tapNewSeasonBadge().
+// Background check for "Waiting for New Season" shows: compares the released-
+// season count captured when each show was added against TMDB's current
+// released-season count. Deliberately ignores TMDB seasons with no air date
+// (or a future one) -- TMDB creates a season entry the moment one is
+// announced, long before it airs, so counting those would flag "New season!"
+// while it's still just an announcement. Fires after the watchlist loads,
+// doesn't block anything. Only checks shows not already flagged, so a flag
+// persists (and stops re-checking) until the user acts on it via
+// tapNewSeasonBadge().
 function checkForNewSeasons() {
   var waiting = (state.watchlist || []).filter(function(s) {
-    return s.waitingForSeason && !s.newSeasonAvailable && s.tmdb_id && s.numberOfSeasons != null;
+    return s.waitingForSeason && !s.newSeasonAvailable && s.tmdb_id;
   });
   waiting.forEach(function(s) {
     fetch('https://api.themoviedb.org/3/tv/' + s.tmdb_id + '?api_key=' + TMDB_KEY)
       .then(function(res) { return res.json(); })
       .then(function(d) {
-        if (!d.number_of_seasons || d.number_of_seasons <= s.numberOfSeasons) return;
+        var today = new Date();
+        var released = (d.seasons || []).filter(function(season) {
+          return season.season_number > 0 && season.air_date && new Date(season.air_date) <= today;
+        });
+        if (!released.length) return;
+        var count = released.length;
+        // Shows added via quick-add flows (New This Week, Prime Time, Full
+        // Lineup, Platform browse, Friends' Favorites) never fetch full TMDB
+        // details, so they land here with no season count on record. Rather
+        // than blindly treating today's count as the baseline (which would
+        // silently swallow a season that already dropped between when the
+        // user started waiting and this first-ever check), compare each
+        // released season's air date against waitingSince to catch that case too.
+        if (s.numberOfSeasons == null) {
+          var alreadyAired = s.waitingSince && released.some(function(season) {
+            return new Date(season.air_date) > new Date(s.waitingSince);
+          });
+          s.numberOfSeasons = count;
+          if (alreadyAired) {
+            s.newSeasonAvailable = true;
+            renderList('watchlist');
+            return updateShowStatus(s.id, 'watchlist', { new_season_available: true, number_of_seasons: count });
+          }
+          return updateShowStatus(s.id, 'watchlist', { number_of_seasons: count });
+        }
+        if (count <= s.numberOfSeasons) return;
         s.newSeasonAvailable = true;
-        s.numberOfSeasons = d.number_of_seasons;
+        s.numberOfSeasons = count;
         renderList('watchlist');
-        return updateShowStatus(s.id, 'watchlist', { new_season_available: true, number_of_seasons: d.number_of_seasons });
+        return updateShowStatus(s.id, 'watchlist', { new_season_available: true, number_of_seasons: count });
       })
       .catch(function(e) { console.error('checkForNewSeasons error for ' + s.title + ':', e); });
   });
@@ -6818,7 +6871,7 @@ window.tmdbSelect = async function(prefix, idx) {
     var d = await res.json();
     _tmdbPending.genre = d.genres && d.genres.length ? d.genres[0].name : null;
     _tmdbPending.original_network = d.networks && d.networks.length ? d.networks[0].name : null;
-    _tmdbPending.number_of_seasons = d.number_of_seasons || null;
+    _tmdbPending.number_of_seasons = releasedSeasonCount(d);
     _tmdbPending.show_status = d.status || null;
   } catch(e) { console.error('TMDB detail error:', e); }
 
@@ -6909,7 +6962,7 @@ window.openShowDetails = async function(tmdbId, friendRatings) {
       genre: (d.genres && d.genres[0]) ? d.genres[0].name : null,
       original_network: (d.networks && d.networks[0]) ? d.networks[0].name : null,
       first_air_year: year ? parseInt(year, 10) : null,
-      number_of_seasons: d.number_of_seasons || null, show_status: d.status || null,
+      number_of_seasons: releasedSeasonCount(d), show_status: d.status || null,
       overview: d.overview || null, vote_average: d.vote_average || null,
     };
     if (addBtn && _currentShowDetails.title) addBtn.style.display = 'block';
@@ -7042,6 +7095,7 @@ window.chooseAddDestination = async function(destKey) {
   var destList = ADD_DEST_LIST[destKey];
   var isDnf = destKey === 'dnf';
   var isWaiting = destKey === 'waiting';
+  var waitingSince = isWaiting ? new Date().toISOString() : null;
   var existing = findMyShowByTitle(info.title);
   var resultShow;
 
@@ -7051,6 +7105,7 @@ window.chooseAddDestination = async function(destKey) {
     state[srcList] = state[srcList].filter(function(x) { return x.id !== s.id; });
     s.dnf = isDnf;
     s.waitingForSeason = isWaiting;
+    s.waitingSince = waitingSince;
     state[destList].push(s);
     renderList(srcList);
     renderList(destList);
@@ -7059,7 +7114,7 @@ window.chooseAddDestination = async function(destKey) {
     showToast(srcList === destList
       ? 'Already in ' + destLabel + ' — updated.'
       : 'Was in ' + ADD_LIST_LABELS[srcList] + ' — moved to ' + destLabel + '.');
-    try { await updateShowStatus(s.id, status, { dnf: isDnf, waiting_for_season: isWaiting }); } catch(e) { console.error('chooseAddDestination move error:', e); }
+    try { await updateShowStatus(s.id, status, { dnf: isDnf, waiting_for_season: isWaiting, waiting_since: waitingSince }); } catch(e) { console.error('chooseAddDestination move error:', e); }
   } else {
     var src = state.lastViewedFriend ? 'living_room' : 'manual';
     var inf = state.lastViewedFriend || null;
@@ -7071,9 +7126,9 @@ window.chooseAddDestination = async function(destKey) {
         number_of_seasons: info.number_of_seasons, show_status: info.show_status,
         overview: info.overview, vote_average: info.vote_average,
       });
-      if (isWaiting) { try { await updateShowStatus(row.id, 'watchlist', { waiting_for_season: true }); } catch(e) { console.error('chooseAddDestination waiting flag error:', e); } }
+      if (isWaiting) { try { await updateShowStatus(row.id, 'watchlist', { waiting_for_season: true, waiting_since: waitingSince }); } catch(e) { console.error('chooseAddDestination waiting flag error:', e); } }
       resultShow = {
-        id: row.id, title: info.title, platform: info.platform || 'None', rating: 0, hidden: false, dnf: isDnf, waitingForSeason: isWaiting,
+        id: row.id, title: info.title, platform: info.platform || 'None', rating: 0, hidden: false, dnf: isDnf, waitingForSeason: isWaiting, waitingSince: waitingSince,
         source: src, influencedBy: inf, addedAt: row.added_at, reactions: [], showReact: false,
         poster_path: info.poster_path || null, tmdb_id: info.tmdb_id || null,
       };
