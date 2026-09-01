@@ -35,12 +35,26 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
 .screen{display:none;flex-direction:column;min-height:100vh;}
 .screen.active{display:flex;}
 
-.nav{background:#EDE8DC;border-bottom:1px solid var(--border);padding:0 20px;display:flex;align-items:center;justify-content:space-between;height:52px;flex-shrink:0;}
+.nav{background:#EDE8DC;border-bottom:1px solid var(--border);padding:0 20px;display:flex;align-items:center;justify-content:space-between;height:52px;flex-shrink:0;position:relative;}
 .nav-logo{font-family:var(--serif);font-size:22px;color:var(--terra);font-weight:700;}
 .nav-right{display:flex;align-items:center;gap:10px;}
 .nav-back{background:none;border:none;color:var(--fig);font-family:var(--sans);font-size:14px;font-weight:600;cursor:pointer;}
 .nav-settings{background:none;border:none;font-size:20px;cursor:pointer;padding:2px;}
 .nav-avatar{width:32px;height:32px;border-radius:50%;background:var(--olive);color:white;font-size:16px;display:flex;align-items:center;justify-content:center;cursor:pointer;border:none;flex-shrink:0;}
+.nav-bell{position:relative;background:none;border:none;font-size:19px;cursor:pointer;padding:2px;line-height:1;}
+.nav-bell-dot{position:absolute;top:0;right:0;min-width:15px;height:15px;padding:0 3px;box-sizing:border-box;border-radius:8px;background:var(--terra);color:#fff;font-size:9px;font-weight:700;font-family:var(--sans);display:flex;align-items:center;justify-content:center;border:1.5px solid #EDE8DC;}
+.notif-panel{position:absolute;top:52px;right:12px;width:min(340px,calc(100vw - 24px));max-height:70vh;overflow-y:auto;background:#fff;border:1px solid var(--border);border-radius:12px;box-shadow:0 8px 28px rgba(0,0,0,0.18);z-index:400;}
+.notif-panel-head{padding:12px 14px;font-family:var(--serif);font-size:15px;font-weight:700;color:var(--charcoal);border-bottom:1px solid var(--border);position:sticky;top:0;background:#fff;}
+.notif-empty{padding:22px 14px;text-align:center;color:var(--muted);font-size:13px;}
+.notif-item{display:flex;gap:10px;padding:11px 14px;border-bottom:1px solid var(--border);cursor:pointer;align-items:flex-start;}
+.notif-item:last-child{border-bottom:none;}
+.notif-item:hover{background:var(--cream);}
+.notif-item.is-unread{background:rgba(196,98,45,0.06);}
+.notif-ico{font-size:16px;flex-shrink:0;line-height:1.3;}
+.notif-body{flex:1;min-width:0;}
+.notif-title{font-size:13px;font-weight:700;color:var(--charcoal);}
+.notif-sub{font-size:12px;color:var(--muted);margin-top:1px;}
+.notif-time{font-size:11px;color:var(--muted);margin-top:3px;}
 
 .bottom-nav{position:fixed;bottom:0;left:0;right:0;background:#EDE8DC;border-top:1px solid var(--border);display:flex;justify-content:space-around;align-items:center;height:60px;z-index:100;padding-bottom:env(safe-area-inset-bottom);}
 .nav-tab{background:none;border:none;display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 10px;font-family:var(--sans);font-size:10px;color:var(--muted);cursor:pointer;transition:all 0.2s;flex:1;}
@@ -723,8 +737,13 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
   <div class="nav">
     <div class="nav-logo">ShowUp</div>
     <div class="nav-right">
+      <button class="nav-bell" id="nav-bell" onclick="toggleNotifPanel(event)" title="Notifications" aria-label="Notifications">&#128276;<span class="nav-bell-dot" id="nav-bell-dot" style="display:none">0</span></button>
       <button class="nav-settings" onclick="goToSettings()" title="Settings">&#9881;&#65039;</button>
       <button class="nav-avatar" id="user-avatar" onclick="goToProfile()">?</button>
+    </div>
+    <div class="notif-panel" id="notif-panel" hidden>
+      <div class="notif-panel-head">Notifications</div>
+      <div id="notif-list"></div>
     </div>
   </div>
   <div class="content">
@@ -1129,6 +1148,7 @@ var state = {
   allRoomsSearchLoaded: false,
   allFriendsAcrossRooms: [], // everyone you share ANY room with, full show+reaction data -- powers card-level ratings/comment pooling (see preloadFriendsInBackground)
   crewShowsByPlatform: false, // Your Crowd view mode: friend tiles (false) vs. shows grouped by platform (true)
+  notifications: [],     // per-user feed (new_season, ...), filled by loadNotifications()
 };
 
 var _firstTimeTellMore = false; // true when completing onboarding for the first time
@@ -5202,7 +5222,7 @@ async function loadUserIntoState(profile) {
     state.watching = shows.filter(function(s) { return s.status === 'watching'; }).map(normalizeShow);
     state.watchlist = shows.filter(function(s) { return s.status === 'watchlist'; }).map(normalizeShow);
     state.watched = shows.filter(function(s) { return s.status === 'watched' || s.status === 'dnf'; }).map(normalizeShow);
-    checkForNewSeasons(); // fire-and-forget, updates badges in the background as each check resolves
+    loadNotifications(); // fire-and-forget, fills the bell + new-season badges from server-computed state
     loadInfluencerNames(); // fire-and-forget, fills in "Recommended by" badges once resolved
   } catch(e) { console.error('Error loading shows:', e); }
 
@@ -6025,6 +6045,7 @@ window.tapNewSeasonBadge = async function(id) {
   s.newSeasonAvailable = false;
   state.watching.push(s);
   renderList('watchlist'); renderList('watching');
+  _markNewSeasonNotifRead(id);
   try { await updateShowStatus(id, 'watching', { waiting_for_season: false, waiting_since: null, new_season_available: false }); } catch(e) { console.error('tapNewSeasonBadge error:', e); }
 };
 
@@ -6035,6 +6056,7 @@ window.tapNewSeasonOnWatching = async function(id) {
   if (!s) return;
   s.newSeasonAvailable = false;
   renderList('watching');
+  _markNewSeasonNotifRead(id);
   try { await updateShowStatus(id, 'watching', { new_season_available: false }); } catch(e) { console.error('tapNewSeasonOnWatching error:', e); }
 };
 
@@ -6740,69 +6762,165 @@ function mapProviderToPlatform(name) {
   return null;
 }
 
-// Background check for new seasons: compares the released-season count
-// captured when each show was added against TMDB's current released-season
-// count. Deliberately ignores TMDB seasons with no air date (or a future
-// one) -- TMDB creates a season entry the moment one is announced, long
-// before it airs, so counting those would flag "New season!" while it's
-// still just an announcement.
-//
-// Covers two groups, since a show can go stale in either spot: everything
-// in Waiting for New Season (the explicit "I'm caught up, tell me when
-// there's more" signal), and everything still in Currently Watching (people
-// often finish a show without ever flipping that flag, and it would
-// otherwise sit there forever with no way to surface a new season). Fires
-// after the lists load, doesn't block anything. Only checks shows not
-// already flagged, so a flag persists until the user acts on it.
-function checkForNewSeasons() {
-  var candidates = (state.watchlist || [])
-    .filter(function(s) { return s.waitingForSeason && !s.newSeasonAvailable && s.tmdb_id; })
-    .map(function(s) { return { show: s, list: 'watchlist', status: 'watchlist', referenceDate: s.waitingSince }; })
-    .concat((state.watching || [])
-      .filter(function(s) { return !s.newSeasonAvailable && s.tmdb_id; })
-      .map(function(s) { return { show: s, list: 'watching', status: 'watching', referenceDate: s.addedAt }; }));
+// New-season detection now runs server-side: a daily GitHub Actions job
+// (scripts/check-new-seasons.mjs) checks TMDB once per unique show, updates
+// a shared tracked_seasons registry, sets shows.new_season_available, and
+// writes a row into notifications. The client just reads those -- see
+// loadNotifications() and the new-season badge on show cards. The old
+// in-browser checkForNewSeasons() (one TMDB call per show per app-open, per
+// user, off an inflated baseline) is gone.
 
-  candidates.forEach(function(c) {
-    var s = c.show;
-    fetch('https://api.themoviedb.org/3/tv/' + s.tmdb_id + '?api_key=' + TMDB_KEY)
-      .then(function(res) { return res.json(); })
-      .then(function(d) {
-        var today = new Date();
-        var released = (d.seasons || []).filter(function(season) {
-          return season.season_number > 0 && season.air_date && new Date(season.air_date) <= today;
-        });
-        if (!released.length) return;
-        var count = released.length;
-        // Shows added via quick-add flows (New This Week, Prime Time, Full
-        // Lineup, Platform browse, Friends' Favorites) never fetch full TMDB
-        // details, so they land here with no season count on record. Rather
-        // than blindly treating today's count as the baseline (which would
-        // silently swallow a season that already dropped between when the
-        // reference point and this first-ever check), compare each released
-        // season's air date against that reference point to catch that case
-        // too -- waitingSince for a waiting show, addedAt for one still
-        // being watched.
-        if (s.numberOfSeasons == null) {
-          var alreadyAired = c.referenceDate && released.some(function(season) {
-            return new Date(season.air_date) > new Date(c.referenceDate);
-          });
-          s.numberOfSeasons = count;
-          if (alreadyAired) {
-            s.newSeasonAvailable = true;
-            renderList(c.list);
-            return updateShowStatus(s.id, c.status, { new_season_available: true, number_of_seasons: count });
-          }
-          return updateShowStatus(s.id, c.status, { number_of_seasons: count });
-        }
-        if (count <= s.numberOfSeasons) return;
-        s.newSeasonAvailable = true;
-        s.numberOfSeasons = count;
-        renderList(c.list);
-        return updateShowStatus(s.id, c.status, { new_season_available: true, number_of_seasons: count });
-      })
-      .catch(function(e) { console.error('checkForNewSeasons error for ' + s.title + ':', e); });
+// ============================================================
+// NOTIFICATIONS (bell)
+// ============================================================
+// The feed is written server-side (scripts/check-new-seasons.mjs). The
+// client only reads it, stamps seen_at when the bell panel is opened (which
+// clears the dot), and stamps read_at when an item is tapped. new_season is
+// the only type today; the table and this code are shaped so comment /
+// invite types can be added without a rework.
+
+var NOTIF_ICON = { new_season: '🎉' };
+
+function _notifEsc(s) {
+  return String(s == null ? '' : s).replace(/[&<>"]/g, function(c) {
+    return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c];
   });
 }
+
+async function loadNotifications() {
+  if (!state.user) return;
+  try {
+    var res = await sb.from('notifications')
+      .select('*')
+      .eq('user_id', state.user.id)
+      .order('created_at', { ascending: false })
+      .limit(50);
+    if (res.error) throw res.error;
+    state.notifications = res.data || [];
+  } catch (e) {
+    console.error('loadNotifications error:', e);
+    state.notifications = [];
+  }
+  renderNotifBell();
+  var panel = document.getElementById('notif-panel');
+  if (panel && !panel.hidden) renderNotifPanel();
+}
+
+function _unseenNotifCount() {
+  return (state.notifications || []).filter(function(n) { return !n.seen_at; }).length;
+}
+
+function renderNotifBell() {
+  var dot = document.getElementById('nav-bell-dot');
+  if (!dot) return;
+  var n = _unseenNotifCount();
+  if (n > 0) { dot.textContent = n > 9 ? '9+' : String(n); dot.style.display = 'flex'; }
+  else { dot.style.display = 'none'; }
+}
+
+function renderNotifPanel() {
+  var list = document.getElementById('notif-list');
+  if (!list) return;
+  var items = state.notifications || [];
+  if (!items.length) {
+    list.innerHTML = '<div class="notif-empty">No notifications yet.</div>';
+    return;
+  }
+  list.innerHTML = items.map(function(n) {
+    return '<div class="notif-item' + (n.read_at ? '' : ' is-unread') + '" onclick="openNotification(\'' + n.id + '\')">'
+      + '<span class="notif-ico">' + (NOTIF_ICON[n.type] || '🔔') + '</span>'
+      + '<div class="notif-body">'
+      + '<div class="notif-title">' + _notifEsc(n.title) + '</div>'
+      + (n.body ? '<div class="notif-sub">' + _notifEsc(n.body) + '</div>' : '')
+      + '<div class="notif-time">' + timeAgo(n.created_at) + '</div>'
+      + '</div></div>';
+  }).join('');
+}
+
+window.toggleNotifPanel = function(ev) {
+  if (ev) ev.stopPropagation();
+  var panel = document.getElementById('notif-panel');
+  if (!panel) return;
+  if (panel.hidden) {
+    renderNotifPanel();
+    panel.hidden = false;
+    setTimeout(function() { document.addEventListener('click', _closeNotifOnOutside); }, 0);
+    _markNotifsSeen();
+  } else {
+    _closeNotifPanel();
+  }
+};
+
+function _closeNotifPanel() {
+  var panel = document.getElementById('notif-panel');
+  if (panel) panel.hidden = true;
+  document.removeEventListener('click', _closeNotifOnOutside);
+}
+
+function _closeNotifOnOutside(e) {
+  var panel = document.getElementById('notif-panel');
+  var bell = document.getElementById('nav-bell');
+  if (!panel || panel.hidden) return;
+  if (panel.contains(e.target) || (bell && bell.contains(e.target))) return;
+  _closeNotifPanel();
+}
+
+async function _markNotifsSeen() {
+  var unseen = (state.notifications || []).filter(function(n) { return !n.seen_at; });
+  if (!unseen.length) return;
+  var now = new Date().toISOString();
+  unseen.forEach(function(n) { n.seen_at = now; });
+  renderNotifBell();
+  try {
+    await sb.from('notifications').update({ seen_at: now })
+      .eq('user_id', state.user.id).is('seen_at', null);
+  } catch (e) { console.error('_markNotifsSeen error:', e); }
+}
+
+// Called when the matching card badge is tapped directly, so the bell feed
+// doesn't keep showing that new season as unread.
+function _markNewSeasonNotifRead(showId) {
+  var hit = (state.notifications || []).filter(function(n) {
+    return n.type === 'new_season' && n.show_id === showId && !n.read_at;
+  });
+  if (!hit.length) return;
+  var now = new Date().toISOString();
+  hit.forEach(function(n) { n.read_at = now; });
+  var panel = document.getElementById('notif-panel');
+  if (panel && !panel.hidden) renderNotifPanel();
+  sb.from('notifications').update({ read_at: now })
+    .eq('show_id', showId).eq('type', 'new_season').is('read_at', null)
+    .then(function(res) { if (res.error) console.error('_markNewSeasonNotifRead error:', res.error); });
+}
+
+window.openNotification = async function(id) {
+  var n = (state.notifications || []).find(function(x) { return x.id === id; });
+  if (!n) return;
+  if (!n.read_at) {
+    n.read_at = new Date().toISOString();
+    renderNotifPanel();
+    renderNotifBell();
+    try { await sb.from('notifications').update({ read_at: n.read_at }).eq('id', id); }
+    catch (e) { console.error('openNotification mark-read error:', e); }
+  }
+  _closeNotifPanel();
+
+  if (n.type === 'new_season' && n.show_id) {
+    if (state.watchlist.find(function(s) { return s.id === n.show_id; })) {
+      tapNewSeasonBadge(n.show_id); // confirm + move to Currently Watching
+      return;
+    }
+    if (state.watching.find(function(s) { return s.id === n.show_id; })) {
+      var btn = document.getElementById('btab-watching');
+      if (btn) showTab('watching', btn);
+      setTimeout(function() {
+        var card = document.getElementById('card-' + n.show_id);
+        if (card) card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }, 60);
+      return;
+    }
+  }
+};
 
 // "Recommended by" badges need the recommender's name, but your own
 // Watching/My List tabs aren't tied to any specific room -- state.friends

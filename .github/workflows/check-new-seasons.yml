@@ -1,0 +1,29 @@
+name: Check for new seasons
+
+# Daily server-side new-season check. Replaces the old in-browser
+# checkForNewSeasons(). See scripts/check-new-seasons.mjs.
+
+on:
+  schedule:
+    - cron: '0 15 * * *' # 15:00 UTC daily (~10-11am ET)
+  workflow_dispatch: {} # run by hand from the Actions tab
+
+concurrency:
+  group: check-new-seasons
+  cancel-in-progress: false
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Run new-season check
+        run: node scripts/check-new-seasons.mjs
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          TMDB_API_KEY: ${{ secrets.TMDB_API_KEY }}
