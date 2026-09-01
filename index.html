@@ -6775,11 +6775,12 @@ function mapProviderToPlatform(name) {
 // ============================================================
 // The feed is written server-side (scripts/check-new-seasons.mjs). The
 // client only reads it, stamps seen_at when the bell panel is opened (which
-// clears the dot), and stamps read_at when an item is tapped. new_season is
-// the only type today; the table and this code are shaped so comment /
+// clears the dot), and stamps read_at when an item is tapped. Types today:
+// new_season (a season aired) and season_upcoming (a confirmed premiere
+// date, ~2-3 weeks out). The table and this code are shaped so comment /
 // invite types can be added without a rework.
 
-var NOTIF_ICON = { new_season: '🎉' };
+var NOTIF_ICON = { new_season: '🎉', season_upcoming: '🗓️' };
 
 function _notifEsc(s) {
   return String(s == null ? '' : s).replace(/[&<>"]/g, function(c) {
@@ -6904,23 +6905,30 @@ window.openNotification = async function(id) {
     catch (e) { console.error('openNotification mark-read error:', e); }
   }
   _closeNotifPanel();
+  if (!n.show_id) return;
 
-  if (n.type === 'new_season' && n.show_id) {
-    if (state.watchlist.find(function(s) { return s.id === n.show_id; })) {
-      tapNewSeasonBadge(n.show_id); // confirm + move to Currently Watching
-      return;
-    }
-    if (state.watching.find(function(s) { return s.id === n.show_id; })) {
-      var btn = document.getElementById('btab-watching');
-      if (btn) showTab('watching', btn);
-      setTimeout(function() {
-        var card = document.getElementById('card-' + n.show_id);
-        if (card) card.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      }, 60);
-      return;
-    }
+  // "Season is out" on a Waiting show: offer the move-to-Watching flow.
+  if (n.type === 'new_season' && state.watchlist.find(function(s) { return s.id === n.show_id && s.waitingForSeason; })) {
+    tapNewSeasonBadge(n.show_id);
+    return;
   }
+  // Everything else (season_upcoming, or a new_season on a plain My List /
+  // Currently Watching show): just jump to the card.
+  _jumpToMyShow(n.show_id);
 };
+
+function _jumpToMyShow(showId) {
+  var tab = state.watching.find(function(s) { return s.id === showId; }) ? 'watching'
+          : state.watchlist.find(function(s) { return s.id === showId; }) ? 'watchlist'
+          : null;
+  if (!tab) return;
+  var btn = document.getElementById('btab-' + tab);
+  if (btn) showTab(tab, btn);
+  setTimeout(function() {
+    var card = document.getElementById('card-' + showId);
+    if (card) card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }, 60);
+}
 
 // "Recommended by" badges need the recommender's name, but your own
 // Watching/My List tabs aren't tied to any specific room -- state.friends

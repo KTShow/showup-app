@@ -5,17 +5,25 @@
 // by hand with `node scripts/check-new-seasons.mjs` given the env vars).
 //
 // What it does, once per run:
-//   1. Pulls every show anyone is Currently Watching, plus every show in
-//      Waiting for New Season.
-//   2. For each DISTINCT tmdb_id, asks TMDB how many seasons have actually
-//      aired (air_date present and in the past — never counts a season TMDB
-//      created the moment it was announced).
-//   3. Upserts that into tracked_seasons (one shared row per show).
+//   1. Pulls every show anyone has in Currently Watching or My List
+//      (My List includes the "Waiting for New Season" subset).
+//   2. For each DISTINCT tmdb_id, asks TMDB:
+//        - how many seasons have actually aired (air_date present and in the
+//          past — never counts a season TMDB created when it was announced)
+//        - whether a not-yet-aired season has a confirmed premiere date
+//          (tmdb.next_episode_to_air only)
+//   3. Upserts the aired count into tracked_seasons (one shared row per show).
 //   4. Per user's copy of the show:
-//        - no stored number_of_seasons  -> set the baseline, do NOT notify
-//        - released count went up        -> set new_season_available = true
-//                                           and insert a notification
-//        - otherwise                     -> nothing
+//        - confirmed premiere date for a season they haven't seen ->
+//          'season_upcoming' notification ("Season 3 premieres Nov 9"),
+//          no card badge (it isn't out yet)
+//        - no stored number_of_seasons -> set the baseline, do NOT notify
+//        - aired count went up -> set new_season_available = true and insert
+//          a 'new_season' notification ("Season 3 is out")
+//        - otherwise -> nothing
+//
+// A user can get both notifications for one season: the dated heads-up
+// ~2-3 weeks out, then the "it's out" on air day.
 //
 // Zero dependencies: Node 20+ global fetch, Supabase REST, TMDB REST.
 // The dedup unique index on notifications means re-running is always safe.
@@ -51,6 +59,24 @@ function releasedSeasons(tmdb) {
   return (tmdb.seasons || [])
     .filter((s) => s.season_number > 0 && s.air_date && new Date(s.air_date) <= today)
     .sort((a, b) => new Date(a.air_date) - new Date(b.air_date));
+}
+
+// --- upcoming season: a confirmed premiere date for a season not yet aired -
+// Uses ONLY tmdb.next_episode_to_air, TMDB's "this is genuinely scheduled
+// next" field. Far-out dates in tmdb.seasons[] are routinely placeholders or
+// shift around, so they're deliberately ignored -- we'd rather give ~2-3
+// weeks of reliable notice than a month of maybe-wrong notice.
+function upcomingSeason(tmdb, releasedCount) {
+  const nx = tmdb.next_episode_to_air;
+  if (!nx || !nx.air_date) return null;
+  if (nx.season_number == null || nx.season_number <= releasedCount) return null;
+  if (new Date(nx.air_date) <= new Date()) return null;
+  return { season_number: nx.season_number, air_date: nx.air_date };
+}
+
+function fmtDate(iso) {
+  const d = new Date(iso + 'T00:00:00Z');
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' });
 }
 
 async function sbGet(path) {
@@ -95,11 +121,13 @@ async function main() {
   const startedAt = new Date();
   console.log(`[new-seasons] run start ${startedAt.toISOString()}`);
 
-  // 1. Candidate shows: Currently Watching + Waiting for New Season, with a tmdb_id.
+  // 1. Candidate shows: everything in Currently Watching or My List, with a
+  //    tmdb_id. (My List = status 'watchlist', which includes the "Waiting
+  //    for New Season" subset.)
   const shows = await sbGet(
-    'shows?select=id,user_id,title,tmdb_id,status,waiting_for_season,number_of_seasons,new_season_available' +
+    'shows?select=id,user_id,title,tmdb_id,status,number_of_seasons,new_season_available' +
       '&tmdb_id=not.is.null' +
-      '&or=(status.eq.watching,and(status.eq.watchlist,waiting_for_season.is.true))'
+      '&status=in.(watching,watchlist)'
   );
   console.log(`[new-seasons] ${shows.length} candidate show rows`);
 
@@ -119,6 +147,7 @@ async function main() {
   let checked = 0,
     baselined = 0,
     notified = 0,
+    headsups = 0,
     skipped = 0,
     errors = 0;
 
@@ -140,6 +169,7 @@ async function main() {
     const released = releasedSeasons(tmdb);
     const count = released.length;
     const latest = released[released.length - 1];
+    const upcoming = upcomingSeason(tmdb, count);
     checked++;
 
     // 3. Upsert the shared registry row.
@@ -163,6 +193,29 @@ async function main() {
     // 4. Reconcile each user's copy of the show.
     for (const s of byTmdb.get(tmdbId)) {
       try {
+        // 4a. Dated heads-up for a not-yet-aired season the user hasn't seen.
+        //     Independent of the baseline/new_season logic below; the dedup
+        //     index keeps it to one per user per season. No card badge.
+        const seenCount = s.number_of_seasons == null ? count : s.number_of_seasons;
+        if (upcoming && upcoming.season_number > seenCount) {
+          await sbUpsert(
+            'notifications',
+            {
+              user_id: s.user_id,
+              type: 'season_upcoming',
+              title: s.title,
+              body: `Season ${upcoming.season_number} premieres ${fmtDate(upcoming.air_date)}`,
+              show_id: s.id,
+              tmdb_id: tmdbId,
+              season_count: upcoming.season_number,
+              season_number: upcoming.season_number,
+            },
+            { ignoreDuplicates: true }
+          );
+          headsups++;
+        }
+
+        // 4b. Baseline / new-season-is-out.
         if (s.number_of_seasons == null) {
           await sbPatch(`shows?id=eq.${s.id}`, { number_of_seasons: count });
           baselined++;
@@ -202,7 +255,7 @@ async function main() {
   }
 
   console.log(
-    `[new-seasons] done: checked=${checked} baselined=${baselined} notified=${notified} skipped=${skipped} errors=${errors}`
+    `[new-seasons] done: checked=${checked} baselined=${baselined} notified=${notified} headsups=${headsups} skipped=${skipped} errors=${errors}`
   );
   if (errors > 0) process.exitCode = 1;
 }
