@@ -411,6 +411,8 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
 .friend-section-count{font-size:11px;color:var(--muted);white-space:nowrap;}
 .tmdb-dropdown{position:absolute;top:100%;left:0;right:0;background:white;border:1px solid var(--border);border-radius:10px;box-shadow:0 6px 24px rgba(0,0,0,0.12);z-index:300;max-height:300px;overflow-y:auto;display:none;margin-top:3px;}
 .tmdb-dropdown.open{display:block;}
+.dup-hint{align-items:center;gap:5px;margin-top:7px;font-size:12px;font-weight:600;color:var(--fig);cursor:pointer;}
+.dup-hint:active{opacity:0.6;}
 .tmdb-result{display:flex;align-items:center;gap:10px;padding:8px 12px;cursor:pointer;border-bottom:1px solid var(--border);}
 .tmdb-result:last-child{border-bottom:none;}
 .tmdb-result:hover{background:var(--sand);}
@@ -756,7 +758,7 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
       <div class="page-sub" id="watching-sub"></div>
       <div class="add-form">
         <div class="form-row">
-          <div class="form-group" style="position:relative;"><label>Show title</label><div class="lr-search-wrap" style="margin-bottom:0;"><input id="w-title" placeholder="Search for a show..." oninput="tmdbSearch('w');toggleSearchClearBtn(this)" autocomplete="off" style="padding-right:34px;" /><button class="lr-search-clear" type="button" aria-label="Clear search" onclick="clearSearchInput('w-title')">&#10005;</button></div><div class="tmdb-dropdown" id="w-tmdb-dd"></div></div>
+          <div class="form-group" style="position:relative;"><label>Show title</label><div class="lr-search-wrap" style="margin-bottom:0;"><input id="w-title" placeholder="Search for a show..." oninput="tmdbSearch('w');toggleSearchClearBtn(this)" autocomplete="off" style="padding-right:34px;" /><button class="lr-search-clear" type="button" aria-label="Clear search" onclick="clearSearchInput('w-title')">&#10005;</button></div><div class="tmdb-dropdown" id="w-tmdb-dd"></div><div class="dup-hint" id="w-dup-hint" style="display:none" onclick="tapDupHint('w')"></div></div>
           <div class="form-group" style="max-width:210px"><label>Streaming on</label><select id="w-platform" onchange="togglePlatformOther('w-platform')"><option value="">Platform...</option></select><input type="text" id="w-platform-other" placeholder="Which platform?" style="display:none;margin-top:6px;width:100%;box-sizing:border-box;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-family:var(--sans);font-size:13px;" /></div>
           <button class="btn-add" onclick="addShow('watching')">+ Add</button>
         </div>
@@ -768,7 +770,7 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
       <div class="page-sub">Save your next binge.</div>
       <div class="add-form">
         <div class="form-row">
-          <div class="form-group" style="position:relative;"><label>Show title</label><div class="lr-search-wrap" style="margin-bottom:0;"><input id="wl-title" placeholder="Search for a show..." oninput="tmdbSearch('wl');toggleSearchClearBtn(this)" autocomplete="off" style="padding-right:34px;" /><button class="lr-search-clear" type="button" aria-label="Clear search" onclick="clearSearchInput('wl-title')">&#10005;</button></div><div class="tmdb-dropdown" id="wl-tmdb-dd"></div></div>
+          <div class="form-group" style="position:relative;"><label>Show title</label><div class="lr-search-wrap" style="margin-bottom:0;"><input id="wl-title" placeholder="Search for a show..." oninput="tmdbSearch('wl');toggleSearchClearBtn(this)" autocomplete="off" style="padding-right:34px;" /><button class="lr-search-clear" type="button" aria-label="Clear search" onclick="clearSearchInput('wl-title')">&#10005;</button></div><div class="tmdb-dropdown" id="wl-tmdb-dd"></div><div class="dup-hint" id="wl-dup-hint" style="display:none" onclick="tapDupHint('wl')"></div></div>
           <div class="form-group" style="max-width:210px"><label>Streaming on</label><select id="wl-platform" onchange="togglePlatformOther('wl-platform')"><option value="">Platform...</option></select><input type="text" id="wl-platform-other" placeholder="Which platform?" style="display:none;margin-top:6px;width:100%;box-sizing:border-box;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-family:var(--sans);font-size:13px;" /></div>
           <button class="btn-add" onclick="addShow('watchlist')">+ Add</button>
         </div>
@@ -793,7 +795,7 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
       </div>
       <div class="add-form">
         <div class="form-row">
-          <div class="form-group" style="position:relative;"><label>Show title</label><div class="lr-search-wrap" style="margin-bottom:0;"><input id="wd-title" placeholder="Search for a show..." oninput="tmdbSearch('wd');toggleSearchClearBtn(this)" autocomplete="off" style="padding-right:34px;" /><button class="lr-search-clear" type="button" aria-label="Clear search" onclick="clearSearchInput('wd-title')">&#10005;</button></div><div class="tmdb-dropdown" id="wd-tmdb-dd"></div></div>
+          <div class="form-group" style="position:relative;"><label>Show title</label><div class="lr-search-wrap" style="margin-bottom:0;"><input id="wd-title" placeholder="Search for a show..." oninput="tmdbSearch('wd');toggleSearchClearBtn(this)" autocomplete="off" style="padding-right:34px;" /><button class="lr-search-clear" type="button" aria-label="Clear search" onclick="clearSearchInput('wd-title')">&#10005;</button></div><div class="tmdb-dropdown" id="wd-tmdb-dd"></div><div class="dup-hint" id="wd-dup-hint" style="display:none" onclick="tapDupHint('wd')"></div></div>
           <div class="form-group" style="max-width:210px"><label>Streaming on</label><select id="wd-platform" onchange="togglePlatformOther('wd-platform')"><option value="">Platform...</option></select><input type="text" id="wd-platform-other" placeholder="Which platform?" style="display:none;margin-top:6px;width:100%;box-sizing:border-box;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-family:var(--sans);font-size:13px;" /></div>
           <button class="btn-add" onclick="addShow('watched')">+ Add</button>
         </div>
@@ -5777,10 +5779,11 @@ window.addShow = function(list) {
     setTimeout(function() { tEl.style.borderColor = ''; }, 900);
     return;
   }
-  var existing = findMyShowByTitle(title);
+  var existing = findMyShow(title, _tmdbPending && _tmdbPending.tmdb_id);
   if (existing) {
     tEl.value = ''; pEl.value = ''; resetPlatformOther(pId);
     _tmdbPending = {};
+    _clearDupHint(list === 'watching' ? 'w' : list === 'watchlist' ? 'wl' : 'wd');
     goToExistingShow(existing);
     return;
   }
@@ -7030,11 +7033,44 @@ async function fetchAutoPlatform(tmdbId) {
   } catch(e) { console.error('TMDB watch providers error:', e); return null; }
 }
 
+// The add box on Watching / My List / Binged also acts as a finder: when
+// you pick a show you already have, we don't make you press + Add just to
+// be told so. Same tab -> jump straight to the card. A different list ->
+// an inline "Already in X" hint under the input (tap to go there); no
+// auto tab-switch, since that's a bigger surprise off a background match.
+var LIST_BY_PREFIX = { w: 'watching', wl: 'watchlist', wd: 'watched' };
+var _dupHint = {};
+function _showDupHint(prefix, mine) {
+  _dupHint[prefix] = mine;
+  var el = document.getElementById(prefix + '-dup-hint');
+  if (!el) return;
+  el.innerHTML = '&#10003; Already in ' + (ADD_LIST_LABELS[mine.list] || 'another list')
+    + ' <span style="text-decoration:underline;">&rarr; view it</span>';
+  el.style.display = 'flex';
+}
+function _clearDupHint(prefix) {
+  delete _dupHint[prefix];
+  var el = document.getElementById(prefix + '-dup-hint');
+  if (el) { el.style.display = 'none'; el.innerHTML = ''; }
+}
+window.tapDupHint = function(prefix) {
+  var mine = _dupHint[prefix];
+  if (!mine) return;
+  var tEl = document.getElementById(prefix + '-title');
+  if (tEl) tEl.value = '';
+  var pSel = document.getElementById(PLATFORM_SELECT_ID[prefix]);
+  if (pSel) { pSel.value = ''; resetPlatformOther(PLATFORM_SELECT_ID[prefix]); }
+  _tmdbPending = {};
+  _clearDupHint(prefix);
+  goToExistingShow(mine); // switches tab, scrolls, toasts
+};
+
 window.tmdbSearch = function(prefix) {
   var inp = document.getElementById(prefix + '-title');
   var dd = document.getElementById(prefix + '-tmdb-dd');
   var q = inp ? inp.value.trim() : '';
   _tmdbPending = {};
+  _clearDupHint(prefix);
   if (_tmdbTimers[prefix]) clearTimeout(_tmdbTimers[prefix]);
   var mySeq = (_tmdbSeq[prefix] || 0) + 1;
   _tmdbSeq[prefix] = mySeq;
@@ -7081,6 +7117,24 @@ window.tmdbSelect = async function(prefix, idx) {
     overview: show.overview || null,
     vote_average: show.vote_average || null
   };
+
+  // Finder behaviour: if this pick is already on one of my lists, don't
+  // make me press + Add.
+  var curList = LIST_BY_PREFIX[prefix];
+  var mine = curList ? findMyShow(show.name, show.id) : null;
+  if (mine && mine.list === curList) {
+    if (inp) inp.value = '';
+    var pId = PLATFORM_SELECT_ID[prefix];
+    var pEl = pId ? document.getElementById(pId) : null;
+    if (pEl) { pEl.value = ''; resetPlatformOther(pId); }
+    _tmdbPending = {};
+    _clearDupHint(prefix);
+    showToast('Already in ' + (ADD_LIST_LABELS[curList] || 'this list') + ' — here it is.');
+    scrollToShowCard(mine.show.id, "It's on this list but I can't find the card.");
+    return;
+  }
+  if (mine) { _showDupHint(prefix, mine); } else { _clearDupHint(prefix); }
+
   try {
     var res = await fetch('https://api.themoviedb.org/3/tv/' + show.id + '?api_key=' + TMDB_KEY + '&language=en-US');
     var d = await res.json();
@@ -7272,17 +7326,34 @@ window.closeInstallGuide = function() {
 
 // Case-insensitive title match against your own three lists, so
 // "add" from a friend's/ranking's show never creates a duplicate row.
-function findMyShowByTitle(title) {
+// Match a show against my own three lists. TMDB id first (exact -- the
+// reliable signal when we have it, e.g. a pick from the search dropdown),
+// then lowercased title as a fallback for manual entries with no id.
+function findMyShow(title, tmdbId) {
+  var lists = ['watching', 'watchlist', 'watched'];
+  var i, j, arr;
+  if (tmdbId != null && tmdbId !== '') {
+    var idKey = String(tmdbId);
+    for (i = 0; i < lists.length; i++) {
+      arr = state[lists[i]] || [];
+      for (j = 0; j < arr.length; j++) {
+        if (arr[j].tmdb_id != null && String(arr[j].tmdb_id) === idKey) return { list: lists[i], show: arr[j] };
+      }
+    }
+  }
   var key = (title || '').toLowerCase().trim();
   if (!key) return null;
-  var lists = ['watching', 'watchlist', 'watched'];
-  for (var i = 0; i < lists.length; i++) {
-    var arr = state[lists[i]] || [];
-    for (var j = 0; j < arr.length; j++) {
+  for (i = 0; i < lists.length; i++) {
+    arr = state[lists[i]] || [];
+    for (j = 0; j < arr.length; j++) {
       if ((arr[j].title || '').toLowerCase().trim() === key) return { list: lists[i], show: arr[j] };
     }
   }
   return null;
+}
+
+function findMyShowByTitle(title) {
+  return findMyShow(title, null);
 }
 
 var ADD_DEST_STATUS = { watching: 'watching', waiting: 'watchlist', watchlist: 'watchlist', dnf: 'watched', watched: 'watched' };
