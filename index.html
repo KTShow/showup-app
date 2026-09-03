@@ -55,6 +55,8 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
 .notif-title{font-size:13px;font-weight:700;color:var(--charcoal);}
 .notif-sub{font-size:12px;color:var(--muted);margin-top:1px;}
 .notif-time{font-size:11px;color:var(--muted);margin-top:3px;}
+.notif-dismiss{flex-shrink:0;align-self:flex-start;margin:-2px -4px 0 0;border:none;background:none;color:var(--muted);font-size:18px;line-height:1;padding:2px 6px;cursor:pointer;border-radius:6px;opacity:0.55;}
+.notif-dismiss:hover{opacity:1;background:var(--border);color:var(--charcoal);}
 
 .bottom-nav{position:fixed;bottom:0;left:0;right:0;background:#EDE8DC;border-top:1px solid var(--border);display:flex;justify-content:space-around;align-items:center;height:60px;z-index:100;padding-bottom:env(safe-area-inset-bottom);}
 .nav-tab{background:none;border:none;display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 10px;font-family:var(--sans);font-size:10px;color:var(--muted);cursor:pointer;transition:all 0.2s;flex:1;}
@@ -6775,7 +6777,8 @@ function mapProviderToPlatform(name) {
 // ============================================================
 // The feed is written server-side (scripts/check-new-seasons.mjs). The
 // client only reads it, stamps seen_at when the bell panel is opened (which
-// clears the dot), and stamps read_at when an item is tapped. Types today:
+// clears the dot), stamps read_at when an item is tapped, and stamps
+// dismissed_at (a soft delete -- see dismissNotification). Types today:
 // new_season (a season aired) and season_upcoming (a confirmed premiere
 // date, ~2-3 weeks out). The table and this code are shaped so comment /
 // invite types can be added without a rework.
@@ -6794,6 +6797,7 @@ async function loadNotifications() {
     var res = await sb.from('notifications')
       .select('*')
       .eq('user_id', state.user.id)
+      .is('dismissed_at', null)
       .order('created_at', { ascending: false })
       .limit(50);
     if (res.error) throw res.error;
@@ -6834,7 +6838,9 @@ function renderNotifPanel() {
       + '<div class="notif-title">' + _notifEsc(n.title) + '</div>'
       + (n.body ? '<div class="notif-sub">' + _notifEsc(n.body) + '</div>' : '')
       + '<div class="notif-time">' + timeAgo(n.created_at) + '</div>'
-      + '</div></div>';
+      + '</div>'
+      + '<button class="notif-dismiss" title="Dismiss" aria-label="Dismiss notification" onclick="dismissNotification(event, \'' + n.id + '\')">&times;</button>'
+      + '</div>';
   }).join('');
 }
 
@@ -6893,6 +6899,25 @@ function _markNewSeasonNotifRead(showId) {
     .eq('show_id', showId).eq('type', 'new_season').is('read_at', null)
     .then(function(res) { if (res.error) console.error('_markNewSeasonNotifRead error:', res.error); });
 }
+
+// Soft-dismiss: stamps dismissed_at so the row drops out of the feed but
+// stays in the table -- see sql/add_notification_dismissed_at.sql for why
+// (the daily checker would otherwise re-create a dismissed season_upcoming).
+window.dismissNotification = async function(ev, id) {
+  if (ev) ev.stopPropagation();
+  state.notifications = (state.notifications || []).filter(function(n) { return n.id !== id; });
+  renderNotifPanel();
+  renderNotifBell();
+  try {
+    var res = await sb.from('notifications')
+      .update({ dismissed_at: new Date().toISOString() })
+      .eq('id', id);
+    if (res.error) throw res.error;
+  } catch (e) {
+    console.error('dismissNotification error:', e);
+    loadNotifications(); // resync so a failed dismiss reappears rather than lying
+  }
+};
 
 window.openNotification = async function(id) {
   var n = (state.notifications || []).find(function(x) { return x.id === id; });
