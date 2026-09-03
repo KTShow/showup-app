@@ -3325,6 +3325,10 @@ window.openPrimeTimeView = async function() {
 };
 
 window.backFromPrimeTimeView = function() {
+  // In the detail panel the persistent page-title's back arrow steps back
+  // to the list (its own in-panel back link was removed as a duplicate).
+  var d = document.getElementById('prime-time-detail-view');
+  if (d && d.style.display === 'block') { backToPrimeTimeList(); return; }
   document.getElementById('prime-time-view').style.display = 'none';
   document.getElementById('room-picker-view').style.display = 'block';
 };
@@ -3347,6 +3351,8 @@ window.openShowTalkHub = function() {
 };
 
 window.backFromShowTalkHub = function() {
+  var d = document.getElementById('showtalk-hub-detail-panel');
+  if (d && d.style.display === 'block') { backToShowTalk(); return; }
   document.getElementById('showtalk-hub-view').style.display = 'none';
   document.getElementById('room-picker-view').style.display = 'block';
   _showTalkHubMode = false;
@@ -3393,6 +3399,8 @@ window.openFullLineupView = async function() {
 };
 
 window.backFromFullLineupView = function() {
+  var d = document.getElementById('full-lineup-detail-view');
+  if (d && d.style.display === 'block') { backToFullLineupList(); return; }
   document.getElementById('full-lineup-view').style.display = 'none';
   document.getElementById('room-picker-view').style.display = 'block';
 };
@@ -3472,8 +3480,7 @@ window.showFullLineupDetail = function(idx){
     ? '<div style="display:flex;align-items:baseline;gap:10px;margin-bottom:4px;"><span class="rank-detail-avg">'+avgNum.toFixed(1)+'</span><div style="display:flex;gap:2px;">'+remotes+'</div></div>'
       +'<div class="rank-detail-sub">rated by '+s.rating_count+' across ShowUp</div>'
     : '<div class="rank-detail-sub">Not yet rated by anyone on ShowUp.</div>';
-  panel.innerHTML='<button class="rank-close" onclick="backToFullLineupList()">← Back to The Full Lineup</button>'
-    +'<div class="rank-detail">'
+  panel.innerHTML='<div class="rank-detail">'
     +'<div style="display:flex;gap:12px;align-items:flex-start;margin-bottom:4px;">'
     +thumb
     +'<div style="flex:1;min-width:0;">'
@@ -3575,8 +3582,7 @@ window.showPrimeTimeDetail = function(idx){
   var addBtn=mine
     ? onListBadgeHTML(mine, null, true)
     : '<button onclick="handlePrimeTimeAdd('+idx+')" style="display:inline-flex;align-items:center;gap:4px;background:none;border:1px solid var(--terra);color:var(--terra);border-radius:8px;padding:2px 8px;font-family:var(--sans);font-size:11px;font-weight:700;cursor:pointer;line-height:1.6;white-space:nowrap;">&#10133; Add</button>';
-  panel.innerHTML='<button class="rank-close" onclick="backToPrimeTimeList()">← Back to Prime Time</button>'
-    +'<div class="rank-detail">'
+  panel.innerHTML='<div class="rank-detail">'
     +'<div style="display:flex;gap:12px;align-items:flex-start;margin-bottom:4px;">'
     +thumb
     +'<div style="flex:1;min-width:0;">'
@@ -4099,7 +4105,7 @@ function showShowTalkDetail(idx){
   var reactBoxId='showtalk-react-'+idx;
   var reactHTML='<div class="inline-react" style="margin:4px 0 12px;"><input class="react-input" id="'+reactBoxId+'" placeholder="What did you think? 😊" /><button class="btn-send" onclick="submitShowTalkReact('+idx+')">Send</button><button class="btn-cancel" onclick="document.getElementById(&quot;'+reactBoxId+'&quot;).value=\'\'">Cancel</button></div>';
   panel.style.display='block';
-  panel.innerHTML='<button class="rank-close" onclick="backToShowTalk()">← Back to Show Talk</button>'
+  panel.innerHTML=(_showTalkHubMode ? '' : '<button class="rank-close" onclick="backToShowTalk()">← Back to Show Talk</button>')
     +'<div class="rank-detail">'
     +'<div style="display:flex;gap:12px;align-items:flex-start;margin-bottom:4px;">'
     +thumb
