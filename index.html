@@ -210,6 +210,8 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
 .btn-add-prominent{background:var(--terra);color:white;border:none;cursor:pointer;padding:7px 14px;font-size:13px;font-weight:700;border-radius:7px;line-height:1;white-space:nowrap;box-shadow:0 2px 6px rgba(196,98,45,0.35);transition:all 0.2s;}
 .btn-add-prominent:hover{transform:translateY(-1px);box-shadow:0 3px 9px rgba(196,98,45,0.45);}
 .on-list-badge{font-size:11px;font-weight:700;color:var(--fig);white-space:nowrap;}
+.on-list-badge-tap{cursor:pointer;text-decoration:underline;text-decoration-style:dotted;text-underline-offset:2px;}
+.on-list-badge-tap:active{opacity:0.55;}
 .rec-banner{background:linear-gradient(135deg,var(--fig),#8a4a6b);border-radius:var(--radius);padding:14px 16px;margin-bottom:12px;box-shadow:0 4px 14px rgba(107,45,78,0.3);}
 .rec-banner-top{display:flex;gap:12px;align-items:flex-start;}
 .rec-banner-body{flex:1;min-width:0;}
@@ -2390,7 +2392,7 @@ function renderNewThisWeekList(){
     var ratingHTML = item.mine ? '' : (item.rating ? remoteStatic(item.rating) : '');
     var myOwnCopy = item.mine ? null : findMyShowByTitle(item.title);
     var addBtn = item.mine ? '' : (myOwnCopy
-      ? '<span class="on-list-badge">'+onListBadgeContent(myOwnCopy)+'</span>'
+      ? onListBadgeHTML(myOwnCopy)
       : '<button onclick="handleNewThisWeekAdd('+i+')" style="display:inline-flex;align-items:center;gap:4px;background:none;border:1px solid var(--terra);color:var(--terra);border-radius:8px;padding:2px 8px;font-family:var(--sans);font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;">&#10133; Add</button>');
     return '<div class="show-card"><div class="show-card-top">'+thumb
       +'<div class="show-info"><div class="show-title">'+escAttr(item.title)+'</div>'
@@ -2564,7 +2566,7 @@ function renderShowsByPlatform(q){
     var ratingLine = avg ? (remoteAvgLabel(avg.toFixed(1))+' &middot; '+ratings.length+' rated') : 'Not yet rated';
     var mine = findMyShowByTitle(s.title);
     var addBtn = mine
-      ? '<span class="on-list-badge" style="display:inline-block;margin-top:4px;">'+onListBadgeContent(mine)+'</span>'
+      ? onListBadgeHTML(mine, 'display:inline-block;margin-top:4px;')
       : '<button onclick="event.stopPropagation();handlePlatformShowAdd('+i+')" style="display:inline-flex;align-items:center;gap:4px;background:none;border:1px solid var(--terra);color:var(--terra);border-radius:8px;padding:2px 8px;font-family:var(--sans);font-size:11px;font-weight:700;cursor:pointer;margin-top:4px;">&#10133; Add</button>';
     return '<div class="friend-card">'+thumb
       +'<div class="friend-name" style="margin-top:6px;">'+escAttr(s.title)+'</div>'
@@ -3418,7 +3420,7 @@ function renderFullLineup(){
     var ratingHTML = '<span class="rank-rating-col">' + (s.avg_rating ? remoteAvgLabel(Number(s.avg_rating).toFixed(1)) : '') + '</span>';
     var mine = findMyShowByTitle(s.title);
     var actionHTML = '<span class="rank-action-col">' + (mine
-      ? '<span class="on-list-badge">'+onListBadgeContent(mine)+'</span>'
+      ? onListBadgeHTML(mine)
       : '<button onclick="event.stopPropagation();handleFullLineupAdd('+i+')" class="rank-add-btn">&#10133; Add</button>') + '</span>';
     return '<div class="rank-card" onclick="showFullLineupDetail('+i+')">'
       +'<span class="rank-badge">'+(i+1)+'</span>'
@@ -3464,7 +3466,7 @@ window.showFullLineupDetail = function(idx){
     : '<div'+clickAttr+' style="width:84px;height:84px;border-radius:10px;background:var(--olive);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:30px;">&#128252;</div>';
   var mine = findMyShowByTitle(s.title);
   var addBtn = mine
-    ? '<span class="on-list-badge">'+onListBadgeContent(mine)+'</span>'
+    ? onListBadgeHTML(mine)
     : '<button onclick="handleFullLineupAdd('+idx+')" style="display:inline-flex;align-items:center;gap:4px;background:none;border:1px solid var(--terra);color:var(--terra);border-radius:8px;padding:2px 8px;font-family:var(--sans);font-size:11px;font-weight:700;cursor:pointer;line-height:1.6;white-space:nowrap;">&#10133; Add</button>';
   var ratingLine = hasRating
     ? '<div style="display:flex;align-items:baseline;gap:10px;margin-bottom:4px;"><span class="rank-detail-avg">'+avgNum.toFixed(1)+'</span><div style="display:flex;gap:2px;">'+remotes+'</div></div>'
@@ -3520,7 +3522,7 @@ function renderPrimeTimeList() {
       : '<div'+thumbClick+'width:46px;height:46px;border-radius:8px;background:var(--olive);flex-shrink:0;margin-right:12px;display:flex;align-items:center;justify-content:center;font-size:18px;">&#128252;</div>';
     var mine = findMyShowByTitle(s.title);
     var mineBadge = '<span class="rank-action-col">' + (mine
-      ? '<span class="on-list-badge">'+onListBadgeContent(mine)+'</span>'
+      ? onListBadgeHTML(mine)
       : '<button onclick="event.stopPropagation();handlePrimeTimeAdd('+i+')" class="rank-add-btn">&#10133; Add</button>') + '</span>';
     var ratingHTML = '<span class="rank-rating-col">'+remoteAvgLabel(s.avg.toFixed(1))+'</span>';
     return '<div class="rank-card" onclick="showPrimeTimeDetail('+i+')">'
@@ -3571,7 +3573,7 @@ window.showPrimeTimeDetail = function(idx){
     : '<div'+clickAttr+' style="width:84px;height:84px;border-radius:10px;background:var(--olive);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:30px;">&#128252;</div>';
   var mine=findMyShowByTitle(s.title);
   var addBtn=mine
-    ? '<span class="on-list-badge">'+onListBadgeContent(mine)+'</span>'
+    ? onListBadgeHTML(mine)
     : '<button onclick="handlePrimeTimeAdd('+idx+')" style="display:inline-flex;align-items:center;gap:4px;background:none;border:1px solid var(--terra);color:var(--terra);border-radius:8px;padding:2px 8px;font-family:var(--sans);font-size:11px;font-weight:700;cursor:pointer;line-height:1.6;white-space:nowrap;">&#10133; Add</button>';
   panel.innerHTML='<button class="rank-close" onclick="backToPrimeTimeList()">← Back to Prime Time</button>'
     +'<div class="rank-detail">'
@@ -4044,7 +4046,7 @@ function renderShowTalk(){
       +'</div></div>'
       +ratingHTML
       +'<span class="rank-action-col">'+(function(){ var mine=findMyShowByTitle(s.title); return mine
-        ? '<span class="on-list-badge">'+onListBadgeContent(mine)+'</span>'
+        ? onListBadgeHTML(mine)
         : '<button onclick="event.stopPropagation();handleShowTalkAdd('+i+')" class="rank-add-btn">&#10133; Add</button>'; })()+'</span>'
       +'</div>';
   }).join('');
@@ -4092,7 +4094,7 @@ function showShowTalkDetail(idx){
   }
   var mine=findMyShowByTitle(s.title);
   var addBtn=mine
-    ? '<span class="on-list-badge">'+onListBadgeContent(mine)+'</span>'
+    ? onListBadgeHTML(mine)
     : '<button onclick="handleShowTalkAdd('+idx+')" style="display:inline-flex;align-items:center;gap:4px;background:none;border:1px solid var(--terra);color:var(--terra);border-radius:8px;padding:2px 8px;font-family:var(--sans);font-size:11px;font-weight:700;cursor:pointer;line-height:1.6;white-space:nowrap;flex-shrink:0;">&#10133; Add</button>';
   var reactBoxId='showtalk-react-'+idx;
   var reactHTML='<div class="inline-react" style="margin:4px 0 12px;"><input class="react-input" id="'+reactBoxId+'" placeholder="What did you think? 😊" /><button class="btn-send" onclick="submitShowTalkReact('+idx+')">Send</button><button class="btn-cancel" onclick="document.getElementById(&quot;'+reactBoxId+'&quot;).value=\'\'">Cancel</button></div>';
@@ -4576,7 +4578,7 @@ function renderRankings(){
       +'</div></div>'
       +'<span class="rank-rating-col">'+remoteAvgLabel(s.avg.toFixed(1))+'</span>'
       +'<span class="rank-action-col">'+(function(){ var mine=findMyShowByTitle(s.title); return mine
-        ? '<span class="on-list-badge">'+onListBadgeContent(mine)+'</span>'
+        ? onListBadgeHTML(mine)
         : '<button onclick="event.stopPropagation();handleRankAdd('+i+')" class="rank-add-btn">&#10133; Add</button>'; })()+'</span>'
       +'</div>';
   }).join('');
@@ -4604,7 +4606,7 @@ function showRankDetail(idx){
     : '<div'+clickAttr+' style="width:84px;height:84px;border-radius:10px;background:var(--olive);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:30px;">&#128252;</div>';
   var mine=findMyShowByTitle(s.title);
   var addBtn=mine
-    ? '<span class="on-list-badge">'+onListBadgeContent(mine)+'</span>'
+    ? onListBadgeHTML(mine)
     : '<button onclick="handleRankAdd('+idx+')" style="display:inline-flex;align-items:center;gap:4px;background:none;border:1px solid var(--terra);color:var(--terra);border-radius:8px;padding:2px 8px;font-family:var(--sans);font-size:11px;font-weight:700;cursor:pointer;line-height:1.6;white-space:nowrap;">&#10133; Add</button>';
   panel.style.display='block';
   panel.innerHTML='<button class="rank-close" onclick="backToRankings()">\u2190 Back to rankings</button>'
@@ -5696,6 +5698,20 @@ function onListBadgeContent(match) {
   return (ON_LIST_BADGE_ICONS[key] || '&#10003;') + ' ' + (ON_LIST_BADGE_LABELS[key] || 'On your list');
 }
 
+// Same badge, but tappable -> jumps to the show's own card (see
+// jumpToOwnedShow). Used on the discovery surfaces (Full Lineup, Prime
+// Time, Show Talk, Rankings, New This Week, Shows-by-Platform) where the
+// plain badge was a visual dead end. Friend-room cards still use the
+// plain span -- jumping out of a friend's room is a separate call.
+function onListBadgeHTML(match, extraStyle) {
+  var inner = onListBadgeContent(match);
+  var id = match && match.show && match.show.id;
+  var st = extraStyle ? ' style="' + extraStyle + '"' : '';
+  if (!id) return '<span class="on-list-badge"' + st + '>' + inner + '</span>';
+  return '<span class="on-list-badge on-list-badge-tap"' + st + ' role="button" tabindex="0" title="Go to this show"'
+    + ' onclick="jumpToOwnedShow(event,\'' + match.list + '\',\'' + id + '\')">' + inner + '</span>';
+}
+
 // Checked up front, before the confirm popup even opens, so a duplicate
 // warning is something the user can act on (Cancel is right there) —
 // not something they find out after they've already hit Add.
@@ -5723,6 +5739,17 @@ function goToExistingShow(existing) {
   scrollToShowCard(showId);
   showToast('Already in ' + (ADD_LIST_LABELS[list] || 'My Lists') + ' — here it is.');
 }
+
+// Tappable "On My List" badge on the discovery surfaces -> jump to that
+// show's card, same destination as re-adding a title you already own from
+// the Add box. Match is title-only there, so a jump is the safe action
+// here (a status change wouldn't be -- that's the card's own move menu).
+window.jumpToOwnedShow = function(ev, list, showId) {
+  if (ev) ev.stopPropagation();
+  var show = (state[list] || []).find(function(s) { return s.id === showId; });
+  if (!show) { showToast("That show isn't on your lists anymore."); return; }
+  goToExistingShow({ list: list, show: show });
+};
 
 window.addShow = function(list) {
   var tId = list==='watching'?'w-title':list==='watchlist'?'wl-title':'wd-title';
