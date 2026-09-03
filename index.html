@@ -2392,7 +2392,7 @@ function renderNewThisWeekList(){
     var ratingHTML = item.mine ? '' : (item.rating ? remoteStatic(item.rating) : '');
     var myOwnCopy = item.mine ? null : findMyShowByTitle(item.title);
     var addBtn = item.mine ? '' : (myOwnCopy
-      ? onListBadgeHTML(myOwnCopy)
+      ? onListBadgeHTML(myOwnCopy, null, true)
       : '<button onclick="handleNewThisWeekAdd('+i+')" style="display:inline-flex;align-items:center;gap:4px;background:none;border:1px solid var(--terra);color:var(--terra);border-radius:8px;padding:2px 8px;font-family:var(--sans);font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;">&#10133; Add</button>');
     return '<div class="show-card"><div class="show-card-top">'+thumb
       +'<div class="show-info"><div class="show-title">'+escAttr(item.title)+'</div>'
@@ -2566,7 +2566,7 @@ function renderShowsByPlatform(q){
     var ratingLine = avg ? (remoteAvgLabel(avg.toFixed(1))+' &middot; '+ratings.length+' rated') : 'Not yet rated';
     var mine = findMyShowByTitle(s.title);
     var addBtn = mine
-      ? onListBadgeHTML(mine, 'display:inline-block;margin-top:4px;')
+      ? onListBadgeHTML(mine, 'display:inline-block;margin-top:4px;white-space:normal;', true)
       : '<button onclick="event.stopPropagation();handlePlatformShowAdd('+i+')" style="display:inline-flex;align-items:center;gap:4px;background:none;border:1px solid var(--terra);color:var(--terra);border-radius:8px;padding:2px 8px;font-family:var(--sans);font-size:11px;font-weight:700;cursor:pointer;margin-top:4px;">&#10133; Add</button>';
     return '<div class="friend-card">'+thumb
       +'<div class="friend-name" style="margin-top:6px;">'+escAttr(s.title)+'</div>'
@@ -5691,7 +5691,10 @@ var ON_LIST_BADGE_ICONS = { watching: '&#128250;', watchlist: '&#128715;&#65039;
 var ON_LIST_BADGE_LABELS = { watching: 'Currently<br>Watching', watchlist: 'My<br>List', watched: 'Already<br>Binged', waiting: 'WFNS', dnf: 'DNF' };
 // The labels carry a hard <br> so they stack into the narrow fixed-width
 // rank-action-col on list rows. Pass oneLine on roomy placements (detail
-// panels) to flatten that back to a single line.
+// panels, New This Week, platform search) to flatten that back to a
+// single line; where the container can still get tight, also pass
+// white-space:normal via extraStyle so it falls back to wrapping rather
+// than overflowing.
 function onListBadgeContent(match, oneLine) {
   if (!match) return '&#10003; On your list';
   var show = match.show || {};
