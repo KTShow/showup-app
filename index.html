@@ -3466,7 +3466,7 @@ window.showFullLineupDetail = function(idx){
     : '<div'+clickAttr+' style="width:84px;height:84px;border-radius:10px;background:var(--olive);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:30px;">&#128252;</div>';
   var mine = findMyShowByTitle(s.title);
   var addBtn = mine
-    ? onListBadgeHTML(mine)
+    ? onListBadgeHTML(mine, null, true)
     : '<button onclick="handleFullLineupAdd('+idx+')" style="display:inline-flex;align-items:center;gap:4px;background:none;border:1px solid var(--terra);color:var(--terra);border-radius:8px;padding:2px 8px;font-family:var(--sans);font-size:11px;font-weight:700;cursor:pointer;line-height:1.6;white-space:nowrap;">&#10133; Add</button>';
   var ratingLine = hasRating
     ? '<div style="display:flex;align-items:baseline;gap:10px;margin-bottom:4px;"><span class="rank-detail-avg">'+avgNum.toFixed(1)+'</span><div style="display:flex;gap:2px;">'+remotes+'</div></div>'
@@ -3573,7 +3573,7 @@ window.showPrimeTimeDetail = function(idx){
     : '<div'+clickAttr+' style="width:84px;height:84px;border-radius:10px;background:var(--olive);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:30px;">&#128252;</div>';
   var mine=findMyShowByTitle(s.title);
   var addBtn=mine
-    ? onListBadgeHTML(mine)
+    ? onListBadgeHTML(mine, null, true)
     : '<button onclick="handlePrimeTimeAdd('+idx+')" style="display:inline-flex;align-items:center;gap:4px;background:none;border:1px solid var(--terra);color:var(--terra);border-radius:8px;padding:2px 8px;font-family:var(--sans);font-size:11px;font-weight:700;cursor:pointer;line-height:1.6;white-space:nowrap;">&#10133; Add</button>';
   panel.innerHTML='<button class="rank-close" onclick="backToPrimeTimeList()">← Back to Prime Time</button>'
     +'<div class="rank-detail">'
@@ -4094,7 +4094,7 @@ function showShowTalkDetail(idx){
   }
   var mine=findMyShowByTitle(s.title);
   var addBtn=mine
-    ? onListBadgeHTML(mine)
+    ? onListBadgeHTML(mine, null, true)
     : '<button onclick="handleShowTalkAdd('+idx+')" style="display:inline-flex;align-items:center;gap:4px;background:none;border:1px solid var(--terra);color:var(--terra);border-radius:8px;padding:2px 8px;font-family:var(--sans);font-size:11px;font-weight:700;cursor:pointer;line-height:1.6;white-space:nowrap;flex-shrink:0;">&#10133; Add</button>';
   var reactBoxId='showtalk-react-'+idx;
   var reactHTML='<div class="inline-react" style="margin:4px 0 12px;"><input class="react-input" id="'+reactBoxId+'" placeholder="What did you think? 😊" /><button class="btn-send" onclick="submitShowTalkReact('+idx+')">Send</button><button class="btn-cancel" onclick="document.getElementById(&quot;'+reactBoxId+'&quot;).value=\'\'">Cancel</button></div>';
@@ -4606,7 +4606,7 @@ function showRankDetail(idx){
     : '<div'+clickAttr+' style="width:84px;height:84px;border-radius:10px;background:var(--olive);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:30px;">&#128252;</div>';
   var mine=findMyShowByTitle(s.title);
   var addBtn=mine
-    ? onListBadgeHTML(mine)
+    ? onListBadgeHTML(mine, null, true)
     : '<button onclick="handleRankAdd('+idx+')" style="display:inline-flex;align-items:center;gap:4px;background:none;border:1px solid var(--terra);color:var(--terra);border-radius:8px;padding:2px 8px;font-family:var(--sans);font-size:11px;font-weight:700;cursor:pointer;line-height:1.6;white-space:nowrap;">&#10133; Add</button>';
   panel.style.display='block';
   panel.innerHTML='<button class="rank-close" onclick="backToRankings()">\u2190 Back to rankings</button>'
@@ -5689,13 +5689,18 @@ var ON_LIST_BADGE_ICONS = { watching: '&#128250;', watchlist: '&#128715;&#65039;
 // <br> between the two words so a long label wraps under its own icon
 // instead of shoving the rest of the tile's content sideways.
 var ON_LIST_BADGE_LABELS = { watching: 'Currently<br>Watching', watchlist: 'My<br>List', watched: 'Already<br>Binged', waiting: 'WFNS', dnf: 'DNF' };
-function onListBadgeContent(match) {
+// The labels carry a hard <br> so they stack into the narrow fixed-width
+// rank-action-col on list rows. Pass oneLine on roomy placements (detail
+// panels) to flatten that back to a single line.
+function onListBadgeContent(match, oneLine) {
   if (!match) return '&#10003; On your list';
   var show = match.show || {};
   var key = match.list === 'watched' ? (show.dnf ? 'dnf' : 'watched')
     : match.list === 'watchlist' ? (show.waitingForSeason ? 'waiting' : 'watchlist')
     : match.list;
-  return (ON_LIST_BADGE_ICONS[key] || '&#10003;') + ' ' + (ON_LIST_BADGE_LABELS[key] || 'On your list');
+  var label = ON_LIST_BADGE_LABELS[key] || 'On your list';
+  if (oneLine) label = label.replace(/<br>/g, ' ');
+  return (ON_LIST_BADGE_ICONS[key] || '&#10003;') + ' ' + label;
 }
 
 // Same badge, but tappable -> jumps to the show's own card (see
@@ -5703,8 +5708,8 @@ function onListBadgeContent(match) {
 // Time, Show Talk, Rankings, New This Week, Shows-by-Platform) where the
 // plain badge was a visual dead end. Friend-room cards still use the
 // plain span -- jumping out of a friend's room is a separate call.
-function onListBadgeHTML(match, extraStyle) {
-  var inner = onListBadgeContent(match);
+function onListBadgeHTML(match, extraStyle, oneLine) {
+  var inner = onListBadgeContent(match, oneLine);
   var id = match && match.show && match.show.id;
   var st = extraStyle ? ' style="' + extraStyle + '"' : '';
   if (!id) return '<span class="on-list-badge"' + st + '>' + inner + '</span>';
