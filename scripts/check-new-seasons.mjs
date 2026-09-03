@@ -130,11 +130,14 @@ async function main() {
 
   // 1. Candidate shows: everything in Currently Watching or My List, with a
   //    tmdb_id. (My List = status 'watchlist', which includes the "Waiting
-  //    for New Season" subset.)
+  //    for New Season" subset.) media_type = 'tv' only -- a documentary
+  //    film's tmdb_id is a TMDB *movie* id and would resolve to an
+  //    unrelated show (or 404) against /tv.
   const shows = await sbGet(
     'shows?select=id,user_id,title,tmdb_id,status,number_of_seasons,new_season_available' +
       '&tmdb_id=not.is.null' +
-      '&status=in.(watching,watchlist)'
+      '&status=in.(watching,watchlist)' +
+      '&media_type=eq.tv'
   );
   console.log(`[new-seasons] ${shows.length} candidate show rows`);
 

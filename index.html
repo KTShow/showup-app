@@ -420,6 +420,7 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
 .tmdb-poster-empty{width:30px;height:45px;border-radius:4px;background:var(--sand);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:14px;}
 .tmdb-result-title{font-size:13px;font-weight:600;color:var(--charcoal);line-height:1.3;}
 .tmdb-result-year{font-size:11px;color:var(--muted);margin-top:1px;}
+.tmdb-doc-tag{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.3px;color:var(--fig);background:rgba(107,45,78,0.1);border-radius:4px;padding:1px 5px;vertical-align:middle;white-space:nowrap;}
 </style>
 <style>
 /* LOGIN SCREEN */
@@ -1980,6 +1981,11 @@ function ownCardRatingsHTML(title, list, id, myRating) {
   return '<div class="fr-disclosure">'+summaryBtn+individual+'</div>';
 }
 
+// A documentary film never gets another season, so the "Waiting for New
+// Season" controls are hidden for it (docuseries are media_type 'tv' and
+// keep them).
+function isDocFilm(s) { return !!s && s.media_type === 'documentary'; }
+
 function buildDNFCard(s) {
   var inpId = 'inp-watched-' + s.id;
   var sid = s.id;
@@ -1991,7 +1997,7 @@ function buildDNFCard(s) {
     + '<button class="btn-more" onclick="toggleCardMenu(this)" title="More">&#8942;</button>'
     + '<div class="card-menu">'
     + '<button class="card-menu-item" onclick="moveDNFToBinged(\''+sid+'\');closeCardMenus();">&#127871; Move to Binged</button>'
-    + '<button class="card-menu-item" onclick="moveToWaiting(\'watched\',\''+sid+'\');closeCardMenus();">Waiting for New Season</button>'
+    + (isDocFilm(s) ? '' : '<button class="card-menu-item" onclick="moveToWaiting(\'watched\',\''+sid+'\');closeCardMenus();">Waiting for New Season</button>')
     + '<button class="card-menu-item" onclick="toggleHide(\'watched\',\''+sid+'\');closeCardMenus();">'+hideLabel+'</button>'
     + '<button class="card-menu-item" onclick="togglePlatEdit(\'watched\',\''+sid+'\');closeCardMenus();">Edit streaming service</button>'
     + '<button class="card-menu-item danger" onclick="removeShow(\'watched\',\''+sid+'\');closeCardMenus();">Remove</button>'
@@ -2017,7 +2023,7 @@ function buildWatchingCard(s) {
   // All three status choices are always visible, in this fixed order, as
   // equal-weight peer buttons — a status is a choice people expect to see
   // directly, not something they'd think to look for in the overflow menu.
-  var primaryHTML = '<button class="waiting-season-btn" onclick="markWaiting(\''+sid+'\')">Waiting for New Season &#8987;</button>'
+  var primaryHTML = (isDocFilm(s) ? '' : '<button class="waiting-season-btn" onclick="markWaiting(\''+sid+'\')">Waiting for New Season &#8987;</button>')
     + '<button class="done-watching-btn" onclick="markWatched(\''+sid+'\')">Finished &#127871;</button>';
   var dnfHTML = '<button class="didnt-finish-btn" onclick="markDNF(\''+sid+'\')">Didn&#39;t Finish</button>';
 
@@ -2102,7 +2108,7 @@ function buildWatchlistCard(s) {
 
   return '<div class="show-card'+(s.hidden?' is-hidden':'')+'" id="card-'+sid+'"><div class="show-card-top">'+showTile(s)+'<div class="show-info"><div class="show-title">'+s.title+(s.hidden?'<span class="hidden-badge">Hidden from friends</span>':'')+'</div>'+platformRow+recommendedBadge+watchedByBadge+'</div>'+recommendBtn(sid)+menuHTML+'</div>'
     + otherRatingsList
-    + '<div class="show-move"><button class="btn-start" onclick="moveToWatching(\''+sid+'\')">Watch Now</button><button class="waiting-season-btn" onclick="markWaitingFromList(\''+sid+'\')">Waiting for New Season &#8987;</button></div>'
+    + '<div class="show-move"><button class="btn-start" onclick="moveToWatching(\''+sid+'\')">Watch Now</button>' + (isDocFilm(s) ? '' : '<button class="waiting-season-btn" onclick="markWaitingFromList(\''+sid+'\')">Waiting for New Season &#8987;</button>') + '</div>'
     + '<div class="react-area">'+talkPreviewHTML(s.title)+reactToggle+'</div>'
     + '</div>';
 }
@@ -2135,7 +2141,7 @@ function buildBingedCard(s) {
     + '<button class="btn-more" onclick="toggleCardMenu(this)" title="More">&#8942;</button>'
     + '<div class="card-menu">'
     + '<button class="card-menu-item" onclick="moveToWatchingAgain(\'watched\',\''+sid+'\');closeCardMenus();">Start Watching Again</button>'
-    + '<button class="card-menu-item" onclick="moveToWaiting(\'watched\',\''+sid+'\');closeCardMenus();">Waiting for New Season</button>'
+    + (isDocFilm(s) ? '' : '<button class="card-menu-item" onclick="moveToWaiting(\'watched\',\''+sid+'\');closeCardMenus();">Waiting for New Season</button>')
     + '<button class="card-menu-item" onclick="toggleHide(\'watched\',\''+sid+'\');closeCardMenus();">'+hideLabel+'</button>'
     + '<button class="card-menu-item" onclick="togglePlatEdit(\'watched\',\''+sid+'\');closeCardMenus();">Edit streaming service</button>'
     + '<button class="card-menu-item danger" onclick="removeShow(\'watched\',\''+sid+'\');closeCardMenus();">Remove</button>'
@@ -4993,6 +4999,7 @@ async function dbAddShow(showData) {
     rating: showData.rating || 0,
     dnf: showData.dnf || false,
     tmdb_id: showData.tmdb_id || null,
+    media_type: showData.media_type === 'documentary' ? 'documentary' : 'tv',
     poster_path: showData.poster_path || null,
     genre: showData.genre || null,
     original_network: showData.original_network || null,
@@ -5170,6 +5177,7 @@ function normalizeShow(s) {
     addedAt: s.added_at,
     poster_path: s.poster_path || null,
     tmdb_id: s.tmdb_id || null,
+    media_type: s.media_type || 'tv',
     reactions: (s.reactions || []).map(function(r) {
       var u = state.user;
       var isMe = u && r.user_id === u.id;
@@ -5890,13 +5898,13 @@ window.confirmAddShow = async function() {
 
   try {
     var show = await dbAddShow({ title: title, platform: platform, status: status, dnf: isDnf, source: src, influencedBy: inf,
-      tmdb_id: tmdb.tmdb_id, poster_path: tmdb.poster_path, genre: tmdb.genre,
+      tmdb_id: tmdb.tmdb_id, media_type: tmdb.media_type, poster_path: tmdb.poster_path, genre: tmdb.genre,
       original_network: tmdb.original_network, first_air_year: tmdb.first_air_year,
       number_of_seasons: tmdb.number_of_seasons, show_status: tmdb.show_status,
       overview: tmdb.overview, vote_average: tmdb.vote_average });
     var newShow = { id: show.id, title: title, platform: platform, rating: 0, hidden: false, dnf: isDnf,
       source: src, influencedBy: inf, addedAt: show.added_at, reactions: [], showReact: false,
-      poster_path: tmdb.poster_path || null, tmdb_id: tmdb.tmdb_id || null };
+      poster_path: tmdb.poster_path || null, tmdb_id: tmdb.tmdb_id || null, media_type: tmdb.media_type || 'tv' };
     state[destList].push(newShow);
     if (tEl) tEl.value = ''; if (pEl) pEl.value = ''; resetPlatformOther(pending.pId);
     _tmdbPending = {};
@@ -6592,7 +6600,7 @@ async function autoAddTop5ToBinged(title, platform, tmdb) {
   } else {
     try {
       var show = await dbAddShow({ title: title, platform: platform, status: 'watched', rating: 5,
-        tmdb_id: tmdb.tmdb_id || null, poster_path: tmdb.poster_path || null,
+        tmdb_id: tmdb.tmdb_id || null, media_type: tmdb.media_type || 'tv', poster_path: tmdb.poster_path || null,
         genre: tmdb.genre || null, original_network: tmdb.original_network || null,
         first_air_year: tmdb.first_air_year || null, number_of_seasons: tmdb.number_of_seasons || null,
         show_status: tmdb.show_status || null, overview: tmdb.overview || null, vote_average: tmdb.vote_average || null });
@@ -7018,9 +7026,10 @@ function loadInfluencerNames() {
     .catch(function(e){ console.error('loadInfluencerNames error:', e); });
 }
 
-async function fetchAutoPlatform(tmdbId) {
+async function fetchAutoPlatform(tmdbId, mediaType) {
   try {
-    var res = await fetch('https://api.themoviedb.org/3/tv/' + tmdbId + '/watch/providers?api_key=' + TMDB_KEY);
+    var kind = mediaType === 'documentary' ? 'movie' : 'tv';
+    var res = await fetch('https://api.themoviedb.org/3/' + kind + '/' + tmdbId + '/watch/providers?api_key=' + TMDB_KEY);
     var d = await res.json();
     var us = d.results && d.results.US;
     if (!us) return null;
@@ -7077,10 +7086,28 @@ window.tmdbSearch = function(prefix) {
   if (q.length < 2) { if (dd) { dd.innerHTML = ''; dd.classList.remove('open'); } return; }
   _tmdbTimers[prefix] = setTimeout(async function() {
     try {
-      var res = await fetch('https://api.themoviedb.org/3/search/tv?query=' + encodeURIComponent(q) + '&api_key=' + TMDB_KEY + '&language=en-US&page=1');
-      var data = await res.json();
+      // TV series (incl. docuseries) + documentary FILMS. Films come from
+      // /search/movie filtered to TMDB genre 99 -- that's the only non-TV
+      // thing allowed in; no general movies. Both normalised to one shape.
+      var qs = encodeURIComponent(q);
+      var pair = await Promise.all([
+        fetch('https://api.themoviedb.org/3/search/tv?query=' + qs + '&api_key=' + TMDB_KEY + '&language=en-US&page=1'),
+        fetch('https://api.themoviedb.org/3/search/movie?query=' + qs + '&api_key=' + TMDB_KEY + '&language=en-US&page=1')
+      ]);
+      var tvData = await pair[0].json();
+      var mvData = await pair[1].json();
       if (_tmdbSeq[prefix] !== mySeq) return; // a newer keystroke has already superseded this request
-      var results = (data.results || []).filter(function(r) { return r.name; })
+      var tv = (tvData.results || []).filter(function(r) { return r.name; }).map(function(r) {
+        return { id: r.id, media_type: 'tv', name: r.name, year: (r.first_air_date || '').substring(0, 4),
+          poster_path: r.poster_path || null, overview: r.overview || null, vote_average: r.vote_average || null };
+      });
+      var docs = (mvData.results || []).filter(function(r) {
+        return r.title && (r.genre_ids || []).indexOf(99) !== -1;
+      }).map(function(r) {
+        return { id: r.id, media_type: 'documentary', name: r.title, year: (r.release_date || '').substring(0, 4),
+          poster_path: r.poster_path || null, overview: r.overview || null, vote_average: r.vote_average || null };
+      });
+      var results = tv.concat(docs)
         .sort(function(a, b) { return tmdbMatchScore(b.name, q) - tmdbMatchScore(a.name, q); })
         .slice(0, 6);
       _tmdbResults[prefix] = results;
@@ -7089,13 +7116,13 @@ window.tmdbSearch = function(prefix) {
         dd.classList.add('open'); return;
       }
       dd.innerHTML = results.map(function(r, i) {
-        var year = r.first_air_date ? r.first_air_date.substring(0, 4) : '';
         var img = r.poster_path
           ? '<img class="tmdb-poster" src="' + TMDB_IMG + r.poster_path + '" />'
-          : '<div class="tmdb-poster-empty">📺</div>';
+          : '<div class="tmdb-poster-empty">' + (r.media_type === 'documentary' ? '🎬' : '📺') + '</div>';
         return '<div class="tmdb-result" onclick="tmdbSelect(\'' + prefix + '\',' + i + ')">'
-          + img + '<div><div class="tmdb-result-title">' + r.name + '</div>'
-          + (year ? '<div class="tmdb-result-year">' + year + '</div>' : '')
+          + img + '<div><div class="tmdb-result-title">' + escAttr(r.name)
+          + (r.media_type === 'documentary' ? ' <span class="tmdb-doc-tag">Documentary</span>' : '') + '</div>'
+          + (r.year ? '<div class="tmdb-result-year">' + r.year + '</div>' : '')
           + '</div></div>';
       }).join('');
       dd.classList.add('open');
@@ -7112,8 +7139,9 @@ window.tmdbSelect = async function(prefix, idx) {
   if (dd) { dd.innerHTML = ''; dd.classList.remove('open'); }
   _tmdbPending = {
     tmdb_id: show.id,
+    media_type: show.media_type || 'tv',
     poster_path: show.poster_path || null,
-    first_air_year: show.first_air_date ? parseInt(show.first_air_date.substring(0, 4)) : null,
+    first_air_year: show.year ? parseInt(show.year, 10) : null,
     overview: show.overview || null,
     vote_average: show.vote_average || null
   };
@@ -7136,18 +7164,27 @@ window.tmdbSelect = async function(prefix, idx) {
   if (mine) { _showDupHint(prefix, mine); } else { _clearDupHint(prefix); }
 
   try {
-    var res = await fetch('https://api.themoviedb.org/3/tv/' + show.id + '?api_key=' + TMDB_KEY + '&language=en-US');
-    var d = await res.json();
-    _tmdbPending.genre = d.genres && d.genres.length ? d.genres[0].name : null;
-    _tmdbPending.original_network = d.networks && d.networks.length ? d.networks[0].name : null;
-    _tmdbPending.number_of_seasons = releasedSeasonCount(d);
-    _tmdbPending.show_status = d.status || null;
+    if (_tmdbPending.media_type === 'documentary') {
+      var mres = await fetch('https://api.themoviedb.org/3/movie/' + show.id + '?api_key=' + TMDB_KEY + '&language=en-US');
+      var md = await mres.json();
+      _tmdbPending.genre = 'Documentary';
+      _tmdbPending.original_network = (md.production_companies && md.production_companies.length) ? md.production_companies[0].name : null;
+      _tmdbPending.number_of_seasons = null;
+      _tmdbPending.show_status = md.status || null;
+    } else {
+      var res = await fetch('https://api.themoviedb.org/3/tv/' + show.id + '?api_key=' + TMDB_KEY + '&language=en-US');
+      var d = await res.json();
+      _tmdbPending.genre = d.genres && d.genres.length ? d.genres[0].name : null;
+      _tmdbPending.original_network = d.networks && d.networks.length ? d.networks[0].name : null;
+      _tmdbPending.number_of_seasons = releasedSeasonCount(d);
+      _tmdbPending.show_status = d.status || null;
+    }
   } catch(e) { console.error('TMDB detail error:', e); }
 
   var platformSelId = PLATFORM_SELECT_ID[prefix];
   var platformSel = platformSelId ? document.getElementById(platformSelId) : null;
   if (platformSel && !platformSel.value) {
-    var auto = await fetchAutoPlatform(show.id);
+    var auto = await fetchAutoPlatform(show.id, _tmdbPending.media_type);
     if (auto && !platformSel.value) {
       var hasOption = Array.prototype.some.call(platformSel.options, function(o) { return o.value === auto; });
       if (hasOption) platformSel.value = auto;
@@ -7181,16 +7218,27 @@ window.openShowDetails = async function(tmdbId, friendRatings) {
   _currentShowDetails = null;
   overlay.style.display = 'flex';
   try {
+    // Probe TV first; a documentary film is a TMDB "movie" on a separate
+    // id namespace, so a 404 here means try /movie.
     var res = await fetch('https://api.themoviedb.org/3/tv/' + tmdbId + '?api_key=' + TMDB_KEY + '&language=en-US&append_to_response=credits');
+    var isDocFilm = false;
+    if (res.status === 404) {
+      res = await fetch('https://api.themoviedb.org/3/movie/' + tmdbId + '?api_key=' + TMDB_KEY + '&language=en-US&append_to_response=credits');
+      isDocFilm = true;
+    }
     var d = await res.json();
+    d.name = d.name || d.title || '';
+    var docPlaceholder = isDocFilm ? '🎬' : '📺';
     var poster = d.poster_path
       ? '<img src="' + TMDB_POSTER_LG + d.poster_path + '" style="width:120px;height:180px;border-radius:10px;object-fit:cover;flex-shrink:0;" />'
-      : '<div style="width:120px;height:180px;border-radius:10px;background:var(--olive);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:36px;">📺</div>';
-    var year = d.first_air_date ? d.first_air_date.substring(0, 4) : '';
-    var genre = d.genres && d.genres.length ? d.genres[0].name : '';
-    var network = d.networks && d.networks.length ? d.networks[0].name : '';
-    var metaBits = [year, genre, network, d.number_of_seasons ? (d.number_of_seasons + (d.number_of_seasons === 1 ? ' season' : ' seasons')) : '', d.status]
-      .filter(Boolean).join(' • ');
+      : '<div style="width:120px;height:180px;border-radius:10px;background:var(--olive);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:36px;">' + docPlaceholder + '</div>';
+    var year = (d.first_air_date || d.release_date || '').substring(0, 4);
+    var genre = isDocFilm ? 'Documentary' : (d.genres && d.genres.length ? d.genres[0].name : '');
+    var network = isDocFilm
+      ? (d.production_companies && d.production_companies.length ? d.production_companies[0].name : '')
+      : (d.networks && d.networks.length ? d.networks[0].name : '');
+    var seasonsBit = (!isDocFilm && d.number_of_seasons) ? (d.number_of_seasons + (d.number_of_seasons === 1 ? ' season' : ' seasons')) : '';
+    var metaBits = [year, genre, network, seasonsBit, d.status].filter(Boolean).join(' • ');
     var rating = d.vote_average ? '&#9733; ' + d.vote_average.toFixed(1) + '/10' : '';
     var cast = (d.credits && d.credits.cast) ? d.credits.cast.slice(0, 8) : [];
     var castHTML = cast.length
@@ -7228,10 +7276,11 @@ window.openShowDetails = async function(tmdbId, friendRatings) {
       + castHTML;
     _currentShowDetails = {
       tmdb_id: tmdbId, title: d.name || '', poster_path: d.poster_path || null,
-      genre: (d.genres && d.genres[0]) ? d.genres[0].name : null,
-      original_network: (d.networks && d.networks[0]) ? d.networks[0].name : null,
+      media_type: isDocFilm ? 'documentary' : 'tv',
+      genre: genre || null,
+      original_network: network || null,
       first_air_year: year ? parseInt(year, 10) : null,
-      number_of_seasons: releasedSeasonCount(d), show_status: d.status || null,
+      number_of_seasons: isDocFilm ? null : releasedSeasonCount(d), show_status: d.status || null,
       overview: d.overview || null, vote_average: d.vote_average || null,
     };
     if (addBtn && _currentShowDetails.title) addBtn.style.display = 'block';
@@ -7407,7 +7456,7 @@ window.chooseAddDestination = async function(destKey) {
     try {
       var row = await dbAddShow({
         title: info.title, platform: info.platform || 'None', status: status, dnf: isDnf, source: src, influencedBy: inf,
-        tmdb_id: info.tmdb_id, poster_path: info.poster_path, genre: info.genre,
+        tmdb_id: info.tmdb_id, media_type: info.media_type, poster_path: info.poster_path, genre: info.genre,
         original_network: info.original_network, first_air_year: info.first_air_year,
         number_of_seasons: info.number_of_seasons, show_status: info.show_status,
         overview: info.overview, vote_average: info.vote_average,
@@ -7416,7 +7465,7 @@ window.chooseAddDestination = async function(destKey) {
       resultShow = {
         id: row.id, title: info.title, platform: info.platform || 'None', rating: 0, hidden: false, dnf: isDnf, waitingForSeason: isWaiting, waitingSince: waitingSince,
         source: src, influencedBy: inf, addedAt: row.added_at, reactions: [], showReact: false,
-        poster_path: info.poster_path || null, tmdb_id: info.tmdb_id || null,
+        poster_path: info.poster_path || null, tmdb_id: info.tmdb_id || null, media_type: info.media_type || 'tv',
       };
       state[destList].push(resultShow);
       renderList(destList);
