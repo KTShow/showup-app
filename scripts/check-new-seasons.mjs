@@ -94,8 +94,15 @@ async function sbPatch(path, body) {
   if (!res.ok) throw new Error(`PATCH ${path} -> ${res.status} ${await res.text()}`);
 }
 
-async function sbUpsert(path, body, { ignoreDuplicates = false } = {}) {
-  const res = await fetch(`${REST}/${path}`, {
+async function sbUpsert(path, body, { ignoreDuplicates = false, onConflict = null } = {}) {
+  // PostgREST resolves ON CONFLICT against the primary key unless on_conflict
+  // names the columns of the constraint to dedup on. notifications has a uuid
+  // PK, so without this the ignore-duplicates preference does nothing and a
+  // repeat insert hits notifications_dedup_idx with a 409.
+  const url = onConflict
+    ? `${REST}/${path}${path.includes('?') ? '&' : '?'}on_conflict=${onConflict}`
+    : `${REST}/${path}`;
+  const res = await fetch(url, {
     method: 'POST',
     headers: {
       ...SB_HEADERS,
@@ -210,7 +217,7 @@ async function main() {
               season_count: upcoming.season_number,
               season_number: upcoming.season_number,
             },
-            { ignoreDuplicates: true }
+            { ignoreDuplicates: true, onConflict: 'user_id,type,tmdb_id,season_count' }
           );
           headsups++;
         }
@@ -241,7 +248,7 @@ async function main() {
             season_count: count,
             season_number: latest ? latest.season_number : null,
           },
-          { ignoreDuplicates: true }
+          { ignoreDuplicates: true, onConflict: 'user_id,type,tmdb_id,season_count' }
         );
         notified++;
         console.log(`[new-seasons] notified user ${s.user_id} -> ${s.title} (S${latest ? latest.season_number : '?'})`);
