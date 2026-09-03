@@ -145,6 +145,14 @@ async function main() {
   const registryRows = await sbGet('tracked_seasons?select=tmdb_id,released_season_count');
   const registry = new Map(registryRows.map((r) => [r.tmdb_id, r.released_season_count]));
 
+  // 2b. Users who turned "New season alerts" off (Settings > Notifications).
+  //     No row = on, so we only collect the explicit false. A muted user
+  //     still gets the passive card badge (new_season_available) -- just no
+  //     notification row / push.
+  const prefRows = await sbGet('notification_prefs?select=user_id,new_season&new_season=is.false');
+  const mutedNewSeason = new Set(prefRows.map((r) => r.user_id));
+  if (mutedNewSeason.size) console.log(`[new-seasons] ${mutedNewSeason.size} user(s) muted new-season alerts`);
+
   // Group candidate rows by tmdb_id.
   const byTmdb = new Map();
   for (const s of shows) {
@@ -158,6 +166,7 @@ async function main() {
     baselined = 0,
     notified = 0,
     headsups = 0,
+    muted = 0,
     skipped = 0,
     errors = 0;
 
@@ -203,26 +212,32 @@ async function main() {
     // 4. Reconcile each user's copy of the show.
     for (const s of byTmdb.get(tmdbId)) {
       try {
+        const alertsMuted = mutedNewSeason.has(s.user_id);
+
         // 4a. Dated heads-up for a not-yet-aired season the user hasn't seen.
         //     Independent of the baseline/new_season logic below; the dedup
         //     index keeps it to one per user per season. No card badge.
         const seenCount = s.number_of_seasons == null ? count : s.number_of_seasons;
         if (upcoming && upcoming.season_number > seenCount) {
-          await sbUpsert(
-            'notifications',
-            {
-              user_id: s.user_id,
-              type: 'season_upcoming',
-              title: s.title,
-              body: `Season ${upcoming.season_number} premieres ${fmtDate(upcoming.air_date)}`,
-              show_id: s.id,
-              tmdb_id: tmdbId,
-              season_count: upcoming.season_number,
-              season_number: upcoming.season_number,
-            },
-            { ignoreDuplicates: true, onConflict: 'user_id,type,tmdb_id,season_count' }
-          );
-          headsups++;
+          if (alertsMuted) {
+            muted++;
+          } else {
+            await sbUpsert(
+              'notifications',
+              {
+                user_id: s.user_id,
+                type: 'season_upcoming',
+                title: s.title,
+                body: `Season ${upcoming.season_number} premieres ${fmtDate(upcoming.air_date)}`,
+                show_id: s.id,
+                tmdb_id: tmdbId,
+                season_count: upcoming.season_number,
+                season_number: upcoming.season_number,
+              },
+              { ignoreDuplicates: true, onConflict: 'user_id,type,tmdb_id,season_count' }
+            );
+            headsups++;
+          }
         }
 
         // 4b. Baseline / new-season-is-out.
@@ -233,10 +248,15 @@ async function main() {
         }
         if (count <= s.number_of_seasons) continue;
 
+        // The card badge is passive state, set regardless of the alert pref.
         await sbPatch(`shows?id=eq.${s.id}`, {
           number_of_seasons: count,
           new_season_available: true,
         });
+        if (alertsMuted) {
+          muted++;
+          continue;
+        }
         await sbUpsert(
           'notifications',
           {
@@ -265,7 +285,7 @@ async function main() {
   }
 
   console.log(
-    `[new-seasons] done: checked=${checked} baselined=${baselined} notified=${notified} headsups=${headsups} skipped=${skipped} errors=${errors}`
+    `[new-seasons] done: checked=${checked} baselined=${baselined} notified=${notified} headsups=${headsups} muted=${muted} skipped=${skipped} errors=${errors}`
   );
   if (errors > 0) process.exitCode = 1;
 }

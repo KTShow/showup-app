@@ -294,6 +294,11 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
 .settings-row-icon{font-size:18px;flex-shrink:0;width:24px;text-align:center;}
 .settings-row-label{font-size:14px;color:var(--charcoal);font-weight:500;flex:1;}
 .settings-row-arrow{font-size:18px;color:var(--muted);}
+.settings-row-sub{display:block;font-size:11px;color:var(--muted);font-weight:400;margin-top:2px;line-height:1.35;}
+.switch{width:42px;height:24px;border-radius:12px;border:none;background:var(--border);position:relative;flex-shrink:0;cursor:pointer;padding:0;transition:background 0.2s;}
+.switch[aria-checked="true"]{background:var(--terra);}
+.switch::after{content:"";position:absolute;top:2px;left:2px;width:20px;height:20px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,0.25);transition:transform 0.2s;}
+.switch[aria-checked="true"]::after{transform:translateX(18px);}
 
 .room-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:10px;margin-top:4px;}
 .room-btn{background:var(--cream);border:2px solid var(--border);border-radius:12px;padding:14px 8px;cursor:pointer;text-align:center;transition:all 0.2s;font-family:var(--sans);}
@@ -1043,10 +1048,15 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
     </div>
 
     <div class="settings-section">
-      <div class="settings-section-label">Coming Soon</div>
+      <div class="settings-section-label">Notifications</div>
       <div class="settings-card">
-        <div class="settings-row" style="cursor:default;opacity:0.5;"><span class="settings-row-icon">&#128276;</span><span class="settings-row-label">Notifications</span><span style="font-size:11px;color:var(--muted);margin-left:auto;">Coming soon</span></div>
+        <div class="settings-row" style="cursor:default;">
+          <span class="settings-row-icon">&#128276;</span>
+          <span class="settings-row-label">New season alerts<span class="settings-row-sub">A heads-up when a show you follow has a new season coming or out</span></span>
+          <button type="button" class="switch" id="pref-new-season" role="switch" aria-checked="true" aria-label="New season alerts" onclick="toggleNotifPref('new_season')"></button>
+        </div>
       </div>
+      <div style="font-size:11px;color:var(--muted);margin-top:6px;padding-left:4px;">Phone notifications arrive with the app &mdash; for now this controls the in-app bell.</div>
     </div>
 
     <div class="settings-section">
@@ -1156,6 +1166,7 @@ var state = {
   allFriendsAcrossRooms: [], // everyone you share ANY room with, full show+reaction data -- powers card-level ratings/comment pooling (see preloadFriendsInBackground)
   crewShowsByPlatform: false, // Your Crowd view mode: friend tiles (false) vs. shows grouped by platform (true)
   notifications: [],     // per-user feed (new_season, ...), filled by loadNotifications()
+  notificationPrefs: { new_season: true }, // per-type on/off, from notification_prefs (absence = all on)
 };
 
 var _firstTimeTellMore = false; // true when completing onboarding for the first time
@@ -5243,6 +5254,7 @@ async function loadUserIntoState(profile) {
     state.watchlist = shows.filter(function(s) { return s.status === 'watchlist'; }).map(normalizeShow);
     state.watched = shows.filter(function(s) { return s.status === 'watched' || s.status === 'dnf'; }).map(normalizeShow);
     loadNotifications(); // fire-and-forget, fills the bell + new-season badges from server-computed state
+    loadNotificationPrefs(); // fire-and-forget, fills the Settings toggles
     loadInfluencerNames(); // fire-and-forget, fills in "Recommended by" badges once resolved
   } catch(e) { console.error('Error loading shows:', e); }
 
@@ -5642,6 +5654,7 @@ window.backFromProfile = function() {
 window.goToSettings = function() {
   showScreen('settings');
   renderRoomGrid();
+  renderNotifPrefs();
   var adminSection = document.getElementById('settings-admin-section');
   if (adminSection) adminSection.style.display = (state.user && state.user.isAdmin) ? 'block' : 'none';
 };
@@ -6992,6 +7005,49 @@ window.openNotification = async function(id) {
   // Everything else (season_upcoming, or a new_season on a plain My List /
   // Currently Watching show): just jump to the card.
   _jumpToMyShow(n.show_id);
+};
+
+// ---- Notification preferences (Settings toggles) -------------------------
+// One row per user in notification_prefs; absence of a row = everything on.
+// The daily checker (scripts/check-new-seasons.mjs) is what actually honours
+// these -- a muted type stops producing bell rows (and, later, push). The
+// 'New season!' card badge is passive state, not an alert, so it still
+// shows. Phone push isn't wired yet; today this gates the in-app bell.
+async function loadNotificationPrefs() {
+  if (!state.user) return;
+  try {
+    var res = await sb.from('notification_prefs').select('*').eq('user_id', state.user.id).maybeSingle();
+    if (res.error) throw res.error;
+    if (res.data) state.notificationPrefs = { new_season: res.data.new_season !== false };
+    else state.notificationPrefs = { new_season: true };
+  } catch (e) {
+    console.error('loadNotificationPrefs error:', e);
+    state.notificationPrefs = { new_season: true };
+  }
+  renderNotifPrefs();
+}
+
+function renderNotifPrefs() {
+  var el = document.getElementById('pref-new-season');
+  if (!el) return;
+  var on = state.notificationPrefs.new_season !== false;
+  el.setAttribute('aria-checked', on ? 'true' : 'false');
+}
+
+window.toggleNotifPref = async function(key) {
+  var next = !(state.notificationPrefs[key] !== false);
+  state.notificationPrefs[key] = next;
+  renderNotifPrefs();
+  try {
+    var res = await sb.from('notification_prefs')
+      .upsert({ user_id: state.user.id, new_season: state.notificationPrefs.new_season, updated_at: new Date().toISOString() }, { onConflict: 'user_id' });
+    if (res.error) throw res.error;
+  } catch (e) {
+    console.error('toggleNotifPref error:', e);
+    state.notificationPrefs[key] = !next; // revert
+    renderNotifPrefs();
+    showToast("Couldn't save that — try again in a moment.");
+  }
 };
 
 function _jumpToMyShow(showId) {
