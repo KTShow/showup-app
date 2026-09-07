@@ -2007,8 +2007,7 @@ function buildDNFCard(s) {
   var menuHTML = '<div class="card-menu-wrap">'
     + '<button class="btn-more" onclick="toggleCardMenu(this)" title="More">&#8942;</button>'
     + '<div class="card-menu">'
-    + '<button class="card-menu-item" onclick="moveDNFToBinged(\''+sid+'\');closeCardMenus();">&#127871; Move to Binged</button>'
-    + (isDocFilm(s) ? '' : '<button class="card-menu-item" onclick="moveToWaiting(\'watched\',\''+sid+'\');closeCardMenus();">Waiting for New Season</button>')
+    + '<button class="card-menu-item" onclick="moveDNFToBinged(\''+sid+'\');closeCardMenus();">&#127871; I finished it after all</button>'
     + '<button class="card-menu-item" onclick="toggleHide(\'watched\',\''+sid+'\');closeCardMenus();">'+hideLabel+'</button>'
     + '<button class="card-menu-item" onclick="togglePlatEdit(\'watched\',\''+sid+'\');closeCardMenus();">Edit streaming service</button>'
     + '<button class="card-menu-item danger" onclick="removeShow(\'watched\',\''+sid+'\');closeCardMenus();">Remove</button>'
@@ -2024,7 +2023,9 @@ function buildDNFCard(s) {
     + menuHTML
     + '</div>'
     + otherRatingsDNF
-    + '<div class="show-move"><button class="btn-start" onclick="startWatchingFromDNF(\''+sid+'\')">Start Watching</button></div>'
+    + '<div class="show-move"><button class="btn-start" onclick="startWatchingFromDNF(\''+sid+'\')">Start Watching</button>'
+    + (isDocFilm(s) ? '' : '<button class="waiting-season-btn" onclick="moveToWaiting(\'watched\',\''+sid+'\')">Waiting for New Season &#8987;</button>')
+    + '</div>'
     + '<div class="react-area">' + talkPreviewHTML(s.title) + reactToggle + '</div>'
     + '</div>';
 }
@@ -6157,16 +6158,17 @@ async function _doMoveToWaiting(list, id) {
   try { await updateShowStatus(id, 'watchlist', { waiting_for_season: true, waiting_since: now, dnf: false }); } catch(e) { console.error('moveToWaiting error:', e); }
 }
 
-// Kebab-menu shortcut on a Didn't Finish card, for shows marked DNF by
-// mistake — un-marks it so it moves from the DNF section into the regular
+// Kebab-menu recovery path on a Didn't Finish card ("I finished it after
+// all") — for a DNF marked by mistake, or a show the user came back and
+// finished. Un-marks dnf so it moves from the DNF section into the regular
 // Already Binged section, without leaving the Binged tab. Confirms first,
-// same reasoning as moveToWaiting: icon-only action, silently changes section.
+// same reasoning as moveToWaiting: menu action, silently changes section.
 window.moveDNFToBinged = function(id) {
   var s = state.watched.find(function(x) { return x.id === id; });
   if (!s) return;
   _moveDNFToBingedPending = id;
   document.getElementById('add-confirm-title').textContent = s.title;
-  document.getElementById('add-confirm-sub').textContent = 'Move to Binged?';
+  document.getElementById('add-confirm-sub').textContent = 'Mark as finished and move to Binged?';
   document.getElementById('add-confirm-modal').classList.add('active');
 };
 
