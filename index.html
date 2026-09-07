@@ -210,6 +210,7 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
 .btn-add-prominent{background:var(--terra);color:white;border:none;cursor:pointer;padding:7px 14px;font-size:13px;font-weight:700;border-radius:7px;line-height:1;white-space:nowrap;box-shadow:0 2px 6px rgba(196,98,45,0.35);transition:all 0.2s;}
 .btn-add-prominent:hover{transform:translateY(-1px);box-shadow:0 3px 9px rgba(196,98,45,0.45);}
 .on-list-badge{font-size:11px;font-weight:700;color:var(--fig);white-space:nowrap;}
+.lr-rating-owner{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:0.04em;color:var(--muted);}
 .on-list-badge-tap{cursor:pointer;text-decoration:underline;text-decoration-style:dotted;text-underline-offset:2px;}
 .on-list-badge-tap:active{opacity:0.55;}
 .rec-banner{background:linear-gradient(135deg,var(--fig),#8a4a6b);border-radius:var(--radius);padding:14px 16px;margin-bottom:12px;box-shadow:0 4px 14px rgba(107,45,78,0.3);}
@@ -1546,6 +1547,16 @@ function remoteStatic(rating) {
   return html+'</div>';
 }
 
+// On a friend's Living Room card, a rating widget wrapped with a small
+// owner label ("Dave" / "You") so their rating and your own interactive
+// one can sit side by side without being mistaken for each other. Each
+// pair stays glued together when the actions row wraps.
+function lrRatingPair(label, widgetHTML) {
+  return '<span style="display:inline-flex;align-items:center;gap:3px;white-space:nowrap;">'
+    + '<span class="lr-rating-owner">'+escAttr(label)+'</span>'+widgetHTML+'</span>';
+}
+function firstNameOf(name) { return String(name||'').trim().split(/\s+/)[0] || name || ''; }
+
 // A single small lit remote, inline with a number -- the compact
 // "average rating" label used in list/summary rows (Rankings, Prime
 // Time, Full Lineup, search results, etc.) everywhere a plain star
@@ -2828,9 +2839,17 @@ async function showFriend(id) {
         var mineExisting = isSelf ? null : findMyShowByTitle(s.title);
         var actions='';
         if (lk==='w'||lk==='wd') {
-          actions = isSelf ? remoteRatingLR(lk==='w'?'watching':'watched', s.id, s.rating, f.id)
-            : mineExisting ? remoteRatingLR(mineExisting.list, mineExisting.show.id, mineExisting.show.rating, f.id)
-            : remoteStatic(s.rating);
+          if (isSelf) {
+            actions = remoteRatingLR(lk==='w'?'watching':'watched', s.id, s.rating, f.id);
+          } else if (mineExisting) {
+            // Their rating always shows (static); yours sits beside it,
+            // still interactive, so you can rate on the spot without their
+            // rating disappearing. Labelled so the two don't get confused.
+            actions = lrRatingPair(firstNameOf(f.name), remoteStatic(s.rating))
+              + lrRatingPair('You', remoteRatingLR(mineExisting.list, mineExisting.show.id, mineExisting.show.rating, f.id));
+          } else {
+            actions = remoteStatic(s.rating);
+          }
         }
         actions+='<button class="btn-recommend" onclick="openRecommendPicker(\''+s.id+'\')" title="Recommend to a friend">&#127919;</button>';
         if(!isSelf) actions+= mineExisting
@@ -2888,11 +2907,19 @@ async function showFriend(id) {
               var reactToggle=('<div class="inline-react"><input class="react-input" id="'+inpId+'" placeholder="What did you think? 😊" /><button class="btn-send" onclick="submitFR(\''+f.id+'\',\'wd\',\''+s.id+'\')">Send</button><button class="btn-cancel" onclick="document.getElementById(\''+inpId+'\').value=\'\'">Cancel</button></div>'
                 + quickReactRow('quickReactFR', "'"+f.id+"','wd','"+s.id+"'"));
               var dnfMineExisting = isSelf ? null : findMyShowByTitle(s.title);
-              var dnfRatingRow = isSelf
-                ? '<div style="margin-top:5px;">'+remoteRatingLR('watched', s.id, s.rating, f.id)+'</div>'
-                : dnfMineExisting
-                  ? '<div style="margin-top:5px;">'+remoteRatingLR(dnfMineExisting.list, dnfMineExisting.show.id, dnfMineExisting.show.rating, f.id)+'</div>'
-                  : (s.rating ? '<div style="margin-top:5px;">'+remoteStatic(s.rating)+'</div>' : '');
+              var dnfRatingRow;
+              if (isSelf) {
+                dnfRatingRow = '<div style="margin-top:5px;">'+remoteRatingLR('watched', s.id, s.rating, f.id)+'</div>';
+              } else if (dnfMineExisting) {
+                // Their rating (if they gave one) stays visible; yours sits
+                // beside it and stays interactive. Labelled to keep them apart.
+                dnfRatingRow = '<div style="margin-top:5px;display:flex;flex-wrap:wrap;align-items:center;gap:4px 8px;">'
+                  + (s.rating ? lrRatingPair(firstNameOf(f.name), remoteStatic(s.rating)) : '')
+                  + lrRatingPair('You', remoteRatingLR(dnfMineExisting.list, dnfMineExisting.show.id, dnfMineExisting.show.rating, f.id))
+                  + '</div>';
+              } else {
+                dnfRatingRow = s.rating ? '<div style="margin-top:5px;">'+remoteStatic(s.rating)+'</div>' : '';
+              }
               var dnfActions=isSelf?'':(dnfMineExisting
                 ? '<span class="on-list-badge">'+onListBadgeContent(dnfMineExisting)+'</span>'
                 : '<button class="btn-add-prominent" onclick="addFromFriendCard(\''+s.id+'\')" title="Add to my list">+ Add</button>');
