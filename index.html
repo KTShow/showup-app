@@ -1477,7 +1477,7 @@ function showTab(tab, btn) {
   }
   if (tab==='living-room') { showRoomPicker(); }
   if (tab==='watched') { renderBingedTop5(); }
-  if (tab!=='living-room') state.lastViewedFriend = null;
+  if (tab!=='living-room') { state.lastViewedFriend = null; _friendDetailReturn = null; }
   if (state.user) state.user.lastActive = new Date().toISOString();
 }
 
@@ -2795,7 +2795,34 @@ async function logImpressions(friendId, showIds) {
   } catch(e) { console.error('Impression log error:', e); }
 }
 
+// Where "← Back" from a friend's room detail should return you. The detail
+// view (showFriend) is opened from ~7 places -- Your Crowd, a room's
+// Conversations / Favorites / Show Talk, and the room-independent Prime
+// Time, Show Talk hub, and Living Rooms search. Each needs its own return
+// target; without this the single back button always dumped you into a
+// room's crew view even when you were never in a room.
+var _friendDetailReturn = null;
+function _isShown(elId){ var el=document.getElementById(elId); return !!el && el.style.display!=='none'; }
+function captureFriendDetailReturn(){
+  // Already inside the friend detail (a re-render, e.g. after rating a card,
+  // or a friend->friend hop): keep the original return target.
+  if (_isShown('friend-detail-view')) return;
+  var scrollY = window.scrollY;
+  if (_isShown('prime-time-view')) {
+    _friendDetailReturn = { kind:'prime-time', detailIdx: _isShown('prime-time-detail-view') ? _primeTimeDetailIdx : null, scrollY:scrollY, label:'← Back to Prime Time' };
+  } else if (_isShown('showtalk-hub-view')) {
+    _friendDetailReturn = { kind:'showtalk-hub', detailIdx: _isShown('showtalk-hub-detail-panel') ? _showTalkDetailIdx : null, scrollY:scrollY, label:'← Back to Show Talk' };
+  } else if (_isShown('room-picker-view')) {
+    _friendDetailReturn = { kind:'room-picker', scrollY:scrollY, label:'← Back to Your Living Rooms' };
+  } else if (_isShown('friends-view')) {
+    _friendDetailReturn = { kind:'room', subView:_currentLRView, scrollY:scrollY, label:'← Back to Living Room' };
+  } else {
+    _friendDetailReturn = null;
+  }
+}
+
 async function showFriend(id) {
+  captureFriendDetailReturn();
   state.lastViewedFriend=id;
   var isSelf = !!(state.user && id === state.user.id);
   // Someone clicked in from outside Living Room browsing (e.g. a Show Talk
@@ -2889,7 +2916,8 @@ async function showFriend(id) {
   var dnfItems=(f.watched||[]).filter(function(x){return x.dnf;});
   var dnfKey='frv:'+f.id+':dnf';
   var dnfCollapsed=_collapsedSections[dnfKey]!==false;
-  dv.innerHTML='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;"><button class="back-btn" onclick="backToFriends()">&#8592; Back to Living Room</button><div style="display:flex;gap:8px;">'+sharedTasteBtn+muteBtn+removeBtn+'</div></div>'
+  var backLabel = (_friendDetailReturn && _friendDetailReturn.label) || '← Back to Living Room';
+  dv.innerHTML='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;"><button class="back-btn" onclick="backToFriends()">'+escAttr(backLabel)+'</button><div style="display:flex;gap:8px;">'+sharedTasteBtn+muteBtn+removeBtn+'</div></div>'
     +'<div class="friend-header"><div class="friend-header-av" style="background:'+fColor+';font-size:18px;font-weight:700;font-family:var(--sans);">'+fInitials+'</div>'
     +'<div><div style="font-family:Georgia,serif;font-size:20px;font-weight:700">'+roomTitle+'</div>'
     +cityLine+'</div></div>'
@@ -2936,16 +2964,71 @@ async function showFriend(id) {
         : '')
     : '')
   + top5HTML
-  + '<div style="margin-top:24px;text-align:center;"><button class="back-btn" onclick="backToFriends()">&#8592; Back to Living Room</button></div>';
+  + '<div style="margin-top:24px;text-align:center;"><button class="back-btn" onclick="backToFriends()">'+escAttr(backLabel)+'</button></div>';
 }
 
 function frShowArr(fid,lk){var isSelf=!!(state.user&&fid===state.user.id);var src=isSelf?{watching:state.watching,watchlist:state.watchlist,watched:state.watched}:state.friends.find(function(x){return x.id===fid;});if(!src)return null;return lk==='w'?src.watching:lk==='wl'?src.watchlist:src.watched;}
 function toggleFR(fid,lk,sid){var arr=frShowArr(fid,lk);var show=arr&&arr.find(function(s){return s.id===sid;});if(!show)return;show.showReact=!show.showReact;showFriend(fid);setTimeout(function(){var el=document.getElementById('finp-'+lk+'-'+fid+'-'+sid);if(el)el.focus();},60);}
 async function submitFR(fid,lk,sid){var arr=frShowArr(fid,lk);var show=arr&&arr.find(function(s){return s.id===sid;});var inp=document.getElementById('finp-'+lk+'-'+fid+'-'+sid);if(!show||!inp||!inp.value.trim())return;var u=state.user;if(!show.reactions)show.reactions=[];var txt=inp.value.trim();var sentiment=detectSentiment(txt);show.reactions.push({user:u?u.first+(u.last?' '+u.last:''):'You',initials:u?u.initials:'Y',color:'#C4622D',text:txt,sentiment:sentiment,reactedAt:new Date().toISOString()});show.showReact=false;showFriend(fid);try{await dbAddReaction(show.id,txt,sentiment);}catch(e){console.error('reaction save error:',e);}}
 async function quickReactFR(fid,lk,sid,emoji,sentiment){var arr=frShowArr(fid,lk);var show=arr&&arr.find(function(s){return s.id===sid;});if(!show)return;var u=state.user;if(!show.reactions)show.reactions=[];show.reactions.push({user:u?u.first+(u.last?' '+u.last:''):'You',initials:u?u.initials:'Y',color:'#C4622D',text:emoji,sentiment:sentiment,reactedAt:new Date().toISOString()});showFriend(fid);try{await dbAddReaction(show.id,emoji,sentiment);}catch(e){console.error('quick reaction save error:',e);}}
-function backToFriends(){document.getElementById('friends-view').style.display='block';document.getElementById('friend-detail-view').style.display='none';}
+function backToFriends(){
+  var r = _friendDetailReturn;
+  _friendDetailReturn = null;
+  document.getElementById('friend-detail-view').style.display='none';
 
+  if (r && r.kind === 'prime-time') {
+    hideLivingRoomTopPanels();
+    document.getElementById('friends-view').style.display='none';
+    document.getElementById('prime-time-view').style.display='block';
+    if (r.detailIdx != null && _primeTimeListCache[r.detailIdx]) {
+      var ptListScroll = _primeTimeScrollY;
+      showPrimeTimeDetail(r.detailIdx);
+      _primeTimeScrollY = ptListScroll; // don't let the detail's own capture clobber the list position
+    } else {
+      document.getElementById('prime-time-detail-view').style.display='none';
+      document.getElementById('prime-time-list-view').style.display='block';
+      var ptw=document.getElementById('prime-time-search-wrap'); if(ptw) ptw.style.display='block';
+      renderPrimeTimeList();
+    }
+    window.scrollTo(0, r.scrollY||0);
+    return;
+  }
+  if (r && r.kind === 'showtalk-hub') {
+    hideLivingRoomTopPanels();
+    document.getElementById('friends-view').style.display='none';
+    _showTalkHubMode = true;
+    document.getElementById('showtalk-hub-view').style.display='block';
+    if (r.detailIdx != null && _showTalkListCache[r.detailIdx]) {
+      var stListScroll = _showTalkScrollY;
+      showShowTalkDetail(r.detailIdx);
+      _showTalkScrollY = stListScroll;
+    } else {
+      document.getElementById('showtalk-hub-detail-panel').style.display='none';
+      document.getElementById('showtalk-hub-list').style.display='block';
+      var stw=document.getElementById('showtalk-hub-search-wrap'); if(stw) stw.style.display='block';
+      renderShowTalk();
+    }
+    window.scrollTo(0, r.scrollY||0);
+    return;
+  }
+  if (r && r.kind === 'room-picker') {
+    showRoomPicker();
+    var q=document.getElementById('room-picker-search');
+    if (q && q.value.trim()) renderRoomPickerSearch();
+    window.scrollTo(0, r.scrollY||0);
+    return;
+  }
+
+  // Default, and r.kind === 'room': back into the room, on whichever
+  // sub-view (Your Crowd / Favorites / Show Talk / Conversations) you left.
+  document.getElementById('friends-view').style.display='block';
+  if (r && r.kind === 'room' && r.subView) switchLRView(r.subView);
+  if (r && r.scrollY) window.scrollTo(0, r.scrollY);
+}
+
+var _currentLRView = 'crew';
 function switchLRView(view){
+  _currentLRView = view;
   document.getElementById('lr-crew-view').style.display=view==='crew'?'block':'none';
   document.getElementById('lr-picks-view').style.display=view==='picks'?'block':'none';
   document.getElementById('lr-showtalk-view').style.display=view==='showtalk'?'block':'none';
@@ -3071,6 +3154,7 @@ window.clearAnnouncementBanner = async function(){
 // ============================================================
 
 async function showRoomPicker() {
+  _friendDetailReturn = null;
   document.getElementById('room-picker-view').style.display = 'block';
   document.getElementById('friends-view').style.display = 'none';
   document.getElementById('friend-detail-view').style.display = 'none';
@@ -3357,9 +3441,13 @@ function buildPrimeTimeLeaderboard(data) {
 var _primeTimeListCache = [];
 var _primeTimeScrollY = 0;
 var _primeTimeAddIdx = null;
+var _primeTimeDetailIdx = null;
 
 window.openPrimeTimeView = async function() {
+  _friendDetailReturn = null;
+  _primeTimeDetailIdx = null;
   document.getElementById('room-picker-view').style.display = 'none';
+  document.getElementById('friend-detail-view').style.display = 'none';
   document.getElementById('prime-time-view').style.display = 'block';
   document.getElementById('prime-time-detail-view').style.display = 'none';
   var searchWrap = document.getElementById('prime-time-search-wrap');
@@ -3385,6 +3473,8 @@ window.backFromPrimeTimeView = function() {
 // just pooled across every room from the start instead of needing a
 // specific room entered first.
 window.openShowTalkHub = function() {
+  _friendDetailReturn = null;
+  _showTalkDetailIdx = null;
   hideLivingRoomTopPanels();
   document.getElementById('friends-view').style.display = 'none';
   document.getElementById('friend-detail-view').style.display = 'none';
@@ -3431,6 +3521,7 @@ async function loadFullLineupData() {
 }
 
 window.openFullLineupView = async function() {
+  _friendDetailReturn = null;
   hideLivingRoomTopPanels();
   document.getElementById('friends-view').style.display = 'none';
   document.getElementById('friend-detail-view').style.display = 'none';
@@ -3598,6 +3689,7 @@ window.showPrimeTimeDetail = function(idx){
   _primeTimeScrollY = window.scrollY;
   var s=_primeTimeListCache[idx];
   if(!s)return;
+  _primeTimeDetailIdx = idx;
   var panel=document.getElementById('prime-time-detail-view');
   var remotes=''; for(var n=1;n<=5;n++){var lit=n<=Math.floor(s.avg);remotes+='<span style="opacity:'+(lit?'1':'0.18')+';display:inline-block;">'+remoteIcon(16,lit)+'</span>';}
   // Named raters (you + anyone in one of your rooms) render individually.
@@ -3651,6 +3743,7 @@ window.showPrimeTimeDetail = function(idx){
 };
 
 window.backToPrimeTimeList = function(){
+  _primeTimeDetailIdx = null;
   document.getElementById('prime-time-detail-view').style.display='none';
   document.getElementById('prime-time-list-view').style.display='block';
   var searchWrap=document.getElementById('prime-time-search-wrap');
@@ -4048,6 +4141,7 @@ function buildShowTalk(){
 
 var _showTalkListCache = [];
 var _showTalkAddIdx = null;
+var _showTalkDetailIdx = null;
 // 'room' = whichever room is currently entered (state.friends), matching a
 // room-scoped card's own counts. 'all' = pooled across every room the
 // viewer belongs to (state.allFriendsAcrossRooms), used when Show Talk is
@@ -4110,6 +4204,7 @@ function showShowTalkDetail(idx){
   _showTalkScrollY = window.scrollY;
   var s=_showTalkListCache[idx];
   if(!s)return;
+  _showTalkDetailIdx = idx;
   var ids=stIds();
   var panel=document.getElementById(ids.detail);
   var rows=s.comments.map(function(c, ci){
@@ -4173,7 +4268,7 @@ function showShowTalkDetail(idx){
   panel.scrollIntoView({behavior:'smooth'});
 }
 
-function backToShowTalk(){var ids=stIds();document.getElementById(ids.detail).style.display='none';document.getElementById(ids.list).style.display='block';var searchWrap=document.getElementById(ids.searchWrap);if(searchWrap)searchWrap.style.display='block';window.scrollTo(0,_showTalkScrollY);}
+function backToShowTalk(){_showTalkDetailIdx=null;var ids=stIds();document.getElementById(ids.detail).style.display='none';document.getElementById(ids.list).style.display='block';var searchWrap=document.getElementById(ids.searchWrap);if(searchWrap)searchWrap.style.display='block';window.scrollTo(0,_showTalkScrollY);}
 
 // Finds the actual show object (own or a friend's copy) a Show Talk comment
 // came from, so edit/delete can mutate the same state everywhere else reads
