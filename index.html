@@ -59,6 +59,9 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
 .notif-dismiss:hover{opacity:1;background:var(--border);color:var(--charcoal);}
 
 .bottom-nav{position:fixed;bottom:0;left:0;right:0;background:#EDE8DC;border-top:1px solid var(--border);display:flex;justify-content:space-around;align-items:center;height:60px;z-index:100;padding-bottom:env(safe-area-inset-bottom);}
+.back-to-top{position:fixed;right:16px;bottom:calc(72px + env(safe-area-inset-bottom));width:42px;height:42px;border-radius:50%;background:var(--fig);color:#fff;border:none;box-shadow:0 4px 14px rgba(0,0,0,0.28);font-size:20px;line-height:1;cursor:pointer;z-index:150;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transform:translateY(10px);transition:opacity 0.2s,transform 0.2s;}
+.back-to-top.visible{opacity:0.92;pointer-events:auto;transform:none;}
+.back-to-top:active{transform:scale(0.92);}
 .nav-tab{background:none;border:none;display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 10px;font-family:var(--sans);font-size:10px;color:var(--muted);cursor:pointer;transition:all 0.2s;flex:1;}
 .nav-tab.active{color:white;background:var(--terra);border-radius:10px;box-shadow:0 2px 8px rgba(196,98,45,0.4);}
 .nav-tab:hover{color:var(--fig);}
@@ -91,9 +94,12 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
 .service-divider{margin-bottom:10px;cursor:pointer;user-select:none;}
 .service-divider-text{display:block;font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:0.1em;color:white;background:var(--terra);padding:9px 16px;border-radius:8px;box-shadow:0 2px 8px rgba(196,98,45,0.3);}
 .service-count{font-weight:600;opacity:0.85;margin-left:2px;}
-.section-toggle-all{font-size:12px;color:var(--muted);text-align:right;margin-bottom:10px;}
-.section-toggle-all span{cursor:pointer;text-decoration:underline;text-decoration-color:transparent;transition:text-decoration-color 0.15s;}
-.section-toggle-all span:hover{text-decoration-color:var(--muted);}
+.section-toggle-all{display:flex;justify-content:flex-end;gap:8px;padding:7px 0;margin-bottom:8px;}
+.section-toggle-all span{cursor:pointer;font-size:11px;font-weight:700;color:var(--muted);border:1px solid var(--border);border-radius:999px;padding:4px 11px;background:var(--cream);white-space:nowrap;}
+.section-toggle-all span:hover{color:var(--terra);border-color:var(--terra);}
+/* On the Watching/List/Binged tabs the control sticks under the (scrolled-
+   away) top bar so "Collapse all" is reachable from anywhere in a long list. */
+.section-toggle-all--sticky{position:sticky;top:0;z-index:5;background:var(--sand);border-bottom:1px solid var(--border);}
 
 .show-card{background:var(--cream);border:1px solid var(--border);border-radius:var(--radius);padding:9px 12px;box-shadow:var(--shadow);transition:box-shadow 0.2s;}
 .show-card:hover{box-shadow:0 4px 20px rgba(100,50,20,0.14);}
@@ -944,6 +950,7 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
       <div id="friend-detail-view" style="display:none"></div>
     </div>
   </div>
+  <button id="back-to-top" class="back-to-top" onclick="scrollToTopSmooth()" aria-label="Back to top" title="Back to top">&#8593;</button>
   <div class="bottom-nav">
     <button class="nav-tab active" id="btab-watching" onclick="showTab('watching',this)"><span class="nav-tab-icon">&#128250;</span><span class="nav-tab-label">Watching</span></button>
     <button class="nav-tab" id="btab-watchlist" onclick="showTab('watchlist',this)"><span class="nav-tab-icon">🛋️</span><span class="nav-tab-label">My List</span></button>
@@ -1507,7 +1514,41 @@ function showTab(tab, btn) {
   if (tab==='watched') { renderBingedTop5(); }
   if (tab!=='living-room') { state.lastViewedFriend = null; _friendDetailReturn = null; }
   if (state.user) state.user.lastActive = new Date().toISOString();
+  _updateBackToTop();
 }
+
+// ---- Back to top (long lists) -----------------------------------------
+// The top bar scrolls away with the page, so a long list (Prime Time, the
+// Full Lineup, a stacked Watching tab, the Lounge) leaves no quick way up.
+// One fixed button, all views, appears once you're ~a screen down.
+var _bttEl = null, _bttTick = false;
+function _initBackToTop(){
+  _bttEl = document.getElementById('back-to-top');
+  if (!_bttEl) return;
+  window.addEventListener('scroll', function(){
+    if (_bttTick) return;
+    _bttTick = true;
+    requestAnimationFrame(function(){ _updateBackToTop(); _bttTick = false; });
+  }, { passive: true });
+  _updateBackToTop();
+}
+function _bttOverlayOpen(){
+  if (document.querySelector('.invite-modal-overlay.active')) return true;
+  return ['dwm-overlay','sd-overlay'].some(function(id){
+    var e = document.getElementById(id); return e && e.style.display === 'flex';
+  });
+}
+function _updateBackToTop(){
+  if (!_bttEl) return;
+  var appScreen = document.getElementById('screen-app');
+  var appOn = appScreen && appScreen.classList.contains('active');
+  _bttEl.classList.toggle('visible', !!appOn && window.scrollY > 500 && !_bttOverlayOpen());
+}
+window.scrollToTopSmooth = function(){
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+  if (_bttEl) _bttEl.classList.remove('visible');
+};
+document.addEventListener('DOMContentLoaded', _initBackToTop);
 
 function addShow_OLD(list) {
   var tId = list==='watching'?'w-title':list==='watchlist'?'wl-title':'wd-title';
@@ -1867,7 +1908,7 @@ function getServiceKeysForList(list){
 }
 function sectionToggleControls(list){
   if(getServiceKeysForList(list).length<2) return '';
-  return '<div class="section-toggle-all"><span onclick="setAllSections(\''+list+'\',true)">Collapse all</span> &middot; <span onclick="setAllSections(\''+list+'\',false)">Expand all</span></div>';
+  return '<div class="section-toggle-all section-toggle-all--sticky"><span onclick="setAllSections(\''+list+'\',true)">Collapse all</span><span onclick="setAllSections(\''+list+'\',false)">Expand all</span></div>';
 }
 
 // Same collapsible-by-platform pattern as the own Watching/My List/Binged
@@ -1910,7 +1951,7 @@ window.setAllFriendSections = function(fid, sectionKey, collapse){
 };
 function frvSectionToggleControls(fid, sectionKey, arr){
   if (Object.keys(groupByService(arr)).length < 2) return '';
-  return '<div class="section-toggle-all"><span onclick="setAllFriendSections(\''+fid+'\',\''+sectionKey+'\',true)">Collapse all</span> &middot; <span onclick="setAllFriendSections(\''+fid+'\',\''+sectionKey+'\',false)">Expand all</span></div>';
+  return '<div class="section-toggle-all"><span onclick="setAllFriendSections(\''+fid+'\',\''+sectionKey+'\',true)">Collapse all</span><span onclick="setAllFriendSections(\''+fid+'\',\''+sectionKey+'\',false)">Expand all</span></div>';
 }
 function renderServiceGroup(key, svc, shows, list){
   var isCollapsed = !!_collapsedSections[key];
