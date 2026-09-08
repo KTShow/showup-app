@@ -180,10 +180,28 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
 .friend-header{display:flex;align-items:center;gap:14px;margin-bottom:20px;}
 .friend-header-av{width:54px;height:54px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:22px;color:white;}
 
-.lr-toggle{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:24px;}
-.lr-toggle-btn{flex:1;background:var(--cream);border:2px solid var(--border);padding:14px 10px;border-radius:var(--radius);font-family:var(--sans);font-size:13px;font-weight:700;color:var(--muted);cursor:pointer;transition:all 0.2s;text-align:center;box-shadow:var(--shadow);display:flex;flex-direction:column;align-items:center;gap:6px;}
-.toggle-icon{font-size:24px;line-height:1;}
+.lr-toggle{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:18px;}
+.lr-toggle-btn{flex:1;background:var(--cream);border:2px solid var(--border);padding:10px 8px;border-radius:var(--radius);font-family:var(--sans);font-size:12px;font-weight:700;color:var(--muted);cursor:pointer;transition:all 0.2s;text-align:center;box-shadow:var(--shadow);display:flex;flex-direction:column;align-items:center;gap:4px;}
+/* Odd number of tabs (e.g. 5): the last one spans the full width so it
+   doesn't sit orphaned in a half-row. */
+.lr-toggle-btn:last-child:nth-child(odd){grid-column:1 / -1;}
+.toggle-icon{font-size:19px;line-height:1;}
 .lr-toggle-btn.active{background:var(--fig);color:white;border-color:var(--fig);}
+/* --- The Lounge --- */
+.lounge-composer{background:var(--cream);border:1px solid var(--border);border-radius:var(--radius);padding:12px 14px;box-shadow:var(--shadow);margin-bottom:16px;}
+.lounge-textarea{width:100%;box-sizing:border-box;background:white;border:1px solid var(--border);border-radius:10px;padding:9px 12px;font-family:var(--sans);font-size:13px;color:var(--charcoal);outline:none;resize:vertical;min-height:44px;line-height:1.45;}
+.lounge-post{background:var(--cream);border:1px solid var(--border);border-left:3px solid var(--fig);border-radius:var(--radius);padding:12px 14px;box-shadow:var(--shadow);margin-bottom:10px;}
+.lounge-post.is-new{background:#FBF3E0;}
+.lounge-head{display:flex;align-items:baseline;gap:8px;margin-bottom:4px;}
+.lounge-author{font-size:12px;font-weight:800;color:var(--charcoal);}
+.lounge-time{font-size:11px;color:var(--muted);}
+.lounge-body{font-size:13px;color:var(--charcoal);line-height:1.5;white-space:pre-wrap;word-break:break-word;}
+.lounge-actions{display:flex;gap:12px;margin-top:7px;}
+.lounge-link{background:none;border:none;padding:0;font-family:var(--sans);font-size:11px;font-weight:700;color:var(--muted);cursor:pointer;}
+.lounge-link:hover{color:var(--terra);}
+.lounge-replies{margin:8px 0 0 12px;border-left:2px solid var(--border);padding-left:12px;}
+.lounge-reply{padding:7px 0;}
+.lounge-reply+.lounge-reply{border-top:1px solid var(--border);}
 .conv-badge{background:var(--terra);color:white;font-size:10px;font-weight:800;padding:1px 7px;border-radius:10px;margin-left:2px;}
 .lr-search-wrap{margin-bottom:14px;position:relative;}
 .lr-search-input{width:100%;box-sizing:border-box;background:var(--cream);border:2px solid var(--border);border-radius:var(--radius);padding:10px 36px 10px 14px;font-family:var(--sans);font-size:14px;color:var(--charcoal);outline:none;}
@@ -892,6 +910,7 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
           <button class="lr-toggle-btn" id="toggle-picks" onclick="switchLRView('picks')"><span class="toggle-icon">&#127942;</span>Friends' Favorites</button>
           <button class="lr-toggle-btn" id="toggle-showtalk" onclick="_showTalkScope='room';switchLRView('showtalk')"><span class="toggle-icon">&#128483;&#65039;</span>Show Talk</button>
           <button class="lr-toggle-btn" id="toggle-conversations" onclick="switchLRView('conversations')"><span class="toggle-icon">&#128172;</span>Conversations<span class="conv-badge" id="conv-badge" style="display:none;"></span></button>
+          <button class="lr-toggle-btn" id="toggle-lounge" onclick="switchLRView('lounge')"><span class="toggle-icon">&#9749;</span>The Lounge<span class="conv-badge" id="lounge-badge" style="display:none;"></span></button>
         </div>
         <div id="lr-crew-view">
           <div id="tastemakers-banner-wrap"></div>
@@ -916,6 +935,10 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
         </div>
         <div id="lr-conversations-view" style="display:none">
           <div id="conversations-list"></div>
+        </div>
+        <div id="lr-lounge-view" style="display:none">
+          <div id="lounge-composer-wrap"></div>
+          <div id="lounge-list"></div>
         </div>
       </div>
       <div id="friend-detail-view" style="display:none"></div>
@@ -1168,6 +1191,7 @@ var state = {
   crewShowsByPlatform: false, // Your Crowd view mode: friend tiles (false) vs. shows grouped by platform (true)
   notifications: [],     // per-user feed (new_season, ...), filled by loadNotifications()
   notificationPrefs: { new_season: true }, // per-type on/off, from notification_prefs (absence = all on)
+  lounge: { posts: [], replies: [], seenAt: null }, // The Lounge, current room only -- see loadLounge()
 };
 
 var _firstTimeTellMore = false; // true when completing onboarding for the first time
@@ -1474,6 +1498,10 @@ function showTab(tab, btn) {
   if (leavingLivingRoom && _conversationsViewed) {
     markConversationsSeen();
     _conversationsViewed = false;
+  }
+  if (leavingLivingRoom && _loungeViewed) {
+    markLoungeSeen();
+    _loungeViewed = false;
   }
   if (tab==='living-room') { showRoomPicker(); }
   if (tab==='watched') { renderBingedTop5(); }
@@ -3033,10 +3061,12 @@ function switchLRView(view){
   document.getElementById('lr-picks-view').style.display=view==='picks'?'block':'none';
   document.getElementById('lr-showtalk-view').style.display=view==='showtalk'?'block':'none';
   document.getElementById('lr-conversations-view').style.display=view==='conversations'?'block':'none';
+  document.getElementById('lr-lounge-view').style.display=view==='lounge'?'block':'none';
   document.getElementById('toggle-crew').classList.toggle('active',view==='crew');
   document.getElementById('toggle-picks').classList.toggle('active',view==='picks');
   document.getElementById('toggle-showtalk').classList.toggle('active',view==='showtalk');
   document.getElementById('toggle-conversations').classList.toggle('active',view==='conversations');
+  document.getElementById('toggle-lounge').classList.toggle('active',view==='lounge');
   if(view==='picks'){document.getElementById('rankings-list').style.display='block';document.getElementById('rank-detail-panel').style.display='none';renderRankings();}
   if(view==='showtalk'){_showTalkHubMode=false;document.getElementById('showtalk-list').style.display='block';document.getElementById('showtalk-detail-panel').style.display='none';renderShowTalk();}
   // Doesn't mark seen here on open — marking happens when the user actually
@@ -3044,6 +3074,7 @@ function switchLRView(view){
   // (clicking into a friend's room and back, more than once) doesn't quietly
   // clear the rest of the list before they've looked at it.
   if(view==='conversations'){renderConversations(); _conversationsViewed = true;}
+  if(view==='lounge'){renderLounge(); _loungeViewed = true;}
 }
 
 // ============================================================
@@ -3347,6 +3378,10 @@ window.backToRoomPicker = async function() {
   if (_conversationsViewed) {
     await markConversationsSeen();
     _conversationsViewed = false;
+  }
+  if (_loungeViewed) {
+    await markLoungeSeen();
+    _loungeViewed = false;
   }
   showRoomPicker();
 };
@@ -4464,6 +4499,259 @@ window.markConversationsSeen = async function(){
     await sb.from('room_last_seen')
       .upsert({ user_id: user.id, living_room_id: state.currentRoomId, last_seen_at: now });
   } catch(e) { console.error('markConversationsSeen error:', e); }
+};
+
+// ============================================================
+// THE LOUNGE — free-form per-room discussion. Text posts + threaded
+// replies, scoped to state.currentRoomId. Distinct from Show Talk
+// (per-show comments) and Conversations (activity log). Backed by
+// lounge_posts / lounge_replies + get_lounge / add_lounge_reply /
+// mark_lounge_seen -- see sql/add_lounge.sql.
+// ============================================================
+var _loungeViewed = false;
+var _loungeReplyOpen = {};        // { postId: true } -- which reply boxes are open
+var _loungeEditing = null;        // { kind:'post'|'reply', id } | null
+
+function _loungeName(row){ return (row.first_name || 'Someone') + (row.last_initial ? ' ' + row.last_initial + '.' : ''); }
+function _loungeCanDelete(ownerId){ return state.user && (state.user.id === ownerId || state.currentRoomIsOwner); }
+
+async function loadLounge(roomId){
+  if (!roomId){ state.lounge = { posts:[], replies:[], seenAt:null }; return; }
+  try {
+    var res = await sb.rpc('get_lounge', { p_room_id: roomId });
+    if (res.error) throw res.error;
+    var d = res.data || {};
+    state.lounge = { posts: d.posts || [], replies: d.replies || [], seenAt: d.lounge_seen_at || null };
+  } catch(e){
+    console.error('loadLounge error:', e);
+    state.lounge = { posts:[], replies:[], seenAt:null };
+  }
+  renderLoungeBadge();
+}
+
+function _loungeUnreadCount(){
+  var seen = state.lounge.seenAt ? new Date(state.lounge.seenAt).getTime() : 0;
+  var myId = state.user ? state.user.id : null;
+  var n = 0;
+  (state.lounge.posts||[]).forEach(function(p){ if (p.user_id !== myId && new Date(p.created_at).getTime() > seen) n++; });
+  (state.lounge.replies||[]).forEach(function(r){ if (r.user_id !== myId && new Date(r.created_at).getTime() > seen) n++; });
+  return n;
+}
+
+function renderLoungeBadge(){
+  var b = document.getElementById('lounge-badge');
+  if (!b) return;
+  var n = _loungeUnreadCount();
+  b.style.display = n ? 'inline-block' : 'none';
+  b.textContent = n > 99 ? '99+' : String(n);
+}
+
+window.markLoungeSeen = async function(){
+  if (!state.currentRoomId) return;
+  state.lounge.seenAt = new Date().toISOString();
+  renderLoungeBadge();
+  try { await sb.rpc('mark_lounge_seen', { p_room_id: state.currentRoomId }); }
+  catch(e){ console.error('markLoungeSeen error:', e); }
+};
+
+function renderLounge(){
+  var wrap = document.getElementById('lounge-composer-wrap');
+  var list = document.getElementById('lounge-list');
+  if (!wrap || !list) return;
+
+  wrap.innerHTML = state.currentRoomIsAdminView ? '' :
+    '<div class="lounge-composer">'
+    + '<textarea class="lounge-textarea" id="lounge-input" placeholder="Ask the room something, or start a thought…" maxlength="4000"></textarea>'
+    + '<div style="text-align:right;margin-top:8px;"><button class="btn-send" onclick="submitLoungePost()">Post</button></div>'
+    + '</div>';
+
+  var posts = state.lounge.posts || [];
+  if (!posts.length){
+    list.innerHTML = '<div class="empty"><div class="empty-icon">☕</div>'
+      + (state.currentRoomIsAdminView ? 'Nothing in the Lounge yet.' : 'The Lounge is quiet — be the first to say something.')
+      + '</div>';
+    return;
+  }
+
+  var seen = state.lounge.seenAt ? new Date(state.lounge.seenAt).getTime() : 0;
+  var myId = state.user ? state.user.id : null;
+
+  list.innerHTML = posts.map(function(p){
+    var isNew = p.user_id !== myId && new Date(p.created_at).getTime() > seen;
+    var replies = (state.lounge.replies || []).filter(function(r){ return r.post_id === p.id; });
+    var body = (_loungeEditing && _loungeEditing.kind === 'post' && _loungeEditing.id === p.id)
+      ? '<textarea class="lounge-textarea" id="lounge-edit-input" maxlength="4000">' + escAttr(p.body) + '</textarea>'
+        + '<div style="text-align:right;margin-top:6px;"><button class="btn-send" onclick="submitEditLounge(\'post\',\'' + p.id + '\')">Save</button> '
+        + '<button class="btn-cancel" onclick="cancelEditLounge()">Cancel</button></div>'
+      : '<div class="lounge-body">' + escAttr(p.body) + '</div>';
+
+    var actions = state.currentRoomIsAdminView ? '' : '<div class="lounge-actions">'
+      + '<button class="lounge-link" onclick="toggleLoungeReply(\'' + p.id + '\')">Reply</button>'
+      + (p.user_id === myId ? '<button class="lounge-link" onclick="startEditLounge(\'post\',\'' + p.id + '\')">Edit</button>' : '')
+      + (_loungeCanDelete(p.user_id) ? '<button class="lounge-link" onclick="deleteLoungePost(\'' + p.id + '\')">Delete</button>' : '')
+      + '</div>';
+
+    var replyRows = replies.map(function(r){
+      var rEdit = (_loungeEditing && _loungeEditing.kind === 'reply' && _loungeEditing.id === r.id);
+      var rBody = rEdit
+        ? '<textarea class="lounge-textarea" id="lounge-edit-input" maxlength="4000">' + escAttr(r.body) + '</textarea>'
+          + '<div style="text-align:right;margin-top:6px;"><button class="btn-send" onclick="submitEditLounge(\'reply\',\'' + r.id + '\')">Save</button> '
+          + '<button class="btn-cancel" onclick="cancelEditLounge()">Cancel</button></div>'
+        : '<div class="lounge-body">' + escAttr(r.body) + '</div>';
+      var rActions = (!state.currentRoomIsAdminView && _loungeCanDelete(r.user_id))
+        ? '<div class="lounge-actions">'
+          + (r.user_id === myId ? '<button class="lounge-link" onclick="startEditLounge(\'reply\',\'' + r.id + '\')">Edit</button>' : '')
+          + '<button class="lounge-link" onclick="deleteLoungeReply(\'' + r.id + '\')">Delete</button></div>'
+        : '';
+      return '<div class="lounge-reply"><div class="lounge-head"><span class="lounge-author">' + escAttr(_loungeName(r))
+        + '</span><span class="lounge-time">' + timeAgo(r.created_at) + (r.updated_at ? ' · edited' : '') + '</span></div>'
+        + rBody + rActions + '</div>';
+    }).join('');
+
+    var replyBox = _loungeReplyOpen[p.id]
+      ? '<div class="inline-react" style="margin-top:8px;"><input class="react-input" id="lounge-reply-' + p.id + '" placeholder="Reply…" maxlength="4000" />'
+        + '<button class="btn-send" onclick="submitLoungeReply(\'' + p.id + '\')">Send</button>'
+        + '<button class="btn-cancel" onclick="toggleLoungeReply(\'' + p.id + '\')">Cancel</button></div>'
+      : '';
+
+    return '<div class="lounge-post' + (isNew ? ' is-new' : '') + '" id="lounge-post-' + p.id + '">'
+      + '<div class="lounge-head"><span class="lounge-author">' + escAttr(_loungeName(p))
+      + '</span><span class="lounge-time">' + timeAgo(p.created_at) + (p.updated_at ? ' · edited' : '') + '</span></div>'
+      + body + actions
+      + (replyRows ? '<div class="lounge-replies">' + replyRows + '</div>' : '')
+      + replyBox
+      + '</div>';
+  }).join('');
+}
+
+window.submitLoungePost = async function(){
+  var el = document.getElementById('lounge-input');
+  if (!el) return;
+  var body = el.value.trim();
+  if (!body) return;
+  if (!state.currentRoomId || !state.user) return;
+  el.value = '';
+  var tmpId = 'tmp-' + Date.now();
+  var now = new Date().toISOString();
+  state.lounge.posts.unshift({ id: tmpId, user_id: state.user.id, body: body, created_at: now,
+    updated_at: null, last_activity_at: now, first_name: state.user.first, last_initial: state.user.last || '' });
+  renderLounge();
+  try {
+    var res = await sb.from('lounge_posts')
+      .insert({ living_room_id: state.currentRoomId, user_id: state.user.id, body: body })
+      .select().single();
+    if (res.error) throw res.error;
+    var p = state.lounge.posts.find(function(x){ return x.id === tmpId; });
+    if (p){ p.id = res.data.id; p.created_at = res.data.created_at; p.last_activity_at = res.data.last_activity_at; }
+    renderLounge();
+  } catch(e){
+    console.error('submitLoungePost error:', e);
+    state.lounge.posts = state.lounge.posts.filter(function(x){ return x.id !== tmpId; });
+    renderLounge();
+    showToast('Couldn’t post that — try again.');
+  }
+};
+
+window.toggleLoungeReply = function(postId){
+  if (_loungeReplyOpen[postId]) delete _loungeReplyOpen[postId];
+  else _loungeReplyOpen[postId] = true;
+  renderLounge();
+  if (_loungeReplyOpen[postId]) setTimeout(function(){
+    var i = document.getElementById('lounge-reply-' + postId); if (i) i.focus();
+  }, 50);
+};
+
+window.submitLoungeReply = async function(postId){
+  var el = document.getElementById('lounge-reply-' + postId);
+  if (!el) return;
+  var body = el.value.trim();
+  if (!body || !state.user) return;
+  delete _loungeReplyOpen[postId];
+  var tmpId = 'tmp-' + Date.now();
+  var now = new Date().toISOString();
+  state.lounge.replies.push({ id: tmpId, post_id: postId, user_id: state.user.id, body: body,
+    created_at: now, updated_at: null, first_name: state.user.first, last_initial: state.user.last || '' });
+  var post = state.lounge.posts.find(function(x){ return x.id === postId; });
+  if (post) post.last_activity_at = now;
+  _resortLoungePosts();
+  renderLounge();
+  try {
+    var res = await sb.rpc('add_lounge_reply', { p_post_id: postId, p_body: body });
+    if (res.error) throw res.error;
+    var r = state.lounge.replies.find(function(x){ return x.id === tmpId; });
+    if (r && res.data){ r.id = res.data.id; r.created_at = res.data.created_at; }
+    renderLounge();
+  } catch(e){
+    console.error('submitLoungeReply error:', e);
+    state.lounge.replies = state.lounge.replies.filter(function(x){ return x.id !== tmpId; });
+    renderLounge();
+    showToast('Couldn’t send that reply — try again.');
+  }
+};
+
+function _resortLoungePosts(){
+  state.lounge.posts.sort(function(a,b){ return new Date(b.last_activity_at) - new Date(a.last_activity_at); });
+}
+
+window.startEditLounge = function(kind, id){
+  _loungeEditing = { kind: kind, id: id };
+  renderLounge();
+  setTimeout(function(){
+    var t = document.getElementById('lounge-edit-input');
+    if (t){ t.focus(); t.setSelectionRange(t.value.length, t.value.length); }
+  }, 50);
+};
+window.cancelEditLounge = function(){ _loungeEditing = null; renderLounge(); };
+
+window.submitEditLounge = async function(kind, id){
+  var el = document.getElementById('lounge-edit-input');
+  if (!el) return;
+  var body = el.value.trim();
+  if (!body){ return; }
+  var table = kind === 'post' ? 'lounge_posts' : 'lounge_replies';
+  var arr = kind === 'post' ? state.lounge.posts : state.lounge.replies;
+  var row = arr.find(function(x){ return x.id === id; });
+  if (!row) return;
+  var now = new Date().toISOString();
+  row.body = body; row.updated_at = now;
+  _loungeEditing = null;
+  renderLounge();
+  try {
+    var res = await sb.from(table).update({ body: body, updated_at: now }).eq('id', id);
+    if (res.error) throw res.error;
+  } catch(e){
+    console.error('submitEditLounge error:', e);
+    showToast('Couldn’t save that edit.');
+    loadLounge(state.currentRoomId).then(renderLounge);
+  }
+};
+
+window.deleteLoungePost = async function(id){
+  if (!confirm('Delete this post and all its replies?')) return;
+  state.lounge.posts = state.lounge.posts.filter(function(x){ return x.id !== id; });
+  state.lounge.replies = state.lounge.replies.filter(function(x){ return x.post_id !== id; });
+  renderLounge();
+  try {
+    var res = await sb.from('lounge_posts').delete().eq('id', id);
+    if (res.error) throw res.error;
+  } catch(e){
+    console.error('deleteLoungePost error:', e);
+    showToast('Couldn’t delete that.');
+    loadLounge(state.currentRoomId).then(renderLounge);
+  }
+};
+
+window.deleteLoungeReply = async function(id){
+  state.lounge.replies = state.lounge.replies.filter(function(x){ return x.id !== id; });
+  renderLounge();
+  try {
+    var res = await sb.from('lounge_replies').delete().eq('id', id);
+    if (res.error) throw res.error;
+  } catch(e){
+    console.error('deleteLoungeReply error:', e);
+    showToast('Couldn’t delete that.');
+    loadLounge(state.currentRoomId).then(renderLounge);
+  }
 };
 
 // ============================================================
@@ -6636,7 +6924,7 @@ async function loadRecommendations() {
 async function loadAndRenderFriends() {
   if (!state.currentRoomId) return;
   try {
-    var results = await Promise.all([getFriendsWithShows(state.currentRoomId), loadRecommendations()]);
+    var results = await Promise.all([getFriendsWithShows(state.currentRoomId), loadRecommendations(), loadLounge(state.currentRoomId)]);
     state.friends = results[0];
     state.recommendations = results[1];
     state.friendsLoaded = true;
@@ -6644,6 +6932,7 @@ async function loadAndRenderFriends() {
     renderRankings();
     renderShowTalk();
     renderConversations();
+    renderLounge();
     renderList('watching'); renderList('watchlist'); renderList('watched');
   } catch(e) {
     console.error('Error loading friends:', e);
@@ -6972,7 +7261,7 @@ function mapProviderToPlatform(name) {
 // date, ~2-3 weeks out). The table and this code are shaped so comment /
 // invite types can be added without a rework.
 
-var NOTIF_ICON = { new_season: '🎉', season_upcoming: '🗓️' };
+var NOTIF_ICON = { new_season: '🎉', season_upcoming: '🗓️', lounge_reply: '☕' };
 
 function _notifEsc(s) {
   return String(s == null ? '' : s).replace(/[&<>"]/g, function(c) {
@@ -7119,6 +7408,27 @@ window.openNotification = async function(id) {
     catch (e) { console.error('openNotification mark-read error:', e); }
   }
   _closeNotifPanel();
+
+  // A Lounge reply: jump into that room's Lounge, scrolled to the thread.
+  if (n.type === 'lounge_reply' && n.room_id) {
+    var lrBtn = document.getElementById('btab-living-room');
+    if (lrBtn) showTab('living-room', lrBtn);
+    setTimeout(async function(){
+      await enterLivingRoom(n.room_id);
+      switchLRView('lounge');
+      _loungeViewed = true;
+      setTimeout(function(){
+        var el = n.entity_id && document.getElementById('lounge-post-' + n.entity_id);
+        if (el){
+          el.scrollIntoView({ behavior:'smooth', block:'center' });
+          el.classList.add('flash-pulse');
+          setTimeout(function(){ el.classList.remove('flash-pulse'); el.classList.add('flash-settled'); }, 2500);
+        }
+      }, 350);
+    }, 40);
+    return;
+  }
+
   if (!n.show_id) return;
 
   // "Season is out" on a Waiting show: offer the move-to-Watching flow.
