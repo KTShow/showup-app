@@ -2234,6 +2234,7 @@ function buildBingedCard(s) {
     + '<div class="card-menu">'
     + '<button class="card-menu-item" onclick="moveToWatchingAgain(\'watched\',\''+sid+'\');closeCardMenus();">Start Watching Again</button>'
     + (isDocFilm(s) ? '' : '<button class="card-menu-item" onclick="moveToWaiting(\'watched\',\''+sid+'\');closeCardMenus();">Waiting for New Season</button>')
+    + '<button class="card-menu-item" onclick="moveBingedToDNF(\''+sid+'\');closeCardMenus();">Move to Didn&#39;t Finish</button>'
     + '<button class="card-menu-item" onclick="toggleHide(\'watched\',\''+sid+'\');closeCardMenus();">'+hideLabel+'</button>'
     + '<button class="card-menu-item" onclick="togglePlatEdit(\'watched\',\''+sid+'\');closeCardMenus();">Edit streaming service</button>'
     + '<button class="card-menu-item danger" onclick="removeShow(\'watched\',\''+sid+'\');closeCardMenus();">Remove</button>'
@@ -6269,12 +6270,14 @@ window.addShow = function(list) {
 var _moveWaitingPending = null;
 var _moveToWatchingPending = null;
 var _moveDNFToBingedPending = null;
+var _moveBingedToDNFPending = null;
 
 window.cancelAddShow = function() {
   _addConfirmPending = null;
   _moveWaitingPending = null;
   _moveToWatchingPending = null;
   _moveDNFToBingedPending = null;
+  _moveBingedToDNFPending = null;
   document.getElementById('add-confirm-modal').classList.remove('active');
 };
 
@@ -6321,6 +6324,13 @@ window.confirmAddShow = async function() {
     _moveDNFToBingedPending = null;
     document.getElementById('add-confirm-modal').classList.remove('active');
     _doMoveDNFToBinged(mdb);
+    return;
+  }
+  if (_moveBingedToDNFPending) {
+    var mbd = _moveBingedToDNFPending;
+    _moveBingedToDNFPending = null;
+    document.getElementById('add-confirm-modal').classList.remove('active');
+    _doMoveBingedToDNF(mbd);
     return;
   }
   var pending = _addConfirmPending;
@@ -6630,6 +6640,29 @@ async function _doMoveDNFToBinged(id) {
   renderList('watched');
   showToast('Moved "' + s.title + '" to ' + ADD_DEST_DISPLAY_LABELS.watched + '.');
   try { await updateShowStatus(id, 'watched', { dnf: false }); } catch(e) { console.error('moveDNFToBinged error:', e); }
+}
+
+// Inverse of the above: a Binged card's kebab shortcut for a show you
+// filed as Binged but didn't actually finish. Just flips the dnf flag --
+// it stays in state.watched, moving from the main section into Didn't
+// Finish, keeping its rating (DNF shows stay rateable). Confirms first,
+// same reasoning as the others: menu action, silently changes section.
+window.moveBingedToDNF = function(id) {
+  var s = state.watched.find(function(x) { return x.id === id; });
+  if (!s) return;
+  _moveBingedToDNFPending = id;
+  document.getElementById('add-confirm-title').textContent = s.title;
+  document.getElementById('add-confirm-sub').textContent = 'Move to Didn’t Finish?';
+  document.getElementById('add-confirm-modal').classList.add('active');
+};
+
+async function _doMoveBingedToDNF(id) {
+  var s = state.watched.find(function(x) { return x.id === id; });
+  if (!s) return;
+  s.dnf = true;
+  renderList('watched');
+  showToast('Moved "' + s.title + '" to Didn’t Finish.');
+  try { await updateShowStatus(id, 'watched', { dnf: true }); } catch(e) { console.error('moveBingedToDNF error:', e); }
 }
 
 // Shortcut from Binged/DNF straight back into active Watching. Confirms
