@@ -5237,6 +5237,8 @@ init();
 // ============================================================
 
 const SUPABASE_URL = 'https://sgnulweruogjfdddwboe.supabase.co';
+// Canonical public origin for share/invite links (custom domain as of 2026-09).
+var APP_ORIGIN = 'https://showuproom.com';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNnbnVsd2VydW9namZkZGR3Ym9lIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkxMzQ0MzMsImV4cCI6MjA5NDcxMDQzM30.bL28eAEx24TjpE8msSmoZHUQOWU5Yj6EfHpMv8V5VrM';
 
 // Read inviter username from /join/:username URL (set by Vercel rewrite) --
@@ -8080,7 +8082,7 @@ window.chooseAddDestination = async function(destKey) {
 
 function updateInviteLinks() {
   if (!state.currentRoomId) return;
-  var link = 'https://showup-app-zeta.vercel.app/join-room/' + state.currentRoomId;
+  var link = APP_ORIGIN + '/join-room/' + state.currentRoomId;
   document.querySelectorAll('#invite-modal-link').forEach(function(el) { el.textContent = link; });
 }
 
@@ -8089,7 +8091,7 @@ window.openInviteModal = function() {
   var roomName = state.currentRoomName || 'your Living Room';
   document.getElementById('invite-modal-title').textContent = 'Invite to "' + roomName + '"';
   document.getElementById('invite-modal-sub').textContent = 'Copy the message below and send it however you like — text, email, whatever’s easiest.';
-  document.getElementById('invite-modal-link').textContent = 'https://showup-app-zeta.vercel.app/join-room/' + state.currentRoomId;
+  document.getElementById('invite-modal-link').textContent = APP_ORIGIN + '/join-room/' + state.currentRoomId;
   document.getElementById('invite-modal').classList.add('active');
 };
 
@@ -8157,7 +8159,7 @@ bootstrap();
   <div class="invite-modal">
     <div class="invite-modal-title" id="invite-modal-title">Invite to your Living Room</div>
     <div class="invite-modal-sub" id="invite-modal-sub">Share your link and get your friends on the couch.</div>
-    <div class="invite-modal-link" id="invite-modal-link" style="display:none;">https://showup-app-zeta.vercel.app/join/tracey-m-x7k2</div>
+    <div class="invite-modal-link" id="invite-modal-link" style="display:none;">https://showuproom.com/join/tracey-m-x7k2</div>
     <button class="btn-invite-copy" id="invite-msg-btn" onclick="copyInviteMessage()" style="width:100%;margin-bottom:10px;">&#128203; Copy Invite Message</button>
     <button class="btn-invite-close" onclick="closeInviteModal()" style="width:100%;">Close</button>
   </div>
