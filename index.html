@@ -3,6 +3,41 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<script>
+// Text size setting (Settings > App). On phones it scales the whole page through
+// the viewport (like a locked pinch-zoom, so fixed bars, modals and vh all scale
+// together); on desktop it falls back to CSS zoom. Applied before first paint
+// from localStorage; the account copy (auth user_metadata) is synced after login.
+(function() {
+  var SCALES = { standard: 1, large: 1.12, xlarge: 1.25 };
+  function deviceWidth() {
+    var w = screen.width, h = screen.height;
+    var land = window.matchMedia && matchMedia('(orientation: landscape)').matches;
+    return land ? Math.max(w, h) : Math.min(w, h);
+  }
+  window.applyTextSize = function(size) {
+    if (!SCALES[size]) size = 'standard';
+    var s = SCALES[size];
+    var touch = window.matchMedia && matchMedia('(pointer: coarse)').matches;
+    var meta = document.querySelector('meta[name="viewport"]');
+    if (touch && meta) {
+      meta.setAttribute('content', s === 1
+        ? 'width=device-width, initial-scale=1.0, maximum-scale=1.0'
+        : 'width=' + Math.round(deviceWidth() / s) + ', initial-scale=' + s + ', minimum-scale=' + s + ', maximum-scale=' + s);
+      document.documentElement.style.zoom = '';
+    } else {
+      document.documentElement.style.zoom = s === 1 ? '' : String(s);
+    }
+    window._textSize = size;
+  };
+  var saved = 'standard';
+  try { saved = localStorage.getItem('showup_text_size') || 'standard'; } catch(e) {}
+  applyTextSize(saved);
+  window.addEventListener('orientationchange', function() {
+    setTimeout(function() { applyTextSize(window._textSize); }, 300);
+  });
+})();
+</script>
 <title>ShowUp</title>
 <link rel="icon" href="/favicon.ico">
 <link rel="manifest" href="/manifest.json">
@@ -323,6 +358,9 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
 .switch{width:42px;height:24px;border-radius:12px;border:none;background:var(--border);position:relative;flex-shrink:0;cursor:pointer;padding:0;transition:background 0.2s;}
 .switch[aria-checked="true"]{background:var(--terra);}
 .switch::after{content:"";position:absolute;top:2px;left:2px;width:20px;height:20px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,0.25);transition:transform 0.2s;}
+.textsize-seg{display:flex;gap:6px;margin-top:8px;}
+.textsize-seg button{flex:1;padding:8px 4px;border:1px solid var(--border);border-radius:var(--radius-btn,8px);background:#fff;font-family:var(--sans);color:var(--charcoal);cursor:pointer;line-height:1.1;}
+.textsize-seg button.active{background:var(--terra);border-color:var(--terra);color:#fff;font-weight:600;}
 .switch[aria-checked="true"]::after{transform:translateX(18px);}
 
 .room-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:10px;margin-top:4px;}
@@ -1057,6 +1095,16 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
     <div class="settings-section">
       <div class="settings-section-label">App</div>
       <div class="settings-card">
+        <div class="settings-row" style="cursor:default;align-items:flex-start;">
+          <span class="settings-row-icon">&#128269;</span>
+          <span class="settings-row-label">Text size<span class="settings-row-sub">Make everything in ShowUp bigger and easier to read</span>
+            <span class="textsize-seg" id="textsize-seg" role="group" aria-label="Text size">
+              <button type="button" data-size="standard" onclick="setTextSize('standard')" style="font-size:13px;">Standard</button>
+              <button type="button" data-size="large" onclick="setTextSize('large')" style="font-size:15px;">Large</button>
+              <button type="button" data-size="xlarge" onclick="setTextSize('xlarge')" style="font-size:17px;">Extra large</button>
+            </span>
+          </span>
+        </div>
         <button class="settings-row" onclick="openInstallGuide()">
           <span class="settings-row-icon">&#128241;</span><span class="settings-row-label">Add ShowUp to Home Screen</span><span class="settings-row-arrow">&#8250;</span>
         </button>
@@ -5710,6 +5758,7 @@ async function loadUserIntoState(profile) {
     state.watched = shows.filter(function(s) { return s.status === 'watched' || s.status === 'dnf'; }).map(normalizeShow);
     loadNotifications(); // fire-and-forget, fills the bell + new-season badges from server-computed state
     loadNotificationPrefs(); // fire-and-forget, fills the Settings toggles
+    syncTextSizeFromAccount(); // fire-and-forget, applies the account's saved text size
     loadInfluencerNames(); // fire-and-forget, fills in "Recommended by" badges once resolved
   } catch(e) { console.error('Error loading shows:', e); }
 
@@ -7523,6 +7572,41 @@ window.openNotification = async function(id) {
 // these -- a muted type stops producing bell rows (and, later, push). The
 // 'New season!' card badge is passive state, not an alert, so it still
 // shows. Phone push isn't wired yet; today this gates the in-app bell.
+// ---- Text size (see applyTextSize in <head>) ----
+function renderTextSizeSeg() {
+  document.querySelectorAll('#textsize-seg button').forEach(function(b) {
+    var on = b.getAttribute('data-size') === window._textSize;
+    b.classList.toggle('active', on);
+    b.setAttribute('aria-pressed', on ? 'true' : 'false');
+  });
+}
+
+window.setTextSize = function(size) {
+  applyTextSize(size);
+  try { localStorage.setItem('showup_text_size', size); } catch(e) {}
+  renderTextSizeSeg();
+  // Saved on the account too, so it follows the user between the app and the website.
+  sb.auth.updateUser({ data: { text_size: size } }).then(function(r) {
+    if (r && r.error) console.error('[setTextSize] save error:', r.error);
+  });
+};
+
+// After login: adopt the size saved on the account (e.g. first sign-in inside the app).
+// Deferred so it never runs inside an onAuthStateChange callback.
+function syncTextSizeFromAccount() {
+  setTimeout(function() {
+    sb.auth.getSession().then(function(r) {
+      var u = r && r.data && r.data.session && r.data.session.user;
+      var ts = u && u.user_metadata && u.user_metadata.text_size;
+      if (ts && ts !== window._textSize) {
+        applyTextSize(ts);
+        try { localStorage.setItem('showup_text_size', ts); } catch(e) {}
+      }
+      renderTextSizeSeg();
+    }).catch(function() {});
+  }, 0);
+}
+
 async function loadNotificationPrefs() {
   if (!state.user) return;
   try {
