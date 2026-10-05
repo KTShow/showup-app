@@ -1105,7 +1105,7 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
             </span>
           </span>
         </div>
-        <button class="settings-row" onclick="openInstallGuide()">
+        <button class="settings-row" id="settings-install-row" onclick="openInstallGuide()">
           <span class="settings-row-icon">&#128241;</span><span class="settings-row-label">Add ShowUp to Home Screen</span><span class="settings-row-arrow">&#8250;</span>
         </button>
       </div>
@@ -5759,6 +5759,7 @@ async function loadUserIntoState(profile) {
     loadNotifications(); // fire-and-forget, fills the bell + new-season badges from server-computed state
     loadNotificationPrefs(); // fire-and-forget, fills the Settings toggles
     syncTextSizeFromAccount(); // fire-and-forget, applies the account's saved text size
+    if (IS_NATIVE_APP) { var ir = document.getElementById('settings-install-row'); if (ir) ir.style.display = 'none'; }
     loadInfluencerNames(); // fire-and-forget, fills in "Recommended by" badges once resolved
   } catch(e) { console.error('Error loading shows:', e); }
 
@@ -8012,7 +8013,12 @@ window.switchInstallGuidePlatform = function(platform) {
   renderInstallGuideSteps();
 };
 
+// Inside the TestFlight/App Store app (Capacitor injects window.Capacitor into the
+// live site) "Add to Home Screen" makes no sense -- they already have the app.
+var IS_NATIVE_APP = !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());
+
 window.openInstallGuide = function() {
+  if (IS_NATIVE_APP) return;
   renderInstallGuideSteps();
   var el = document.getElementById('install-guide-modal');
   if (el) el.classList.add('active');
