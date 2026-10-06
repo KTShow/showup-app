@@ -8143,10 +8143,14 @@ function _pushSupported() {
   return !IS_NATIVE_APP && 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
 }
 
+function _isIOSDevice() {
+  var ua = navigator.userAgent || '';
+  return /iPad|iPhone|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+}
+
 function _isIOSBrowserTab() {
   if (IS_NATIVE_APP) return false;
-  var ua = navigator.userAgent || '';
-  var ios = /iPad|iPhone|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  var ios = _isIOSDevice();
   var standalone = window.navigator.standalone === true || (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches);
   return ios && !standalone;
 }
@@ -8202,7 +8206,11 @@ function renderAlertsUI() {
   row.style.display = '';
   sbtn.style.display = 'none';
   if (_pushSupported()) {
-    if (Notification.permission === 'granted') sub.textContent = 'On';
+    // iPhone banners default to "Temporary" and vanish in a blink; only the
+    // user can change that, so point them at the setting.
+    if (Notification.permission === 'granted') sub.textContent = _isIOSDevice()
+      ? 'On. Alerts vanish too fast? iPhone Settings → Notifications → ShowUp → Banner Style → Persistent'
+      : 'On';
     else if (Notification.permission === 'denied') sub.textContent = 'Blocked — allow notifications for ShowUp in your device settings';
     else { sub.textContent = 'Off'; sbtn.style.display = 'inline-block'; }
   } else if (_isIOSBrowserTab()) {
