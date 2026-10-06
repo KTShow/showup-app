@@ -1,0 +1,38 @@
+name: Send daily comment recap
+
+# Daily email recap of comments for people without phone alerts.
+# See scripts/send-comment-digest.mjs.
+
+on:
+  schedule:
+    - cron: '0 21 * * *' # 21:00 UTC daily (5pm ET in summer, 4pm ET in winter)
+  workflow_dispatch:
+    inputs:
+      only_email:
+        description: 'Send only to this email (leave blank for everyone)'
+        required: false
+        default: ''
+      dry_run:
+        description: 'Dry run: list who would get one, send nothing'
+        type: boolean
+        default: false
+
+concurrency:
+  group: send-comment-digest
+  cancel-in-progress: false
+
+jobs:
+  send:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+      # Zero npm dependencies, so the runner's preinstalled Node is fine.
+      - name: Send recaps
+        run: node scripts/send-comment-digest.mjs
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          ONLY_EMAIL: ${{ inputs.only_email }}
+          DRY_RUN: ${{ inputs.dry_run && '1' || '' }}

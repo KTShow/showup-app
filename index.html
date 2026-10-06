@@ -1171,13 +1171,18 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
           <span class="settings-row-label">Comment alerts<span class="settings-row-sub">When someone in your Living Room comments on a show</span></span>
           <button type="button" class="switch" id="pref-comments" role="switch" aria-checked="true" aria-label="Comment alerts" onclick="toggleNotifPref('comments')"></button>
         </div>
+        <div class="settings-row" style="cursor:default;">
+          <span class="settings-row-icon">&#9993;&#65039;</span>
+          <span class="settings-row-label">Daily email recap<span class="settings-row-sub">A 5pm email of comments you missed — only if phone alerts aren't on</span></span>
+          <button type="button" class="switch" id="pref-email-digest" role="switch" aria-checked="true" aria-label="Daily email recap" onclick="toggleNotifPref('email_digest')"></button>
+        </div>
         <div class="settings-row" id="settings-device-alerts-row" style="cursor:default;display:none;">
           <span class="settings-row-icon">&#128241;</span>
           <span class="settings-row-label">Alerts on this device<span class="settings-row-sub" id="settings-device-alerts-sub"></span></span>
           <button type="button" class="alerts-card-btn" id="settings-device-alerts-btn" onclick="enablePushAlerts()" style="display:none;">Turn on</button>
         </div>
       </div>
-      <div style="font-size:11px;color:var(--muted);margin-top:6px;padding-left:4px;">These switches control both the bell and phone alerts.</div>
+      <div style="font-size:11px;color:var(--muted);margin-top:6px;padding-left:4px;">The first two switches control both the bell and phone alerts.</div>
     </div>
 
     <div class="settings-section">
@@ -1287,7 +1292,7 @@ var state = {
   allFriendsAcrossRooms: [], // everyone you share ANY room with, full show+reaction data -- powers card-level ratings/comment pooling (see preloadFriendsInBackground)
   crewShowsByPlatform: false, // Your Crowd view mode: friend tiles (false) vs. shows grouped by platform (true)
   notifications: [],     // per-user feed (new_season, ...), filled by loadNotifications()
-  notificationPrefs: { new_season: true, comments: true }, // per-type on/off, from notification_prefs (absence = all on)
+  notificationPrefs: { new_season: true, comments: true, email_digest: true }, // per-type on/off, from notification_prefs (absence = all on)
   lounge: { posts: [], replies: [], seenAt: null }, // The Lounge, current room only -- see loadLounge()
 };
 
@@ -7710,17 +7715,17 @@ async function loadNotificationPrefs() {
   try {
     var res = await sb.from('notification_prefs').select('*').eq('user_id', state.user.id).maybeSingle();
     if (res.error) throw res.error;
-    if (res.data) state.notificationPrefs = { new_season: res.data.new_season !== false, comments: res.data.comments !== false };
-    else state.notificationPrefs = { new_season: true, comments: true };
+    if (res.data) state.notificationPrefs = { new_season: res.data.new_season !== false, comments: res.data.comments !== false, email_digest: res.data.email_digest !== false };
+    else state.notificationPrefs = { new_season: true, comments: true, email_digest: true };
   } catch (e) {
     console.error('loadNotificationPrefs error:', e);
-    state.notificationPrefs = { new_season: true, comments: true };
+    state.notificationPrefs = { new_season: true, comments: true, email_digest: true };
   }
   renderNotifPrefs();
 }
 
 function renderNotifPrefs() {
-  [['pref-new-season', 'new_season'], ['pref-comments', 'comments']].forEach(function(p) {
+  [['pref-new-season', 'new_season'], ['pref-comments', 'comments'], ['pref-email-digest', 'email_digest']].forEach(function(p) {
     var el = document.getElementById(p[0]);
     if (el) el.setAttribute('aria-checked', state.notificationPrefs[p[1]] !== false ? 'true' : 'false');
   });
@@ -7732,7 +7737,7 @@ window.toggleNotifPref = async function(key) {
   renderNotifPrefs();
   try {
     var res = await sb.from('notification_prefs')
-      .upsert({ user_id: state.user.id, new_season: state.notificationPrefs.new_season !== false, comments: state.notificationPrefs.comments !== false, updated_at: new Date().toISOString() }, { onConflict: 'user_id' });
+      .upsert({ user_id: state.user.id, new_season: state.notificationPrefs.new_season !== false, comments: state.notificationPrefs.comments !== false, email_digest: state.notificationPrefs.email_digest !== false, updated_at: new Date().toISOString() }, { onConflict: 'user_id' });
     if (res.error) throw res.error;
   } catch (e) {
     console.error('toggleNotifPref error:', e);
