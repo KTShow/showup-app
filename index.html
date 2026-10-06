@@ -92,6 +92,14 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
 .notif-time{font-size:11px;color:var(--muted);margin-top:3px;}
 .notif-dismiss{flex-shrink:0;align-self:flex-start;margin:-2px -4px 0 0;border:none;background:none;color:var(--muted);font-size:18px;line-height:1;padding:2px 6px;cursor:pointer;border-radius:6px;opacity:0.55;}
 .notif-dismiss:hover{opacity:1;background:var(--border);color:var(--charcoal);}
+.alerts-card{display:flex;gap:12px;align-items:flex-start;background:#fff;border:1.5px solid var(--terra);border-radius:12px;padding:14px 16px;margin-bottom:16px;box-shadow:var(--shadow);}
+.alerts-card-icon{font-size:24px;line-height:1;flex-shrink:0;}
+.alerts-card-body{flex:1;min-width:0;}
+.alerts-card-title{font-size:15px;font-weight:700;color:var(--charcoal);}
+.alerts-card-sub{font-size:13px;color:var(--muted);margin-top:3px;line-height:1.45;}
+.alerts-card-actions{display:flex;gap:10px;align-items:center;margin-top:10px;flex-wrap:wrap;}
+.alerts-card-btn{background:var(--terra);color:#fff;border:none;border-radius:8px;padding:8px 14px;font-family:var(--sans);font-size:13px;font-weight:700;cursor:pointer;}
+.alerts-card-later{background:none;border:none;color:var(--muted);font-family:var(--sans);font-size:13px;cursor:pointer;padding:8px 4px;}
 
 .bottom-nav{position:fixed;bottom:0;left:0;right:0;background:#EDE8DC;border-top:1px solid var(--border);display:flex;justify-content:space-around;align-items:center;height:60px;z-index:100;padding-bottom:env(safe-area-inset-bottom);}
 .back-to-top{position:fixed;right:16px;bottom:calc(72px + env(safe-area-inset-bottom));width:42px;height:42px;border-radius:50%;background:var(--fig);color:#fff;border:none;box-shadow:0 4px 14px rgba(0,0,0,0.28);font-size:20px;line-height:1;cursor:pointer;z-index:150;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transform:translateY(10px);transition:opacity 0.2s,transform 0.2s;}
@@ -835,6 +843,17 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
     </div>
   </div>
   <div class="content">
+    <div class="alerts-card" id="alerts-card" style="display:none;">
+      <div class="alerts-card-icon">&#128276;</div>
+      <div class="alerts-card-body">
+        <div class="alerts-card-title" id="alerts-card-title"></div>
+        <div class="alerts-card-sub" id="alerts-card-sub"></div>
+        <div class="alerts-card-actions">
+          <button type="button" class="alerts-card-btn" id="alerts-card-btn"></button>
+          <button type="button" class="alerts-card-later" onclick="snoozeAlertsCard()">Not now</button>
+        </div>
+      </div>
+    </div>
     <div id="tab-watching" class="tab-pane">
       <div class="page-title">&#128250;&nbsp; Currently Watching on My TV</div>
       <div class="page-sub" id="watching-sub"></div>
@@ -1147,8 +1166,18 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
           <span class="settings-row-label">New season alerts<span class="settings-row-sub">A heads-up when a show you follow has a new season coming or out</span></span>
           <button type="button" class="switch" id="pref-new-season" role="switch" aria-checked="true" aria-label="New season alerts" onclick="toggleNotifPref('new_season')"></button>
         </div>
+        <div class="settings-row" style="cursor:default;">
+          <span class="settings-row-icon">&#128172;</span>
+          <span class="settings-row-label">Comment alerts<span class="settings-row-sub">When someone in your Living Room comments on a show</span></span>
+          <button type="button" class="switch" id="pref-comments" role="switch" aria-checked="true" aria-label="Comment alerts" onclick="toggleNotifPref('comments')"></button>
+        </div>
+        <div class="settings-row" id="settings-device-alerts-row" style="cursor:default;display:none;">
+          <span class="settings-row-icon">&#128241;</span>
+          <span class="settings-row-label">Alerts on this device<span class="settings-row-sub" id="settings-device-alerts-sub"></span></span>
+          <button type="button" class="alerts-card-btn" id="settings-device-alerts-btn" onclick="enablePushAlerts()" style="display:none;">Turn on</button>
+        </div>
       </div>
-      <div style="font-size:11px;color:var(--muted);margin-top:6px;padding-left:4px;">Phone notifications arrive with the app &mdash; for now this controls the in-app bell.</div>
+      <div style="font-size:11px;color:var(--muted);margin-top:6px;padding-left:4px;">These switches control both the bell and phone alerts.</div>
     </div>
 
     <div class="settings-section">
@@ -1258,7 +1287,7 @@ var state = {
   allFriendsAcrossRooms: [], // everyone you share ANY room with, full show+reaction data -- powers card-level ratings/comment pooling (see preloadFriendsInBackground)
   crewShowsByPlatform: false, // Your Crowd view mode: friend tiles (false) vs. shows grouped by platform (true)
   notifications: [],     // per-user feed (new_season, ...), filled by loadNotifications()
-  notificationPrefs: { new_season: true }, // per-type on/off, from notification_prefs (absence = all on)
+  notificationPrefs: { new_season: true, comments: true }, // per-type on/off, from notification_prefs (absence = all on)
   lounge: { posts: [], replies: [], seenAt: null }, // The Lounge, current room only -- see loadLounge()
 };
 
@@ -5580,7 +5609,19 @@ async function dbAddReaction(showId, text, sentiment) {
     sentiment: sentiment,
   }).select().single();
   if (error) throw error;
+  notifyCommentPosted(data.id);
   return data;
+}
+
+// Fire-and-forget: the database works out who should hear about this
+// comment (sql/add_push_alerts.sql -> notify_show_comment), then /api/push
+// delivers any phone alerts. Never blocks or fails the comment itself.
+function notifyCommentPosted(reactionId) {
+  if (!reactionId) return;
+  sb.rpc('notify_show_comment', { p_reaction_id: reactionId }).then(function(res) {
+    if (res.error) { console.error('notify_show_comment error:', res.error); return; }
+    if (res.data > 0) fetch('/api/push', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' }).catch(function() {});
+  });
 }
 
 // ============================================================
@@ -5806,7 +5847,8 @@ async function loadUserIntoState(profile) {
   init();
   showScreen('app');
   renderAll();
-  preloadFriendsInBackground(); // fire-and-forget, see function comment
+  state.friendsPreload = preloadFriendsInBackground(); // fire-and-forget, see function comment
+  initPushAlerts(); // fire-and-forget: alerts card, device re-subscribe, ?notif= deep link
 }
 
 // ============================================================
@@ -6209,6 +6251,7 @@ window.goToSettings = function() {
   showScreen('settings');
   renderRoomGrid();
   renderNotifPrefs();
+  renderAlertsUI();
   var adminSection = document.getElementById('settings-admin-section');
   if (adminSection) adminSection.style.display = (state.user && state.user.isAdmin) ? 'block' : 'none';
 };
@@ -7015,6 +7058,7 @@ window.removeFriend = async function(friendId) {
 
 window.handleSignOut = async function() {
   try {
+    await forgetThisDeviceForAlerts();
     await signOut();
     state.user = null; state.watching = []; state.watchlist = []; state.watched = []; state.friends = []; state.recommendations = []; state.lastVisitAt = null;
     showScreen('login');
@@ -7436,7 +7480,7 @@ function mapProviderToPlatform(name) {
 // date, ~2-3 weeks out). The table and this code are shaped so comment /
 // invite types can be added without a rework.
 
-var NOTIF_ICON = { new_season: '🎉', season_upcoming: '🗓️', lounge_reply: '☕' };
+var NOTIF_ICON = { new_season: '🎉', season_upcoming: '🗓️', lounge_reply: '☕', comment: '💬' };
 
 function _notifEsc(s) {
   return String(s == null ? '' : s).replace(/[&<>"]/g, function(c) {
@@ -7604,6 +7648,10 @@ window.openNotification = async function(id) {
     return;
   }
 
+  // A comment: open that show's conversation (Show Talk, pooled across
+  // every room you're in, so it works whichever room it was said in).
+  if (n.type === 'comment') { _openCommentNotification(n); return; }
+
   if (!n.show_id) return;
 
   // "Season is out" on a Waiting show: offer the move-to-Watching flow.
@@ -7662,20 +7710,20 @@ async function loadNotificationPrefs() {
   try {
     var res = await sb.from('notification_prefs').select('*').eq('user_id', state.user.id).maybeSingle();
     if (res.error) throw res.error;
-    if (res.data) state.notificationPrefs = { new_season: res.data.new_season !== false };
-    else state.notificationPrefs = { new_season: true };
+    if (res.data) state.notificationPrefs = { new_season: res.data.new_season !== false, comments: res.data.comments !== false };
+    else state.notificationPrefs = { new_season: true, comments: true };
   } catch (e) {
     console.error('loadNotificationPrefs error:', e);
-    state.notificationPrefs = { new_season: true };
+    state.notificationPrefs = { new_season: true, comments: true };
   }
   renderNotifPrefs();
 }
 
 function renderNotifPrefs() {
-  var el = document.getElementById('pref-new-season');
-  if (!el) return;
-  var on = state.notificationPrefs.new_season !== false;
-  el.setAttribute('aria-checked', on ? 'true' : 'false');
+  [['pref-new-season', 'new_season'], ['pref-comments', 'comments']].forEach(function(p) {
+    var el = document.getElementById(p[0]);
+    if (el) el.setAttribute('aria-checked', state.notificationPrefs[p[1]] !== false ? 'true' : 'false');
+  });
 }
 
 window.toggleNotifPref = async function(key) {
@@ -7684,7 +7732,7 @@ window.toggleNotifPref = async function(key) {
   renderNotifPrefs();
   try {
     var res = await sb.from('notification_prefs')
-      .upsert({ user_id: state.user.id, new_season: state.notificationPrefs.new_season, updated_at: new Date().toISOString() }, { onConflict: 'user_id' });
+      .upsert({ user_id: state.user.id, new_season: state.notificationPrefs.new_season !== false, comments: state.notificationPrefs.comments !== false, updated_at: new Date().toISOString() }, { onConflict: 'user_id' });
     if (res.error) throw res.error;
   } catch (e) {
     console.error('toggleNotifPref error:', e);
@@ -8077,6 +8125,166 @@ window.closeInstallGuide = function() {
   var el = document.getElementById('install-guide-modal');
   if (el) el.classList.remove('active');
 };
+
+// ============================================================
+// PHONE / DESKTOP ALERTS (Web Push)
+// ============================================================
+// sw.js shows alerts, /api/push sends them, sql/add_push_alerts.sql decides
+// who gets what. On iPhone, web alerts only exist when ShowUp is opened from
+// its Home Screen icon (iOS 16.4+) -- in a Safari tab PushManager is
+// missing, so the card there nudges people to add it to the Home Screen
+// instead. Nothing here runs inside the TestFlight app (IS_NATIVE_APP);
+// that gets native push separately.
+var VAPID_PUBLIC_KEY = 'BG2kXjoiKVotzmcJ1T1NCl-FL3DC8fMdoCCpwmdVdeRaGRc9V9jN6ikRHurIOMC1Wio9ZmfqJQv_6vJdgtx2Y9w';
+var ALERTS_SNOOZE_KEY = 'showup_alerts_snooze_until';
+var PENDING_NOTIF_ID = (function() { try { return new URLSearchParams(window.location.search).get('notif'); } catch (e) { return null; } })();
+
+function _pushSupported() {
+  return !IS_NATIVE_APP && 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
+}
+
+function _isIOSBrowserTab() {
+  if (IS_NATIVE_APP) return false;
+  var ua = navigator.userAgent || '';
+  var ios = /iPad|iPhone|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  var standalone = window.navigator.standalone === true || (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches);
+  return ios && !standalone;
+}
+
+function _alertsSnoozed() {
+  try { return Number(localStorage.getItem(ALERTS_SNOOZE_KEY) || 0) > Date.now(); } catch (e) { return false; }
+}
+
+function _urlB64ToUint8Array(b64) {
+  var raw = atob((b64 + '='.repeat((4 - b64.length % 4) % 4)).replace(/-/g, '+').replace(/_/g, '/'));
+  var out = new Uint8Array(raw.length);
+  for (var i = 0; i < raw.length; i++) out[i] = raw.charCodeAt(i);
+  return out;
+}
+
+async function _subscribeThisDevice(reg) {
+  var sub = await reg.pushManager.getSubscription();
+  if (!sub) sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: _urlB64ToUint8Array(VAPID_PUBLIC_KEY) });
+  var j = sub.toJSON();
+  var res = await sb.rpc('save_push_subscription', { p_endpoint: j.endpoint, p_p256dh: j.keys.p256dh, p_auth: j.keys.auth, p_user_agent: navigator.userAgent || '' });
+  if (res.error) throw res.error;
+}
+
+// The "Turn on alerts" card (top of every tab) + the Settings device row.
+function renderAlertsUI() {
+  var mode = null;
+  if (state.user) {
+    if (_pushSupported() && Notification.permission === 'default') mode = 'enable';
+    else if (_isIOSBrowserTab()) mode = 'homescreen';
+  }
+  var card = document.getElementById('alerts-card');
+  if (card) {
+    if (mode && !_alertsSnoozed()) {
+      document.getElementById('alerts-card-title').textContent = mode === 'enable'
+        ? 'Know when your friends are talking shows' : 'Want an alert when friends comment?';
+      document.getElementById('alerts-card-sub').textContent = mode === 'enable'
+        ? 'Get an alert when someone in your Living Room comments on a show.'
+        : 'Add ShowUp to your Home Screen and open it from there — then you can turn on alerts.';
+      var btn = document.getElementById('alerts-card-btn');
+      btn.textContent = mode === 'enable' ? 'Turn on alerts' : 'Show me how';
+      btn.onclick = mode === 'enable' ? enablePushAlerts : openInstallGuide;
+      card.style.display = 'flex';
+    } else {
+      card.style.display = 'none';
+    }
+  }
+
+  var row = document.getElementById('settings-device-alerts-row');
+  if (!row) return;
+  if (IS_NATIVE_APP) { row.style.display = 'none'; return; }
+  var sub = document.getElementById('settings-device-alerts-sub');
+  var sbtn = document.getElementById('settings-device-alerts-btn');
+  row.style.display = '';
+  sbtn.style.display = 'none';
+  if (_pushSupported()) {
+    if (Notification.permission === 'granted') sub.textContent = 'On';
+    else if (Notification.permission === 'denied') sub.textContent = 'Blocked — allow notifications for ShowUp in your device settings';
+    else { sub.textContent = 'Off'; sbtn.style.display = 'inline-block'; }
+  } else if (_isIOSBrowserTab()) {
+    sub.textContent = 'Add ShowUp to your Home Screen and open it from there to turn on alerts';
+  } else {
+    sub.textContent = 'Not available in this browser';
+  }
+}
+
+window.snoozeAlertsCard = function() {
+  try { localStorage.setItem(ALERTS_SNOOZE_KEY, String(Date.now() + 7 * 24 * 60 * 60 * 1000)); } catch (e) {}
+  var card = document.getElementById('alerts-card');
+  if (card) card.style.display = 'none';
+};
+
+window.enablePushAlerts = function() {
+  if (!_pushSupported()) return;
+  // Requested straight from the tap -- iOS ignores a permission request
+  // that doesn't come directly from a user gesture.
+  Notification.requestPermission().then(async function(perm) {
+    renderAlertsUI();
+    if (perm !== 'granted') return;
+    try {
+      await navigator.serviceWorker.register('/sw.js');
+      await _subscribeThisDevice(await navigator.serviceWorker.ready);
+      showToast('Alerts are on — we’ll let you know when friends comment.');
+      var r = await sb.auth.getSession();
+      var token = r && r.data && r.data.session && r.data.session.access_token;
+      if (token) fetch('/api/push', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token }, body: JSON.stringify({ test: true }) }).catch(function() {});
+    } catch (e) {
+      console.error('enablePushAlerts error:', e);
+      showToast('Couldn’t turn on alerts — try again in a moment.');
+    }
+  });
+};
+
+// Called once after login. Registers the alert worker, quietly re-saves this
+// device's subscription if alerts were already allowed (new login on the
+// same phone, or the browser rotated it), and handles a tapped alert's link.
+async function initPushAlerts() {
+  renderAlertsUI();
+  if (_pushSupported()) {
+    try {
+      await navigator.serviceWorker.register('/sw.js');
+      if (Notification.permission === 'granted') await _subscribeThisDevice(await navigator.serviceWorker.ready);
+    } catch (e) { console.error('initPushAlerts error:', e); }
+  }
+  if (PENDING_NOTIF_ID) {
+    var id = PENDING_NOTIF_ID;
+    PENDING_NOTIF_ID = null;
+    try { history.replaceState(null, '', window.location.pathname); } catch (e) {}
+    // loadNotifications() is already in flight from boot -- wait for it.
+    var has = function() { return (state.notifications || []).some(function(n) { return n.id === id; }); };
+    for (var i = 0; i < 25 && !has(); i++) await new Promise(function(r) { setTimeout(r, 200); });
+    if (has()) openNotification(id);
+  }
+}
+
+// Comment alerts open Show Talk pooled across every room, so it needs the
+// background friends load (who said what) to have landed first.
+async function _openCommentNotification(n) {
+  try { if (state.friendsPreload) await state.friendsPreload; } catch (e) {}
+  openShowTalkFor(n.title, 'all');
+}
+
+// Signing out: stop this device getting the old account's alerts.
+async function forgetThisDeviceForAlerts() {
+  try {
+    if (!_pushSupported()) return;
+    var reg = await navigator.serviceWorker.getRegistration('/');
+    var sub = reg && await reg.pushManager.getSubscription();
+    if (sub) await sb.rpc('delete_push_subscription', { p_endpoint: sub.endpoint });
+  } catch (e) { console.error('forgetThisDeviceForAlerts error:', e); }
+}
+
+// Tapping an alert while ShowUp is already open: sw.js hands us the link;
+// a fresh load guarantees the new comment is in the data we show.
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.addEventListener('message', function(e) {
+    if (e.data && e.data.type === 'open-url' && e.data.url) window.location.href = e.data.url;
+  });
+}
 
 // Case-insensitive title match against your own three lists, so
 // "add" from a friend's/ranking's show never creates a duplicate row.
