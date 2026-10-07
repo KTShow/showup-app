@@ -1139,7 +1139,7 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
           <button type="button" class="switch" id="pref-email-digest" role="switch" aria-checked="true" aria-label="Weekly email recap" onclick="toggleNotifPref('email_digest')"></button>
         </div>
       </div>
-      <div style="font-size:11px;color:var(--muted);margin-top:6px;padding-left:4px;">Everything also shows in the &#128276; inside ShowUp.</div>
+      <div style="font-size:11px;color:var(--muted);margin-top:6px;padding-left:4px;">New seasons also show in the &#128276; inside ShowUp; comments show in your Living Room.</div>
     </div>
 
     <div class="settings-section">
@@ -7510,6 +7510,15 @@ function mapProviderToPlatform(name) {
 
 var NOTIF_ICON = { new_season: '🎉', season_upcoming: '🗓️', lounge_reply: '☕', comment: '💬' };
 
+// The bell is for new seasons only. Comment / Lounge-reply rows still live
+// in the table -- they power phone alerts (a tapped alert opens its row via
+// ?notif=) and the weekly email recap -- but the Living Room's own unread
+// counts already cover them, so they stay out of the bell's list and dot.
+var BELL_TYPES = ['new_season', 'season_upcoming'];
+function _bellItems() {
+  return (state.notifications || []).filter(function(n) { return BELL_TYPES.indexOf(n.type) >= 0; });
+}
+
 function _notifEsc(s) {
   return String(s == null ? '' : s).replace(/[&<>"]/g, function(c) {
     return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c];
@@ -7523,10 +7532,18 @@ async function loadNotifications() {
       .select('*')
       .eq('user_id', state.user.id)
       .is('dismissed_at', null)
+      .in('type', BELL_TYPES)
       .order('created_at', { ascending: false })
       .limit(50);
     if (res.error) throw res.error;
-    state.notifications = res.data || [];
+    var rows = res.data || [];
+    // A tapped phone alert (?notif=) may be a comment, which the bell query
+    // above leaves out -- fetch that one row so it can still be opened.
+    if (TAPPED_NOTIF_ID && !rows.some(function(n) { return n.id === TAPPED_NOTIF_ID; })) {
+      var one = await sb.from('notifications').select('*').eq('id', TAPPED_NOTIF_ID).eq('user_id', state.user.id).maybeSingle();
+      if (one.data) rows.push(one.data);
+    }
+    state.notifications = rows;
   } catch (e) {
     console.error('loadNotifications error:', e);
     state.notifications = [];
@@ -7537,7 +7554,7 @@ async function loadNotifications() {
 }
 
 function _unseenNotifCount() {
-  return (state.notifications || []).filter(function(n) { return !n.seen_at; }).length;
+  return _bellItems().filter(function(n) { return !n.seen_at; }).length;
 }
 
 function renderNotifBell() {
@@ -7551,7 +7568,7 @@ function renderNotifBell() {
 function renderNotifPanel() {
   var list = document.getElementById('notif-list');
   if (!list) return;
-  var items = state.notifications || [];
+  var items = _bellItems();
   if (!items.length) {
     list.innerHTML = '<div class="notif-empty">No notifications yet.</div>';
     return;
@@ -7598,14 +7615,14 @@ function _closeNotifOnOutside(e) {
 }
 
 async function _markNotifsSeen() {
-  var unseen = (state.notifications || []).filter(function(n) { return !n.seen_at; });
+  var unseen = _bellItems().filter(function(n) { return !n.seen_at; });
   if (!unseen.length) return;
   var now = new Date().toISOString();
   unseen.forEach(function(n) { n.seen_at = now; });
   renderNotifBell();
   try {
     await sb.from('notifications').update({ seen_at: now })
-      .eq('user_id', state.user.id).is('seen_at', null);
+      .eq('user_id', state.user.id).is('seen_at', null).in('type', BELL_TYPES);
   } catch (e) { console.error('_markNotifsSeen error:', e); }
 }
 
@@ -8166,6 +8183,9 @@ window.closeInstallGuide = function() {
 var VAPID_PUBLIC_KEY = 'BG2kXjoiKVotzmcJ1T1NCl-FL3DC8fMdoCCpwmdVdeRaGRc9V9jN6ikRHurIOMC1Wio9ZmfqJQv_6vJdgtx2Y9w';
 var ALERTS_SNOOZE_KEY = 'showup_alerts_snooze_until';
 var PENDING_NOTIF_ID = (function() { try { return new URLSearchParams(window.location.search).get('notif'); } catch (e) { return null; } })();
+// Never cleared (initPushAlerts nulls PENDING_NOTIF_ID once it starts), so
+// loadNotifications can always fetch the tapped row even if it lands later.
+var TAPPED_NOTIF_ID = PENDING_NOTIF_ID;
 
 function _pushSupported() {
   return !IS_NATIVE_APP && 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
