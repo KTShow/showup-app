@@ -1,8 +1,10 @@
 // ============================================================
 // /api/unsubscribe — "Stop these emails" link in the weekly recap
 // ============================================================
-// GET  ?u=<user id>&t=<token>  -> turns the recap off, shows a short page
-// POST (same query)            -> one-click unsubscribe from mail apps
+// GET  ?u=<user id>&t=<token>  -> confirm page with a "Stop" button; changes
+//                                 nothing (mail scanners open every link)
+// POST (same query)            -> turns the recap off: the button above, and
+//                                 one-click unsubscribe from mail apps
 //                                 (List-Unsubscribe-Post header)
 //
 // The token is an HMAC of the user id keyed by the service-role key, so the
@@ -21,13 +23,16 @@ function validToken(userId, token) {
   return crypto.timingSafeEqual(Buffer.from(want), Buffer.from(token));
 }
 
-function page(title, msg) {
+const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+
+function page(title, msg, extra) {
   return '<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">'
     + '<title>ShowUp</title></head><body style="margin:0;background:#FBF7F2;font-family:-apple-system,Segoe UI,Helvetica,Arial,sans-serif;color:#3A3A3A;">'
     + '<div style="max-width:440px;margin:60px auto;padding:28px 24px;background:#fff;border-radius:12px;text-align:center;">'
     + '<div style="font-size:22px;font-weight:800;color:#C4622D;margin-bottom:14px;">ShowUp</div>'
     + '<div style="font-size:18px;font-weight:700;margin-bottom:8px;">' + title + '</div>'
     + '<div style="font-size:15px;color:#6A6A6A;line-height:1.5;">' + msg + '</div>'
+    + (extra || '')
     + '<a href="/" style="display:inline-block;margin-top:20px;color:#C4622D;font-weight:700;text-decoration:none;">Open ShowUp &rsaquo;</a>'
     + '</div></body></html>';
 }
@@ -37,6 +42,11 @@ module.exports = async (req, res) => {
   res.setHeader('Content-Type', 'text/html; charset=utf-8');
   if (!SERVICE_KEY || !validToken(u, t)) {
     return res.status(400).send(page('That link didn’t work', 'You can turn off the weekly recap in ShowUp under Settings → Notifications.'));
+  }
+  if (req.method !== 'POST') {
+    const form = '<form method="POST" action="/api/unsubscribe?u=' + esc(u) + '&amp;t=' + esc(t) + '" style="margin-top:20px;">'
+      + '<button type="submit" style="background:#C4622D;color:#fff;border:none;border-radius:8px;padding:12px 20px;font-size:15px;font-weight:700;cursor:pointer;">Stop recap emails</button></form>';
+    return res.status(200).send(page('Stop the weekly recap?', 'You won’t get the weekly email of comments you missed.', form));
   }
   try {
     const r = await fetch(SUPABASE_URL + '/rest/v1/rpc/digest_unsubscribe', {
