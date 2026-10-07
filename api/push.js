@@ -64,7 +64,9 @@ async function deliver(subs, payloadFor) {
 }
 
 function payloadForNotification(n) {
-  const icon = n.type === 'comment' ? '💬 ' : n.type === 'lounge_reply' ? '☕ ' : '';
+  const icon = n.type === 'comment' ? '💬 '
+    : n.type === 'lounge_reply' ? '☕ '
+    : (n.type === 'new_season' || n.type === 'season_upcoming') ? '📺 ' : '';
   return {
     title: icon + (n.title || 'ShowUp'),
     body: n.body || '',
@@ -94,7 +96,7 @@ async function test(req) {
   const subs = await subscriptionsFor([user.id]);
   const sent = await deliver(subs, () => ({
     title: "🔔 You're all set",
-    body: "You'll get an alert when someone in your Living Room comments on a show.",
+    body: "You'll get an alert when someone in your Living Room comments on a show, or a show you follow gets a new season.",
     url: '/',
     tag: 'test',
   }));

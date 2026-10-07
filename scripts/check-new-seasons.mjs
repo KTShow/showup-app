@@ -32,6 +32,7 @@
 const SUPABASE_URL = need('SUPABASE_URL');
 const SERVICE_KEY = need('SUPABASE_SERVICE_ROLE_KEY');
 const TMDB_KEY = need('TMDB_API_KEY');
+const PUSH_URL = process.env.PUSH_URL || 'https://showuproom.com/api/push';
 
 const REST = `${SUPABASE_URL}/rest/v1`;
 const SB_HEADERS = {
@@ -233,6 +234,7 @@ async function main() {
                 tmdb_id: tmdbId,
                 season_count: upcoming.season_number,
                 season_number: upcoming.season_number,
+                push_pending: true,
               },
               { ignoreDuplicates: true, onConflict: 'user_id,type,tmdb_id,season_count' }
             );
@@ -270,6 +272,7 @@ async function main() {
             tmdb_id: tmdbId,
             season_count: count,
             season_number: latest ? latest.season_number : null,
+            push_pending: true,
           },
           { ignoreDuplicates: true, onConflict: 'user_id,type,tmdb_id,season_count' }
         );
@@ -282,6 +285,22 @@ async function main() {
     }
 
     await sleep(120); // be polite to TMDB
+  }
+
+  // 5. Phone alerts: rows above went in with push_pending; /api/push (the
+  //    same sender comment alerts use) claims and delivers them to anyone
+  //    with alerts on. Duplicate rows were ignored, so nothing re-pushes.
+  //    Rows older than 15 minutes are dropped by the sender, hence once at
+  //    the end rather than in a separate later job.
+  try {
+    const res = await fetch(`${PUSH_URL}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: '{}',
+    });
+    console.log(`[new-seasons] push flush -> ${res.status} ${await res.text()}`);
+  } catch (e) {
+    console.error(`[new-seasons] push flush failed: ${e.message}`);
   }
 
   console.log(

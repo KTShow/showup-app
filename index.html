@@ -1113,15 +1113,33 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
     <div class="page-sub">Manage your ShowUp experience</div>
 
     <div class="settings-section">
-      <div class="settings-section-label">Account</div>
+      <div class="settings-section-label">Notifications</div>
       <div class="settings-card">
-        <button class="settings-row" onclick="goToProfile()">
-          <span class="settings-row-icon">&#128100;</span><span class="settings-row-label">Edit Profile</span><span class="settings-row-arrow">&#8250;</span>
-        </button>
-        <button class="settings-row" onclick="goToTellMore()">
-          <span class="settings-row-icon">🛋️</span><span class="settings-row-label">Update My Preferences</span><span class="settings-row-arrow">&#8250;</span>
-        </button>
+        <div class="settings-row" id="settings-device-alerts-row" style="cursor:default;display:none;">
+          <span class="settings-row-icon">&#128241;</span>
+          <span class="settings-row-label"><span id="settings-device-alerts-label">Phone alerts</span><span class="settings-row-sub" id="settings-device-alerts-sub"></span></span>
+          <button type="button" class="alerts-card-btn" id="settings-device-alerts-btn" onclick="enablePushAlerts()" style="display:none;">Turn on</button>
+        </div>
       </div>
+      <div class="settings-section-label" style="margin-top:14px;">What to tell me about</div>
+      <div class="settings-card">
+        <div class="settings-row" style="cursor:default;">
+          <span class="settings-row-icon">&#128172;</span>
+          <span class="settings-row-label">Friends&rsquo; comments<span class="settings-row-sub">When someone in your Living Room comments on a show</span></span>
+          <button type="button" class="switch" id="pref-comments" role="switch" aria-checked="true" aria-label="Friends' comments" onclick="toggleNotifPref('comments')"></button>
+        </div>
+        <div class="settings-row" style="cursor:default;">
+          <span class="settings-row-icon">&#128250;</span>
+          <span class="settings-row-label">New seasons<span class="settings-row-sub">When a show you follow has a new season coming or out</span></span>
+          <button type="button" class="switch" id="pref-new-season" role="switch" aria-checked="true" aria-label="New seasons" onclick="toggleNotifPref('new_season')"></button>
+        </div>
+        <div class="settings-row" id="settings-email-digest-row" style="cursor:default;">
+          <span class="settings-row-icon">&#9993;&#65039;</span>
+          <span class="settings-row-label">Weekly email recap<span class="settings-row-sub">A Sunday email of comments you missed &mdash; sent only if phone alerts are off</span></span>
+          <button type="button" class="switch" id="pref-email-digest" role="switch" aria-checked="true" aria-label="Weekly email recap" onclick="toggleNotifPref('email_digest')"></button>
+        </div>
+      </div>
+      <div style="font-size:11px;color:var(--muted);margin-top:6px;padding-left:4px;">Everything also shows in the &#128276; inside ShowUp.</div>
     </div>
 
     <div class="settings-section">
@@ -1149,6 +1167,18 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
       <div class="room-grid" id="room-grid"></div>
     </div>
 
+    <div class="settings-section">
+      <div class="settings-section-label">Account</div>
+      <div class="settings-card">
+        <button class="settings-row" onclick="goToProfile()">
+          <span class="settings-row-icon">&#128100;</span><span class="settings-row-label">Edit Profile</span><span class="settings-row-arrow">&#8250;</span>
+        </button>
+        <button class="settings-row" onclick="goToTellMore()">
+          <span class="settings-row-icon">🛋️</span><span class="settings-row-label">Update My Preferences</span><span class="settings-row-arrow">&#8250;</span>
+        </button>
+      </div>
+    </div>
+
     <div class="settings-section" id="settings-admin-section" style="display:none;">
       <div class="settings-section-label">Admin</div>
       <div class="settings-card">
@@ -1156,33 +1186,6 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
           <span class="settings-row-icon">&#128226;</span><span class="settings-row-label">Edit Announcement Banner</span><span class="settings-row-arrow">&#8250;</span>
         </button>
       </div>
-    </div>
-
-    <div class="settings-section">
-      <div class="settings-section-label">Notifications</div>
-      <div class="settings-card">
-        <div class="settings-row" style="cursor:default;">
-          <span class="settings-row-icon">&#128276;</span>
-          <span class="settings-row-label">New season alerts<span class="settings-row-sub">A heads-up when a show you follow has a new season coming or out</span></span>
-          <button type="button" class="switch" id="pref-new-season" role="switch" aria-checked="true" aria-label="New season alerts" onclick="toggleNotifPref('new_season')"></button>
-        </div>
-        <div class="settings-row" style="cursor:default;">
-          <span class="settings-row-icon">&#128172;</span>
-          <span class="settings-row-label">Comment alerts<span class="settings-row-sub">When someone in your Living Room comments on a show</span></span>
-          <button type="button" class="switch" id="pref-comments" role="switch" aria-checked="true" aria-label="Comment alerts" onclick="toggleNotifPref('comments')"></button>
-        </div>
-        <div class="settings-row" id="settings-email-digest-row" style="cursor:default;">
-          <span class="settings-row-icon">&#9993;&#65039;</span>
-          <span class="settings-row-label">Weekly email recap<span class="settings-row-sub">A Sunday email of comments you missed — only if phone alerts aren't on</span></span>
-          <button type="button" class="switch" id="pref-email-digest" role="switch" aria-checked="true" aria-label="Weekly email recap" onclick="toggleNotifPref('email_digest')"></button>
-        </div>
-        <div class="settings-row" id="settings-device-alerts-row" style="cursor:default;display:none;">
-          <span class="settings-row-icon">&#128241;</span>
-          <span class="settings-row-label">Alerts on this device<span class="settings-row-sub" id="settings-device-alerts-sub"></span></span>
-          <button type="button" class="alerts-card-btn" id="settings-device-alerts-btn" onclick="enablePushAlerts()" style="display:none;">Turn on</button>
-        </div>
-      </div>
-      <div style="font-size:11px;color:var(--muted);margin-top:6px;padding-left:4px;">The first two switches control both the bell and phone alerts.</div>
     </div>
 
     <div class="settings-section">
@@ -8212,7 +8215,7 @@ function renderAlertsUI() {
       document.getElementById('alerts-card-title').textContent = mode === 'enable'
         ? 'Know when your friends are talking shows' : 'Want an alert when friends comment?';
       document.getElementById('alerts-card-sub').textContent = mode === 'enable'
-        ? 'Get an alert when someone in your Living Room comments on a show.'
+        ? 'Get an alert when someone in your Living Room comments on a show, or a show you follow gets a new season.'
         : 'Add ShowUp to your Home Screen and open it from there — then you can turn on alerts.';
       var btn = document.getElementById('alerts-card-btn');
       btn.textContent = mode === 'enable' ? 'Turn on alerts' : 'Show me how';
@@ -8228,6 +8231,9 @@ function renderAlertsUI() {
   if (IS_NATIVE_APP) { row.style.display = 'none'; return; }
   var sub = document.getElementById('settings-device-alerts-sub');
   var sbtn = document.getElementById('settings-device-alerts-btn');
+  var isPhone = _isIOSDevice() || /Android|Mobi/i.test(navigator.userAgent || '');
+  document.getElementById('settings-device-alerts-label').textContent = isPhone ? 'Phone alerts' : 'Computer alerts';
+  var where = isPhone ? 'phone' : 'computer';
   row.style.display = '';
   sbtn.style.display = 'none';
   if (_pushSupported()) {
@@ -8236,10 +8242,10 @@ function renderAlertsUI() {
     if (Notification.permission === 'granted') sub.textContent = _isIOSDevice()
       ? 'On. Alerts vanish too fast? iPhone Settings → Notifications → ShowUp → Banner Style → Persistent'
       : 'On';
-    else if (Notification.permission === 'denied') sub.textContent = 'Blocked — allow notifications for ShowUp in your device settings';
-    else { sub.textContent = 'Off'; sbtn.style.display = 'inline-block'; }
+    else if (Notification.permission === 'denied') sub.textContent = 'Blocked — allow notifications for ShowUp in your ' + where + '’s settings';
+    else { sub.textContent = 'Off — get a ping on this ' + where + ' when friends comment or a new season drops'; sbtn.style.display = 'inline-block'; }
   } else if (_isIOSBrowserTab()) {
-    sub.textContent = 'Add ShowUp to your Home Screen and open it from there to turn on alerts';
+    sub.textContent = 'Add ShowUp to your Home Screen and open it from there to turn these on';
   } else {
     sub.textContent = 'Not available in this browser';
   }
@@ -8261,7 +8267,7 @@ window.enablePushAlerts = function() {
     try {
       await navigator.serviceWorker.register('/sw.js');
       await _subscribeThisDevice(await navigator.serviceWorker.ready);
-      showToast('Alerts are on — we’ll let you know when friends comment.');
+      showToast('Alerts are on — we’ll let you know when friends comment or a new season drops.');
       var r = await sb.auth.getSession();
       var token = r && r.data && r.data.session && r.data.session.access_token;
       if (token) fetch('/api/push', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token }, body: JSON.stringify({ test: true }) }).catch(function() {});
