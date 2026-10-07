@@ -7192,7 +7192,26 @@ async function preloadFriendsInBackground() {
       // jump into the right room when someone's clicked from outside the
       // room currently entered (e.g. a Show Talk commenter). First room
       // found wins; any shared room works equally well for this purpose.
-      (list || []).forEach(function(f) { if (f && !merged[f.id]) { f._roomId = data[i].id; merged[f.id] = f; } });
+      (list || []).forEach(function(f) {
+        if (!f) return;
+        if (!merged[f.id]) { f._roomId = data[i].id; merged[f.id] = f; return; }
+        // Same person in another of my rooms. Each room's load only carries
+        // comments from that room's members, so fold this room's comments
+        // into their shows too -- otherwise a comment made in a room loaded
+        // later (e.g. Kristy on Jim's show) vanishes from pooled Show Talk.
+        var into = merged[f.id];
+        ['watching', 'watchlist', 'watched'].forEach(function(lk) {
+          var byId = {};
+          (into[lk] || []).forEach(function(s) { byId[s.id] = s; });
+          (f[lk] || []).forEach(function(s) {
+            var t = byId[s.id];
+            if (!t) return;
+            var have = {};
+            (t.reactions || []).forEach(function(r) { have[r.id] = true; });
+            (s.reactions || []).forEach(function(r) { if (!have[r.id]) { t.reactions = (t.reactions || []).concat([r]); have[r.id] = true; } });
+          });
+        });
+      });
     });
     state.allFriendsAcrossRooms = Object.values(merged);
     state.friendsLoadedAt = Date.now();
