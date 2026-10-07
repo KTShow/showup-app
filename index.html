@@ -937,18 +937,10 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
           <div class="tastemakers-banner-arrow">&#8250;</div>
         </div>
         <div class="tastemakers-banner" onclick="openFullLineupView()" style="margin-bottom:16px;background:linear-gradient(135deg,#3b6e8f,#2c4f66);">
-          <div class="tastemakers-banner-icon">&#128220;</div>
+          <div class="tastemakers-banner-icon">&#128293;</div>
           <div class="tastemakers-banner-text">
-            <div class="tastemakers-banner-title">The Full Lineup</div>
-            <div class="tastemakers-banner-sub">Every show on ShowUp, and how it's rated</div>
-          </div>
-          <div class="tastemakers-banner-arrow">&#8250;</div>
-        </div>
-        <div class="tastemakers-banner" onclick="openShowTalkHub()" style="margin-bottom:16px;background:linear-gradient(135deg,var(--fig),#8a4a6b);">
-          <div class="tastemakers-banner-icon">&#128483;&#65039;</div>
-          <div class="tastemakers-banner-text">
-            <div class="tastemakers-banner-title">Show Talk</div>
-            <div class="tastemakers-banner-sub">See what your crowd is saying across each of your living rooms</div>
+            <div class="tastemakers-banner-title">Hot Right Now</div>
+            <div class="tastemakers-banner-sub">Today's big shows &mdash; not the classics</div>
           </div>
           <div class="tastemakers-banner-arrow">&#8250;</div>
         </div>
@@ -979,8 +971,8 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
         <div id="showtalk-hub-detail-panel" style="display:none"></div>
       </div>
       <div id="full-lineup-view" style="display:none">
-        <div class="page-title"><button class="nav-back" onclick="backFromFullLineupView()" style="margin-right:6px;">&#8592;</button>&#128220;&nbsp; The Full Lineup</div>
-        <div class="page-sub">Every show on ShowUp, platform-wide — no comments, just the numbers.</div>
+        <div class="page-title"><button class="nav-back" onclick="backFromFullLineupView()" style="margin-right:6px;">&#8592;</button>&#128293;&nbsp; Hot Right Now</div>
+        <div class="page-sub">Current shows with a season out in the last year &mdash; what people are watching now.</div>
         <div class="lr-search-wrap" id="full-lineup-search-wrap"><input type="text" id="full-lineup-search" class="lr-search-input" placeholder="Search shows or platforms..." oninput="renderFullLineup();toggleSearchClearBtn(this)" autocomplete="off" /><button class="lr-search-clear" type="button" aria-label="Clear search" onclick="clearSearchInput('full-lineup-search')">&#10005;</button></div>
         <div id="full-lineup-list"></div>
         <div id="full-lineup-detail-view" style="display:none"></div>
@@ -3690,16 +3682,46 @@ window.backFromShowTalkHub = function() {
 // ============================================================
 
 var _fullLineupData = null;
+
+// TMDB's popular current shows streaming in the US: an episode in the last
+// ~6 weeks (binge drops included), English-language, minus news / reality /
+// talk / soap / kids / animation, and only series that STARTED in the last
+// 8 years -- otherwise decades-old procedurals (Law & Order, NCIS) crowd out
+// the buzzy hits people asked for.
+async function _loadTrendingUS() {
+  var d = function(n) { return new Date(Date.now() + n * 864e5).toISOString().slice(0, 10); };
+  var base = 'https://api.themoviedb.org/3/discover/tv?api_key=' + TMDB_KEY
+    + '&language=en-US&watch_region=US&with_watch_monetization_types=flatrate%7Cads%7Cfree'
+    + '&with_original_language=en&sort_by=popularity.desc&include_null_first_air_dates=false'
+    + '&air_date.gte=' + d(-42) + '&air_date.lte=' + d(1)
+    + '&first_air_date.gte=' + d(-8 * 365)
+    + '&without_genres=10763%2C10764%2C10766%2C10767%2C10762%2C16';
+  var pages = await Promise.all([1, 2].map(function(p) {
+    return fetch(base + '&page=' + p).then(function(res) {
+      if (!res.ok) throw new Error('TMDB discover ' + res.status);
+      return res.json();
+    });
+  }));
+  var results = [].concat(pages[0].results || [], pages[1].results || []);
+  return results.map(function(r) {
+    return { trending: true, title: r.name, tmdb_id: r.id, poster_path: r.poster_path || null,
+             platform: null, avg_rating: null, rating_count: 0,
+             year: r.first_air_date ? r.first_air_date.slice(0, 4) : null };
+  });
+}
+
 async function loadFullLineupData() {
   if (_fullLineupData) return _fullLineupData;
-  try {
-    const { data, error } = await sb.rpc('get_full_lineup');
-    if (error) throw error;
-    _fullLineupData = data || { shows: [] };
-  } catch(e) {
-    console.error('get_full_lineup error:', e);
-    _fullLineupData = { shows: [] };
-  }
+  var crowd = [], trending = [];
+  await Promise.all([
+    sb.rpc('get_hot_right_now').then(function(r) {
+      if (r.error) throw r.error;
+      crowd = (r.data && r.data.shows) || [];
+    }).catch(function(e) { console.error('get_hot_right_now error:', e); }),
+    _loadTrendingUS().then(function(t) { trending = t; })
+      .catch(function(e) { console.error('trending error:', e); }),
+  ]);
+  _fullLineupData = { shows: crowd, trending: trending };
   return _fullLineupData;
 }
 
@@ -3757,36 +3779,65 @@ function rankDetailActionsHTML(s, addCall) {
   return html + '</div>';
 }
 
+// Hot Right Now (lives in the old Full Lineup view/ids): two parts --
+// "Hot on ShowUp" (current shows people here have, from get_hot_right_now)
+// then "Trending in the US" (TMDB's popular current US-streaming shows,
+// minus anything already in part one) to keep the list full while ShowUp is
+// small. One combined list cache, so the detail view is shared.
+var HOT_TOTAL = 25;
 var _fullLineupListCache = [];
+
+function _hotRow(s, i, rankLabel) {
+  var ratingHTML = '<span class="rank-rating-col">' + (s.avg_rating ? remoteAvgLabel(Number(s.avg_rating).toFixed(1)) : '') + '</span>';
+  var meta = s.trending
+    ? (s.year ? '<span class="rank-count-inline">' + s.year + '</span>' : '')
+    : (s.platform ? '<span class="rank-platform">' + escAttr(s.platform) + '</span>' : '')
+      + '<span class="rank-count-inline">' + s.people + (s.people == 1 ? ' has it' : ' have it') + '</span>';
+  return '<div class="rank-card" onclick="showFullLineupDetail(' + i + ')">'
+    + '<span class="rank-badge' + (i < 3 ? ' gold' : '') + '">' + rankLabel + '</span>'
+    + rankThumbHTML(s)
+    + '<div class="rank-info">'
+    + '<div class="rank-title-text">' + escAttr(s.title || '') + '</div>'
+    + (meta ? '<div class="rank-meta-line">' + meta + '</div>' : '')
+    + '</div>'
+    + ratingHTML
+    + rankListBadgeHTML(s) + '<span class="rank-chev">&rsaquo;</span>'
+    + '</div>';
+}
+
 function renderFullLineup(){
   if (!_fullLineupData) return;
   var el = document.getElementById('full-lineup-list');
-  var list = (_fullLineupData.shows||[]).slice();
+  var crowd = (_fullLineupData.shows || []).slice(0, HOT_TOTAL);
+  var seen = {};
+  crowd.forEach(function(s) { if (s.tmdb_id) seen[s.tmdb_id] = true; });
+  var trending = (_fullLineupData.trending || []).filter(function(s) { return !seen[s.tmdb_id]; })
+    .slice(0, Math.max(10, HOT_TOTAL - crowd.length));
   var q = ((document.getElementById('full-lineup-search')||{}).value||'').trim().toLowerCase();
-  if (q) list = list.filter(function(s){ return (s.title||'').toLowerCase().indexOf(q)!==-1 || (s.platform||'').toLowerCase().indexOf(q)!==-1; });
-  list.sort(function(a,b){ return (a.title||'').toLowerCase().localeCompare((b.title||'').toLowerCase()); });
-  _fullLineupListCache = list;
-  if (!list.length) {
+  var match = function(s){ return !q || (s.title||'').toLowerCase().indexOf(q)!==-1 || (s.platform||'').toLowerCase().indexOf(q)!==-1; };
+  crowd = crowd.filter(match);
+  trending = trending.filter(match);
+  _fullLineupListCache = crowd.concat(trending);
+  if (!_fullLineupListCache.length) {
     el.innerHTML = q
       ? '<div class="empty"><div class="empty-icon">&#128269;</div>No shows match "'+escAttr(q)+'".</div>'
-      : '<div class="empty"><div class="empty-icon">&#128220;</div>No shows yet.</div>';
+      : '<div class="empty"><div class="empty-icon">&#128293;</div>Nothing to show right now &mdash; check back soon.</div>';
     return;
   }
-  el.innerHTML = list.map(function(s,i){
-    var thumb = rankThumbHTML(s);
-    var ratingHTML = '<span class="rank-rating-col">' + (s.avg_rating ? remoteAvgLabel(Number(s.avg_rating).toFixed(1)) : '') + '</span>';
-    var actionHTML = rankListBadgeHTML(s) + '<span class="rank-chev">&rsaquo;</span>';
-    return '<div class="rank-card" onclick="showFullLineupDetail('+i+')">'
-      +'<span class="rank-badge">'+(i+1)+'</span>'
-      +thumb
-      +'<div class="rank-info">'
-      +'<div class="rank-title-text">'+(s.title||'')+'</div>'
-      +(s.platform?'<div class="rank-meta-line"><span class="rank-platform">'+s.platform+'</span>'+(s.rating_count?'<span class="rank-count-inline">'+s.rating_count+' rated</span>':'')+'</div>':'')
-      +'</div>'
-      +ratingHTML
-      +actionHTML
-      +'</div>';
-  }).join('');
+  var head = function(t, sub) {
+    return '<div style="margin:14px 0 8px;"><div style="font-size:13px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:var(--charcoal);">' + t + '</div>'
+      + '<div style="font-size:12px;color:var(--muted);">' + sub + '</div></div>';
+  };
+  var html = '';
+  if (crowd.length) {
+    html += head('&#128293; Hot on ShowUp', 'Current shows people here are watching and rating');
+    html += crowd.map(function(s, i) { return _hotRow(s, i, i + 1); }).join('');
+  }
+  if (trending.length) {
+    html += head('&#128200; Trending in the US', 'Popular on US streaming right now');
+    html += trending.map(function(s, j) { return _hotRow(s, crowd.length + j, '&#128200;'); }).join('');
+  }
+  el.innerHTML = html;
 }
 
 window.handleFullLineupAdd = function(idx){
@@ -3821,7 +3872,8 @@ window.showFullLineupDetail = function(idx){
   var ratingLine = hasRating
     ? '<div style="display:flex;align-items:baseline;gap:10px;margin-bottom:4px;"><span class="rank-detail-avg">'+avgNum.toFixed(1)+'</span><div style="display:flex;gap:2px;">'+remotes+'</div></div>'
       +'<div class="rank-detail-sub">rated by '+s.rating_count+' across ShowUp</div>'
-    : '<div class="rank-detail-sub">Not yet rated by anyone on ShowUp.</div>';
+    : '<div class="rank-detail-sub">'+(s.trending ? 'Trending in the US &mdash; not on ShowUp yet. Be the first!' : 'Not yet rated by anyone on ShowUp.')+'</div>';
+  if (!s.trending && s.people) ratingLine += '<div class="rank-detail-sub" style="margin-top:-8px;">'+s.people+(s.people==1?' person on ShowUp has it':' people on ShowUp have it')+'</div>';
   panel.innerHTML='<div class="rank-detail">'
     +'<div style="display:flex;gap:12px;align-items:flex-start;margin-bottom:4px;">'
     +thumb
@@ -8346,6 +8398,18 @@ async function initPushAlerts() {
 // fresh: if ShowUp sat open in the background, that load predates the very
 // comment we're opening, so reload it first.
 async function _openCommentNotification(n) {
+  // Show Talk left the Living Rooms hub, so open it inside the room the
+  // comment was made in (the row carries it). No room -> pooled fallback.
+  if (n.room_id) {
+    // Room name / ownership come from state.myRooms, loaded by the preload.
+    try { if (state.friendsPreload) await state.friendsPreload; } catch (e) {}
+    var lrBtn = document.getElementById('btab-living-room');
+    if (lrBtn) showTab('living-room', lrBtn);
+    await new Promise(function(r) { setTimeout(r, 40); }); // same settle as the Lounge path
+    try { await enterLivingRoom(n.room_id); } catch (e) { console.error('open comment room error:', e); }
+    openShowTalkFor(n.title, 'room');
+    return;
+  }
   try { if (state.friendsPreload) await state.friendsPreload; } catch (e) {}
   if (!state.friendsLoadedAt || Date.now() - state.friendsLoadedAt > 15000) {
     try { state.friendsPreload = preloadFriendsInBackground(); await state.friendsPreload; } catch (e) {}

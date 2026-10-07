@@ -134,10 +134,13 @@ async function main() {
   //    for New Season" subset.) media_type = 'tv' only -- a documentary
   //    film's tmdb_id is a TMDB *movie* id and would resolve to an
   //    unrelated show (or 404) against /tv.
+  //    Binged ('watched') shows are fetched too, but ONLY so the shared
+  //    registry knows their air dates (Hot Right Now's "is it current?"
+  //    test) -- they're skipped in step 4, so no notifications for them.
   const shows = await sbGet(
     'shows?select=id,user_id,title,tmdb_id,status,number_of_seasons,new_season_available' +
       '&tmdb_id=not.is.null' +
-      '&status=in.(watching,watchlist)' +
+      '&status=in.(watching,watchlist,watched)' +
       '&media_type=eq.tv'
   );
   console.log(`[new-seasons] ${shows.length} candidate show rows`);
@@ -212,6 +215,7 @@ async function main() {
 
     // 4. Reconcile each user's copy of the show.
     for (const s of byTmdb.get(tmdbId)) {
+      if (s.status === 'watched') continue; // registry only, see step 1
       try {
         const alertsMuted = mutedNewSeason.has(s.user_id);
 
