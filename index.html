@@ -1171,10 +1171,11 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
           <span class="settings-row-label">Comment alerts<span class="settings-row-sub">When someone in your Living Room comments on a show</span></span>
           <button type="button" class="switch" id="pref-comments" role="switch" aria-checked="true" aria-label="Comment alerts" onclick="toggleNotifPref('comments')"></button>
         </div>
-        <div class="settings-row" style="cursor:default;">
+        <!-- Hidden until the weekly recap is released (see send-comment-digest.yml). -->
+        <div class="settings-row" id="settings-email-digest-row" style="cursor:default;display:none;">
           <span class="settings-row-icon">&#9993;&#65039;</span>
-          <span class="settings-row-label">Daily email recap<span class="settings-row-sub">A 5pm email of comments you missed — only if phone alerts aren't on</span></span>
-          <button type="button" class="switch" id="pref-email-digest" role="switch" aria-checked="true" aria-label="Daily email recap" onclick="toggleNotifPref('email_digest')"></button>
+          <span class="settings-row-label">Weekly email recap<span class="settings-row-sub">A Sunday email of comments you missed — only if phone alerts aren't on</span></span>
+          <button type="button" class="switch" id="pref-email-digest" role="switch" aria-checked="true" aria-label="Weekly email recap" onclick="toggleNotifPref('email_digest')"></button>
         </div>
         <div class="settings-row" id="settings-device-alerts-row" style="cursor:default;display:none;">
           <span class="settings-row-icon">&#128241;</span>

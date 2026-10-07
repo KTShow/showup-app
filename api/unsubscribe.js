@@ -1,5 +1,5 @@
 // ============================================================
-// /api/unsubscribe — "Stop these emails" link in the daily recap
+// /api/unsubscribe — "Stop these emails" link in the weekly recap
 // ============================================================
 // GET  ?u=<user id>&t=<token>  -> turns the recap off, shows a short page
 // POST (same query)            -> one-click unsubscribe from mail apps
@@ -36,7 +36,7 @@ module.exports = async (req, res) => {
   const { u, t } = req.query || {};
   res.setHeader('Content-Type', 'text/html; charset=utf-8');
   if (!SERVICE_KEY || !validToken(u, t)) {
-    return res.status(400).send(page('That link didn’t work', 'You can turn off the daily recap in ShowUp under Settings → Notifications.'));
+    return res.status(400).send(page('That link didn’t work', 'You can turn off the weekly recap in ShowUp under Settings → Notifications.'));
   }
   try {
     const r = await fetch(SUPABASE_URL + '/rest/v1/rpc/digest_unsubscribe', {
@@ -49,5 +49,5 @@ module.exports = async (req, res) => {
     console.error('/api/unsubscribe error', e);
     return res.status(500).send(page('Something went wrong', 'Please try the link again in a minute.'));
   }
-  return res.status(200).send(page('You’re unsubscribed', 'No more daily recap emails. You can turn them back on any time in Settings → Notifications.'));
+  return res.status(200).send(page('You’re unsubscribed', 'No more weekly recap emails. You can turn them back on any time in Settings → Notifications.'));
 };

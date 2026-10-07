@@ -1,10 +1,10 @@
 // ============================================================
-// send-comment-digest.mjs — daily email recap of comments
+// send-comment-digest.mjs — weekly email recap of comments
 // ============================================================
-// Runs daily from .github/workflows/send-comment-digest.yml (and can be run
+// Runs Sundays from .github/workflows/send-comment-digest.yml (and can be run
 // by hand with `node scripts/send-comment-digest.mjs` given the env vars).
 //
-// For people who DON'T get phone alerts: one email a day listing the
+// For people who DON'T get phone alerts: one email a week listing the
 // comments their crowd made that they haven't seen in the app yet. Who and
 // what come from get_comment_digest() (sql/add_comment_digest.sql); each
 // emailed bell row is stamped via mark_digest_sent() so it never goes out
@@ -70,11 +70,26 @@ function subjectFor(items) {
     return who ? `${who} commented on ${items[0].title}` : `New comments on ${items[0].title}`;
   }
   const shows = new Set(items.map((i) => (i.title || '').toLowerCase())).size;
-  return shows === 1 ? `New comments on ${items[0].title}` : `Your crowd talked about ${shows} shows today`;
+  return shows === 1 ? `New comments on ${items[0].title}` : `Your crowd talked about ${shows} shows this week`;
+}
+
+const MAX_SHOWS = 10;
+
+// One entry per show (newest comment row wins; rows arrive newest-first),
+// capped at MAX_SHOWS. Every row's id is still stamped as emailed.
+function byShow(rows) {
+  const seen = new Map();
+  rows.forEach((it) => {
+    const k = (it.title || '').toLowerCase();
+    if (!seen.has(k)) seen.set(k, it);
+  });
+  return [...seen.values()];
 }
 
 function render(row) {
-  const items = row.items;
+  const all = byShow(row.items);
+  const items = all.slice(0, MAX_SHOWS);
+  const more = all.length - items.length;
   const hi = row.first_name ? `Hi ${esc(row.first_name)},` : 'Hi,';
   const unsub = unsubscribeUrl(row.user_id);
   const blocks = items.map((it) => `
@@ -82,29 +97,33 @@ function render(row) {
         <div style="font-size:16px;font-weight:700;color:#3A3A3A;">${esc(it.title)}</div>
         <div style="font-size:15px;color:#555;margin:4px 0 8px;line-height:1.45;">${esc(it.body)}</div>
         <a href="${SITE}/?notif=${it.id}" style="color:#C4622D;font-weight:700;text-decoration:none;font-size:14px;">Read &amp; reply &rsaquo;</a>
-      </td></tr>`).join('');
+      </td></tr>`).join('') + (more > 0 ? `
+      <tr><td style="padding:14px 0;border-top:1px solid #eee;font-size:15px;color:#555;">
+        &hellip;and ${more} more ${more === 1 ? 'show' : 'shows'}. <a href="${SITE}/" style="color:#C4622D;font-weight:700;text-decoration:none;">Open ShowUp &rsaquo;</a>
+      </td></tr>` : '');
 
   const html = `<!doctype html><html><body style="margin:0;background:#FBF7F2;font-family:-apple-system,Segoe UI,Helvetica,Arial,sans-serif;">
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#FBF7F2;"><tr><td align="center" style="padding:24px 16px;">
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;background:#fff;border-radius:12px;padding:24px;">
       <tr><td style="font-size:22px;font-weight:800;color:#C4622D;padding-bottom:12px;">ShowUp</td></tr>
       <tr><td style="font-size:16px;color:#3A3A3A;padding-bottom:8px;">${hi}</td></tr>
-      <tr><td style="font-size:16px;color:#3A3A3A;padding-bottom:6px;">Here's what your crowd said today:</td></tr>
+      <tr><td style="font-size:16px;color:#3A3A3A;padding-bottom:6px;">Here's what your crowd talked about this week:</td></tr>
       ${blocks}
       <tr><td style="padding-top:20px;font-size:12px;color:#999;line-height:1.5;border-top:1px solid #eee;">
-        You get this daily recap because phone alerts aren't turned on for your account.
+        You get this weekly recap because phone alerts aren't turned on for your account.
         <a href="${unsub}" style="color:#999;">Stop these emails</a> &middot; or change it in ShowUp under Settings &rarr; Notifications.
       </td></tr>
     </table>
   </td></tr></table></body></html>`;
 
   const text = [
-    row.first_name ? `Hi ${row.first_name},` : 'Hi,', '', "Here's what your crowd said today:", '',
+    row.first_name ? `Hi ${row.first_name},` : 'Hi,', '', "Here's what your crowd talked about this week:", '',
     ...items.flatMap((it) => [it.title, it.body || '', `${SITE}/?notif=${it.id}`, '']),
+    ...(more > 0 ? [`...and ${more} more. ${SITE}/`, ''] : []),
     `Stop these emails: ${unsub}`,
   ].join('\n');
 
-  return { subject: subjectFor(items), html, text, unsub };
+  return { subject: subjectFor(all), html, text, unsub };
 }
 
 async function send(row, msg) {

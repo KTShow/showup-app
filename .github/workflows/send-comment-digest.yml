@@ -1,11 +1,13 @@
-name: Send daily comment recap
+name: Send weekly comment recap
 
-# Daily email recap of comments for people without phone alerts.
+# Weekly email recap of comments for people without phone alerts.
 # See scripts/send-comment-digest.mjs.
 
+# NOT ON A SCHEDULE YET: manual runs only (Actions tab -> Run workflow) until
+# Tracey approves the preview. To release, add back:
+#   schedule:
+#     - cron: '0 21 * * 0' # Sundays 21:00 UTC (5pm ET summer, 4pm ET winter)
 on:
-  schedule:
-    - cron: '0 21 * * *' # 21:00 UTC daily (5pm ET in summer, 4pm ET in winter)
   workflow_dispatch:
     inputs:
       only_email:

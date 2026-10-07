@@ -1,21 +1,21 @@
 -- ============================================================
 -- add_comment_digest.sql  (2026-10-06)
 -- ============================================================
--- Daily email recap of comments, for people who don't get phone alerts.
--- Sent once a day by scripts/send-comment-digest.mjs (GitHub Actions).
+-- Weekly email recap of comments, for people who don't get phone alerts.
+-- Sent Sundays by scripts/send-comment-digest.mjs (GitHub Actions).
 --
 --   * notification_prefs.email_digest -- Settings toggle + the email's
 --     unsubscribe link; off = no recap emails.
 --   * notifications.emailed_at -- stamped once a comment bell row has gone
 --     out in a recap, so it's never emailed twice.
---   * get_comment_digest() -- who gets a recap today and what's in it:
---     comment bell rows from the last 24h that the person hasn't seen in
+--   * get_comment_digest() -- who gets a recap this week and what's in it:
+--     comment bell rows from the last 7 days that the person hasn't seen in
 --     the app yet (bell never opened past them), not already emailed, for
 --     people with NO device signed up for phone alerts, comment alerts on,
 --     and the recap on.
 --   * mark_digest_sent(ids) / digest_unsubscribe(user) -- bookkeeping.
 --
--- All three functions are service-role only (the daily job and
+-- All three functions are service-role only (the weekly job and
 -- /api/unsubscribe); the app never calls them.
 --
 -- Run in the Supabase SQL editor. Safe to re-run.
@@ -40,7 +40,7 @@ as $$
     left join users u on u.id = n.user_id
     left join notification_prefs np on np.user_id = n.user_id
    where n.type = 'comment'
-     and n.created_at > now() - interval '24 hours'
+     and n.created_at > now() - interval '7 days'
      and n.seen_at is null
      and n.dismissed_at is null
      and n.emailed_at is null
