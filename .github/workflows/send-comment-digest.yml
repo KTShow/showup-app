@@ -14,8 +14,8 @@ on:
         description: 'Preview: send one recap to just this email (leave blank = real run for everyone)'
         required: false
         default: ''
-      dry_run:
-        description: 'Dry run: list who would get one, send nothing'
+      send_to_everyone:
+        description: 'REAL SEND to everyone eligible (unticked + no email above = just list who would get one)'
         type: boolean
         default: false
 
@@ -37,4 +37,6 @@ jobs:
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
           ONLY_EMAIL: ${{ inputs.only_email }}
-          DRY_RUN: ${{ inputs.dry_run && '1' || '' }}
+          # A manual run only sends for real to everyone when the box is ticked;
+          # otherwise (no preview email) it's a dry run that just lists who.
+          DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.only_email == '' && !inputs.send_to_everyone && '1' || '' }}
