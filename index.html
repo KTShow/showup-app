@@ -7195,6 +7195,7 @@ async function preloadFriendsInBackground() {
       (list || []).forEach(function(f) { if (f && !merged[f.id]) { f._roomId = data[i].id; merged[f.id] = f; } });
     });
     state.allFriendsAcrossRooms = Object.values(merged);
+    state.friendsLoadedAt = Date.now();
     renderList('watching'); renderList('watchlist'); renderList('watched');
   } catch(e) { console.error('Background friends preload error:', e); }
 }
@@ -8275,9 +8276,14 @@ async function initPushAlerts() {
 }
 
 // Comment alerts open Show Talk pooled across every room, so it needs the
-// background friends load (who said what) to have landed first.
+// background friends load (who said what) to have landed first -- and to be
+// fresh: if ShowUp sat open in the background, that load predates the very
+// comment we're opening, so reload it first.
 async function _openCommentNotification(n) {
   try { if (state.friendsPreload) await state.friendsPreload; } catch (e) {}
+  if (!state.friendsLoadedAt || Date.now() - state.friendsLoadedAt > 15000) {
+    try { state.friendsPreload = preloadFriendsInBackground(); await state.friendsPreload; } catch (e) {}
+  }
   openShowTalkFor(n.title, 'all');
 }
 
