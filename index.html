@@ -870,7 +870,7 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
         </div>
       </div>
     </div>
-    <div id="tab-watching" class="tab-pane">
+    <div id="tab-watching" class="tab-pane" style="display:none">
       <div class="page-title">&#128250;&nbsp; Currently Watching on My TV</div>
       <div class="page-sub" id="watching-sub"></div>
       <div class="add-form">
@@ -927,7 +927,7 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
       </div>
       <div id="watched-list"></div>
     </div>
-    <div id="tab-living-room" class="tab-pane" style="display:none">
+    <div id="tab-living-room" class="tab-pane" style="display:block">
       <div id="room-picker-view">
         <div class="announcement-banner" id="announcement-banner" style="display:none;">
           <span class="announcement-icon" id="announcement-icon">&#128226;</span>
@@ -1030,10 +1030,10 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
   </div>
   <button id="back-to-top" class="back-to-top" onclick="scrollToTopSmooth()" aria-label="Back to top" title="Back to top">&#8593;</button>
   <div class="bottom-nav">
-    <button class="nav-tab active" id="btab-watching" onclick="showTab('watching',this)"><span class="nav-tab-icon">&#128250;</span><span class="nav-tab-label">Watching</span></button>
+    <button class="nav-tab active" id="btab-living-room" onclick="showTab('living-room',this)"><span class="nav-tab-icon">&#127968;</span><span class="nav-tab-label">Living Room</span></button>
+    <button class="nav-tab" id="btab-watching" onclick="showTab('watching',this)"><span class="nav-tab-icon">&#128250;</span><span class="nav-tab-label">Watching</span></button>
     <button class="nav-tab" id="btab-watchlist" onclick="showTab('watchlist',this)"><span class="nav-tab-icon">🛋️</span><span class="nav-tab-label">My List</span></button>
     <button class="nav-tab" id="btab-watched" onclick="showTab('watched',this)"><span class="nav-tab-icon">&#128252;</span><span class="nav-tab-label">Binged</span></button>
-    <button class="nav-tab" id="btab-living-room" onclick="showTab('living-room',this)"><span class="nav-tab-icon">&#127968;</span><span class="nav-tab-label">Living Room</span></button>
   </div>
 </div>
 
@@ -5966,6 +5966,10 @@ async function loadUserIntoState(profile) {
   init();
   showScreen('app');
   renderAll();
+  // ShowUp opens on the Living Room (Hot Right Now, Prime Time, your rooms)
+  // rather than your own Watching list -- the fresh, social content first.
+  var lrTab = document.getElementById('btab-living-room');
+  if (lrTab) showTab('living-room', lrTab);
   state.friendsPreload = preloadFriendsInBackground(); // fire-and-forget, see function comment
   initPushAlerts(); // fire-and-forget: alerts card, device re-subscribe, ?notif= deep link
 }
