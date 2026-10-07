@@ -11,7 +11,7 @@ on:
   workflow_dispatch:
     inputs:
       only_email:
-        description: 'Send only to this email (leave blank for everyone)'
+        description: 'Preview: send one recap to just this email (leave blank = real run for everyone)'
         required: false
         default: ''
       dry_run:

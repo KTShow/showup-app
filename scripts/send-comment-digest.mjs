@@ -11,7 +11,10 @@
 // twice. Sent through Resend from recap@showuproom.com.
 //
 // Env: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, RESEND_API_KEY
-// Optional: ONLY_EMAIL=someone@x.com -- send only to that address (testing)
+// Optional: ONLY_EMAIL=someone@x.com -- PREVIEW: send one recap to just that
+//             account, built from its comment bell rows of the last 7 days
+//             regardless of its settings / alerts / what it's seen, and stamp
+//             nothing (so the real Sunday run is unaffected)
 //           DRY_RUN=1 -- print what would be sent, send and stamp nothing
 //
 // Zero dependencies: Node 20+ global fetch + node:crypto.
@@ -146,9 +149,36 @@ async function send(row, msg) {
   if (!res.ok) throw new Error(`resend ${res.status} ${await res.text()}`);
 }
 
+async function get(path, base = '/rest/v1') {
+  const res = await fetch(`${SUPABASE_URL}${base}${path}`, { headers: SB_HEADERS });
+  if (!res.ok) throw new Error(`${path} -> ${res.status} ${await res.text()}`);
+  return res.json();
+}
+
+async function previewRow(email) {
+  let user = null;
+  for (let page = 1; !user && page <= 20; page++) {
+    const r = await get(`/admin/users?page=${page}&per_page=200`, '/auth/v1');
+    const list = r.users || [];
+    user = list.find((u) => (u.email || '').toLowerCase() === email);
+    if (list.length < 200) break;
+  }
+  if (!user) { console.error(`No account with email ${email}`); return null; }
+  const since = new Date(Date.now() - 7 * 864e5).toISOString();
+  const items = await get(`/notifications?select=id,title,body&user_id=eq.${user.id}&type=eq.comment&created_at=gt.${since}&order=created_at.desc`);
+  if (!items.length) { console.error('No comments for that account in the last 7 days'); return null; }
+  const prof = await get(`/users?select=first_name&id=eq.${user.id}`);
+  return { user_id: user.id, email: user.email, first_name: prof[0] && prof[0].first_name, items };
+}
+
 async function main() {
-  let rows = (await rpc('get_comment_digest')) || [];
-  if (ONLY_EMAIL) rows = rows.filter((r) => (r.email || '').toLowerCase() === ONLY_EMAIL);
+  let rows;
+  if (ONLY_EMAIL) {
+    const r = await previewRow(ONLY_EMAIL);
+    rows = r ? [r] : [];
+  } else {
+    rows = (await rpc('get_comment_digest')) || [];
+  }
   console.log(`${rows.length} recap(s) to send${DRY_RUN ? ' (dry run)' : ''}${ONLY_EMAIL ? ' (only ' + ONLY_EMAIL + ')' : ''}`);
 
   let sent = 0, failed = 0;
@@ -160,7 +190,7 @@ async function main() {
     }
     try {
       await send(row, msg);
-      await rpc('mark_digest_sent', { p_ids: row.items.map((i) => i.id) });
+      if (!ONLY_EMAIL) await rpc('mark_digest_sent', { p_ids: row.items.map((i) => i.id) });
       sent++;
     } catch (e) {
       failed++;
