@@ -320,7 +320,15 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
 .rank-detail-title{font-family:var(--serif);font-size:20px;font-weight:700;color:var(--charcoal);margin-bottom:4px;}
 .rank-detail-sub{font-size:12px;color:var(--muted);margin-bottom:14px;}
 .rank-detail-avg{font-family:var(--serif);font-size:30px;font-weight:700;color:var(--terra);}
-.rank-detail-row{display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--border);}
+/* One tap = one thing on Prime Time / Full Lineup: the whole list row opens
+   the detail view (chevron says so); the other actions live there as
+   thumb-sized (>=44pt, Apple's minimum) buttons. */
+.rank-chev{flex-shrink:0;margin-left:6px;color:var(--muted);font-size:22px;line-height:1;}
+.rank-detail-actions{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0 14px;}
+.rank-act-btn{display:inline-flex;align-items:center;gap:6px;min-height:44px;padding:0 14px;border-radius:10px;border:1.5px solid var(--terra);background:none;color:var(--terra);font-family:var(--sans);font-size:14px;font-weight:700;cursor:pointer;white-space:nowrap;}
+.rank-act-btn.primary{background:var(--terra);color:#fff;}
+.rank-detail-row{display:flex;align-items:center;gap:10px;padding:7px 0;min-height:44px;border-bottom:1px solid var(--border);}
+.rank-detail-row-link{cursor:pointer;}
 .rank-detail-row:last-child{border-bottom:none;}
 .rank-detail-av{width:28px;height:28px;border-radius:50%;color:white;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
 .rank-detail-name{font-size:13px;font-weight:600;color:var(--charcoal);flex:1;}
@@ -3718,6 +3726,37 @@ window.backFromFullLineupView = function() {
   document.getElementById('room-picker-view').style.display = 'block';
 };
 
+// ---- Prime Time / Full Lineup rows: one tap = one thing ----
+// The list row opens the detail view and nothing inside it is separately
+// tappable (a 46px poster + a small badge/Add packed into one row meant
+// thumbs kept hitting the wrong one). The other actions are big buttons in
+// the detail view instead -- see rankDetailActionsHTML.
+function rankThumbHTML(s) {
+  return s.poster_path
+    ? '<img src="'+TMDB_IMG+s.poster_path+'" alt="" style="width:46px;height:46px;border-radius:8px;object-fit:cover;flex-shrink:0;margin-right:12px;" />'
+    : '<div style="width:46px;height:46px;border-radius:8px;background:var(--olive);flex-shrink:0;margin-right:12px;display:flex;align-items:center;justify-content:center;font-size:18px;">&#128252;</div>';
+}
+
+// Display-only "it's on your list" badge (no tap of its own in the list).
+function rankListBadgeHTML(s) {
+  var mine = findMyShowByTitle(s.title);
+  return '<span class="rank-action-col">' + (mine ? '<span class="on-list-badge">' + onListBadgeContent(mine) + '</span>' : '') + '</span>';
+}
+
+// The detail view's buttons: About this show + go to / add to your list.
+function rankDetailActionsHTML(s, addCall) {
+  var mine = findMyShowByTitle(s.title);
+  var html = '<div class="rank-detail-actions">';
+  if (mine && mine.show && mine.show.id) {
+    html += '<button type="button" class="rank-act-btn primary" onclick="jumpToOwnedShow(event,\''+mine.list+'\',\''+mine.show.id+'\')">'
+      + 'On ' + escAttr(ADD_LIST_LABELS[mine.list] || 'your list') + ' &rsaquo;</button>';
+  } else {
+    html += '<button type="button" class="rank-act-btn primary" onclick="'+addCall+'">&#10133; Add to my list</button>';
+  }
+  if (s.tmdb_id) html += '<button type="button" class="rank-act-btn" onclick="openShowDetails('+s.tmdb_id+')">About this show</button>';
+  return html + '</div>';
+}
+
 var _fullLineupListCache = [];
 function renderFullLineup(){
   if (!_fullLineupData) return;
@@ -3734,15 +3773,9 @@ function renderFullLineup(){
     return;
   }
   el.innerHTML = list.map(function(s,i){
-    var thumbClick = s.tmdb_id ? ' onclick="event.stopPropagation();openShowDetails('+s.tmdb_id+')" title="Show details" style="cursor:pointer;' : ' style="';
-    var thumb = s.poster_path
-      ? '<img src="'+TMDB_IMG+s.poster_path+'"'+thumbClick+'width:46px;height:46px;border-radius:8px;object-fit:cover;flex-shrink:0;margin-right:12px;" />'
-      : '<div'+thumbClick+'width:46px;height:46px;border-radius:8px;background:var(--olive);flex-shrink:0;margin-right:12px;display:flex;align-items:center;justify-content:center;font-size:18px;">&#128252;</div>';
+    var thumb = rankThumbHTML(s);
     var ratingHTML = '<span class="rank-rating-col">' + (s.avg_rating ? remoteAvgLabel(Number(s.avg_rating).toFixed(1)) : '') + '</span>';
-    var mine = findMyShowByTitle(s.title);
-    var actionHTML = '<span class="rank-action-col">' + (mine
-      ? onListBadgeHTML(mine)
-      : '<button onclick="event.stopPropagation();handleFullLineupAdd('+i+')" class="rank-add-btn">&#10133; Add</button>') + '</span>';
+    var actionHTML = rankListBadgeHTML(s) + '<span class="rank-chev">&rsaquo;</span>';
     return '<div class="rank-card" onclick="showFullLineupDetail('+i+')">'
       +'<span class="rank-badge">'+(i+1)+'</span>'
       +thumb
@@ -3785,10 +3818,6 @@ window.showFullLineupDetail = function(idx){
   var thumb=s.poster_path
     ? '<img src="'+TMDB_IMG+s.poster_path+'"'+clickAttr+' style="width:84px;height:84px;border-radius:10px;object-fit:cover;flex-shrink:0;" />'
     : '<div'+clickAttr+' style="width:84px;height:84px;border-radius:10px;background:var(--olive);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:30px;">&#128252;</div>';
-  var mine = findMyShowByTitle(s.title);
-  var addBtn = mine
-    ? onListBadgeHTML(mine, null, true)
-    : '<button onclick="handleFullLineupAdd('+idx+')" style="display:inline-flex;align-items:center;gap:4px;background:none;border:1px solid var(--terra);color:var(--terra);border-radius:8px;padding:2px 8px;font-family:var(--sans);font-size:11px;font-weight:700;cursor:pointer;line-height:1.6;white-space:nowrap;">&#10133; Add</button>';
   var ratingLine = hasRating
     ? '<div style="display:flex;align-items:baseline;gap:10px;margin-bottom:4px;"><span class="rank-detail-avg">'+avgNum.toFixed(1)+'</span><div style="display:flex;gap:2px;">'+remotes+'</div></div>'
       +'<div class="rank-detail-sub">rated by '+s.rating_count+' across ShowUp</div>'
@@ -3799,8 +3828,8 @@ window.showFullLineupDetail = function(idx){
     +'<div style="flex:1;min-width:0;">'
     +'<div class="rank-detail-title">'+escAttr(s.title)+'</div>'
     +(s.platform?'<span class="rank-platform" style="margin:0 0 6px 0;display:inline-block;">'+escAttr(s.platform)+'</span>':'')
-    +'<div>'+addBtn+'</div>'
     +'</div></div>'
+    +rankDetailActionsHTML(s, 'handleFullLineupAdd('+idx+')')
     +ratingLine
     +'</div>';
   document.getElementById('full-lineup-list').style.display='none';
@@ -3836,14 +3865,8 @@ function renderPrimeTimeList() {
   }
   listEl.innerHTML = matchLabel + list.map(function(s, i){
     var rank = i+1; var isGold = rank<=3;
-    var thumbClick = s.tmdb_id ? ' onclick="event.stopPropagation();openShowDetails('+s.tmdb_id+')" title="Show details" style="cursor:pointer;' : ' style="';
-    var thumb = s.poster_path
-      ? '<img src="'+TMDB_IMG+s.poster_path+'"'+thumbClick+'width:46px;height:46px;border-radius:8px;object-fit:cover;flex-shrink:0;margin-right:12px;" />'
-      : '<div'+thumbClick+'width:46px;height:46px;border-radius:8px;background:var(--olive);flex-shrink:0;margin-right:12px;display:flex;align-items:center;justify-content:center;font-size:18px;">&#128252;</div>';
-    var mine = findMyShowByTitle(s.title);
-    var mineBadge = '<span class="rank-action-col">' + (mine
-      ? onListBadgeHTML(mine)
-      : '<button onclick="event.stopPropagation();handlePrimeTimeAdd('+i+')" class="rank-add-btn">&#10133; Add</button>') + '</span>';
+    var thumb = rankThumbHTML(s);
+    var mineBadge = rankListBadgeHTML(s) + '<span class="rank-chev">&rsaquo;</span>';
     var ratingHTML = '<span class="rank-rating-col">'+remoteAvgLabel(s.avg.toFixed(1))+'</span>';
     return '<div class="rank-card" onclick="showPrimeTimeDetail('+i+')">'
       +'<span class="rank-badge'+(isGold?' gold':'')+'">#'+rank+'</span>'
@@ -3876,9 +3899,11 @@ window.showPrimeTimeDetail = function(idx){
     var rR=''; for(var n=1;n<=5;n++){rR+='<span style="opacity:'+(n<=r.rating?'1':'0.18')+';display:inline-block;">'+remoteIcon(13,n<=r.rating)+'</span>';}
     var jump = r.showId ? 'jumpToFriendShow(\''+r.id+'\',\''+r.showId+'\',\'They have hidden this one from their room.\')' : 'showFriend(\''+r.id+'\')';
     var isLink = !r.isMe && r.inNetwork && r.id;
-    var nameAttr = isLink ? ' class="rank-detail-name rank-detail-name-link" onclick="'+jump+'"' : ' class="rank-detail-name"';
+    // The whole row is the tap target for a friend (not just the name pill).
+    var rowAttr = isLink ? ' class="rank-detail-row rank-detail-row-link" onclick="'+jump+'"' : ' class="rank-detail-row"';
     var nameHTML = isLink ? '<span class="name-pill">'+escAttr(r.name)+'</span>' : escAttr(r.name);
-    return '<div class="rank-detail-row"><div class="rank-detail-av" style="background:#888">'+escAttr(r.initials||'?')+'</div><div'+nameAttr+'>'+nameHTML+'</div><div style="display:flex;gap:2px;">'+rR+'</div></div>';
+    return '<div'+rowAttr+'><div class="rank-detail-av" style="background:#888">'+escAttr(r.initials||'?')+'</div><div class="rank-detail-name">'+nameHTML+'</div><div style="display:flex;gap:2px;">'+rR+'</div>'
+      +(isLink?'<span class="rank-chev" style="font-size:18px;">&rsaquo;</span>':'')+'</div>';
   }).join('');
   if(neighbors.length){
     var nAvg=neighbors.reduce(function(a,r){return a+r.rating;},0)/neighbors.length;
@@ -3892,18 +3917,14 @@ window.showPrimeTimeDetail = function(idx){
   var thumb=s.poster_path
     ? '<img src="'+TMDB_IMG+s.poster_path+'"'+clickAttr+' style="width:84px;height:84px;border-radius:10px;object-fit:cover;flex-shrink:0;" />'
     : '<div'+clickAttr+' style="width:84px;height:84px;border-radius:10px;background:var(--olive);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:30px;">&#128252;</div>';
-  var mine=findMyShowByTitle(s.title);
-  var addBtn=mine
-    ? onListBadgeHTML(mine, null, true)
-    : '<button onclick="handlePrimeTimeAdd('+idx+')" style="display:inline-flex;align-items:center;gap:4px;background:none;border:1px solid var(--terra);color:var(--terra);border-radius:8px;padding:2px 8px;font-family:var(--sans);font-size:11px;font-weight:700;cursor:pointer;line-height:1.6;white-space:nowrap;">&#10133; Add</button>';
   panel.innerHTML='<div class="rank-detail">'
     +'<div style="display:flex;gap:12px;align-items:flex-start;margin-bottom:4px;">'
     +thumb
     +'<div style="flex:1;min-width:0;">'
     +'<div class="rank-detail-title">'+escAttr(s.title)+'</div>'
     +(s.platform?'<span class="rank-platform" style="margin:0 0 6px 0;display:inline-block;">'+escAttr(s.platform)+'</span>':'')
-    +'<div>'+addBtn+'</div>'
     +'</div></div>'
+    +rankDetailActionsHTML(s, 'handlePrimeTimeAdd('+idx+')')
     +'<div style="display:flex;align-items:baseline;gap:10px;margin-bottom:4px;">'
     +'<span class="rank-detail-avg">'+s.avg.toFixed(1)+'</span>'
     +'<div style="display:flex;gap:2px;">'+remotes+'</div>'
