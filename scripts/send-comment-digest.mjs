@@ -171,7 +171,15 @@ async function previewRow(email) {
   return { user_id: user.id, email: user.email, first_name: prof[0] && prof[0].first_name, items };
 }
 
+// Scheduled runs before this date do nothing (an early recap went out on
+// Wed Oct 7, 2026, so that week's Sunday is skipped). Harmless afterwards.
+const FIRST_SEND = '2026-10-18';
+
 async function main() {
+  if (process.env.GITHUB_EVENT_NAME === 'schedule' && new Date().toISOString().slice(0, 10) < FIRST_SEND) {
+    console.log(`Scheduled sends start ${FIRST_SEND}; skipping.`);
+    return;
+  }
   let rows;
   if (ONLY_EMAIL) {
     const r = await previewRow(ONLY_EMAIL);
