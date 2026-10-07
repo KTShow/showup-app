@@ -3808,7 +3808,7 @@ function _hotRow(s, i, rankLabel) {
   var platform = s.platform ? '<div class="rank-meta-line"><span class="rank-platform">' + escAttr(s.platform) + '</span></div>' : '';
   var score = s.trending
     ? (s.year ? '<div class="rank-score-line">Since ' + s.year + '</div>' : '')
-    : rankScoreLineHTML(s.avg_rating ? Number(s.avg_rating) : null, s.people + (s.people == 1 ? ' has it' : ' have it'));
+    : rankScoreLineHTML(s.avg_rating ? Number(s.avg_rating) : null, 'On ' + s.people + (s.people == 1 ? ' list' : ' lists'));
   return '<div class="rank-card" onclick="showFullLineupDetail(' + i + ')">'
     + '<span class="rank-badge' + (rankLabel <= 3 ? ' gold' : '') + '">' + rankLabel + '</span>'
     + rankThumbHTML(s)
@@ -3914,7 +3914,7 @@ window.showFullLineupDetail = function(idx){
     ? '<div style="display:flex;align-items:baseline;gap:10px;margin-bottom:4px;"><span class="rank-detail-avg">'+avgNum.toFixed(1)+'</span><div style="display:flex;gap:2px;">'+remotes+'</div></div>'
       +'<div class="rank-detail-sub">rated by '+s.rating_count+' across ShowUp</div>'
     : '<div class="rank-detail-sub">'+(s.trending ? 'Trending in the US &mdash; not on ShowUp yet. Be the first!' : 'Not yet rated by anyone on ShowUp.')+'</div>';
-  if (!s.trending && s.people) ratingLine += '<div class="rank-detail-sub" style="margin-top:-8px;">'+s.people+(s.people==1?' person on ShowUp has it':' people on ShowUp have it')+'</div>';
+  if (!s.trending && s.people) ratingLine += '<div class="rank-detail-sub" style="margin-top:-8px;">'+s.people+(s.people==1?' person on ShowUp has this on a list':' people on ShowUp have this on a list')+'</div>';
   panel.innerHTML='<div class="rank-detail">'
     +'<div style="display:flex;gap:12px;align-items:flex-start;margin-bottom:4px;">'
     +thumb
