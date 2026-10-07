@@ -311,6 +311,14 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
    than any row actually used, which on a narrow mobile card both showed
    up as visible dead space AND starved the title column next to it. */
 .rank-rating-col{flex-shrink:0;width:40px;margin-left:8px;font-size:13px;color:var(--muted);white-space:nowrap;text-align:right;}
+/* Prime Time / Hot Right Now: the rating sits on its own line under the
+   title ("remote 4.6 · 12 rated") instead of a fixed right-hand column,
+   which overlapped the count at larger text sizes. Wraps, never overlaps. */
+.rank-score-line{display:flex;flex-wrap:wrap;align-items:center;gap:4px 6px;font-size:12px;color:var(--muted);}
+.rank-score-line b{color:var(--charcoal);font-weight:700;}
+.hot-seg{display:flex;gap:6px;margin:4px 0 14px;}
+.hot-seg button{flex:1;min-height:44px;border-radius:10px;border:1.5px solid var(--terra);background:none;color:var(--terra);font-family:var(--sans);font-size:14px;font-weight:700;cursor:pointer;}
+.hot-seg button.active{background:var(--terra);color:#fff;}
 .rank-action-col{flex-shrink:0;width:72px;margin-left:8px;text-align:right;}
 .rank-add-btn{display:inline-flex;align-items:center;gap:4px;background:none;border:1px solid var(--terra);color:var(--terra);border-radius:8px;padding:2px 8px;font-family:var(--sans);font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;}
 .rank-platform{font-size:10px;font-weight:700;color:white;background:var(--olive);padding:2px 8px;border-radius:10px;white-space:nowrap;flex-shrink:0;}
@@ -3739,6 +3747,7 @@ window.openFullLineupView = async function() {
   listEl.innerHTML = '<div class="empty"><div class="empty-icon">&#8987;</div>Loading&hellip;</div>';
   await loadFullLineupData();
   renderFullLineup();
+  _fillTrendingPlatforms();
 };
 
 window.backFromFullLineupView = function() {
@@ -3757,6 +3766,14 @@ function rankThumbHTML(s) {
   return s.poster_path
     ? '<img src="'+TMDB_IMG+s.poster_path+'" alt="" style="width:46px;height:46px;border-radius:8px;object-fit:cover;flex-shrink:0;margin-right:12px;" />'
     : '<div style="width:46px;height:46px;border-radius:8px;background:var(--olive);flex-shrink:0;margin-right:12px;display:flex;align-items:center;justify-content:center;font-size:18px;">&#128252;</div>';
+}
+
+// "remote 4.6 · 12 rated" line under the title (see .rank-score-line).
+function rankScoreLineHTML(avg, countText) {
+  var parts = [];
+  if (avg != null && !isNaN(avg)) parts.push('<span style="display:inline-flex;align-items:center;gap:3px;">' + remoteIcon(12, true) + '<b>' + Number(avg).toFixed(1) + '</b></span>');
+  if (countText) parts.push('<span>' + countText + '</span>');
+  return parts.length ? '<div class="rank-score-line">' + parts.join('<span aria-hidden="true">&middot;</span>') + '</div>' : '';
 }
 
 // Display-only "it's on your list" badge (no tap of its own in the list).
@@ -3788,19 +3805,17 @@ var HOT_TOTAL = 25;
 var _fullLineupListCache = [];
 
 function _hotRow(s, i, rankLabel) {
-  var ratingHTML = '<span class="rank-rating-col">' + (s.avg_rating ? remoteAvgLabel(Number(s.avg_rating).toFixed(1)) : '') + '</span>';
-  var meta = s.trending
-    ? (s.year ? '<span class="rank-count-inline">' + s.year + '</span>' : '')
-    : (s.platform ? '<span class="rank-platform">' + escAttr(s.platform) + '</span>' : '')
-      + '<span class="rank-count-inline">' + s.people + (s.people == 1 ? ' has it' : ' have it') + '</span>';
+  var platform = s.platform ? '<div class="rank-meta-line"><span class="rank-platform">' + escAttr(s.platform) + '</span></div>' : '';
+  var score = s.trending
+    ? (s.year ? '<div class="rank-score-line">Since ' + s.year + '</div>' : '')
+    : rankScoreLineHTML(s.avg_rating ? Number(s.avg_rating) : null, s.people + (s.people == 1 ? ' has it' : ' have it'));
   return '<div class="rank-card" onclick="showFullLineupDetail(' + i + ')">'
-    + '<span class="rank-badge' + (i < 3 ? ' gold' : '') + '">' + rankLabel + '</span>'
+    + '<span class="rank-badge' + (rankLabel <= 3 ? ' gold' : '') + '">' + rankLabel + '</span>'
     + rankThumbHTML(s)
     + '<div class="rank-info">'
     + '<div class="rank-title-text">' + escAttr(s.title || '') + '</div>'
-    + (meta ? '<div class="rank-meta-line">' + meta + '</div>' : '')
+    + platform + score
     + '</div>'
-    + ratingHTML
     + rankListBadgeHTML(s) + '<span class="rank-chev">&rsaquo;</span>'
     + '</div>';
 }
@@ -3824,20 +3839,46 @@ function renderFullLineup(){
       : '<div class="empty"><div class="empty-icon">&#128293;</div>Nothing to show right now &mdash; check back soon.</div>';
     return;
   }
-  var head = function(t, sub) {
-    return '<div style="margin:14px 0 8px;"><div style="font-size:13px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:var(--charcoal);">' + t + '</div>'
-      + '<div style="font-size:12px;color:var(--muted);">' + sub + '</div></div>';
-  };
-  var html = '';
-  if (crowd.length) {
-    html += head('&#128293; Hot on ShowUp', 'Current shows people here are watching and rating');
-    html += crowd.map(function(s, i) { return _hotRow(s, i, i + 1); }).join('');
-  }
-  if (trending.length) {
-    html += head('&#128200; Trending in the US', 'Popular on US streaming right now');
-    html += trending.map(function(s, j) { return _hotRow(s, crowd.length + j, '&#128200;'); }).join('');
+  // Two tabs instead of one long scroll (people rarely got past 25 rows to
+  // reach the second list). Trending first: it's never empty and it's the
+  // "what's big right now" people asked for.
+  if (!crowd.length && _hotTab === 'showup' && !q) _hotTab = 'trending';
+  var seg = '<div class="hot-seg" role="tablist">'
+    + '<button type="button" role="tab" class="' + (_hotTab === 'trending' ? 'active' : '') + '" onclick="setHotTab(\'trending\')">&#128200; Trending in the US</button>'
+    + '<button type="button" role="tab" class="' + (_hotTab === 'showup' ? 'active' : '') + '" onclick="setHotTab(\'showup\')">&#128293; Hot on ShowUp</button>'
+    + '</div>';
+  var sub = function(t) { return '<div style="font-size:12px;color:var(--muted);margin:-6px 0 10px;">' + t + '</div>'; };
+  var html = seg;
+  if (_hotTab === 'trending') {
+    html += sub('Popular on US streaming right now');
+    html += trending.length
+      ? trending.map(function(s, j) { return _hotRow(s, crowd.length + j, j + 1); }).join('')
+      : '<div class="empty"><div class="empty-icon">&#128200;</div>' + (q ? 'No trending shows match "' + escAttr(q) + '".' : 'Trending list unavailable right now.') + '</div>';
+  } else {
+    html += sub('Current shows people on ShowUp are watching and rating');
+    html += crowd.length
+      ? crowd.map(function(s, i) { return _hotRow(s, i, i + 1); }).join('')
+      : '<div class="empty"><div class="empty-icon">&#128293;</div>' + (q ? 'No ShowUp shows match "' + escAttr(q) + '".' : 'Nothing yet.') + '</div>';
   }
   el.innerHTML = html;
+}
+
+var _hotTab = 'trending';
+window.setHotTab = function(t) { _hotTab = t; renderFullLineup(); };
+
+// Trending rows don't come with a platform (TMDB discover doesn't include
+// providers), so look each up after the list is on screen and fill them in.
+async function _fillTrendingPlatforms() {
+  var list = (_fullLineupData && _fullLineupData.trending) || [];
+  var todo = list.filter(function(s) { return !s.platform && !s._platformChecked; }).slice(0, 40);
+  if (!todo.length) return;
+  await Promise.all(todo.map(function(s) {
+    s._platformChecked = true;
+    return fetchAutoPlatform(s.tmdb_id).then(function(p) { if (p) s.platform = p; });
+  }));
+  var view = document.getElementById('full-lineup-view');
+  var detail = document.getElementById('full-lineup-detail-view');
+  if (view && view.style.display === 'block' && !(detail && detail.style.display === 'block')) renderFullLineup();
 }
 
 window.handleFullLineupAdd = function(idx){
@@ -3919,17 +3960,14 @@ function renderPrimeTimeList() {
     var rank = i+1; var isGold = rank<=3;
     var thumb = rankThumbHTML(s);
     var mineBadge = rankListBadgeHTML(s) + '<span class="rank-chev">&rsaquo;</span>';
-    var ratingHTML = '<span class="rank-rating-col">'+remoteAvgLabel(s.avg.toFixed(1))+'</span>';
     return '<div class="rank-card" onclick="showPrimeTimeDetail('+i+')">'
       +'<span class="rank-badge'+(isGold?' gold':'')+'">#'+rank+'</span>'
       +thumb
       +'<div class="rank-info">'
       +'<div class="rank-title-text">'+escAttr(s.title)+'</div>'
-      +'<div class="rank-meta-line">'
-      +(s.platform?'<span class="rank-platform">'+escAttr(s.platform)+'</span>':'')
-      +'<span class="rank-count-inline">'+s.count+' rated</span>'
-      +'</div></div>'
-      +ratingHTML
+      +(s.platform?'<div class="rank-meta-line"><span class="rank-platform">'+escAttr(s.platform)+'</span></div>':'')
+      +rankScoreLineHTML(s.avg, s.count+' rated')
+      +'</div>'
       +mineBadge
       +'</div>';
   }).join('');
