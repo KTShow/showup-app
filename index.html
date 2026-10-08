@@ -203,6 +203,14 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
 .room-tile-meta{font-size:12px;color:var(--muted);}
 .room-tile-create{background:none;border:2px dashed var(--border);border-radius:var(--radius);padding:16px 14px;text-align:center;cursor:pointer;transition:all 0.2s;color:var(--muted);font-family:var(--sans);font-size:14px;font-weight:600;display:flex;align-items:center;justify-content:center;min-height:64px;}
 .room-tile-create:hover{border-color:var(--terra);color:var(--terra);}
+/* One-room users' "front door" card (admin preview for now -- see renderRoomPicker). */
+.room-card-big{grid-column:1/-1;background:var(--cream);border:2px solid var(--terra);border-radius:var(--radius);padding:18px;cursor:pointer;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:6px;}
+.rcb-name{font-family:var(--serif);font-size:22px;font-weight:700;color:var(--fig);line-height:1.2;}
+.rcb-people{font-size:14px;color:var(--charcoal);}
+.rcb-new{font-size:14px;color:var(--muted);}
+.rcb-new.has-new{color:var(--terra);font-weight:700;}
+.rcb-cta{margin-top:8px;min-height:44px;border-radius:10px;color:#fff;font-size:15px;font-weight:700;display:flex;align-items:center;justify-content:center;}
+.room-new-pill{display:inline-block;margin-left:6px;background:var(--terra);color:#fff;font-size:11px;font-weight:700;padding:1px 7px;border-radius:9px;vertical-align:middle;}
 .friends-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(98px,1fr));gap:9px;margin-bottom:24px;}
 .friend-card{position:relative;background:var(--cream);border:1px solid var(--border);border-radius:var(--radius);padding:11px;text-align:left;cursor:pointer;transition:all 0.2s;box-shadow:var(--shadow);}
 .friend-card.is-muted{opacity:0.5;}
@@ -1193,6 +1201,16 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
         <button class="settings-row" onclick="openEditAnnouncementModal()">
           <span class="settings-row-icon">&#128226;</span><span class="settings-row-label">Edit Announcement Banner</span><span class="settings-row-arrow">&#8250;</span>
         </button>
+        <div class="settings-row" style="cursor:default;align-items:flex-start;">
+          <span class="settings-row-icon">&#128064;</span>
+          <span class="settings-row-label">Preview room cards<span class="settings-row-sub">Only you see this. "One room" shows your busiest room the way one-room users would see it.</span>
+            <span class="textsize-seg" id="roomcard-preview-seg" role="group" aria-label="Preview room cards">
+              <button type="button" data-v="" onclick="setRoomCardPreview('')">Off</button>
+              <button type="button" data-v="one" onclick="setRoomCardPreview('one')">One room</button>
+              <button type="button" data-v="multi" onclick="setRoomCardPreview('multi')">Several rooms</button>
+            </span>
+          </span>
+        </div>
       </div>
     </div>
 
@@ -1295,6 +1313,8 @@ var state = {
   currentRoomIsAdminView: false, // viewing as admin, not a genuine owner/member -- read-only, no self-tile
   currentRoomTheme: 'tuscany',
   currentRoomConversationsLastSeen: null, // per-room, from room_last_seen -- set by getFriendsWithShows()
+  roomLastSeen: {},      // roomId -> conversations last-seen time, for room cards' "N new comments"
+  roomActivity: {},      // roomId -> { names, commentTimes }, from preloadFriendsInBackground
   influencerNames: {},   // who-recommended-what, resolved independent of room (see loadInfluencerNames)
   myRooms: [],           // rooms the user owns or belongs to, for the room picker
   myRoomsLoaded: false,
@@ -3384,14 +3404,73 @@ async function loadAllRoomsSearchData() {
   renderRoomPickerSearch();
 }
 
+// New room cards (big "front door" card for one-room users, "N new" pill on
+// multi-room tiles) are ADMIN PREVIEW ONLY until Tracey approves them:
+// Settings > Admin > "Preview room cards" (Off / One room / Several rooms).
+// "One room" shows an admin their busiest room exactly as a one-room user
+// would see it. To release: make _roomCardMode() return 'one'/'multi' by
+// room count for everyone.
+var ROOMCARD_PREVIEW_KEY = 'showup_roomcard_preview';
+function _roomCardPreview() {
+  if (!(state.user && state.user.isAdmin)) return '';
+  try { return localStorage.getItem(ROOMCARD_PREVIEW_KEY) || ''; } catch (e) { return ''; }
+}
+function _roomCardMode() {
+  return _roomCardPreview(); // '' = old tiles, 'one' = big card, 'multi' = tiles + pills
+}
+
+function _roomPeopleLine(roomId) {
+  var a = state.roomActivity[roomId];
+  if (!a || !a.names.length) return '';
+  var shown = a.names.slice(0, 3);
+  var extra = a.names.length - shown.length;
+  return 'You, ' + shown.map(escAttr).join(', ') + (extra > 0 ? ' +' + extra : '');
+}
+
 function renderRoomPicker() {
   var grid = document.getElementById('room-picker-grid');
   if (!grid) return;
-  var tiles = state.myRooms.slice().sort(function(a,b){ return a.name.localeCompare(b.name); }).map(function(r) {
+  var rooms = state.myRooms.slice().sort(function(a,b){ return a.name.localeCompare(b.name); });
+  var mode = _roomCardMode();
+  var createTile = '<div class="room-tile-create" onclick="openCreateRoomModal()">+ Create New Room</div>';
+
+  if (mode === 'one' && rooms.length) {
+    var r = rooms.slice().sort(function(a, b) { return (b.member_count || 0) - (a.member_count || 0); })[0];
     var theme = LIVING_ROOM_THEMES[r.theme] || LIVING_ROOM_THEMES.tuscany;
-    return '<div class="room-tile" onclick="enterLivingRoom(\''+r.id+'\')" style="border-left:4px solid '+theme.color+';"><div class="room-tile-name">'+escAttr(r.name)+'</div><div class="room-tile-meta">'+r.member_count+' member'+(r.member_count===1?'':'s')+'</div></div>';
+    var n = _roomNewComments(r.id);
+    var people = _roomPeopleLine(r.id);
+    grid.innerHTML = '<div class="room-card-big" role="button" tabindex="0" onclick="enterLivingRoom(\'' + r.id + '\')" style="border-color:' + theme.color + ';">'
+      + '<div class="rcb-name">' + (theme.emoji ? theme.emoji + ' ' : '&#127968; ') + escAttr(r.name) + '</div>'
+      + '<div class="rcb-people">' + (people || (r.member_count + ' member' + (r.member_count === 1 ? '' : 's'))) + '</div>'
+      + '<div class="rcb-new' + (n ? ' has-new' : '') + '">' + (n ? '&#128172; ' + n + ' new comment' + (n === 1 ? '' : 's') : 'See what your crowd is watching') + '</div>'
+      + '<div class="rcb-cta" style="background:' + theme.color + ';">Enter your Living Room &rsaquo;</div>'
+      + '</div>' + createTile;
+    return;
+  }
+
+  var tiles = rooms.map(function(r) {
+    var theme = LIVING_ROOM_THEMES[r.theme] || LIVING_ROOM_THEMES.tuscany;
+    var n = mode === 'multi' ? _roomNewComments(r.id) : 0;
+    var pill = n ? ' <span class="room-new-pill">' + n + ' new</span>' : '';
+    return '<div class="room-tile" onclick="enterLivingRoom(\''+r.id+'\')" style="border-left:4px solid '+theme.color+';"><div class="room-tile-name">'+escAttr(r.name)+'</div><div class="room-tile-meta">'+r.member_count+' member'+(r.member_count===1?'':'s')+pill+'</div></div>';
   }).join('');
-  grid.innerHTML = tiles + '<div class="room-tile-create" onclick="openCreateRoomModal()">+ Create New Room</div>';
+  grid.innerHTML = tiles + createTile;
+}
+
+window.setRoomCardPreview = function(v) {
+  try { if (v) localStorage.setItem(ROOMCARD_PREVIEW_KEY, v); else localStorage.removeItem(ROOMCARD_PREVIEW_KEY); } catch (e) {}
+  _renderRoomCardPreviewSeg();
+  renderRoomPicker();
+  showToast(v ? 'Preview on — open the Living Room tab to see it.' : 'Preview off.');
+};
+
+function _renderRoomCardPreviewSeg() {
+  var cur = _roomCardPreview();
+  document.querySelectorAll('#roomcard-preview-seg button').forEach(function(b) {
+    var on = b.getAttribute('data-v') === cur;
+    b.classList.toggle('active', on);
+    b.setAttribute('aria-pressed', on ? 'true' : 'false');
+  });
 }
 
 // Grouped by PERSON, not by show/room -- searching finds the people who
@@ -4743,6 +4822,7 @@ window.markConversationsSeen = async function(){
   if (!state.currentRoomId) return;
   var now=new Date().toISOString();
   state.currentRoomConversationsLastSeen = now;
+  state.roomLastSeen[state.currentRoomId] = now;
   updateConversationsBadge();
   try {
     const { data: { user } } = await sb.auth.getUser();
@@ -5789,6 +5869,7 @@ async function getFriendsWithShows(roomId) {
 
   // Per-room "since you last looked" -- see room_last_seen table.
   state.currentRoomConversationsLastSeen = bundle.conversations_last_seen_at || null;
+  state.roomLastSeen[roomId] = bundle.conversations_last_seen_at || null; // per room, for room cards
 
   var allUsers = bundle.friends || [];
   if (!allUsers.length) return [];
@@ -6377,6 +6458,7 @@ window.goToSettings = function() {
   renderAlertsUI();
   var adminSection = document.getElementById('settings-admin-section');
   if (adminSection) adminSection.style.display = (state.user && state.user.isAdmin) ? 'block' : 'none';
+  _renderRoomCardPreviewSeg();
 };
 window.backFromSettings = function() { showScreen('app'); };
 
@@ -7304,6 +7386,10 @@ async function preloadFriendsInBackground() {
     var results = await Promise.all(data.map(function(room) {
       return getFriendsWithShows(room.id).catch(function(e) { console.error('preload room friends error:', room.id, e); return []; });
     }));
+    // Room-card summaries (who's in it + when others commented), taken per
+    // room BEFORE the merge below -- the merge folds other rooms' comments
+    // into the first room's objects, which would inflate its count.
+    data.forEach(function(room, i) { state.roomActivity[room.id] = _summarizeRoom(results[i] || []); });
     var merged = {};
     results.forEach(function(list, i) {
       // Tag each friend with a room they're actually in -- lets showFriend()
@@ -7334,7 +7420,50 @@ async function preloadFriendsInBackground() {
     state.allFriendsAcrossRooms = Object.values(merged);
     state.friendsLoadedAt = Date.now();
     renderList('watching'); renderList('watchlist'); renderList('watched');
+    // Room cards can now show names + "N new comments".
+    var picker = document.getElementById('room-picker-view');
+    if (picker && picker.style.display !== 'none') renderRoomPicker();
   } catch(e) { console.error('Background friends preload error:', e); }
+}
+
+// For one room's friend list: first names (for "You, George, Kristy +3") and
+// the times other people commented in that room within the Conversations
+// window -- on members' shows, plus members' comments on your own shows
+// (same scope as that room's Conversations feed). Counted against
+// state.roomLastSeen at render time, so visiting the room clears it.
+function _summarizeRoom(list) {
+  var myId = state.user ? state.user.id : null;
+  var cutoff = Date.now() - CONVERSATIONS_WINDOW_MS;
+  var memberIds = {};
+  var names = [];
+  var times = [];
+  list.forEach(function(f) {
+    if (!f) return;
+    memberIds[f.id] = true;
+    names.push((f.name || '').split(' ')[0]);
+    ['watching', 'watchlist', 'watched'].forEach(function(lk) {
+      (f[lk] || []).forEach(function(s) {
+        (s.reactions || []).forEach(function(r) {
+          if (r.reactorId && r.reactorId !== myId && r.reactedAt && new Date(r.reactedAt).getTime() > cutoff) times.push(r.reactedAt);
+        });
+      });
+    });
+  });
+  ['watching', 'watchlist', 'watched'].forEach(function(lk) {
+    (state[lk] || []).forEach(function(s) {
+      (s.reactions || []).forEach(function(r) {
+        if (r.reactorId && r.reactorId !== myId && memberIds[r.reactorId] && r.reactedAt && new Date(r.reactedAt).getTime() > cutoff) times.push(r.reactedAt);
+      });
+    });
+  });
+  return { names: names, commentTimes: times };
+}
+
+function _roomNewComments(roomId) {
+  var a = state.roomActivity[roomId];
+  if (!a) return 0;
+  var seen = state.roomLastSeen[roomId] ? new Date(state.roomLastSeen[roomId]).getTime() : 0;
+  return a.commentTimes.filter(function(t) { return new Date(t).getTime() > seen; }).length;
 }
 
 // ============================================================
