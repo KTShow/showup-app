@@ -1851,7 +1851,7 @@ function titleCommentsPool(title, pool) {
           if(!r.reactorId||!r.text) return;
           var isMe=r.reactorId===myId;
           if(!isMe && !friendsById[r.reactorId]) return;
-          comments.push({name:nameFor(r.reactorId),text:r.text,reactedAt:r.reactedAt});
+          comments.push({id:r.id,isMe:isMe,name:nameFor(r.reactorId),text:r.text,reactedAt:r.reactedAt});
         });
       });
     });
@@ -1864,13 +1864,41 @@ function talkPreviewHTML(title, pool) {
   var comments=titleCommentsPool(title, pool);
   if(!comments.length) return '';
   var preview=comments.slice(0,2);
+  // Your newest comment always makes the preview, so a duplicate or a
+  // second thought can be deleted right from the tile (the X below).
+  var myNewest=comments.find(function(c){ return c.isMe && c.id; });
+  if (myNewest && preview.indexOf(myNewest)<0) preview=[preview[0], myNewest];
   var scope = pool ? 'room' : 'all';
   return '<div style="display:flex;flex-direction:column;gap:4px;margin:4px 0;">'
     + preview.map(function(c){
-        return '<div style="font-size:12px;color:var(--charcoal);line-height:1.35;"><span style="font-weight:600;">'+escAttr(c.name)+':</span> '+escAttr(c.text)+'</div>';
+        var del = (c.isMe && c.id) ? '<button type="button" class="btn-delete-react" title="Delete your comment" aria-label="Delete your comment" onclick="event.stopPropagation();deleteCardComment(\''+c.id+'\')">&#x2715;</button>' : '';
+        return '<div style="display:flex;align-items:center;gap:4px;"><div style="flex:1;min-width:0;font-size:12px;color:var(--charcoal);line-height:1.35;"><span style="font-weight:600;">'+escAttr(c.name)+':</span> '+escAttr(c.text)+'</div>'+del+'</div>';
       }).join('')
     + '</div><div style="display:inline-flex;align-items:center;gap:4px;font-size:11px;color:var(--fig);font-weight:600;cursor:pointer;" onclick="openShowTalkFor(\''+escAttr(title).replace(/'/g,"\\'")+'\',\''+scope+'\')">&#128172; '+comments.length+' '+(comments.length===1?'person':'people')+' talking about this — see full thread</div>';
 }
+
+// Delete one of YOUR comments straight from a show tile's comment preview.
+// The comment may live on your own copy of the show or a friend's, in any
+// of the loaded data sets -- drop it from all of them, then save.
+window.deleteCardComment = async function(reactionId){
+  if (!reactionId || !confirm('Delete this comment?')) return;
+  var pools = [[{watching:state.watching,watchlist:state.watchlist,watched:state.watched}], state.friends||[], state.allFriendsAcrossRooms||[]];
+  pools.forEach(function(pool){
+    pool.forEach(function(src){
+      if (!src) return;
+      ['watching','watchlist','watched'].forEach(function(lk){
+        (src[lk]||[]).forEach(function(sh){
+          if (sh && sh.reactions) sh.reactions = sh.reactions.filter(function(r){ return r.id !== reactionId; });
+        });
+      });
+    });
+  });
+  renderList('watching'); renderList('watchlist'); renderList('watched');
+  var fdv = document.getElementById('friend-detail-view');
+  if (fdv && fdv.style.display === 'block' && state.lastViewedFriend) { try { showFriend(state.lastViewedFriend); } catch (e) {} }
+  try { await dbDeleteReaction(reactionId); showToast('Comment deleted.'); }
+  catch (e) { console.error('deleteCardComment error:', e); showToast('Couldn’t delete that — try again in a moment.'); }
+};
 
 // Jumps to this show's Show Talk detail panel from anywhere in the app.
 // scope: 'room' keeps Show Talk bounded to whichever room is currently
