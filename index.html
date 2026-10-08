@@ -5902,6 +5902,7 @@ function showScreen(name) {
     window._mark('first-screen-visible: ' + name);
     window._bootReport();
   }
+  _updateBackToTop(); // only shows on long screens (app, Settings, Profile)
 }
 
 // ============================================================
