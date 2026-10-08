@@ -5686,12 +5686,18 @@ async function getLastVisitTime() {
   return (data && data[0]) ? data[0].created_at : null;
 }
 
+// Deletes the whole account server-side (see sql/add_delete_my_account.sql):
+// rooms you created pass to the earliest-joined member, then your profile,
+// data and login are removed.
 async function deleteUserData() {
   const { data: { user } } = await sb.auth.getUser();
   if (!user) throw new Error('Not authenticated');
-  const { error } = await sb.from('users').delete().eq('id', user.id);
+  await forgetThisDeviceForAlerts();
+  const { error } = await sb.rpc('delete_my_account');
   if (error) throw error;
-  await sb.auth.signOut();
+  // The login no longer exists, so the server may reject the sign-out --
+  // clearing the local session is all that matters here.
+  try { await sb.auth.signOut({ scope: 'local' }); } catch (e) {}
 }
 
 // ============================================================
@@ -7238,14 +7244,15 @@ window.handleSignOut = async function() {
 };
 
 window.handleDeleteData = async function() {
-  if (!confirm('Are you sure? This permanently deletes your account and all your data. This cannot be undone.')) return;
+  if (!confirm('Are you sure? This permanently deletes your ShowUp account and all your data, including your shows, ratings and comments. Any Living Room you created will be handed to another member. This cannot be undone.')) return;
   try {
     await deleteUserData();
     state.user = null;
     showScreen('login');
+    showToast('Your account has been deleted.');
   } catch(e) {
     console.error('Delete error:', e);
-    alert('Error deleting account. Please contact us at hello@showup.app');
+    alert('Sorry, we couldn’t delete your account. Please email us at admin@showuproom.com and we’ll take care of it.');
   }
 };
 
