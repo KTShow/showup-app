@@ -3399,12 +3399,13 @@ function _roomCardMode() {
   return state.myRooms.length === 1 ? 'one' : 'multi';
 }
 
+// Friends' first names only -- "You" is implied (you're in every room).
 function _roomPeopleLine(roomId, max) {
   var a = state.roomActivity[roomId];
   if (!a || !a.names.length) return '';
   var shown = a.names.slice(0, max || 3);
   var extra = a.names.length - shown.length;
-  return 'You, ' + shown.map(escAttr).join(', ') + (extra > 0 ? ' +' + extra : '');
+  return shown.map(escAttr).join(', ') + (extra > 0 ? ' +' + extra : '');
 }
 
 function renderRoomPicker() {
@@ -3421,7 +3422,7 @@ function renderRoomPicker() {
     var people = _roomPeopleLine(r.id);
     grid.innerHTML = '<div class="room-card-big" role="button" tabindex="0" onclick="enterLivingRoom(\'' + r.id + '\')" style="border-color:' + theme.color + ';">'
       + '<div class="rcb-name">' + (theme.emoji ? theme.emoji + ' ' : '&#127968; ') + escAttr(r.name) + '</div>'
-      + '<div class="rcb-people">' + (people || (r.member_count + ' member' + (r.member_count === 1 ? '' : 's'))) + '</div>'
+      + '<div class="rcb-people">' + (people ? 'With ' + people : (r.member_count + ' member' + (r.member_count === 1 ? '' : 's'))) + '</div>'
       + '<div class="rcb-new' + (n ? ' has-new' : '') + '">' + (n ? '&#128172; ' + n + ' new comment' + (n === 1 ? '' : 's') : 'See what your crowd is watching') + '</div>'
       + '<div class="rcb-cta" style="background:' + theme.color + ';">Enter your Living Room &rsaquo;</div>'
       + '</div>' + createTile;
