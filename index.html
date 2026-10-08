@@ -3891,17 +3891,18 @@ function rankDetailActionsHTML(s, addCall) {
   return html + '</div>';
 }
 
-// Hot Right Now (lives in the old Full Lineup view/ids): two parts --
-// "Hot on ShowUp" (current shows people here have, from get_hot_right_now)
-// then "Trending in the US" (TMDB's popular current US-streaming shows,
-// minus anything already in part one) to keep the list full while ShowUp is
-// small. One combined list cache, so the detail view is shared.
-var HOT_TOTAL = 25;
+// Hot Right Now (lives in the old Full Lineup view/ids): two tabs, each its
+// own top 20 -- "Trending in the US" (TMDB's popular current US-streaming
+// shows) and "Hot on ShowUp" (current shows people here have, from
+// get_hot_right_now). A show can be in both; a trending show people here
+// have picks up its ShowUp rating / list count. One combined list cache, so
+// the detail view is shared.
+var HOT_TOTAL = 20;
 var _fullLineupListCache = [];
 
 function _hotRow(s, i, rankLabel) {
   var platform = s.platform ? '<div class="rank-meta-line"><span class="rank-platform">' + escAttr(s.platform) + '</span></div>' : '';
-  var score = s.trending
+  var score = (s.trending && !s.people)
     ? (s.year ? '<div class="rank-score-line">Since ' + s.year + '</div>' : '')
     : rankScoreLineHTML(s.avg_rating ? Number(s.avg_rating) : null, 'On ' + s.people + (s.people == 1 ? ' list' : ' lists'));
   return '<div class="rank-card" onclick="showFullLineupDetail(' + i + ')">'
@@ -3919,10 +3920,13 @@ function renderFullLineup(){
   if (!_fullLineupData) return;
   var el = document.getElementById('full-lineup-list');
   var crowd = (_fullLineupData.shows || []).slice(0, HOT_TOTAL);
-  var seen = {};
-  crowd.forEach(function(s) { if (s.tmdb_id) seen[s.tmdb_id] = true; });
-  var trending = (_fullLineupData.trending || []).filter(function(s) { return !seen[s.tmdb_id]; })
-    .slice(0, Math.max(10, HOT_TOTAL - crowd.length));
+  var byTmdb = {};
+  (_fullLineupData.shows || []).forEach(function(s) { if (s.tmdb_id) byTmdb[s.tmdb_id] = s; });
+  var trending = (_fullLineupData.trending || []).slice(0, HOT_TOTAL);
+  trending.forEach(function(t) {
+    var c = byTmdb[t.tmdb_id];
+    if (c) { t.avg_rating = c.avg_rating; t.rating_count = c.rating_count; t.people = c.people; if (!t.platform) t.platform = c.platform; }
+  });
   var q = ((document.getElementById('full-lineup-search')||{}).value||'').trim().toLowerCase();
   var match = function(s){ return !q || (s.title||'').toLowerCase().indexOf(q)!==-1 || (s.platform||'').toLowerCase().indexOf(q)!==-1; };
   crowd = crowd.filter(match);
@@ -4008,8 +4012,8 @@ window.showFullLineupDetail = function(idx){
   var ratingLine = hasRating
     ? '<div style="display:flex;align-items:baseline;gap:10px;margin-bottom:4px;"><span class="rank-detail-avg">'+avgNum.toFixed(1)+'</span><div style="display:flex;gap:2px;">'+remotes+'</div></div>'
       +'<div class="rank-detail-sub">rated by '+s.rating_count+' across ShowUp</div>'
-    : '<div class="rank-detail-sub">'+(s.trending ? 'Trending in the US &mdash; not on ShowUp yet. Be the first!' : 'Not yet rated by anyone on ShowUp.')+'</div>';
-  if (!s.trending && s.people) ratingLine += '<div class="rank-detail-sub" style="margin-top:-8px;">'+s.people+(s.people==1?' person on ShowUp has this on a list':' people on ShowUp have this on a list')+'</div>';
+    : '<div class="rank-detail-sub">'+((s.trending && !s.people) ? 'Trending in the US &mdash; not on ShowUp yet. Be the first!' : 'Not yet rated by anyone on ShowUp.')+'</div>';
+  if (s.people) ratingLine += '<div class="rank-detail-sub" style="margin-top:-8px;">'+s.people+(s.people==1?' person on ShowUp has this on a list':' people on ShowUp have this on a list')+'</div>';
   panel.innerHTML='<div class="rank-detail">'
     +'<div style="display:flex;gap:12px;align-items:flex-start;margin-bottom:4px;">'
     +thumb
