@@ -210,7 +210,7 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
 .rcb-new{font-size:14px;color:var(--muted);}
 .rcb-new.has-new{color:var(--terra);font-weight:700;}
 .rcb-cta{margin-top:8px;min-height:44px;border-radius:10px;color:#fff;font-size:15px;font-weight:700;display:flex;align-items:center;justify-content:center;}
-.room-new-pill{display:inline-block;margin-left:6px;background:var(--terra);color:#fff;font-size:11px;font-weight:700;padding:1px 7px;border-radius:9px;vertical-align:middle;}
+.room-new-pill{display:inline-block;margin-left:6px;background:var(--terra);color:#fff;font-family:var(--sans);font-size:11px;font-weight:700;padding:1px 7px;border-radius:9px;vertical-align:middle;white-space:nowrap;}
 .friends-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(98px,1fr));gap:9px;margin-bottom:24px;}
 .friend-card{position:relative;background:var(--cream);border:1px solid var(--border);border-radius:var(--radius);padding:11px;text-align:left;cursor:pointer;transition:all 0.2s;box-shadow:var(--shadow);}
 .friend-card.is-muted{opacity:0.5;}
@@ -3399,10 +3399,10 @@ function _roomCardMode() {
   return state.myRooms.length === 1 ? 'one' : 'multi';
 }
 
-function _roomPeopleLine(roomId) {
+function _roomPeopleLine(roomId, max) {
   var a = state.roomActivity[roomId];
   if (!a || !a.names.length) return '';
-  var shown = a.names.slice(0, 3);
+  var shown = a.names.slice(0, max || 3);
   var extra = a.names.length - shown.length;
   return 'You, ' + shown.map(escAttr).join(', ') + (extra > 0 ? ' +' + extra : '');
 }
@@ -3430,9 +3430,12 @@ function renderRoomPicker() {
 
   var tiles = rooms.map(function(r) {
     var theme = LIVING_ROOM_THEMES[r.theme] || LIVING_ROOM_THEMES.tuscany;
-    var n = mode === 'multi' ? _roomNewComments(r.id) : 0;
-    var pill = n ? ' <span class="room-new-pill">' + n + ' new</span>' : '';
-    return '<div class="room-tile" onclick="enterLivingRoom(\''+r.id+'\')" style="border-left:4px solid '+theme.color+';"><div class="room-tile-name">'+escAttr(r.name)+'</div><div class="room-tile-meta">'+r.member_count+' member'+(r.member_count===1?'':'s')+pill+'</div></div>';
+    var n = _roomNewComments(r.id);
+    var pill = n ? '<span class="room-new-pill" title="New comments in the last 7 days">&#128172; ' + n + '</span>' : '';
+    // Names ("You, George +2") rather than a member count; falls back to the
+    // count until the background room load has landed.
+    var people = _roomPeopleLine(r.id, 2) || (r.member_count+' member'+(r.member_count===1?'':'s'));
+    return '<div class="room-tile" onclick="enterLivingRoom(\''+r.id+'\')" style="border-left:4px solid '+theme.color+';"><div class="room-tile-name">'+escAttr(r.name)+pill+'</div><div class="room-tile-meta">'+people+'</div></div>';
   }).join('');
   grid.innerHTML = tiles + createTile;
 }
@@ -7390,13 +7393,16 @@ async function preloadFriendsInBackground() {
 }
 
 // For one room's friend list: first names (for "You, George, Kristy +3") and
-// the times other people commented in that room within the Conversations
-// window -- on members' shows, plus members' comments on your own shows
+// the times other people commented in that room in the last 7 days -- on
+// members' shows, plus members' comments on your own shows
 // (same scope as that room's Conversations feed). Counted against
 // state.roomLastSeen at render time, so visiting the room clears it.
+// Room cards count only the last 7 days (fresher nudge than the in-room
+// Conversations feed's 30-day window).
+var ROOM_CARD_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
 function _summarizeRoom(list) {
   var myId = state.user ? state.user.id : null;
-  var cutoff = Date.now() - CONVERSATIONS_WINDOW_MS;
+  var cutoff = Date.now() - ROOM_CARD_WINDOW_MS;
   var memberIds = {};
   var names = [];
   var times = [];
