@@ -491,10 +491,10 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
 .show-card.is-hidden,.dnf-card.is-hidden{opacity:0.45;border-style:dashed;}
 .hidden-badge{font-size:10px;font-weight:700;color:#c0392b;background:#fdecea;padding:1px 7px;border-radius:8px;margin-left:6px;vertical-align:middle;}
 .new-season-badge{font-size:10px;font-weight:700;color:#fff;background:var(--terra);padding:2px 8px;border-radius:8px;margin-left:6px;vertical-align:middle;cursor:pointer;}
-.btn-delete-react{background:none;border:none;color:var(--muted);cursor:pointer;font-size:12px;padding:0 0 0 6px;opacity:0.55;line-height:1;align-self:center;flex-shrink:0;}
-.btn-delete-react:hover{color:#c0392b;opacity:1;}
-.btn-edit-react{background:none;border:none;color:var(--muted);cursor:pointer;font-size:12px;padding:0 0 0 6px;opacity:0.55;line-height:1;align-self:center;flex-shrink:0;}
-.btn-edit-react:hover{color:var(--terra);opacity:1;}
+.btn-delete-react{width:32px;height:32px;margin-left:6px;border-radius:50%;background:var(--cream);border:1.5px solid rgba(192,57,43,0.55);color:#c0392b;cursor:pointer;font-size:13px;padding:0;line-height:1;align-self:center;flex-shrink:0;display:inline-flex;align-items:center;justify-content:center;}
+.btn-delete-react:hover{background:#c0392b;color:#fff;}
+.btn-edit-react{width:32px;height:32px;margin-left:6px;border-radius:50%;background:var(--cream);border:1.5px solid var(--fig);color:var(--fig);cursor:pointer;font-size:14px;padding:0;line-height:1;align-self:center;flex-shrink:0;display:inline-flex;align-items:center;justify-content:center;}
+.btn-edit-react:hover{background:var(--fig);color:#fff;}
 .btn-remove-friend{background:none;border:1px solid rgba(192,57,43,0.3);color:#c0392b;border-radius:6px;padding:5px 12px;font-family:var(--sans);font-size:12px;font-weight:600;cursor:pointer;}
 .btn-remove-friend:hover{background:#fdecea;border-color:#c0392b;}
 @media(max-width:479px){
@@ -1618,6 +1618,19 @@ function showTab(tab, btn) {
   // including your own shows, opens in place via showFriend() without
   // leaving Living Room (see renderConversations).
   var leavingLivingRoom = document.getElementById('tab-living-room').style.display==='block' && tab!=='living-room';
+  // Switching INTO Watching / My List / Binged starts tidy: every streaming
+  // group collapsed (only when there are 2+ groups -- one group collapsed
+  // would hide the whole list). A jump to a specific show calls showTab and
+  // then scrollToShowCard, which reopens just that show's group.
+  var switching = document.getElementById('tab-'+tab).style.display!=='block';
+  if (switching && (tab==='watching'||tab==='watchlist'||tab==='watched')) {
+    var keys = getServiceKeysForList(tab);
+    if (keys.length >= 2) {
+      keys.forEach(function(k){ _collapsedSections[k] = true; });
+      saveCollapsedSections();
+      renderList(tab);
+    }
+  }
   document.querySelectorAll('.tab-pane').forEach(function(t){ t.style.display='none'; });
   document.querySelectorAll('.nav-tab').forEach(function(t){ t.classList.remove('active'); });
   document.getElementById('tab-'+tab).style.display='block';
@@ -4757,7 +4770,22 @@ window.jumpToFriendShow = async function(friendId, showId, notFoundMsg){
 
 window.scrollToShowCard = function(showId, notFoundMsg){
   setTimeout(function(){
-    var el = document.getElementById('card-'+showId);
+    // Your own show can be on the page twice (your hidden list tab AND the
+    // room/self view you're looking at) with the same id -- getElementById
+    // would grab the hidden one and scroll to nothing. Use the copy whose
+    // containing views are actually showing (collapsed groups don't count
+    // as hidden; they get reopened below).
+    var all = document.querySelectorAll('[id="card-'+showId+'"]');
+    var el = null;
+    for (var i = 0; i < all.length && !el; i++) {
+      var ok = true;
+      for (var a = all[i].parentElement; a && a !== document.body; a = a.parentElement) {
+        if (a.style && a.style.display === 'none') { ok = false; break; }
+        if (a.classList && a.classList.contains('screen') && !a.classList.contains('active')) { ok = false; break; }
+      }
+      if (ok) el = all[i];
+    }
+    if (!el) el = all[0] || null;
     if (!el) { if (notFoundMsg) showToast(notFoundMsg); return; }
     var ancestor = el.parentElement, reopened = false;
     while (ancestor) {
