@@ -8828,9 +8828,17 @@ function copyInviteContent(link, btn, resetLabel) {
   }
 }
 
+// One tap and done: copy, close the popup, say what to do next. (The button
+// used to relabel itself "Copy ready-to-send message" after copying, which
+// read as a second screen asking you to copy again.)
 window.copyInviteMessage = function() {
+  var btn = document.getElementById('invite-msg-btn');
   var link = document.getElementById('invite-modal-link').textContent;
-  copyInviteContent(link, document.getElementById('invite-msg-btn'), 'Copy ready-to-send message');
+  copyInviteContent(link, btn, btn.textContent);
+  setTimeout(function() {
+    closeInviteModal();
+    showToast('Invite copied! Now paste it into a text or email.');
+  }, 500);
 };
 
 window.copyInvite = function() {
