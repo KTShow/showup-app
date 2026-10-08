@@ -73,7 +73,10 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
 .nav{background:#EDE8DC;border-bottom:1px solid var(--border);padding:0 20px;display:flex;align-items:center;justify-content:space-between;height:52px;flex-shrink:0;position:relative;}
 .nav-logo{font-family:var(--serif);font-size:22px;color:var(--terra);font-weight:700;}
 .nav-right{display:flex;align-items:center;gap:10px;}
-.nav-back{background:none;border:none;color:var(--fig);font-family:var(--sans);font-size:14px;font-weight:600;cursor:pointer;}
+.nav-back{display:inline-flex;align-items:center;justify-content:center;gap:4px;min-height:40px;padding:0 14px;border-radius:20px;background:var(--cream);border:1.5px solid var(--fig);color:var(--fig);font-family:var(--sans);font-size:14px;font-weight:600;cursor:pointer;box-shadow:0 1px 4px rgba(0,0,0,0.08);}
+/* Arrow-only back buttons next to page titles: a true circle. */
+.page-title .nav-back{width:40px;height:40px;min-height:0;padding:0;border-radius:50%;font-size:18px;vertical-align:middle;}
+.nav-back:active,.back-btn:active,.rank-close:active{transform:scale(0.95);}
 .nav-settings{background:none;border:none;font-size:20px;cursor:pointer;padding:2px;}
 .nav-avatar{width:32px;height:32px;border-radius:50%;background:var(--olive);color:white;font-size:16px;display:flex;align-items:center;justify-content:center;cursor:pointer;border:none;flex-shrink:0;}
 .nav-bell{position:relative;background:none;border:none;font-size:19px;cursor:pointer;padding:2px;line-height:1;}
@@ -233,7 +236,7 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
 .friend-name{font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .friend-city{font-size:10px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .friend-count{margin-top:5px;font-size:10px;color:var(--terra);font-weight:600;}
-.back-btn{background:none;border:none;color:var(--fig);font-family:var(--sans);font-size:14px;cursor:pointer;padding:0;margin-bottom:16px;display:flex;align-items:center;gap:6px;}
+.back-btn{background:var(--cream);border:1.5px solid var(--fig);border-radius:20px;color:var(--fig);font-family:var(--sans);font-size:14px;font-weight:600;cursor:pointer;min-height:40px;padding:0 14px;margin-bottom:16px;display:inline-flex;align-items:center;gap:6px;box-shadow:0 1px 4px rgba(0,0,0,0.08);}
 .friend-header{display:flex;align-items:center;gap:14px;margin-bottom:20px;}
 .friend-header-av{width:54px;height:54px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:22px;color:white;}
 
@@ -349,7 +352,7 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
 .rank-detail-av{width:28px;height:28px;border-radius:50%;color:white;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
 .rank-detail-name{font-size:13px;font-weight:600;color:var(--charcoal);flex:1;}
 .rank-detail-name-link{cursor:pointer;}
-.rank-close{background:none;border:none;color:var(--fig);font-family:var(--sans);font-size:13px;cursor:pointer;padding:0;margin-bottom:14px;display:flex;align-items:center;gap:5px;}
+.rank-close{background:var(--cream);border:1.5px solid var(--fig);border-radius:20px;color:var(--fig);font-family:var(--sans);font-size:13px;font-weight:600;cursor:pointer;min-height:40px;padding:0 14px;margin-bottom:14px;display:inline-flex;align-items:center;gap:5px;box-shadow:0 1px 4px rgba(0,0,0,0.08);}
 
 .invite-box{background:var(--cream);border:1px solid var(--border);border-radius:14px;padding:20px;margin-top:20px;text-align:center;box-shadow:var(--shadow);}
 .invite-title{font-family:var(--serif);font-size:16px;color:var(--fig);font-weight:700;margin-bottom:6px;}
@@ -1036,7 +1039,6 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
       <div id="friend-detail-view" style="display:none"></div>
     </div>
   </div>
-  <button id="back-to-top" class="back-to-top" onclick="scrollToTopSmooth()" aria-label="Back to top" title="Back to top">&#8593;</button>
   <div class="bottom-nav">
     <button class="nav-tab active" id="btab-living-room" onclick="showTab('living-room',this)"><span class="nav-tab-icon">&#127968;</span><span class="nav-tab-label">Living Room</span></button>
     <button class="nav-tab" id="btab-watching" onclick="showTab('watching',this)"><span class="nav-tab-icon">&#128250;</span><span class="nav-tab-label">Watching</span></button>
@@ -1044,6 +1046,9 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
     <button class="nav-tab" id="btab-watched" onclick="showTab('watched',this)"><span class="nav-tab-icon">&#128252;</span><span class="nav-tab-label">Binged</span></button>
   </div>
 </div>
+
+<!-- Back to top: outside any one screen so it works on the app, Settings and Profile. -->
+<button id="back-to-top" class="back-to-top" onclick="scrollToTopSmooth()" aria-label="Back to top" title="Back to top">&#8593;</button>
 
 <!-- PROFILE -->
 <div id="screen-profile" class="screen">
@@ -1655,8 +1660,10 @@ function _bttOverlayOpen(){
 }
 function _updateBackToTop(){
   if (!_bttEl) return;
-  var appScreen = document.getElementById('screen-app');
-  var appOn = appScreen && appScreen.classList.contains('active');
+  // Long pages: the main app, Settings and Profile.
+  var appOn = ['screen-app', 'screen-settings', 'screen-profile'].some(function(id) {
+    var el = document.getElementById(id); return el && el.classList.contains('active');
+  });
   _bttEl.classList.toggle('visible', !!appOn && window.scrollY > 500 && !_bttOverlayOpen());
 }
 window.scrollToTopSmooth = function(){
