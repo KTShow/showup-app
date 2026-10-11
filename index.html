@@ -495,6 +495,17 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
 .btn-delete-react:hover{background:#c0392b;color:#fff;}
 .btn-edit-react{width:32px;height:32px;margin-left:6px;border-radius:50%;background:var(--cream);border:1.5px solid var(--fig);color:var(--fig);cursor:pointer;font-size:14px;padding:0;line-height:1;align-self:center;flex-shrink:0;display:inline-flex;align-items:center;justify-content:center;}
 .btn-edit-react:hover{background:var(--fig);color:#fff;}
+/* "..." menu on your own comments (Edit / Delete) -- one button instead of
+   a pencil + X, everywhere comments appear. Menu floats above everything. */
+.btn-more-react{width:32px;height:32px;margin-left:6px;border-radius:50%;background:var(--cream);border:1.5px solid var(--fig);color:var(--fig);cursor:pointer;font-size:16px;font-weight:700;padding:0 0 6px;line-height:1;align-self:center;flex-shrink:0;display:inline-flex;align-items:center;justify-content:center;}
+.comment-menu{position:fixed;z-index:400;background:#fff;border:1px solid var(--border);border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,0.18);padding:6px;display:flex;flex-direction:column;min-width:140px;}
+.comment-menu button{background:none;border:none;text-align:left;font-family:var(--sans);font-size:15px;color:var(--charcoal);padding:12px 14px;border-radius:8px;cursor:pointer;min-height:44px;}
+.comment-menu button:hover{background:var(--sand);}
+.comment-menu button.danger{color:#c0392b;}
+/* "Your rating" / "Seen it? Rate it" row in Prime Time + Hot Right Now detail. */
+.rank-your-rating{display:flex;align-items:center;flex-wrap:wrap;gap:6px 10px;margin:0 0 14px;padding:10px 12px;background:rgba(196,98,45,0.06);border-radius:10px;}
+.rank-your-rating-label{font-size:13px;font-weight:700;color:var(--charcoal);}
+.remote-btn-lg{background:none;border:none;cursor:pointer;min-width:40px;min-height:40px;padding:4px;display:inline-flex;align-items:center;justify-content:center;}
 .btn-remove-friend{background:none;border:1px solid rgba(192,57,43,0.3);color:#c0392b;border-radius:6px;padding:5px 12px;font-family:var(--sans);font-size:12px;font-weight:600;cursor:pointer;}
 .btn-remove-friend:hover{background:#fdecea;border-color:#c0392b;}
 @media(max-width:479px){
@@ -1871,17 +1882,108 @@ function talkPreviewHTML(title, pool) {
   var scope = pool ? 'room' : 'all';
   return '<div style="display:flex;flex-direction:column;gap:4px;margin:4px 0;">'
     + preview.map(function(c){
-        var del = (c.isMe && c.id) ? '<button type="button" class="btn-delete-react" title="Delete your comment" aria-label="Delete your comment" onclick="event.stopPropagation();deleteCardComment(\''+c.id+'\')">&#x2715;</button>' : '';
-        return '<div style="display:flex;align-items:center;gap:4px;"><div style="flex:1;min-width:0;font-size:12px;color:var(--charcoal);line-height:1.35;"><span style="font-weight:600;">'+escAttr(c.name)+':</span> '+escAttr(c.text)+'</div>'+del+'</div>';
+        if (!(c.isMe && c.id)) return '<div style="display:flex;align-items:center;gap:4px;">'+_cprevTextHTML(c.name, c.text)+'</div>';
+        return '<div class="cprev-line" data-rid="'+c.id+'" style="display:flex;align-items:center;gap:4px;">'+_cprevTextHTML(c.name, c.text)
+          + commentMenuBtnHTML('editCardComment(\''+c.id+'\')', 'deleteCardComment(\''+c.id+'\')') + '</div>';
       }).join('')
     + '</div><div style="display:inline-flex;align-items:center;gap:4px;font-size:11px;color:var(--fig);font-weight:600;cursor:pointer;" onclick="openShowTalkFor(\''+escAttr(title).replace(/'/g,"\\'")+'\',\''+scope+'\')">&#128172; '+comments.length+' '+(comments.length===1?'person':'people')+' talking about this — see full thread</div>';
 }
+
+function _cprevTextHTML(name, text){
+  return '<div style="flex:1;min-width:0;font-size:12px;color:var(--charcoal);line-height:1.35;"><span style="font-weight:600;">'+escAttr(name)+':</span> '+escAttr(text)+'</div>';
+}
+
+// ---- "..." comment menu (Edit / Delete on your own comments) ----
+// The button carries the edit/delete calls; the menu is one floating element
+// so it never gets clipped by a card. Delete always asks first.
+function commentMenuBtnHTML(editCall, deleteCall){
+  return '<button type="button" class="btn-more-react" aria-label="Edit or delete your comment" title="Edit or delete"'
+    + ' data-edit="'+escAttr(editCall)+'" data-del="'+escAttr(deleteCall)+'"'
+    + ' onclick="event.stopPropagation();openCommentMenu(this)">&middot;&middot;&middot;</button>';
+}
+window.openCommentMenu = function(btn){
+  closeCommentMenu();
+  var r = btn.getBoundingClientRect();
+  var m = document.createElement('div');
+  m.className = 'comment-menu';
+  m.id = 'comment-menu';
+  m.innerHTML = '<button type="button" onclick="event.stopPropagation();closeCommentMenu();'+escAttr(btn.getAttribute('data-edit'))+'">Edit</button>'
+    + '<button type="button" class="danger" onclick="event.stopPropagation();closeCommentMenu();if(confirm(\'Delete this comment?\')){'+escAttr(btn.getAttribute('data-del'))+'}">Delete</button>';
+  document.body.appendChild(m);
+  var top = r.bottom + 4;
+  if (top + m.offsetHeight > window.innerHeight - 8) top = Math.max(8, r.top - m.offsetHeight - 4);
+  m.style.top = top + 'px';
+  m.style.right = Math.max(8, window.innerWidth - r.right) + 'px';
+  setTimeout(function(){
+    document.addEventListener('click', closeCommentMenu, { once: true });
+    window.addEventListener('scroll', closeCommentMenu, { once: true, passive: true });
+  }, 0);
+};
+window.closeCommentMenu = function(){
+  var m = document.getElementById('comment-menu');
+  if (m) m.remove();
+};
+
+// Every loaded copy of a reaction (own lists, current room, all rooms).
+function _forEachReaction(reactionId, fn){
+  var pools = [[{watching:state.watching,watchlist:state.watchlist,watched:state.watched}], state.friends||[], state.allFriendsAcrossRooms||[]];
+  pools.forEach(function(pool){
+    pool.forEach(function(src){
+      if (!src) return;
+      ['watching','watchlist','watched'].forEach(function(lk){
+        (src[lk]||[]).forEach(function(sh){
+          (sh && sh.reactions || []).forEach(function(r){ if (r.id === reactionId) fn(r); });
+        });
+      });
+    });
+  });
+}
+
+// Edit one of YOUR comments in place, right on the tile(s) showing it --
+// swaps the preview line for a small box (no full re-render, so a room view
+// doesn't jump back to the top).
+window.editCardComment = function(reactionId){
+  var text = '';
+  _forEachReaction(reactionId, function(r){ text = r.text; });
+  var lines = document.querySelectorAll('.cprev-line[data-rid="'+reactionId+'"]');
+  lines.forEach(function(el){
+    if (!el.hasAttribute('data-orig')) el.setAttribute('data-orig', el.innerHTML);
+    el.innerHTML = '<div class="inline-react" style="flex:1;" onclick="event.stopPropagation()"><input class="react-input" value="'+escAttr(text)+'" />'
+      + '<button class="btn-send" onclick="event.stopPropagation();submitCardCommentEdit(this,\''+reactionId+'\')">Save</button>'
+      + '<button class="btn-cancel" onclick="event.stopPropagation();cancelCardCommentEdit(\''+reactionId+'\')">Cancel</button></div>';
+  });
+  var visible = Array.prototype.find.call(lines, function(el){ return el.offsetParent !== null; });
+  var inp = visible && visible.querySelector('input');
+  if (inp) { inp.focus(); inp.setSelectionRange(inp.value.length, inp.value.length); }
+};
+window.cancelCardCommentEdit = function(reactionId){
+  document.querySelectorAll('.cprev-line[data-rid="'+reactionId+'"]').forEach(function(el){
+    if (el.hasAttribute('data-orig')) { el.innerHTML = el.getAttribute('data-orig'); el.removeAttribute('data-orig'); }
+  });
+};
+window.submitCardCommentEdit = async function(btn, reactionId){
+  var inp = btn.parentElement.querySelector('input');
+  var text = inp ? inp.value.trim() : '';
+  if (!text) return;
+  var sentiment = detectSentiment(text);
+  _forEachReaction(reactionId, function(r){ r.text = text; r.sentiment = sentiment; });
+  renderList('watching'); renderList('watchlist'); renderList('watched');
+  // Lines outside your own tabs (e.g. a room view) weren't re-rendered.
+  document.querySelectorAll('.cprev-line[data-rid="'+reactionId+'"]').forEach(function(el){
+    if (!el.hasAttribute('data-orig')) return;
+    el.removeAttribute('data-orig');
+    el.innerHTML = _cprevTextHTML('You', text)
+      + commentMenuBtnHTML('editCardComment(\''+reactionId+'\')', 'deleteCardComment(\''+reactionId+'\')');
+  });
+  try { await dbUpdateReaction(reactionId, text, sentiment); showToast('Comment updated.'); }
+  catch (e) { console.error('submitCardCommentEdit error:', e); showToast('Couldn’t save that — try again in a moment.'); }
+};
 
 // Delete one of YOUR comments straight from a show tile's comment preview.
 // The comment may live on your own copy of the show or a friend's, in any
 // of the loaded data sets -- drop it from all of them, then save.
 window.deleteCardComment = async function(reactionId){
-  if (!reactionId || !confirm('Delete this comment?')) return;
+  if (!reactionId) return; // the "..." menu already asked "Delete this comment?"
   var pools = [[{watching:state.watching,watchlist:state.watchlist,watched:state.watched}], state.friends||[], state.allFriendsAcrossRooms||[]];
   pools.forEach(function(pool){
     pool.forEach(function(src){
@@ -3877,6 +3979,44 @@ function rankListBadgeHTML(s) {
   return '<span class="rank-action-col">' + (mine ? '<span class="on-list-badge">' + onListBadgeContent(mine) + '</span>' : '') + '</span>';
 }
 
+// "Your rating" (show already on your lists: tap to rate, saves) or "Seen
+// it? Rate it" (not yours yet: opens the normal add step, then the rating
+// popup with that rating filled in) -- Prime Time + Hot Right Now detail.
+// kind: 'pt' (Prime Time) or 'hot' (Hot Right Now); idx into its list cache.
+var _seenItRating = null;
+function rankYourRatingHTML(kind, idx) {
+  var s = (kind === 'pt' ? _primeTimeListCache : _fullLineupListCache)[idx];
+  if (!s) return '';
+  var mine = findMyShowByTitle(s.title);
+  var current = mine && mine.show ? (mine.show.rating || 0) : 0;
+  var fn = mine ? 'rateFromDetail' : 'seenItRate';
+  var btns = '';
+  for (var n = 1; n <= 5; n++) {
+    var lit = n <= current;
+    btns += '<button type="button" class="remote-btn-lg" aria-label="'+n+' remote'+(n>1?'s':'')+'" style="opacity:'+(lit?'1':'0.25')+'" onclick="'+fn+'(\''+kind+'\','+idx+','+n+')">'+remoteIcon(24,lit)+'</button>';
+  }
+  return '<div class="rank-your-rating" data-kind="'+kind+'" data-idx="'+idx+'">'
+    + '<span class="rank-your-rating-label">'+(mine ? 'Your rating' : 'Seen it? Rate it')+'</span>'
+    + '<div style="display:flex;gap:2px;">'+btns+'</div></div>';
+}
+function refreshDetailYourRating() {
+  document.querySelectorAll('.rank-your-rating').forEach(function(el){
+    el.outerHTML = rankYourRatingHTML(el.getAttribute('data-kind'), Number(el.getAttribute('data-idx')));
+  });
+}
+window.rateFromDetail = function(kind, idx, n) {
+  var s = (kind === 'pt' ? _primeTimeListCache : _fullLineupListCache)[idx];
+  var mine = s && findMyShowByTitle(s.title);
+  if (!mine || !mine.show) return;
+  rate(mine.list, mine.show.id, n);
+  refreshDetailYourRating();
+};
+window.seenItRate = function(kind, idx, n) {
+  // Remembered only briefly, so a cancelled add can't pre-fill a later one.
+  _seenItRating = { n: n, at: Date.now() };
+  if (kind === 'pt') handlePrimeTimeAdd(idx); else handleFullLineupAdd(idx);
+};
+
 // The detail view's buttons: About this show + go to / add to your list.
 function rankDetailActionsHTML(s, addCall) {
   var mine = findMyShowByTitle(s.title);
@@ -4022,6 +4162,7 @@ window.showFullLineupDetail = function(idx){
     +(s.platform?'<span class="rank-platform" style="margin:0 0 6px 0;display:inline-block;">'+escAttr(s.platform)+'</span>':'')
     +'</div></div>'
     +rankDetailActionsHTML(s, 'handleFullLineupAdd('+idx+')')
+    +rankYourRatingHTML('hot', idx)
     +ratingLine
     +'</div>';
   document.getElementById('full-lineup-list').style.display='none';
@@ -4114,6 +4255,7 @@ window.showPrimeTimeDetail = function(idx){
     +(s.platform?'<span class="rank-platform" style="margin:0 0 6px 0;display:inline-block;">'+escAttr(s.platform)+'</span>':'')
     +'</div></div>'
     +rankDetailActionsHTML(s, 'handlePrimeTimeAdd('+idx+')')
+    +rankYourRatingHTML('pt', idx)
     +'<div style="display:flex;align-items:baseline;gap:10px;margin-bottom:4px;">'
     +'<span class="rank-detail-avg">'+s.avg.toFixed(1)+'</span>'
     +'<div style="display:flex;gap:2px;">'+remotes+'</div>'
@@ -4372,8 +4514,7 @@ function renderConversations(){
     var actionBtns='';
     if (e.type==='comment' && e.isMine && e.reactionId) {
       var actArgs='\''+(e.list||'')+'\',\''+e.showId+'\',\''+(e.friendId||'')+'\',\''+e.reactionId+'\'';
-      actionBtns='<button class="btn-edit-react" onclick="event.stopPropagation();toggleEditConversationComment('+actArgs+')">&#9998;</button>'
-        +'<button class="btn-delete-react" onclick="event.stopPropagation();deleteConversationComment('+actArgs+')">&#x2715;</button>';
+      actionBtns=commentMenuBtnHTML('toggleEditConversationComment('+actArgs+')', 'deleteConversationComment('+actArgs+')');
     }
     return '<div class="conversation-row type-'+e.type+(e.isNew?' is-new':'')+'"'+click+'><div class="conversation-icon">'+icon+'</div><div class="conversation-text">'+newTag+e.text+'</div><div class="conversation-time">'+timeAgo(e.ts)+'</div>'+actionBtns+'</div>';
   }).join('');
@@ -4606,7 +4747,7 @@ function showShowTalkDetail(idx){
     var nameAttr = isLink ? ' class="rank-detail-name rank-detail-name-link" onclick="'+jump+'"' : ' class="rank-detail-name"';
     var nameHTML = c.isMe ? 'You' : (isLink ? '<span class="name-pill">'+escAttr(c.name)+'</span>' : escAttr(c.name));
     var actionBtns = c.isMe
-      ? '<button class="btn-edit-react" onclick="toggleEditShowTalkComment('+idx+','+ci+')">&#9998;</button><button class="btn-delete-react" onclick="deleteShowTalkComment('+idx+','+ci+')">&#x2715;</button>'
+      ? commentMenuBtnHTML('toggleEditShowTalkComment('+idx+','+ci+')', 'deleteShowTalkComment('+idx+','+ci+')')
       : '<button class="btn-edit-react" onclick="replyToShowTalkComment('+idx+','+ci+')" title="Reply to '+escAttr(c.name)+'">&#8617;</button>';
     return '<div class="rank-detail-row" style="align-items:flex-start;">'
       +'<div class="rank-detail-av" style="background:'+c.color+'">'+c.initials+'</div>'
@@ -6865,6 +7006,7 @@ window.submitDoneWatching = async function() {
     show.rating = _dwmRating;
     try { await updateShowRating(show.id, _dwmRating); } catch(e) { console.error('dwm rating error:', e); }
     renderList(list);
+    refreshDetailYourRating();
   }
   if (comment) {
     var u = state.user;
@@ -8785,7 +8927,10 @@ window.chooseAddDestination = async function(destKey) {
     var heading = isDnf ? "Didn't finish? Rate it anyway" : (isWaiting ? 'Rate it so far' : 'You binged it!');
     var emoji = isDnf ? '🎬' : (isWaiting ? '⏳' : '🍿');
     openDWM(resultShow, heading, emoji);
+    if (_seenItRating && Date.now() - _seenItRating.at < 5 * 60 * 1000) { _dwmRating = _seenItRating.n; renderDWMRemotes(); }
   }
+  _seenItRating = null;
+  refreshDetailYourRating();
 };
 
 // ============================================================
