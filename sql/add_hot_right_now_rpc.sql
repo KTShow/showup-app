@@ -29,7 +29,7 @@ begin
 
   return jsonb_build_object(
     'shows', (
-      select coalesce(jsonb_agg(t order by t.people desc, t.avg_rating desc nulls last), '[]'::jsonb)
+      select coalesce(jsonb_agg(t order by t.people desc, t.avg_rating desc nulls last, t.title), '[]'::jsonb)
       from (
         select
           (array_agg(s.title))[1] as title,
@@ -46,7 +46,11 @@ begin
           and ts.latest_season_air_date::date >= current_date - 365
         group by s.tmdb_id
         order by count(distinct s.user_id) desc
-        limit 25
+        -- Not just the top 25: the app shows the top 20 in Hot on ShowUp,
+        -- but also uses these counts to label Trending in the US rows
+        -- ("On 5 lists"). 2026-10-12: MobLand (5 lists) fell outside a
+        -- top-25 cut and showed no count in Trending.
+        limit 500
       ) t
     )
   );
