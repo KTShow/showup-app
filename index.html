@@ -547,6 +547,26 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
 .tmdb-result-title{font-size:13px;font-weight:600;color:var(--charcoal);line-height:1.3;}
 .tmdb-result-year{font-size:11px;color:var(--muted);margin-top:1px;}
 .tmdb-doc-tag{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.3px;color:var(--fig);background:rgba(107,45,78,0.1);border-radius:4px;padding:1px 5px;vertical-align:middle;white-space:nowrap;}
+
+/* ---- Tap-size pass (Apple HIG: tap areas >= 44x44pt) -----------------
+   Invisible hit areas via ::before -- the visible controls keep their
+   size and look. Standalone controls get a centered 44x44 zone; controls
+   sitting in a row (remotes, card buttons, links) get the full 44 height
+   but only half the gap sideways, so one never steals its neighbour's tap. */
+.nav-back,.back-btn,.rank-close,.btn-more-react,.btn-edit-react,.btn-delete-react,.notif-dismiss,
+.nav-settings,.nav-avatar,.alerts-card-later,.btn-react-toggle,.btn-remove-friend,.match-chip,
+.remote-btn,.btn-more,.btn-hide,.btn-remove,.lounge-link,.btn-send,.btn-cancel,.section-toggle-all span{position:relative;}
+.nav-back::before,.back-btn::before,.rank-close::before,.btn-more-react::before,.btn-edit-react::before,.btn-delete-react::before,
+.notif-dismiss::before,.lr-search-clear::before,.nav-settings::before,.nav-avatar::before,.nav-bell::before,.switch::before,
+.alerts-card-later::before,.btn-remove-friend::before{
+  content:"";position:absolute;top:50%;left:50%;width:max(100%,44px);height:max(100%,44px);transform:translate(-50%,-50%);}
+.remote-btn::before{content:"";position:absolute;top:50%;left:-2px;right:-2px;height:max(100%,44px);transform:translateY(-50%);}
+.btn-more::before,.btn-hide::before,.btn-remove::before{content:"";position:absolute;top:50%;left:-3px;right:-3px;height:max(100%,44px);transform:translateY(-50%);}
+.lounge-link::before{content:"";position:absolute;top:50%;left:-6px;right:-6px;height:44px;transform:translateY(-50%);}
+.btn-send::before,.btn-cancel::before,.match-chip::before,.btn-react-toggle::before{content:"";position:absolute;top:50%;left:-3px;right:-3px;height:max(100%,44px);transform:translateY(-50%);}
+.section-toggle-all span::before{content:"";position:absolute;top:50%;left:-4px;right:-4px;height:44px;transform:translateY(-50%);}
+/* Rating remotes on tiles: a touch more room between them, so each is easier to hit. */
+.remote-btn{padding:0 1px;}
 </style>
 <style>
 /* LOGIN SCREEN */
