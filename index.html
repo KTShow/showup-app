@@ -504,7 +504,7 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
 .btn-edit-react:hover{background:var(--fig);color:#fff;}
 /* "..." menu on your own comments (Edit / Delete) -- one button instead of
    a pencil + X, everywhere comments appear. Menu floats above everything. */
-.btn-more-react{width:32px;height:32px;margin-left:6px;border-radius:50%;background:var(--cream);border:1.5px solid var(--fig);color:var(--fig);cursor:pointer;font-size:16px;font-weight:700;padding:0 0 6px;line-height:1;align-self:center;flex-shrink:0;display:inline-flex;align-items:center;justify-content:center;}
+.btn-more-react{width:32px;height:32px;margin-left:6px;border-radius:50%;background:transparent;border:none;color:var(--muted);cursor:pointer;font-size:16px;font-weight:700;padding:0 0 6px;line-height:1;align-self:center;flex-shrink:0;display:inline-flex;align-items:center;justify-content:center;}
 .comment-menu{position:fixed;z-index:400;background:#fff;border:1px solid var(--border);border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,0.18);padding:6px;display:flex;flex-direction:column;min-width:140px;}
 .comment-menu button{background:none;border:none;text-align:left;font-family:var(--sans);font-size:15px;color:var(--charcoal);padding:12px 14px;border-radius:8px;cursor:pointer;min-height:44px;}
 .comment-menu button:hover{background:var(--sand);}
@@ -582,6 +582,9 @@ html.native-cover{--safe-top:env(safe-area-inset-top);}
 html.native-cover body{padding-top:var(--safe-top);}
 .status-shield{display:none;}
 html.native-cover .status-shield{display:block;position:fixed;top:0;left:0;right:0;height:var(--safe-top);background:var(--sand);z-index:190;pointer-events:none;}
+.btn-add-comment{position:relative;align-items:center;gap:5px;margin-top:6px;min-height:32px;padding:0 12px;border-radius:16px;background:#fff;border:1px solid var(--border);color:var(--fig);font-family:var(--sans);font-size:12px;font-weight:600;cursor:pointer;}
+.btn-add-comment::before{content:"";position:absolute;left:0;right:0;top:50%;height:44px;transform:translateY(-50%);}
+.cbox .inline-react{margin-top:6px;}
 </style>
 <style>
 /* LOGIN SCREEN */
@@ -1794,8 +1797,10 @@ function remoteIcon(size, lit) {
 }
 
 function remoteRating(list, id, rating) {
-  var html='<div style="display:flex;gap:4px;">';
-  for(var n=1;n<=5;n++){var isLit=n<=rating;html+='<button class="remote-btn" style="opacity:'+(isLit?'1':'0.22')+'" onclick="rate(\''+list+'\',\''+id+'\','+n+')">'+remoteIcon(15,isLit)+'</button>';}
+  // 40pt buttons (comfortable tap size) -- the interactive rating row on
+  // your own Watching/My List/Binged cards.
+  var html='<div style="display:flex;gap:0;">';
+  for(var n=1;n<=5;n++){var isLit=n<=rating;html+='<button class="remote-btn-lg" aria-label="Rate '+n+' of 5" style="opacity:'+(isLit?'1':'0.22')+'" onclick="rate(\''+list+'\',\''+id+'\','+n+')">'+remoteIcon(17,isLit)+'</button>';}
   return html+'</div>';
 }
 
@@ -1943,7 +1948,7 @@ function talkPreviewHTML(title, pool) {
         return '<div class="cprev-line" data-rid="'+c.id+'" style="display:flex;align-items:center;gap:4px;">'+_cprevTextHTML(c.name, c.text)
           + commentMenuBtnHTML('editCardComment(\''+c.id+'\')', 'deleteCardComment(\''+c.id+'\')') + '</div>';
       }).join('')
-    + '</div><div style="display:inline-flex;align-items:center;gap:4px;font-size:11px;color:var(--fig);font-weight:600;cursor:pointer;" onclick="openShowTalkFor(\''+escAttr(title).replace(/'/g,"\\'")+'\',\''+scope+'\')">&#128172; '+comments.length+' '+(comments.length===1?'person':'people')+' talking about this — see full thread</div>';
+    + '</div><div style="display:inline-flex;align-items:center;gap:4px;font-size:11px;color:var(--fig);font-weight:600;cursor:pointer;" onclick="openShowTalkFor(\''+escAttr(title).replace(/'/g,"\\'")+'\',\''+scope+'\')">&#128172; '+(comments.length===1?'See the comment':'See all '+comments.length+' comments')+' &rsaquo;</div>';
 }
 
 function _cprevTextHTML(name, text){
@@ -2176,12 +2181,37 @@ function reactionsHTML(reactions, list, showId, friendId) {
   return html+'</div>';
 }
 
-function quickReactRow(fnName, argsJS) {
-  var opts = [['🔥','positive'],['😍','positive'],['😴','negative']];
-  return '<span class="quick-react-row">' + opts.map(function(o) {
-    return '<button class="quick-react-btn" onclick="'+fnName+'('+argsJS+',\''+o[0]+'\',\''+o[1]+'\')">'+o[0]+'</button>';
-  }).join('') + '</span>';
+// The comment box on show tiles stays closed until you tap "Add a comment",
+// so a list isn't a stack of open text boxes. An open box (and what you've
+// typed) survives the list re-rendering in the background; Send or Cancel
+// closes it. sendCall is plain JS, e.g. "submitReact('watching','<id>')".
+var _cboxDraft = {};
+function commentBoxHTML(inpId, sendCall) {
+  var open = Object.prototype.hasOwnProperty.call(_cboxDraft, inpId);
+  return '<div class="cbox">'
+    + '<button type="button" class="btn-add-comment" style="display:'+(open?'none':'inline-flex')+'" onclick="openCommentBox(this,\''+inpId+'\')">&#128172; Add a comment</button>'
+    + '<div class="inline-react" style="display:'+(open?'flex':'none')+';">'
+    + '<input class="react-input" id="'+inpId+'" placeholder="What did you think?" value="'+(open?escAttr(_cboxDraft[inpId]):'')+'" oninput="_cboxDraft[this.id]=this.value" />'
+    + '<button class="btn-send" onclick="'+escAttr('delete _cboxDraft[\''+inpId+'\'];'+sendCall)+'">Send</button>'
+    + '<button class="btn-cancel" onclick="closeCommentBox(this,\''+inpId+'\')">Cancel</button>'
+    + '</div></div>';
 }
+window.openCommentBox = function(btn, inpId) {
+  var box = btn.closest('.cbox');
+  btn.style.display = 'none';
+  box.querySelector('.inline-react').style.display = 'flex';
+  _cboxDraft[inpId] = '';
+  var inp = document.getElementById(inpId);
+  if (inp) inp.focus();
+};
+window.closeCommentBox = function(btn, inpId) {
+  var box = btn.closest('.cbox');
+  delete _cboxDraft[inpId];
+  var inp = document.getElementById(inpId);
+  if (inp) inp.value = '';
+  box.querySelector('.inline-react').style.display = 'none';
+  box.querySelector('.btn-add-comment').style.display = 'inline-flex';
+};
 
 function groupByService(items) {
   var groups={};
@@ -2423,8 +2453,7 @@ function isDocFilm(s) { return !!s && s.media_type === 'documentary'; }
 function buildDNFCard(s) {
   var inpId = 'inp-watched-' + s.id;
   var sid = s.id;
-  var reactToggle = '<div class="inline-react"><input class="react-input" id="'+inpId+'" placeholder="What did you think? 😊" /><button class="btn-send" onclick="submitReact(&quot;watched&quot;,&quot;'+sid+'&quot;)">Send</button><button class="btn-cancel" onclick="document.getElementById(&quot;'+inpId+'&quot;).value=\'\'">Cancel</button></div>'
-    + quickReactRow('quickReact', "'watched','"+sid+"'");
+  var reactToggle = commentBoxHTML(inpId, "submitReact('watched','"+sid+"')");
   var platformRow = s.editingPlatform ? platformSelect('watched', s.id, s.platform) : '';
   var hideLabel = s.hidden ? 'Show to friends' : 'Hide from friends';
   var menuHTML = '<div class="card-menu-wrap">'
@@ -2473,8 +2502,7 @@ function buildWatchingCard(s) {
     + '</div></div>';
 
   var inpId='inp-watching-'+sid;
-  var reactToggle='<div class="inline-react"><input class="react-input" id="'+inpId+'" placeholder="What did you think? 😊" /><button class="btn-send" onclick="submitReact(\'watching\',\''+sid+'\')">Send</button><button class="btn-cancel" onclick="document.getElementById(\''+inpId+'\').value=\'\'">Cancel</button></div>'
-    + quickReactRow('quickReact', "'watching','"+sid+"'");
+  var reactToggle=commentBoxHTML(inpId, "submitReact('watching','"+sid+"')");
   var platformRow=s.editingPlatform?platformSelect('watching',sid,s.platform):'';
   var otherRatingsW=ownCardRatingsHTML(s.title, 'watching', sid, s.rating);
 
@@ -2499,8 +2527,7 @@ function buildWaitingCard(s) {
     + '</div></div>';
 
   var inpId='inp-watchlist-'+sid;
-  var reactToggle='<div class="inline-react"><input class="react-input" id="'+inpId+'" placeholder="What did you think? 😊" /><button class="btn-send" onclick="submitReact(\'watchlist\',\''+sid+'\')">Send</button><button class="btn-cancel" onclick="document.getElementById(\''+inpId+'\').value=\'\'">Cancel</button></div>'
-    + quickReactRow('quickReact', "'watchlist','"+sid+"'");
+  var reactToggle=commentBoxHTML(inpId, "submitReact('watchlist','"+sid+"')");
   var platformRow=s.editingPlatform?platformSelect('watchlist',sid,s.platform):'';
   var otherRatingsWait=ownCardRatingsHTML(s.title, 'watchlist', sid, s.rating);
 
@@ -2524,8 +2551,7 @@ function buildWatchlistCard(s) {
     + '</div></div>';
 
   var inpId='inp-watchlist-'+sid;
-  var reactToggle='<div class="inline-react"><input class="react-input" id="'+inpId+'" placeholder="What did you think? 😊" /><button class="btn-send" onclick="submitReact(\'watchlist\',\''+sid+'\')">Send</button><button class="btn-cancel" onclick="document.getElementById(\''+inpId+'\').value=\'\'">Cancel</button></div>'
-    + quickReactRow('quickReact', "'watchlist','"+sid+"'");
+  var reactToggle=commentBoxHTML(inpId, "submitReact('watchlist','"+sid+"')");
   var platformRow=s.editingPlatform?platformSelect('watchlist',sid,s.platform):'';
   var recommendedBadge='';
   if(s.source==='recommendation'&&s.influencedBy){
@@ -2584,8 +2610,7 @@ function buildBingedCard(s) {
     + '</div></div>';
 
   var inpId='inp-watched-'+sid;
-  var reactToggle='<div class="inline-react"><input class="react-input" id="'+inpId+'" placeholder="What did you think? 😊" /><button class="btn-send" onclick="submitReact(\'watched\',\''+sid+'\')">Send</button><button class="btn-cancel" onclick="document.getElementById(\''+inpId+'\').value=\'\'">Cancel</button></div>'
-    + quickReactRow('quickReact', "'watched','"+sid+"'");
+  var reactToggle=commentBoxHTML(inpId, "submitReact('watched','"+sid+"')");
   var platformRow=s.editingPlatform?platformSelect('watched',sid,s.platform):'';
   var otherRatingsB=ownCardRatingsHTML(s.title, 'watched', sid, s.rating);
 
@@ -3274,8 +3299,7 @@ async function showFriend(id) {
       html+='<div class="service-group'+(isCollapsed?' collapsed':'')+'" data-ckey="'+key+'" data-cfid="'+f.id+'"><div class="service-divider" onclick="toggleFriendSection(\''+key+'\',\''+f.id+'\')"><span class="service-divider-text">'+(isCollapsed?'&#9656;':'&#9662;')+' '+svc+' <span class="service-count">('+groups[svc].length+')</span></span></div><div class="shows-grid">';
       groups[svc].sort(function(a,b){return a.title.localeCompare(b.title);}).forEach(function(s){
         var inpId='finp-'+lk+'-'+f.id+'-'+s.id;
-        var reactToggle=('<div class="inline-react"><input class="react-input" id="'+inpId+'" placeholder="What did you think? 😊" /><button class="btn-send" onclick="submitFR(\''+f.id+'\',\''+lk+'\',\''+s.id+'\')">Send</button><button class="btn-cancel" onclick="document.getElementById(\''+inpId+'\').value=\'\'">Cancel</button></div>'
-          + quickReactRow('quickReactFR', "'"+f.id+"','"+lk+"','"+s.id+"'"));
+        var reactToggle=commentBoxHTML(inpId, "submitFR('"+f.id+"','"+lk+"','"+s.id+"')");
         var mineExisting = isSelf ? null : findMyShowByTitle(s.title);
         var actions='';
         if (lk==='w'||lk==='wd') {
@@ -3349,8 +3373,7 @@ async function showFriend(id) {
         ? '<div class="dnf-section'+(dnfCollapsed?' collapsed':'')+'" data-ckey="'+dnfKey+'" data-cfid="'+f.id+'"><div class="dnf-header" onclick="toggleFriendSection(\''+dnfKey+'\',\''+f.id+'\')">'+(dnfCollapsed?'&#9656;':'&#9662;')+' &#128683; Didn&#39;t Finish <span class="service-count">('+dnfItems.length+')</span></div>'
           + '<div class="shows-grid">' + dnfItems.sort(function(a,b){return a.title.localeCompare(b.title);}).map(function(s){
               var inpId='finp-wd-'+f.id+'-'+s.id;
-              var reactToggle=('<div class="inline-react"><input class="react-input" id="'+inpId+'" placeholder="What did you think? 😊" /><button class="btn-send" onclick="submitFR(\''+f.id+'\',\'wd\',\''+s.id+'\')">Send</button><button class="btn-cancel" onclick="document.getElementById(\''+inpId+'\').value=\'\'">Cancel</button></div>'
-                + quickReactRow('quickReactFR', "'"+f.id+"','wd','"+s.id+"'"));
+              var reactToggle=commentBoxHTML(inpId, "submitFR('"+f.id+"','wd','"+s.id+"')");
               var dnfMineExisting = isSelf ? null : findMyShowByTitle(s.title);
               var dnfRatingRow;
               if (isSelf) {
