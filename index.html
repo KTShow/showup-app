@@ -502,6 +502,17 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
 .comment-menu button{background:none;border:none;text-align:left;font-family:var(--sans);font-size:15px;color:var(--charcoal);padding:12px 14px;border-radius:8px;cursor:pointer;min-height:44px;}
 .comment-menu button:hover{background:var(--sand);}
 .comment-menu button.danger{color:#c0392b;}
+.report-reasons{display:flex;flex-direction:column;gap:2px;margin:6px 0 10px;}
+.report-reasons label{display:flex;align-items:center;gap:10px;min-height:44px;font-size:15px;color:var(--charcoal);cursor:pointer;}
+.report-reasons input{width:20px;height:20px;accent-color:var(--terra);}
+.report-block-row{display:flex;align-items:center;gap:10px;min-height:44px;font-size:14px;color:var(--charcoal);cursor:pointer;margin-top:6px;}
+.report-block-row input{width:20px;height:20px;accent-color:var(--terra);}
+.safety-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);font-size:15px;}
+.report-card{border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:10px;background:var(--cream);}
+.report-head{font-size:14px;color:var(--charcoal);margin-bottom:4px;}
+.report-meta{font-size:13px;color:var(--muted);margin-bottom:4px;}
+.report-content{font-size:14px;color:var(--charcoal);background:#fff;border-radius:8px;padding:8px 10px;margin:6px 0;}
+.report-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;}
 /* "Your rating" / "Seen it? Rate it" row in Prime Time + Hot Right Now detail. */
 .rank-your-rating{display:flex;align-items:center;flex-wrap:wrap;gap:6px 10px;margin:0 0 14px;padding:10px 12px;background:rgba(196,98,45,0.06);border-radius:10px;}
 .rank-your-rating-label{font-size:13px;font-weight:700;color:var(--charcoal);}
@@ -1208,6 +1219,9 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
         <button class="settings-row" onclick="goToTellMore()">
           <span class="settings-row-icon">🛋️</span><span class="settings-row-label">Update My Preferences</span><span class="settings-row-arrow">&#8250;</span>
         </button>
+        <button class="settings-row" onclick="openBlockedList()">
+          <span class="settings-row-icon">&#128683;</span><span class="settings-row-label">Blocked people</span><span class="settings-row-arrow">&#8250;</span>
+        </button>
       </div>
     </div>
 
@@ -1216,6 +1230,9 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
       <div class="settings-card">
         <button class="settings-row" onclick="openEditAnnouncementModal()">
           <span class="settings-row-icon">&#128226;</span><span class="settings-row-label">Edit Announcement Banner</span><span class="settings-row-arrow">&#8250;</span>
+        </button>
+        <button class="settings-row" onclick="openReportsAdmin()">
+          <span class="settings-row-icon">&#128681;</span><span class="settings-row-label">Reports</span><span class="settings-row-arrow">&#8250;</span>
         </button>      </div>
     </div>
 
@@ -1319,6 +1336,8 @@ var state = {
   currentRoomTheme: 'tuscany',
   currentRoomConversationsLastSeen: null, // per-room, from room_last_seen -- set by getFriendsWithShows()
   roomLastSeen: {},      // roomId -> conversations last-seen time, for room cards' "N new comments"
+  blockedIds: new Set(), // people I've blocked (one-way: I stop seeing them) -- see loadSafetyState
+  reportedIds: new Set(),// comments / Lounge posts I've reported -- hidden for me straight away
   roomActivity: {},      // roomId -> { names, commentTimes }, from preloadFriendsInBackground
   influencerNames: {},   // who-recommended-what, resolved independent of room (see loadInfluencerNames)
   myRooms: [],           // rooms the user owns or belongs to, for the room picker
@@ -1901,14 +1920,25 @@ function commentMenuBtnHTML(editCall, deleteCall){
     + ' data-edit="'+escAttr(editCall)+'" data-del="'+escAttr(deleteCall)+'"'
     + ' onclick="event.stopPropagation();openCommentMenu(this)">&middot;&middot;&middot;</button>';
 }
+// Same floating menu with any items: [{label, call, danger, confirm}].
+function itemMenuBtnHTML(items, aria){
+  return '<button type="button" class="btn-more-react" aria-label="'+escAttr(aria||'More options')+'" title="'+escAttr(aria||'More options')+'"'
+    + ' data-items="'+escAttr(JSON.stringify(items))+'" onclick="event.stopPropagation();openCommentMenu(this)">&middot;&middot;&middot;</button>';
+}
 window.openCommentMenu = function(btn){
   closeCommentMenu();
   var r = btn.getBoundingClientRect();
   var m = document.createElement('div');
   m.className = 'comment-menu';
   m.id = 'comment-menu';
-  m.innerHTML = '<button type="button" onclick="event.stopPropagation();closeCommentMenu();'+escAttr(btn.getAttribute('data-edit'))+'">Edit</button>'
-    + '<button type="button" class="danger" onclick="event.stopPropagation();closeCommentMenu();if(confirm(\'Delete this comment?\')){'+escAttr(btn.getAttribute('data-del'))+'}">Delete</button>';
+  var items = btn.hasAttribute('data-items') ? JSON.parse(btn.getAttribute('data-items')) : [
+    { label: 'Edit', call: btn.getAttribute('data-edit') },
+    { label: 'Delete', call: btn.getAttribute('data-del'), danger: true, confirm: 'Delete this comment?' }
+  ];
+  m.innerHTML = items.map(function(it){
+    var call = it.confirm ? 'if(confirm(\''+it.confirm.replace(/'/g,'')+'\')){'+it.call+'}' : it.call;
+    return '<button type="button"'+(it.danger?' class="danger"':'')+' onclick="event.stopPropagation();closeCommentMenu();'+escAttr(call)+'">'+escAttr(it.label)+'</button>';
+  }).join('');
   document.body.appendChild(m);
   var top = r.bottom + 4;
   if (top + m.offsetHeight > window.innerHeight - 8) top = Math.max(8, r.top - m.offsetHeight - 4);
@@ -1965,6 +1995,7 @@ window.submitCardCommentEdit = async function(btn, reactionId){
   var inp = btn.parentElement.querySelector('input');
   var text = inp ? inp.value.trim() : '';
   if (!text) return;
+  if (_isObjectionable(text)) return;
   var sentiment = detectSentiment(text);
   _forEachReaction(reactionId, function(r){ r.text = text; r.sentiment = sentiment; });
   renderList('watching'); renderList('watchlist'); renderList('watched');
@@ -3235,7 +3266,11 @@ async function showFriend(id) {
         }).join('')
       + '</div>';
   }
-  var muteBtn=isSelf?'':'<button class="btn-remove-friend" onclick="toggleMuteFriend(\''+f.id+'\')">'+(f.muted?'Unmute':'Mute')+'</button>';
+  var muteBtn=isSelf?'':'<button class="btn-remove-friend" onclick="toggleMuteFriend(\''+f.id+'\')">'+(f.muted?'Unmute':'Mute')+'</button>'
+    + itemMenuBtnHTML([
+        { label: 'Block '+escAttr((f.name||'').split(' ')[0]).replace(/'/g,''), call: "blockUser('"+f.id+"','"+escAttr(f.name||'').replace(/'/g,'')+"')", danger: true },
+        { label: 'Report '+escAttr((f.name||'').split(' ')[0]).replace(/'/g,''), call: "openReport('user','"+f.id+"','"+f.id+"','"+escAttr(f.name||'').replace(/'/g,'')+"')" }
+      ], 'Block or report');
   // RLS only actually permits the room OWNER to remove a member (invited_by
   // is never set by join_living_room, so that alternate path never applies)
   // -- hiding this for non-owners instead of showing a button that would
@@ -3304,7 +3339,7 @@ async function showFriend(id) {
 
 function frShowArr(fid,lk){var isSelf=!!(state.user&&fid===state.user.id);var src=isSelf?{watching:state.watching,watchlist:state.watchlist,watched:state.watched}:state.friends.find(function(x){return x.id===fid;});if(!src)return null;return lk==='w'?src.watching:lk==='wl'?src.watchlist:src.watched;}
 function toggleFR(fid,lk,sid){var arr=frShowArr(fid,lk);var show=arr&&arr.find(function(s){return s.id===sid;});if(!show)return;show.showReact=!show.showReact;showFriend(fid);setTimeout(function(){var el=document.getElementById('finp-'+lk+'-'+fid+'-'+sid);if(el)el.focus();},60);}
-async function submitFR(fid,lk,sid){var arr=frShowArr(fid,lk);var show=arr&&arr.find(function(s){return s.id===sid;});var inp=document.getElementById('finp-'+lk+'-'+fid+'-'+sid);if(!show||!inp||!inp.value.trim())return;var u=state.user;if(!show.reactions)show.reactions=[];var txt=inp.value.trim();var sentiment=detectSentiment(txt);show.reactions.push({user:u?u.first+(u.last?' '+u.last:''):'You',initials:u?u.initials:'Y',color:'#C4622D',text:txt,sentiment:sentiment,reactedAt:new Date().toISOString()});show.showReact=false;showFriend(fid);try{await dbAddReaction(show.id,txt,sentiment);}catch(e){console.error('reaction save error:',e);}}
+async function submitFR(fid,lk,sid){var arr=frShowArr(fid,lk);var show=arr&&arr.find(function(s){return s.id===sid;});var inp=document.getElementById('finp-'+lk+'-'+fid+'-'+sid);if(!show||!inp||!inp.value.trim())return;var u=state.user;if(!show.reactions)show.reactions=[];var txt=inp.value.trim();if(_isObjectionable(txt))return;var sentiment=detectSentiment(txt);show.reactions.push({user:u?u.first+(u.last?' '+u.last:''):'You',initials:u?u.initials:'Y',color:'#C4622D',text:txt,sentiment:sentiment,reactedAt:new Date().toISOString()});show.showReact=false;showFriend(fid);try{await dbAddReaction(show.id,txt,sentiment);}catch(e){console.error('reaction save error:',e);}}
 async function quickReactFR(fid,lk,sid,emoji,sentiment){var arr=frShowArr(fid,lk);var show=arr&&arr.find(function(s){return s.id===sid;});if(!show)return;var u=state.user;if(!show.reactions)show.reactions=[];show.reactions.push({user:u?u.first+(u.last?' '+u.last:''):'You',initials:u?u.initials:'Y',color:'#C4622D',text:emoji,sentiment:sentiment,reactedAt:new Date().toISOString()});showFriend(fid);try{await dbAddReaction(show.id,emoji,sentiment);}catch(e){console.error('quick reaction save error:',e);}}
 function backToFriends(){
   var r = _friendDetailReturn;
@@ -4450,7 +4485,7 @@ function buildConversationsFeed(){
         }
         (s.reactions||[]).forEach(function(r){
           if(r.reactorId && inWindow(r.reactedAt)){
-            events.push({type:'comment',friendId:f.id,list:lk,showId:s.id,reactionId:r.id,isMine:r.reactorId===myId,commentText:r.text,text:'<b>'+escAttr(nameFor(r.reactorId))+'</b> commented on '+escAttr(s.title)+': &#8220;'+escAttr(r.text)+'&#8221;',ts:r.reactedAt,isNew:isNew(r.reactedAt)});
+            events.push({type:'comment',friendId:f.id,list:lk,showId:s.id,reactionId:r.id,reactorId:r.reactorId,isMine:r.reactorId===myId,commentText:r.text,text:'<b>'+escAttr(nameFor(r.reactorId))+'</b> commented on '+escAttr(s.title)+': &#8220;'+escAttr(r.text)+'&#8221;',ts:r.reactedAt,isNew:isNew(r.reactedAt)});
           }
         });
       });
@@ -4468,7 +4503,7 @@ function buildConversationsFeed(){
       if(inWindow(s.addedAt)) events.push({type:'added',list:lk,showId:s.id,text:'<b>You</b> added '+escAttr(s.title),ts:s.addedAt,isNew:isNew(s.addedAt)});
       (s.reactions||[]).forEach(function(r){
         if(r.reactorId && inWindow(r.reactedAt) && (r.reactorId===myId || friendsById[r.reactorId])){
-          events.push({type:'comment',list:lk,showId:s.id,reactionId:r.id,isMine:r.reactorId===myId,commentText:r.text,text:'<b>'+escAttr(nameFor(r.reactorId))+'</b> commented on your '+escAttr(s.title)+': &#8220;'+escAttr(r.text)+'&#8221;',ts:r.reactedAt,isNew:isNew(r.reactedAt)});
+          events.push({type:'comment',list:lk,showId:s.id,reactionId:r.id,reactorId:r.reactorId,isMine:r.reactorId===myId,commentText:r.text,text:'<b>'+escAttr(nameFor(r.reactorId))+'</b> commented on your '+escAttr(s.title)+': &#8220;'+escAttr(r.text)+'&#8221;',ts:r.reactedAt,isNew:isNew(r.reactedAt)});
         }
       });
     });
@@ -4515,6 +4550,8 @@ function renderConversations(){
     if (e.type==='comment' && e.isMine && e.reactionId) {
       var actArgs='\''+(e.list||'')+'\',\''+e.showId+'\',\''+(e.friendId||'')+'\',\''+e.reactionId+'\'';
       actionBtns=commentMenuBtnHTML('toggleEditConversationComment('+actArgs+')', 'deleteConversationComment('+actArgs+')');
+    } else if (e.type==='comment' && !e.isMine && e.reactionId && e.reactorId) {
+      actionBtns=itemMenuBtnHTML([{ label: 'Report', call: "openReport('comment','"+e.reactionId+"','"+e.reactorId+"','')" }], 'More options');
     }
     return '<div class="conversation-row type-'+e.type+(e.isNew?' is-new':'')+'"'+click+'><div class="conversation-icon">'+icon+'</div><div class="conversation-text">'+newTag+e.text+'</div><div class="conversation-time">'+timeAgo(e.ts)+'</div>'+actionBtns+'</div>';
   }).join('');
@@ -4549,6 +4586,7 @@ window.submitEditConversationComment = async function(list, showId, friendId, re
   var inp = document.getElementById('edit-conv-'+reactionId);
   if (!inp || !inp.value.trim()) return;
   var txt = inp.value.trim();
+  if (_isObjectionable(txt)) return;
   var sentiment = detectSentiment(txt);
   var show = findShowForConversationEvent(list, showId, friendId);
   var r = show && (show.reactions||[]).find(function(x){ return x.id === reactionId; });
@@ -4748,7 +4786,10 @@ function showShowTalkDetail(idx){
     var nameHTML = c.isMe ? 'You' : (isLink ? '<span class="name-pill">'+escAttr(c.name)+'</span>' : escAttr(c.name));
     var actionBtns = c.isMe
       ? commentMenuBtnHTML('toggleEditShowTalkComment('+idx+','+ci+')', 'deleteShowTalkComment('+idx+','+ci+')')
-      : '<button class="btn-edit-react" onclick="replyToShowTalkComment('+idx+','+ci+')" title="Reply to '+escAttr(c.name)+'">&#8617;</button>';
+      : (c.id ? itemMenuBtnHTML([
+          { label: 'Reply', call: 'replyToShowTalkComment('+idx+','+ci+')' },
+          { label: 'Report', call: "openReport('comment','"+c.id+"','"+c.reactorId+"','"+escAttr(c.name).replace(/'/g,'')+"')" }
+        ], 'More options') : '<button class="btn-edit-react" onclick="replyToShowTalkComment('+idx+','+ci+')" title="Reply to '+escAttr(c.name)+'">&#8617;</button>');
     return '<div class="rank-detail-row" style="align-items:flex-start;">'
       +'<div class="rank-detail-av" style="background:'+c.color+'">'+c.initials+'</div>'
       +'<div style="flex:1;min-width:0;">'
@@ -4834,6 +4875,7 @@ window.submitEditShowTalkComment = async function(idx, ci){
   var inp = document.getElementById('edit-st-'+idx+'-'+ci);
   if (!c || !inp || !inp.value.trim()) return;
   var txt = inp.value.trim();
+  if (_isObjectionable(txt)) return;
   var sentiment = detectSentiment(txt);
   var show = findShowForShowTalkComment(c);
   var r = show && (show.reactions||[]).find(function(x){ return x.id === c.id; });
@@ -4881,6 +4923,7 @@ window.submitShowTalkReact = async function(idx){
   var inp=document.getElementById('showtalk-react-'+idx);
   if(!s||!s.target||!inp||!inp.value.trim())return;
   var txt=inp.value.trim();
+  if (_isObjectionable(txt)) return;
   var sentiment=detectSentiment(txt);
   var u=state.user;
   var target=s.target;
@@ -5028,7 +5071,10 @@ async function loadLounge(roomId){
     var res = await sb.rpc('get_lounge', { p_room_id: roomId });
     if (res.error) throw res.error;
     var d = res.data || {};
-    state.lounge = { posts: d.posts || [], replies: d.replies || [], seenAt: d.lounge_seen_at || null };
+    state.lounge = {
+      posts: (d.posts || []).filter(function(x) { return !_isBlocked(x.user_id) && !state.reportedIds.has(x.id); }),
+      replies: (d.replies || []).filter(function(x) { return !_isBlocked(x.user_id) && !state.reportedIds.has(x.id); }),
+      seenAt: d.lounge_seen_at || null };
   } catch(e){
     console.error('loadLounge error:', e);
     state.lounge = { posts:[], replies:[], seenAt:null };
@@ -5096,6 +5142,7 @@ function renderLounge(){
       + '<button class="lounge-link" onclick="toggleLoungeReply(\'' + p.id + '\')">Reply</button>'
       + (p.user_id === myId ? '<button class="lounge-link" onclick="startEditLounge(\'post\',\'' + p.id + '\')">Edit</button>' : '')
       + (_loungeCanDelete(p.user_id) ? '<button class="lounge-link" onclick="deleteLoungePost(\'' + p.id + '\')">Delete</button>' : '')
+      + (p.user_id !== myId ? '<button class="lounge-link" onclick="openReport(\'lounge_post\',\'' + p.id + '\',\'' + p.user_id + '\',\'' + escAttr(_loungeName(p)).replace(/'/g, '') + '\')">Report</button>' : '')
       + '</div>';
 
     var replyRows = replies.map(function(r){
@@ -5105,11 +5152,11 @@ function renderLounge(){
           + '<div style="text-align:right;margin-top:6px;"><button class="btn-send" onclick="submitEditLounge(\'reply\',\'' + r.id + '\')">Save</button> '
           + '<button class="btn-cancel" onclick="cancelEditLounge()">Cancel</button></div>'
         : '<div class="lounge-body">' + escAttr(r.body) + '</div>';
-      var rActions = (!state.currentRoomIsAdminView && _loungeCanDelete(r.user_id))
-        ? '<div class="lounge-actions">'
+      var rActions = state.currentRoomIsAdminView ? '' : '<div class="lounge-actions">'
           + (r.user_id === myId ? '<button class="lounge-link" onclick="startEditLounge(\'reply\',\'' + r.id + '\')">Edit</button>' : '')
-          + '<button class="lounge-link" onclick="deleteLoungeReply(\'' + r.id + '\')">Delete</button></div>'
-        : '';
+          + (_loungeCanDelete(r.user_id) ? '<button class="lounge-link" onclick="deleteLoungeReply(\'' + r.id + '\')">Delete</button>' : '')
+          + (r.user_id !== myId ? '<button class="lounge-link" onclick="openReport(\'lounge_reply\',\'' + r.id + '\',\'' + r.user_id + '\',\'' + escAttr(_loungeName(r)).replace(/'/g, '') + '\')">Report</button>' : '')
+          + '</div>';
       return '<div class="lounge-reply"><div class="lounge-head"><span class="lounge-author">' + escAttr(_loungeName(r))
         + '</span><span class="lounge-time">' + timeAgo(r.created_at) + (r.updated_at ? ' · edited' : '') + '</span></div>'
         + rBody + rActions + '</div>';
@@ -5135,6 +5182,7 @@ window.submitLoungePost = async function(){
   var el = document.getElementById('lounge-input');
   if (!el) return;
   var body = el.value.trim();
+  if (_isObjectionable(body)) return;
   if (!body) return;
   if (!state.currentRoomId || !state.user) return;
   el.value = '';
@@ -5172,6 +5220,7 @@ window.submitLoungeReply = async function(postId){
   var el = document.getElementById('lounge-reply-' + postId);
   if (!el) return;
   var body = el.value.trim();
+  if (_isObjectionable(body)) return;
   if (!body || !state.user) return;
   delete _loungeReplyOpen[postId];
   var tmpId = 'tmp-' + Date.now();
@@ -5214,6 +5263,7 @@ window.submitEditLounge = async function(kind, id){
   var el = document.getElementById('lounge-edit-input');
   if (!el) return;
   var body = el.value.trim();
+  if (_isObjectionable(body)) return;
   if (!body){ return; }
   var table = kind === 'post' ? 'lounge_posts' : 'lounge_replies';
   var arr = kind === 'post' ? state.lounge.posts : state.lounge.replies;
@@ -6053,7 +6103,7 @@ async function getFriendsWithShows(roomId) {
   state.currentRoomConversationsLastSeen = bundle.conversations_last_seen_at || null;
   state.roomLastSeen[roomId] = bundle.conversations_last_seen_at || null; // per room, for room cards
 
-  var allUsers = bundle.friends || [];
+  var allUsers = (bundle.friends || []).filter(function(u) { return !_isBlocked(u.id); });
   if (!allUsers.length) return [];
   var shows = bundle.shows || [];
   var top5 = bundle.top5 || [];
@@ -6070,7 +6120,7 @@ async function getFriendsWithShows(roomId) {
     var ku = userLookup[r.user_id] || { name: 'Someone', initials: '?', color: '#aaa' };
     return { id: r.id, reactorId: r.user_id, user: ku.name, initials: ku.initials, color: ku.color, text: r.text, sentiment: r.sentiment, reactedAt: r.reacted_at };
   }
-  function normShow(s) { var rx = allReactions.filter(function(r){ return r.show_id === s.id; }); return Object.assign({}, s, { reactions: rx.map(normReaction), showReact: false, waitingForSeason: s.waiting_for_season || false }); }
+  function normShow(s) { var rx = allReactions.filter(function(r){ return r.show_id === s.id && _reactionVisible(r.user_id, r.id); }); return Object.assign({}, s, { reactions: rx.map(normReaction), showReact: false, waitingForSeason: s.waiting_for_season || false }); }
 
   return allUsers.map(function(u) {
     var friendShows = (shows || []).filter(function(s) { return s.user_id === u.id; });
@@ -6129,7 +6179,7 @@ function normalizeShow(s) {
     poster_path: s.poster_path || null,
     tmdb_id: s.tmdb_id || null,
     media_type: s.media_type || 'tv',
-    reactions: (s.reactions || []).map(function(r) {
+    reactions: (s.reactions || []).filter(function(r) { return _reactionVisible(r.user_id, r.id); }).map(function(r) {
       var u = state.user;
       var isMe = u && r.user_id === u.id;
       return { id: r.id, reactorId: r.user_id, user: isMe ? (u.first + (u.last ? ' ' + u.last : '')) : 'Someone', initials: isMe ? (u.initials || 'Y') : '?', color: isMe ? '#C4622D' : '#aaa', text: r.text, sentiment: r.sentiment, reactedAt: r.reacted_at };
@@ -6227,6 +6277,7 @@ async function loadUserIntoState(profile) {
     await joinLivingRoom(PENDING_ROOM_ID);
     PENDING_ROOM_ID = null;
   }
+  await loadSafetyState(); // before any room data, so blocked/reported content never shows
   init();
   showScreen('app');
   renderAll();
@@ -7001,6 +7052,7 @@ window.submitDoneWatching = async function() {
   var show = _dwmPending;
   var list = _dwmShowList(show);
   var comment = document.getElementById('dwm-comment').value.trim();
+  if (comment && _isObjectionable(comment)) return;
   document.getElementById('dwm-overlay').style.display = 'none';
   if (_dwmRating > 0) {
     show.rating = _dwmRating;
@@ -7278,6 +7330,7 @@ window.submitReact = async function(list, id) {
   if (!s || !inp || !inp.value.trim()) return;
   var u = state.user;
   var txt = inp.value.trim();
+  if (_isObjectionable(txt)) return;
   var sentiment = detectSentiment(txt);
   var newReact = { id: null, reactorId: u ? u.id : null, user: u ? (u.first + (u.last ? ' ' + u.last : '')) : 'You', initials: u ? u.initials : 'Y', color: '#C4622D', text: txt, sentiment: sentiment, reactedAt: new Date().toISOString() };
   s.reactions.push(newReact);
@@ -7352,6 +7405,7 @@ window.submitEditReact = async function(list, showId, reactId) {
   var inp = document.getElementById('edit-inp-' + list + '-' + showId + '-' + reactId);
   if (!r || !inp || !inp.value.trim()) return;
   var txt = inp.value.trim();
+  if (_isObjectionable(txt)) return;
   var sentiment = detectSentiment(txt);
   r.text = txt; r.sentiment = sentiment; r.editing = false;
   renderList(list);
@@ -7382,6 +7436,7 @@ window.submitEditFriendReact = async function(friendId, lk, showId, reactId) {
   var inp = document.getElementById('edit-finp-' + lk + '-' + friendId + '-' + showId + '-' + reactId);
   if (!r || !inp || !inp.value.trim()) return;
   var txt = inp.value.trim();
+  if (_isObjectionable(txt)) return;
   var sentiment = detectSentiment(txt);
   r.text = txt; r.sentiment = sentiment; r.editing = false;
   showFriend(friendId);
@@ -8993,6 +9048,206 @@ window.copyInvite = function() {
 };
 
 // ============================================================
+// SAFETY: word filter, Report, Block (Apple guideline 1.2)
+// ============================================================
+// Database side: sql/add_report_block_filter.sql. The word filter here
+// mirrors the database trigger (which is the real backstop) so people get a
+// friendly message instead of a failed save. Slurs and sexually explicit
+// terms only -- everyday swearing is fine. Keep in sync with
+// objectionable_text() in that SQL file.
+var OBJECTIONABLE_RE = /\b(n[i1]gg(er|a|ah|az|ers|as)|ch[i1]nks?|g[o0][o0]ks?|sp[i1]cs?|k[i1]kes?|wetbacks?|beaners?|ragheads?|towelheads?|f[a@]gg?[o0]ts?|f[a@]gs|trann(y|ies)|retards?|retarded|c[u*]nts?|cocksuckers?|motherfuckin|whores?|sluts?|blowjobs?|cumshots?|gangbangs?|porn(o|hub)?)\b/i;
+function _isObjectionable(text) {
+  if (!text || !OBJECTIONABLE_RE.test(text)) return false;
+  showToast('Let’s keep it friendly — please edit your comment.');
+  return true;
+}
+
+function _isBlocked(userId) { return !!userId && state.blockedIds.has(userId); }
+function _reactionVisible(userId, reactionId) { return !_isBlocked(userId) && !state.reportedIds.has(reactionId); }
+
+// Who I've blocked + what I've reported. Loaded once after login, before the
+// room data, so blocked/reported content never flashes on screen.
+async function loadSafetyState() {
+  try {
+    var b = await sb.from('blocked_users').select('blocked_user_id');
+    if (!b.error) state.blockedIds = new Set((b.data || []).map(function(r) { return r.blocked_user_id; }));
+    var r = await sb.from('reports').select('target_id').neq('target_type', 'user');
+    if (!r.error) state.reportedIds = new Set((r.data || []).map(function(x) { return x.target_id; }));
+  } catch (e) { console.error('loadSafetyState error:', e); }
+}
+
+// Drop a person (or one item) from everything already on screen / in memory,
+// then redraw whatever is showing.
+function _purgeAndRefresh() {
+  function cleanList(arr) {
+    (arr || []).forEach(function(sh) {
+      if (sh && sh.reactions) sh.reactions = sh.reactions.filter(function(r) { return _reactionVisible(r.reactorId, r.id); });
+    });
+  }
+  ['watching', 'watchlist', 'watched'].forEach(function(lk) { cleanList(state[lk]); });
+  ['friends', 'allFriendsAcrossRooms'].forEach(function(k) {
+    state[k] = (state[k] || []).filter(function(f) { return f && !_isBlocked(f.id); });
+    state[k].forEach(function(f) { ['watching', 'watchlist', 'watched'].forEach(function(lk) { cleanList(f[lk]); }); });
+  });
+  if (state.lounge) {
+    state.lounge.posts = (state.lounge.posts || []).filter(function(x) { return !_isBlocked(x.user_id) && !state.reportedIds.has(x.id); });
+    state.lounge.replies = (state.lounge.replies || []).filter(function(x) { return !_isBlocked(x.user_id) && !state.reportedIds.has(x.id); });
+  }
+  renderList('watching'); renderList('watchlist'); renderList('watched');
+  try {
+    var fdv = document.getElementById('friend-detail-view');
+    if (fdv && fdv.style.display === 'block') {
+      if (state.lastViewedFriend && !_isBlocked(state.lastViewedFriend)) showFriend(state.lastViewedFriend); else backToFriends();
+    } else if (document.getElementById('friends-view').style.display !== 'none') {
+      if (typeof renderFriends === 'function') renderFriends();
+      if (typeof renderConversations === 'function') renderConversations();
+      if (typeof renderLounge === 'function') renderLounge();
+      if (typeof renderShowTalk === 'function' && !_showTalkHubMode) renderShowTalk();
+    }
+    if (_showTalkHubMode && typeof renderShowTalk === 'function') renderShowTalk();
+  } catch (e) { console.error('safety refresh error:', e); }
+}
+
+// ---- Block -------------------------------------------------------------
+window.blockUser = async function(userId, name) {
+  if (!userId) return;
+  var first = (name || 'this person').split(' ')[0];
+  if (!confirm('Block ' + first + '?\n\nYou won’t see their comments, posts or shows anywhere in ShowUp, and you won’t get alerts from them. They won’t be told. You can unblock them in Settings.')) return;
+  try {
+    var res = await sb.from('blocked_users').insert({ user_id: state.user.id, blocked_user_id: userId });
+    if (res.error && res.error.code !== '23505') throw res.error;
+    state.blockedIds.add(userId);
+    _purgeAndRefresh();
+    showToast(first + ' is blocked.');
+  } catch (e) {
+    console.error('blockUser error:', e);
+    showToast('Couldn’t block — try again in a moment.');
+  }
+};
+
+window.openBlockedList = async function() {
+  var body = document.getElementById('blocked-list');
+  body.innerHTML = '<div class="empty">Loading…</div>';
+  document.getElementById('blocked-modal').classList.add('active');
+  try {
+    var res = await sb.rpc('get_blocked_users');
+    if (res.error) throw res.error;
+    var list = res.data || [];
+    body.innerHTML = list.length ? list.map(function(p) {
+      return '<div class="safety-row"><span>' + escAttr(p.name) + '</span>'
+        + '<button type="button" class="rank-act-btn" onclick="unblockUser(\'' + p.id + '\')">Unblock</button></div>';
+    }).join('') : '<div class="empty">You haven’t blocked anyone.</div>';
+  } catch (e) {
+    console.error('openBlockedList error:', e);
+    body.innerHTML = '<div class="empty">Couldn’t load the list — try again in a moment.</div>';
+  }
+};
+window.closeBlockedList = function() { document.getElementById('blocked-modal').classList.remove('active'); };
+window.unblockUser = async function(userId) {
+  try {
+    var res = await sb.from('blocked_users').delete().eq('user_id', state.user.id).eq('blocked_user_id', userId);
+    if (res.error) throw res.error;
+    state.blockedIds.delete(userId);
+    showToast('Unblocked. Their content will show again next time you open ShowUp.');
+    openBlockedList();
+  } catch (e) {
+    console.error('unblockUser error:', e);
+    showToast('Couldn’t unblock — try again in a moment.');
+  }
+};
+
+// ---- Report ------------------------------------------------------------
+var _reportTarget = null;
+window.openReport = function(type, targetId, targetUserId, name) {
+  _reportTarget = { type: type, id: targetId, userId: targetUserId, name: name || '' };
+  var first = (name || '').split(' ')[0];
+  document.getElementById('report-title').textContent = type === 'user' ? ('Report ' + (first || 'this person')) : (type === 'comment' ? 'Report this comment' : 'Report this post');
+  document.querySelectorAll('#report-modal input[name="report-reason"]').forEach(function(r) { r.checked = false; });
+  document.getElementById('report-note').value = '';
+  var blk = document.getElementById('report-block');
+  blk.checked = false;
+  document.getElementById('report-block-label').textContent = 'Also block ' + (first || 'this person');
+  document.getElementById('report-block-row').style.display = (targetUserId && !_isBlocked(targetUserId)) ? 'flex' : 'none';
+  document.getElementById('report-modal').classList.add('active');
+};
+window.closeReport = function() { document.getElementById('report-modal').classList.remove('active'); _reportTarget = null; };
+
+window.submitReport = async function() {
+  var t = _reportTarget;
+  if (!t) return;
+  var picked = document.querySelector('#report-modal input[name="report-reason"]:checked');
+  if (!picked) { showToast('Please pick a reason.'); return; }
+  var note = document.getElementById('report-note').value.trim();
+  var alsoBlock = document.getElementById('report-block').checked;
+  var btn = document.getElementById('report-submit');
+  btn.disabled = true;
+  try {
+    var res = await sb.rpc('submit_report', { p_target_type: t.type, p_target_id: t.id, p_reason: picked.value, p_note: note || null, p_target_user_id: t.userId || null });
+    if (res.error) throw res.error;
+    closeReport();
+    if (t.type !== 'user') state.reportedIds.add(t.id);
+    if (alsoBlock && t.userId) {
+      var ins = await sb.from('blocked_users').insert({ user_id: state.user.id, blocked_user_id: t.userId });
+      if (!ins.error || ins.error.code === '23505') state.blockedIds.add(t.userId);
+    }
+    _purgeAndRefresh();
+    showToast('Thanks for letting us know. We’ll review it within 24 hours.');
+    // Email admin@showuproom.com (fire-and-forget; the report is saved either way).
+    try {
+      var sess = await sb.auth.getSession();
+      var token = sess && sess.data && sess.data.session && sess.data.session.access_token;
+      if (token) fetch('/api/report', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token }, body: JSON.stringify({ report_id: res.data }) }).catch(function() {});
+    } catch (e2) {}
+  } catch (e) {
+    console.error('submitReport error:', e);
+    showToast('Couldn’t send the report — try again in a moment.');
+  } finally {
+    btn.disabled = false;
+  }
+};
+
+// ---- Admin: Reports ----------------------------------------------------
+var REPORT_REASON_LABELS = { spam: 'Spam', harassment: 'Harassment or bullying', hate: 'Hate speech', sexual: 'Sexual content', other: 'Something else' };
+window.openReportsAdmin = async function() {
+  var body = document.getElementById('reports-list');
+  body.innerHTML = '<div class="empty">Loading…</div>';
+  document.getElementById('reports-modal').classList.add('active');
+  try {
+    var res = await sb.rpc('get_reports', { p_status: 'open' });
+    if (res.error) throw res.error;
+    var list = res.data || [];
+    body.innerHTML = list.length ? list.map(function(r) {
+      var what = r.target_type === 'user' ? 'a person' : (r.target_type === 'comment' ? 'a comment' : 'a Lounge post');
+      return '<div class="report-card">'
+        + '<div class="report-head"><b>' + escAttr(REPORT_REASON_LABELS[r.reason] || r.reason) + '</b> &middot; ' + timeAgo(r.created_at) + '</div>'
+        + '<div class="report-meta">' + escAttr(r.reporter) + ' reported ' + what + ' by <b>' + escAttr(r.reported) + '</b></div>'
+        + (r.content ? '<div class="report-content">“' + escAttr(r.content) + '”</div>' : '')
+        + (r.note ? '<div class="report-meta">Note: ' + escAttr(r.note) + '</div>' : '')
+        + '<div class="report-actions">'
+        + (r.target_type !== 'user' ? '<button type="button" class="rank-act-btn primary" onclick="resolveReport(\'' + r.id + '\',\'remove\')">Remove it</button>' : '')
+        + '<button type="button" class="rank-act-btn" onclick="resolveReport(\'' + r.id + '\',\'dismiss\')">Dismiss</button>'
+        + '</div></div>';
+    }).join('') : '<div class="empty">No open reports. 🎉</div>';
+  } catch (e) {
+    console.error('openReportsAdmin error:', e);
+    body.innerHTML = '<div class="empty">Couldn’t load reports — try again in a moment.</div>';
+  }
+};
+window.closeReportsAdmin = function() { document.getElementById('reports-modal').classList.remove('active'); };
+window.resolveReport = async function(id, action) {
+  if (action === 'remove' && !confirm('Remove this for everyone? This deletes the comment or post.')) return;
+  try {
+    var res = await sb.rpc('resolve_report', { p_report_id: id, p_action: action });
+    if (res.error) throw res.error;
+    showToast(action === 'remove' ? 'Removed.' : 'Dismissed.');
+    openReportsAdmin();
+  } catch (e) {
+    console.error('resolveReport error:', e);
+    showToast('Couldn’t do that — try again in a moment.');
+  }
+};
+
+// ============================================================
 // SETTINGS BUTTONS
 // ============================================================
 
@@ -9018,6 +9273,45 @@ wireSettingsButtons();
 bootstrap();
 
 </script>
+
+<!-- REPORT -->
+<div class="invite-modal-overlay" id="report-modal">
+  <div class="invite-modal">
+    <div class="invite-modal-title" id="report-title">Report</div>
+    <div class="invite-modal-sub">What’s wrong? Reports are private — the person won’t know who reported them.</div>
+    <div class="report-reasons">
+      <label><input type="radio" name="report-reason" value="spam"> Spam</label>
+      <label><input type="radio" name="report-reason" value="harassment"> Harassment or bullying</label>
+      <label><input type="radio" name="report-reason" value="hate"> Hate speech</label>
+      <label><input type="radio" name="report-reason" value="sexual"> Sexual content</label>
+      <label><input type="radio" name="report-reason" value="other"> Something else</label>
+    </div>
+    <textarea class="lounge-textarea" id="report-note" maxlength="1000" placeholder="Anything else we should know? (optional)"></textarea>
+    <label class="report-block-row" id="report-block-row"><input type="checkbox" id="report-block"> <span id="report-block-label">Also block this person</span></label>
+    <button type="button" class="btn-invite-copy" id="report-submit" onclick="submitReport()" style="width:100%;margin:12px 0 10px;">Send report</button>
+    <button type="button" class="btn-invite-close" onclick="closeReport()" style="width:100%;">Cancel</button>
+  </div>
+</div>
+
+<!-- BLOCKED PEOPLE -->
+<div class="invite-modal-overlay" id="blocked-modal">
+  <div class="invite-modal">
+    <div class="invite-modal-title">Blocked people</div>
+    <div class="invite-modal-sub">You don’t see their comments, posts or shows, and they don’t send you alerts.</div>
+    <div id="blocked-list" style="max-height:360px;overflow-y:auto;margin-bottom:12px;"></div>
+    <button type="button" class="btn-invite-close" onclick="closeBlockedList()" style="width:100%;">Close</button>
+  </div>
+</div>
+
+<!-- ADMIN: REPORTS -->
+<div class="invite-modal-overlay" id="reports-modal">
+  <div class="invite-modal">
+    <div class="invite-modal-title">Reports</div>
+    <div class="invite-modal-sub">Open reports, newest first. Aim to act within 24 hours.</div>
+    <div id="reports-list" style="max-height:420px;overflow-y:auto;margin-bottom:12px;"></div>
+    <button type="button" class="btn-invite-close" onclick="closeReportsAdmin()" style="width:100%;">Close</button>
+  </div>
+</div>
 
 <!-- INVITE MODAL -->
 <div class="invite-modal-overlay" id="invite-modal">
