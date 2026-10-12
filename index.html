@@ -603,6 +603,7 @@ html.native-cover .status-shield{display:block;position:fixed;top:0;left:0;right
 .lr-rate-line .lr-rating-owner{display:inline-block;width:64px;min-width:64px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;vertical-align:middle;}
 .fr-toggle-btn{flex-wrap:wrap;text-align:left;row-gap:2px;}
 .fr-toggle-btn > span:last-child{white-space:nowrap;}
+.fr-name{display:inline-block;width:64px;min-width:64px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 </style>
 <style>
 /* LOGIN SCREEN */
@@ -1903,7 +1904,7 @@ function friendRatingsHTML(title, excludeId, pool) {
     + '</button>';
   var individual='<div class="fr-individual" style="display:none;flex-direction:column;gap:3px;margin:6px 0 0 2px;">'
     + raters.map(function(r){
-        return '<div style="display:flex;align-items:center;gap:6px;"><span style="font-size:11px;font-weight:600;color:var(--charcoal);">'+escAttr(r.name)+'</span>'+remoteStatic(r.rating)+'</div>';
+        return '<div style="display:flex;align-items:center;gap:6px;"><span class="fr-name" style="font-size:11px;font-weight:600;color:var(--charcoal);">'+escAttr(r.name)+'</span>'+remoteStatic(r.rating)+'</div>';
       }).join('')
     + '</div>';
   return '<div class="fr-disclosure">'+summaryBtn+individual+'</div>';
@@ -2477,11 +2478,11 @@ function ownCardRatingsHTML(title, list, id, myRating) {
     + '<span class="fr-chevron">'+(isOpen?'&#9662;':'&#9656;')+'</span>'
     + summaryInner
     + '</button>';
-  var myRow = '<div style="display:flex;align-items:center;gap:6px;"><span style="font-size:11px;font-weight:600;color:var(--charcoal);">You</span>'
+  var myRow = '<div style="display:flex;align-items:center;gap:6px;"><span class="fr-name" style="font-size:11px;font-weight:600;color:var(--charcoal);">You</span>'
     + remoteRating(list, id, myRating||0)
     + '</div>';
   var friendRows = raters.map(function(r){
-      return '<div style="display:flex;align-items:center;gap:6px;"><span style="font-size:11px;font-weight:600;color:var(--charcoal);">'+escAttr(r.name)+'</span>'+remoteStatic(r.rating)+'</div>';
+      return '<div style="display:flex;align-items:center;gap:6px;"><span class="fr-name" style="font-size:11px;font-weight:600;color:var(--charcoal);">'+escAttr(r.name)+'</span>'+remoteStatic(r.rating)+'</div>';
     }).join('');
   var individual = '<div class="fr-individual" style="display:'+(isOpen?'flex':'none')+';flex-direction:column;gap:3px;margin:6px 0 0 2px;">'+myRow+friendRows+'</div>';
   return '<div class="fr-disclosure">'+summaryBtn+individual+'</div>';
