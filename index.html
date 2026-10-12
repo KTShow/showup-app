@@ -598,6 +598,11 @@ html.native-cover .status-shield{display:block;position:fixed;top:0;left:0;right
 .lr-rate-line{margin-top:5px;}
 .lr-rate-line .lr-rating-owner{display:inline-block;min-width:38px;}
 .btn-shared-taste{background:#fff;border:1px solid var(--border);color:var(--charcoal);border-radius:16px;padding:6px 12px;min-height:34px;font-family:var(--sans);font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;}
+.frv-ratings{margin-top:6px;}
+.frv-ratings .lr-rate-line:first-child{margin-top:0;}
+.lr-rate-line .lr-rating-owner{display:inline-block;width:64px;min-width:64px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;vertical-align:middle;}
+.fr-toggle-btn{flex-wrap:wrap;text-align:left;row-gap:2px;}
+.fr-toggle-btn > span:last-child{white-space:nowrap;}
 </style>
 <style>
 /* LOGIN SCREEN */
@@ -1813,7 +1818,7 @@ function remoteRating(list, id, rating) {
   // Same look as every other rating row; .remote-btn's invisible ::before
   // gives each remote a 44pt-tall tap area.
   var html='<div style="display:flex;gap:0;">';
-  for(var n=1;n<=5;n++){var isLit=n<=rating;html+='<button class="remote-btn" aria-label="Rate '+n+' of 5" style="padding:0 3px;opacity:'+(isLit?'1':'0.22')+'" onclick="rate(\''+list+'\',\''+id+'\','+n+')">'+remoteIcon(16,isLit)+'</button>';}
+  for(var n=1;n<=5;n++){var isLit=n<=rating;html+='<button class="remote-btn" aria-label="Rate '+n+' of 5" style="padding:0 1.5px;opacity:'+(isLit?'1':'0.22')+'" onclick="rate(\''+list+'\',\''+id+'\','+n+')">'+remoteIcon(13,isLit)+'</button>';}
   return html+'</div>';
 }
 
@@ -1827,7 +1832,7 @@ window.rateFromLivingRoomCard = function(list, id, n, viewingId){
 };
 function remoteRatingLR(list, id, rating, viewingId) {
   var html='<div style="display:flex;gap:0;">';
-  for(var n=1;n<=5;n++){var isLit=n<=rating;html+='<button class="remote-btn" aria-label="Rate '+n+' of 5" style="padding:0 3px;opacity:'+(isLit?'1':'0.22')+'" onclick="rateFromLivingRoomCard(\''+list+'\',\''+id+'\','+n+',\''+viewingId+'\')">'+remoteIcon(15,isLit)+'</button>';}
+  for(var n=1;n<=5;n++){var isLit=n<=rating;html+='<button class="remote-btn" aria-label="Rate '+n+' of 5" style="padding:0 1.5px;opacity:'+(isLit?'1':'0.22')+'" onclick="rateFromLivingRoomCard(\''+list+'\',\''+id+'\','+n+',\''+viewingId+'\')">'+remoteIcon(13,isLit)+'</button>';}
   return html+'</div>';
 }
 
@@ -1843,7 +1848,7 @@ function remoteStatic(rating) {
 // pair stays glued together when the actions row wraps.
 function lrRatingPair(label, widgetHTML) {
   return '<span style="display:inline-flex;align-items:center;gap:3px;white-space:nowrap;">'
-    + '<span class="lr-rating-owner">'+escAttr(label)+'</span>'+widgetHTML+'</span>';
+    + '<span class="lr-rating-owner" title="'+escAttr(label)+'">'+escAttr(label)+'</span>'+widgetHTML+'</span>';
 }
 function firstNameOf(name) { return String(name||'').trim().split(/\s+/)[0] || name || ''; }
 
@@ -2093,7 +2098,20 @@ window.deleteCardComment = async function(reactionId){
 // entered (matches a room-scoped card's own counts); 'all' (default, used
 // from the room-independent personal tabs) pools across every room the
 // viewer belongs to -- see _showTalkScope / buildShowTalk.
+// Where "See all comments" was tapped from, when that was one of your own
+// tabs -- Show Talk's back arrow returns there (to the same show) instead of
+// to the Show Talk list.
+var _talkOrigin = null;
 window.openShowTalkFor = function(title, scope) {
+  var origin = null;
+  ['watching','watchlist','watched'].forEach(function(t){
+    var pane = document.getElementById('tab-'+t);
+    if (pane && pane.style.display === 'block') {
+      var key0 = (title||'').toLowerCase().trim();
+      var show = (state[t]||[]).find(function(x){ return (x.title||'').toLowerCase().trim() === key0; });
+      origin = { tab: t, cardId: show ? show.id : null, scrollY: window.scrollY };
+    }
+  });
   var lrBtn = document.getElementById('btab-living-room');
   if (lrBtn) showTab('living-room', lrBtn);
   if (scope === 'room') {
@@ -2108,7 +2126,19 @@ window.openShowTalkFor = function(title, scope) {
   var key = (title||'').toLowerCase().trim();
   var idx = list.findIndex(function(s){ return s.title.toLowerCase().trim()===key; });
   if (idx>=0) showShowTalkDetail(idx);
+  _talkOrigin = origin;
 };
+function _returnToTalkOrigin() {
+  var o = _talkOrigin;
+  _talkOrigin = null;
+  if (!o) return false;
+  document.getElementById('showtalk-hub-view').style.display = 'none';
+  _showTalkHubMode = false;
+  showTab(o.tab, document.getElementById('btab-'+o.tab));
+  if (o.cardId) scrollToShowCard(o.cardId);
+  else window.scrollTo(0, o.scrollY || 0);
+  return true;
+}
 
 function escAttr(str) {
   return (str || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -3272,6 +3302,8 @@ function captureFriendDetailReturn(){
 }
 
 async function showFriend(id) {
+  var _dvEl = document.getElementById('friend-detail-view');
+  var _rerender = !!(_dvEl && _dvEl.style.display === 'block' && state.lastViewedFriend === id);
   captureFriendDetailReturn();
   state.lastViewedFriend=id;
   var isSelf = !!(state.user && id === state.user.id);
@@ -3332,7 +3364,7 @@ async function showFriend(id) {
           ? '<span class="on-list-badge">'+onListBadgeContent(mineExisting)+'</span>'
           : '<button class="btn-add-prominent" onclick="addFromFriendCard(\''+s.id+'\')" title="Add to my list">+ Add</button>';
         var otherRatings=friendRatingsHTML(s.title,f.id,state.friends);
-        html+='<div class="show-card" id="card-'+s.id+'"><div class="show-card-top">'+showTile(s)+'<div class="show-info"><div class="show-title">'+s.title+'</div>'+ratingBlock+(otherRatings?'<div style="margin-top:4px;">'+otherRatings+'</div>':'')+'</div><div class="card-corner">'+corner+'</div></div><div class="react-area">'+talkPreviewHTML(s.title,state.friends)+reactToggle+'</div></div>';
+        html+='<div class="show-card" id="card-'+s.id+'"><div class="show-card-top">'+showTile(s)+'<div class="show-info"><div class="show-title">'+s.title+'</div></div><div class="card-corner">'+corner+'</div></div>'+((ratingBlock||otherRatings)?'<div class="frv-ratings">'+ratingBlock+(otherRatings?'<div style="margin-top:4px;">'+otherRatings+'</div>':'')+'</div>':'')+'<div class="react-area">'+talkPreviewHTML(s.title,state.friends)+reactToggle+'</div></div>';
       });
       html+='</div></div>';
     });
@@ -3421,6 +3453,7 @@ async function showFriend(id) {
     : '')
   + top5HTML
   + '<div style="margin-top:24px;text-align:center;"><button class="back-btn" onclick="backToFriends()">'+escAttr(backLabel)+'</button></div>';
+  if (!_rerender) window.scrollTo(0, 0);
 }
 
 function frShowArr(fid,lk){var isSelf=!!(state.user&&fid===state.user.id);var src=isSelf?{watching:state.watching,watchlist:state.watchlist,watched:state.watched}:state.friends.find(function(x){return x.id===fid;});if(!src)return null;return lk==='w'?src.watching:lk==='wl'?src.watchlist:src.watched;}
@@ -3975,6 +4008,7 @@ window.backFromPrimeTimeView = function() {
 // specific room entered first.
 window.openShowTalkHub = function() {
   _friendDetailReturn = null;
+  _talkOrigin = null;
   _showTalkDetailIdx = null;
   hideLivingRoomTopPanels();
   document.getElementById('friends-view').style.display = 'none';
@@ -3989,6 +4023,7 @@ window.openShowTalkHub = function() {
 };
 
 window.backFromShowTalkHub = function() {
+  if (_returnToTalkOrigin()) return;
   var d = document.getElementById('showtalk-hub-detail-panel');
   if (d && d.style.display === 'block') { backToShowTalk(); return; }
   document.getElementById('showtalk-hub-view').style.display = 'none';
