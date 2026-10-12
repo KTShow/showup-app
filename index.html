@@ -585,6 +585,19 @@ html.native-cover .status-shield{display:block;position:fixed;top:0;left:0;right
 .btn-add-comment{position:relative;align-items:center;gap:5px;margin-top:6px;min-height:32px;padding:0 12px;border-radius:16px;background:#fff;border:1px solid var(--border);color:var(--fig);font-family:var(--sans);font-size:12px;font-weight:600;cursor:pointer;}
 .btn-add-comment::before{content:"";position:absolute;left:0;right:0;top:50%;height:44px;transform:translateY(-50%);}
 .cbox .inline-react{margin-top:6px;}
+.react-area{display:flex;flex-wrap:wrap;align-items:center;column-gap:10px;}
+.cprev-lines{flex-basis:100%;display:flex;flex-direction:column;gap:4px;margin:2px 0 2px;}
+.cprev-more,.btn-add-comment{position:relative;background:none;border:none;padding:0;min-height:32px;margin:0;color:var(--fig);font-family:var(--sans);font-size:12px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:5px;}
+.cprev-more::before{content:"";position:absolute;left:0;right:0;top:50%;height:44px;transform:translateY(-50%);}
+.cbox{display:contents;}
+.react-area .btn-add-comment{margin-left:auto;}
+.react-area > .cbox:first-child .btn-add-comment{margin-left:0;}
+.cbox .inline-react{flex-basis:100%;margin-top:4px;}
+.card-corner{display:flex;align-items:center;gap:6px;flex-shrink:0;}
+.card-corner .on-list-badge{text-align:center;line-height:1.2;}
+.lr-rate-line{margin-top:5px;}
+.lr-rate-line .lr-rating-owner{display:inline-block;min-width:38px;}
+.btn-shared-taste{background:#fff;border:1px solid var(--border);color:var(--charcoal);border-radius:16px;padding:6px 12px;min-height:34px;font-family:var(--sans);font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;}
 </style>
 <style>
 /* LOGIN SCREEN */
@@ -1797,10 +1810,10 @@ function remoteIcon(size, lit) {
 }
 
 function remoteRating(list, id, rating) {
-  // 40pt buttons (comfortable tap size) -- the interactive rating row on
-  // your own Watching/My List/Binged cards.
+  // Same look as every other rating row; .remote-btn's invisible ::before
+  // gives each remote a 44pt-tall tap area.
   var html='<div style="display:flex;gap:0;">';
-  for(var n=1;n<=5;n++){var isLit=n<=rating;html+='<button class="remote-btn-lg" aria-label="Rate '+n+' of 5" style="opacity:'+(isLit?'1':'0.22')+'" onclick="rate(\''+list+'\',\''+id+'\','+n+')">'+remoteIcon(17,isLit)+'</button>';}
+  for(var n=1;n<=5;n++){var isLit=n<=rating;html+='<button class="remote-btn" aria-label="Rate '+n+' of 5" style="padding:0 3px;opacity:'+(isLit?'1':'0.22')+'" onclick="rate(\''+list+'\',\''+id+'\','+n+')">'+remoteIcon(16,isLit)+'</button>';}
   return html+'</div>';
 }
 
@@ -1813,8 +1826,8 @@ window.rateFromLivingRoomCard = function(list, id, n, viewingId){
   showFriend(viewingId);
 };
 function remoteRatingLR(list, id, rating, viewingId) {
-  var html='<div style="display:flex;gap:4px;">';
-  for(var n=1;n<=5;n++){var isLit=n<=rating;html+='<button class="remote-btn" style="opacity:'+(isLit?'1':'0.22')+'" onclick="rateFromLivingRoomCard(\''+list+'\',\''+id+'\','+n+',\''+viewingId+'\')">'+remoteIcon(15,isLit)+'</button>';}
+  var html='<div style="display:flex;gap:0;">';
+  for(var n=1;n<=5;n++){var isLit=n<=rating;html+='<button class="remote-btn" aria-label="Rate '+n+' of 5" style="padding:0 3px;opacity:'+(isLit?'1':'0.22')+'" onclick="rateFromLivingRoomCard(\''+list+'\',\''+id+'\','+n+',\''+viewingId+'\')">'+remoteIcon(15,isLit)+'</button>';}
   return html+'</div>';
 }
 
@@ -1934,21 +1947,20 @@ function titleCommentsPool(title, pool) {
 }
 
 function talkPreviewHTML(title, pool) {
+  // Tile preview: the newest comment, then "See all N comments" on the left
+  // of the footer row ("Add a comment" sits on the right -- see .react-area).
+  // Older comments of your own are edited/deleted from the full thread.
   var comments=titleCommentsPool(title, pool);
   if(!comments.length) return '';
-  var preview=comments.slice(0,2);
-  // Your newest comment always makes the preview, so a duplicate or a
-  // second thought can be deleted right from the tile (the X below).
-  var myNewest=comments.find(function(c){ return c.isMe && c.id; });
-  if (myNewest && preview.indexOf(myNewest)<0) preview=[preview[0], myNewest];
+  var c=comments[0];
   var scope = pool ? 'room' : 'all';
-  return '<div style="display:flex;flex-direction:column;gap:4px;margin:4px 0;">'
-    + preview.map(function(c){
-        if (!(c.isMe && c.id)) return '<div style="display:flex;align-items:center;gap:4px;">'+_cprevTextHTML(c.name, c.text)+'</div>';
-        return '<div class="cprev-line" data-rid="'+c.id+'" style="display:flex;align-items:center;gap:4px;">'+_cprevTextHTML(c.name, c.text)
-          + commentMenuBtnHTML('editCardComment(\''+c.id+'\')', 'deleteCardComment(\''+c.id+'\')') + '</div>';
-      }).join('')
-    + '</div><div style="display:inline-flex;align-items:center;gap:4px;font-size:11px;color:var(--fig);font-weight:600;cursor:pointer;" onclick="openShowTalkFor(\''+escAttr(title).replace(/'/g,"\\'")+'\',\''+scope+'\')">&#128172; '+(comments.length===1?'See the comment':'See all '+comments.length+' comments')+' &rsaquo;</div>';
+  var line = (c.isMe && c.id)
+    ? '<div class="cprev-line" data-rid="'+c.id+'" style="display:flex;align-items:center;gap:4px;">'+_cprevTextHTML(c.name, c.text)
+      + commentMenuBtnHTML('editCardComment(\''+c.id+'\')', 'deleteCardComment(\''+c.id+'\')') + '</div>'
+    : '<div style="display:flex;align-items:center;gap:4px;">'+_cprevTextHTML(c.name, c.text)+'</div>';
+  return '<div class="cprev-lines">'+line+'</div>'
+    + '<button type="button" class="cprev-more" onclick="openShowTalkFor(\''+escAttr(title).replace(/'/g,"\\'")+'\',\''+scope+'\')">'
+    + (comments.length===1?'See the comment':'See all '+comments.length+' comments')+' &rsaquo;</button>';
 }
 
 function _cprevTextHTML(name, text){
@@ -3301,26 +3313,26 @@ async function showFriend(id) {
         var inpId='finp-'+lk+'-'+f.id+'-'+s.id;
         var reactToggle=commentBoxHTML(inpId, "submitFR('"+f.id+"','"+lk+"','"+s.id+"')");
         var mineExisting = isSelf ? null : findMyShowByTitle(s.title);
-        var actions='';
+        // Same shape as your own tiles: ratings under the title (theirs,
+        // then yours on its own labelled line when you have the show too),
+        // and the 🎯 + Add / "on my list" badge in the top-right corner.
+        var ratingBlock='';
         if (lk==='w'||lk==='wd') {
           if (isSelf) {
-            actions = remoteRatingLR(lk==='w'?'watching':'watched', s.id, s.rating, f.id);
+            ratingBlock = '<div class="lr-rate-line">'+remoteRatingLR(lk==='w'?'watching':'watched', s.id, s.rating, f.id)+'</div>';
           } else if (mineExisting) {
-            // Their rating always shows (static); yours sits beside it,
-            // still interactive, so you can rate on the spot without their
-            // rating disappearing. Labelled so the two don't get confused.
-            actions = lrRatingPair(firstNameOf(f.name), remoteStatic(s.rating))
-              + lrRatingPair('You', remoteRatingLR(mineExisting.list, mineExisting.show.id, mineExisting.show.rating, f.id));
+            ratingBlock = '<div class="lr-rate-line">'+lrRatingPair(firstNameOf(f.name), remoteStatic(s.rating))+'</div>'
+              + '<div class="lr-rate-line">'+lrRatingPair('You', remoteRatingLR(mineExisting.list, mineExisting.show.id, mineExisting.show.rating, f.id))+'</div>';
           } else {
-            actions = remoteStatic(s.rating);
+            ratingBlock = '<div class="lr-rate-line">'+remoteStatic(s.rating)+'</div>';
           }
         }
-        actions+='<button class="btn-recommend" onclick="openRecommendPicker(\''+s.id+'\')" title="Recommend to a friend">&#127919;</button>';
-        if(!isSelf) actions+= mineExisting
+        var corner='<button class="btn-recommend" onclick="openRecommendPicker(\''+s.id+'\')" title="Recommend to a friend">&#127919;</button>';
+        if(!isSelf) corner+= mineExisting
           ? '<span class="on-list-badge">'+onListBadgeContent(mineExisting)+'</span>'
           : '<button class="btn-add-prominent" onclick="addFromFriendCard(\''+s.id+'\')" title="Add to my list">+ Add</button>';
         var otherRatings=friendRatingsHTML(s.title,f.id,state.friends);
-        html+='<div class="show-card" id="card-'+s.id+'"><div class="show-card-top">'+showTile(s)+'<div class="show-info"><div class="show-title">'+s.title+'</div>'+(otherRatings?'<div style="margin-top:4px;">'+otherRatings+'</div>':'')+'</div><div class="show-actions">'+actions+'</div></div><div class="react-area">'+talkPreviewHTML(s.title,state.friends)+reactToggle+'</div></div>';
+        html+='<div class="show-card" id="card-'+s.id+'"><div class="show-card-top">'+showTile(s)+'<div class="show-info"><div class="show-title">'+s.title+'</div>'+ratingBlock+(otherRatings?'<div style="margin-top:4px;">'+otherRatings+'</div>':'')+'</div><div class="card-corner">'+corner+'</div></div><div class="react-area">'+talkPreviewHTML(s.title,state.friends)+reactToggle+'</div></div>';
       });
       html+='</div></div>';
     });
@@ -3337,17 +3349,23 @@ async function showFriend(id) {
         }).join('')
       + '</div>';
   }
-  var muteBtn=isSelf?'':'<button class="btn-remove-friend" onclick="toggleMuteFriend(\''+f.id+'\')">'+(f.muted?'Unmute':'Mute')+'</button>'
-    + itemMenuBtnHTML([
-        { label: 'Block '+escAttr((f.name||'').split(' ')[0]).replace(/'/g,''), call: "blockUser('"+f.id+"','"+escAttr(f.name||'').replace(/'/g,'')+"')", danger: true },
-        { label: 'Report '+escAttr((f.name||'').split(' ')[0]).replace(/'/g,''), call: "openReport('user','"+f.id+"','"+f.id+"','"+escAttr(f.name||'').replace(/'/g,'')+"')" }
-      ], 'Block or report');
+  // Mute / Remove / Block / Report are rarely used, so they share one "..."
+  // menu instead of crowding the top bar. Remove (owner only -- RLS only
+  // lets the room OWNER remove a member) and Block confirm first.
+  var fFirst=(f.name||'').split(' ')[0].replace(/'/g,'');
+  var fSafeName=(f.name||'').replace(/'/g,'');
+  var frvMenuItems=isSelf?[]:[{ label: f.muted?'Unmute '+fFirst:'Mute '+fFirst, call: "toggleMuteFriend('"+f.id+"')" }];
+  if(!isSelf&&state.currentRoomIsOwner) frvMenuItems.push({ label: 'Remove from room', call: "removeFriend('"+f.id+"')", danger: true });
+  if(!isSelf) frvMenuItems.push(
+    { label: 'Block '+fFirst, call: "blockUser('"+f.id+"','"+fSafeName+"')", danger: true },
+    { label: 'Report '+fFirst, call: "openReport('user','"+f.id+"','"+f.id+"','"+fSafeName+"')" });
+  var muteBtn=isSelf?'':itemMenuBtnHTML(frvMenuItems, 'More options');
   // RLS only actually permits the room OWNER to remove a member (invited_by
   // is never set by join_living_room, so that alternate path never applies)
   // -- hiding this for non-owners instead of showing a button that would
   // silently fail.
-  var removeBtn=(isSelf||!state.currentRoomIsOwner)?'':'<button class="btn-remove-friend" onclick="removeFriend(\''+f.id+'\')">Remove from Room</button>';
-  var sharedTasteBtn=isSelf?'':'<button class="btn-remove-friend" onclick="openSharedTasteModal(\''+f.id+'\')">&#128156; Shared Taste</button>';
+  var removeBtn='';
+  var sharedTasteBtn=isSelf?'':'<button class="btn-shared-taste" onclick="openSharedTasteModal(\''+f.id+'\')">&#128156; Shared Taste</button>';
   var roomTitle=isSelf?'Your Living Room':f.name+"'s Living Room";
   var cityLine=isSelf?'':'<div style="font-size:13px;color:var(--muted)">'+f.city+'</div>';
   var onItems=friendSectionItems(f,'on');
@@ -3358,7 +3376,7 @@ async function showFriend(id) {
   var dnfKey='frv:'+f.id+':dnf';
   var dnfCollapsed=_collapsedSections[dnfKey]!==false;
   var backLabel = (_friendDetailReturn && _friendDetailReturn.label) || '← Back to Living Room';
-  dv.innerHTML='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;"><button class="back-btn" onclick="backToFriends()">'+escAttr(backLabel)+'</button><div style="display:flex;gap:8px;">'+sharedTasteBtn+muteBtn+removeBtn+'</div></div>'
+  dv.innerHTML='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;"><button class="back-btn" style="white-space:nowrap;" aria-label="'+escAttr(backLabel.replace(/^← */,''))+'" onclick="backToFriends()">'+escAttr(backLabel.replace(/^← *Back to */,'‹ '))+'</button><div style="display:flex;gap:4px;align-items:center;">'+sharedTasteBtn+muteBtn+removeBtn+'</div></div>'
     +'<div class="friend-header"><div class="friend-header-av" style="background:'+fColor+';font-size:18px;font-weight:700;font-family:var(--sans);">'+fInitials+'</div>'
     +'<div><div style="font-family:Georgia,serif;font-size:20px;font-weight:700">'+roomTitle+'</div>'
     +cityLine+'</div></div>'
@@ -3381,10 +3399,8 @@ async function showFriend(id) {
               } else if (dnfMineExisting) {
                 // Their rating (if they gave one) stays visible; yours sits
                 // beside it and stays interactive. Labelled to keep them apart.
-                dnfRatingRow = '<div style="margin-top:5px;display:flex;flex-wrap:wrap;align-items:center;gap:4px 8px;">'
-                  + (s.rating ? lrRatingPair(firstNameOf(f.name), remoteStatic(s.rating)) : '')
-                  + lrRatingPair('You', remoteRatingLR(dnfMineExisting.list, dnfMineExisting.show.id, dnfMineExisting.show.rating, f.id))
-                  + '</div>';
+                dnfRatingRow = (s.rating ? '<div class="lr-rate-line">'+lrRatingPair(firstNameOf(f.name), remoteStatic(s.rating))+'</div>' : '')
+                  + '<div class="lr-rate-line">'+lrRatingPair('You', remoteRatingLR(dnfMineExisting.list, dnfMineExisting.show.id, dnfMineExisting.show.rating, f.id))+'</div>';
               } else {
                 dnfRatingRow = s.rating ? '<div style="margin-top:5px;">'+remoteStatic(s.rating)+'</div>' : '';
               }
@@ -3397,7 +3413,7 @@ async function showFriend(id) {
                 +'<span style="font-size:11px;color:var(--muted);margin-left:6px;">'+s.platform+'</span>'
                 +'</div>'+dnfRatingRow
                 +(friendRatingsHTML(s.title,f.id,state.friends)?'<div style="margin-top:4px;">'+friendRatingsHTML(s.title,f.id,state.friends)+'</div>':'')
-                +'</div>'+(dnfActions?'<div class="show-actions">'+dnfActions+'</div>':'')+'</div>'
+                +'</div>'+(dnfActions?'<div class="card-corner">'+dnfActions+'</div>':'')+'</div>'
                 +'<div class="react-area">'+talkPreviewHTML(s.title,state.friends)+reactToggle+'</div>'
                 +'</div>';
             }).join('') + '</div></div>'
