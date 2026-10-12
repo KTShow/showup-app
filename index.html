@@ -15,6 +15,12 @@
     var land = window.matchMedia && matchMedia('(orientation: landscape)').matches;
     return land ? Math.max(w, h) : Math.min(w, h);
   }
+  // iPhone app (build with appendUserAgent "ShowUpCover"): the web view runs
+  // edge to edge and the page keeps itself clear of the status bar (see
+  // html.native-cover CSS). Older app builds and browsers are unaffected.
+  var COVER = /ShowUpCover/.test(navigator.userAgent);
+  if (COVER) document.documentElement.classList.add('native-cover');
+  var FIT = COVER ? ', viewport-fit=cover' : '';
   window.applyTextSize = function(size) {
     if (!SCALES[size]) size = 'standard';
     var s = SCALES[size];
@@ -22,8 +28,8 @@
     var meta = document.querySelector('meta[name="viewport"]');
     if (touch && meta) {
       meta.setAttribute('content', s === 1
-        ? 'width=device-width, initial-scale=1.0, maximum-scale=1.0'
-        : 'width=' + Math.round(deviceWidth() / s) + ', initial-scale=' + s + ', minimum-scale=' + s + ', maximum-scale=' + s);
+        ? 'width=device-width, initial-scale=1.0, maximum-scale=1.0' + FIT
+        : 'width=' + Math.round(deviceWidth() / s) + ', initial-scale=' + s + ', minimum-scale=' + s + ', maximum-scale=' + s + FIT);
       document.documentElement.style.zoom = '';
     } else {
       document.documentElement.style.zoom = s === 1 ? '' : String(s);
@@ -145,7 +151,7 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
 .section-toggle-all span:hover{color:var(--terra);border-color:var(--terra);}
 /* On the Watching/List/Binged tabs the control sticks under the (scrolled-
    away) top bar so "Collapse all" is reachable from anywhere in a long list. */
-.section-toggle-all--sticky{position:sticky;top:0;z-index:5;background:var(--sand);border-bottom:1px solid var(--border);}
+.section-toggle-all--sticky{position:sticky;top:var(--safe-top);z-index:5;background:var(--sand);border-bottom:1px solid var(--border);}
 
 .show-card{background:var(--cream);border:1px solid var(--border);border-radius:var(--radius);padding:9px 12px;box-shadow:var(--shadow);transition:box-shadow 0.2s;}
 .show-card:hover{box-shadow:0 4px 20px rgba(100,50,20,0.14);}
@@ -567,6 +573,15 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
 .section-toggle-all span::before{content:"";position:absolute;top:50%;left:-4px;right:-4px;height:44px;transform:translateY(-50%);}
 /* Rating remotes on tiles: a touch more room between them, so each is easier to hit. */
 .remote-btn{padding:0 1px;}
+
+/* Status bar: in the iPhone app the page runs edge to edge, so pad it below
+   the status bar and keep a solid strip behind the clock/battery so content
+   never scrolls under them. --safe-top is 0 everywhere else. */
+:root{--safe-top:0px;}
+html.native-cover{--safe-top:env(safe-area-inset-top);}
+html.native-cover body{padding-top:var(--safe-top);}
+.status-shield{display:none;}
+html.native-cover .status-shield{display:block;position:fixed;top:0;left:0;right:0;height:var(--safe-top);background:var(--sand);z-index:190;pointer-events:none;}
 </style>
 <style>
 /* LOGIN SCREEN */
@@ -591,6 +606,7 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
 </style>
 </head>
 <body>
+<div class="status-shield" aria-hidden="true"></div>
 <div class="boot-loader" id="boot-loader">
   <div class="boot-loader-logo">ShowUp</div>
   <div class="boot-loader-spinner"></div>
