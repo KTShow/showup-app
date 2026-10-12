@@ -278,9 +278,10 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
 .conversation-row.type-comment{border-left:3px solid var(--fig);}
 .conversation-row.is-new{background:#FBF3E0;}
 .conv-new-tag{display:inline-block;font-size:9px;font-weight:800;color:white;background:var(--gold);padding:1px 6px;border-radius:6px;letter-spacing:0.4px;margin-right:6px;vertical-align:middle;}
-@keyframes flashPulse{0%,100%{box-shadow:0 0 0 5px var(--terra);background:#FBEAD3;}50%{box-shadow:0 0 0 0 var(--terra);background:var(--cream);}}
+/* Jump-to-show "spotlight": bright gold so it stands out on every room theme. */
+@keyframes flashPulse{0%,100%{box-shadow:0 0 0 6px #F2B705,0 0 18px 6px rgba(242,183,5,0.55);background:#FFF4C2;}50%{box-shadow:0 0 0 2px #F2B705;background:var(--cream);}}
 .flash-pulse{animation:flashPulse 0.5s ease-in-out 5;}
-.show-card.flash-settled,.dnf-card.flash-settled{box-shadow:0 0 0 4px var(--terra);background:#FBEAD3;}
+.show-card.flash-settled,.dnf-card.flash-settled{box-shadow:0 0 0 5px #F2B705,0 0 16px 4px rgba(242,183,5,0.45);background:#FFF4C2;}
 .btn-recommend{background:var(--sand);border:none;cursor:pointer;padding:6px 9px;font-size:15px;color:var(--charcoal);border-radius:7px;line-height:1;transition:all 0.2s;flex-shrink:0;}
 .fr-disclosure{flex-shrink:0;margin-top:8px;}
 .fr-toggle-btn{display:inline-flex;align-items:center;gap:6px;background:none;border:none;padding:0;cursor:pointer;font-family:var(--sans);}
@@ -1648,6 +1649,7 @@ function showTab(tab, btn) {
   // including your own shows, opens in place via showFriend() without
   // leaving Living Room (see renderConversations).
   var leavingLivingRoom = document.getElementById('tab-living-room').style.display==='block' && tab!=='living-room';
+  _flashCardId = null; // a jump sets it again right after switching tabs
   // Switching INTO Watching / My List / Binged starts tidy: every streaming
   // group collapsed (only when there are 2+ groups -- one group collapsed
   // would hide the whole list). A jump to a specific show calls showTab and
@@ -2262,7 +2264,16 @@ function renderServiceGroup(key, svc, shows, list){
 
 function renderAll(){ renderList('watching'); renderList('watchlist'); renderList('watched'); }
 
+// A jump-to-show highlight must survive a re-render (e.g. friends' ratings
+// landing a moment after the app opens redraw the lists) -- otherwise the
+// show is scrolled to but the highlight silently vanishes.
+var _flashCardId = null;
 function renderList(list) {
+  _renderListInner(list);
+  if (_flashCardId) document.querySelectorAll('[id="card-'+_flashCardId+'"]').forEach(function(el){ el.classList.add('flash-settled'); });
+}
+
+function _renderListInner(list) {
   var el=document.getElementById(list+'-list');
   var items=state[list];
   var emptyMsgs={watching:"Nothing on yet — add a show to get started.",watchlist:"Save your next binge.",watched:'No credits have rolled yet. Get watching.'};
@@ -5046,6 +5057,7 @@ window.scrollToShowCard = function(showId, notFoundMsg){
     }
     if (reopened) saveCollapsedSections();
     el.scrollIntoView({behavior:'smooth', block:'center'});
+    _flashCardId = showId;
     // Pulses 5x, then settles into a held highlight that stays put (no
     // auto-fade) -- it only goes away once you navigate elsewhere and the
     // card gets torn down/re-rendered without these classes.
