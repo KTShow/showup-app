@@ -3980,7 +3980,30 @@ window.openFullLineupView = async function() {
   await loadFullLineupData();
   renderFullLineup();
   _fillTrendingPlatforms();
+  _fillTrendingCounts();
 };
+
+// "On N lists" + ShowUp rating for every trending show people here have --
+// matched by TMDB id or title, including brand-new shows the daily season
+// job hasn't registered yet (see sql/add_show_counts_rpc.sql).
+async function _fillTrendingCounts() {
+  var list = (_fullLineupData && _fullLineupData.trending) || [];
+  if (!list.length || _fullLineupData._countsLoaded) return;
+  try {
+    var res = await sb.rpc('get_show_counts', { p_items: list.slice(0, 100).map(function(t) { return { tmdb_id: t.tmdb_id, title: t.title }; }) });
+    if (res.error) throw res.error;
+    var byId = {};
+    (res.data || []).forEach(function(c) { byId[c.tmdb_id] = c; });
+    list.forEach(function(t) {
+      var c = byId[t.tmdb_id];
+      if (c) { t.people = c.people; t.avg_rating = c.avg_rating; t.rating_count = c.rating_count; }
+    });
+    _fullLineupData._countsLoaded = true;
+  } catch (e) { console.error('get_show_counts error:', e); return; }
+  var view = document.getElementById('full-lineup-view');
+  var detail = document.getElementById('full-lineup-detail-view');
+  if (view && view.style.display === 'block' && !(detail && detail.style.display === 'block')) renderFullLineup();
+}
 
 window.backFromFullLineupView = function() {
   var d = document.getElementById('full-lineup-detail-view');
@@ -4001,10 +4024,11 @@ function rankThumbHTML(s) {
 }
 
 // "remote 4.6 · 12 rated" line under the title (see .rank-score-line).
-function rankScoreLineHTML(avg, countText) {
+function rankScoreLineHTML(avg, countText, extraText) {
   var parts = [];
   if (avg != null && !isNaN(avg)) parts.push('<span style="display:inline-flex;align-items:center;gap:3px;">' + remoteIcon(12, true) + '<b>' + Number(avg).toFixed(1) + '</b></span>');
   if (countText) parts.push('<span>' + countText + '</span>');
+  if (extraText) parts.push('<span>' + extraText + '</span>');
   return parts.length ? '<div class="rank-score-line">' + parts.join('<span aria-hidden="true">&middot;</span>') + '</div>' : '';
 }
 
@@ -4077,9 +4101,13 @@ var _fullLineupListCache = [];
 
 function _hotRow(s, i, rankLabel) {
   var platform = s.platform ? '<div class="rank-meta-line"><span class="rank-platform">' + escAttr(s.platform) + '</span></div>' : '';
-  var score = (s.trending && !s.people)
-    ? (s.year ? '<div class="rank-score-line">Since ' + s.year + '</div>' : '')
-    : rankScoreLineHTML(s.avg_rating ? Number(s.avg_rating) : null, 'On ' + s.people + (s.people == 1 ? ' list' : ' lists'));
+  // "4.6 · On 5 lists · Since 2025" -- wraps onto more lines rather than
+  // dropping anything.
+  var year = s.trending ? s.year : s.first_air_year;
+  var since = year ? 'Since ' + year : '';
+  var score = s.people
+    ? rankScoreLineHTML(s.avg_rating ? Number(s.avg_rating) : null, 'On ' + s.people + (s.people == 1 ? ' list' : ' lists'), since)
+    : (since ? '<div class="rank-score-line">' + since + '</div>' : '');
   return '<div class="rank-card" onclick="showFullLineupDetail(' + i + ')">'
     + '<span class="rank-badge' + (rankLabel <= 3 ? ' gold' : '') + '">' + rankLabel + '</span>'
     + rankThumbHTML(s)
