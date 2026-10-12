@@ -604,6 +604,20 @@ html.native-cover .status-shield{display:block;position:fixed;top:0;left:0;right
 .fr-toggle-btn{flex-wrap:wrap;text-align:left;row-gap:2px;}
 .fr-toggle-btn > span:last-child{white-space:nowrap;}
 .fr-name{display:inline-block;width:64px;min-width:64px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.rate-trigger{position:relative;display:inline-flex;align-items:center;gap:6px;background:none;border:none;padding:4px 0;min-height:32px;cursor:pointer;font-family:var(--sans);}
+.rate-trigger::before{content:"";position:absolute;left:-4px;right:-4px;top:50%;height:44px;transform:translateY(-50%);}
+.rate-trigger-hint{font-size:11px;font-weight:600;color:var(--fig);}
+.rate-sheet-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:650;display:flex;align-items:flex-end;justify-content:center;}
+.rate-sheet{width:100%;max-width:480px;background:var(--cream);border-radius:18px 18px 0 0;padding:18px 16px calc(18px + env(safe-area-inset-bottom));box-shadow:0 -6px 24px rgba(0,0,0,0.2);text-align:center;}
+.rate-sheet-title{font-family:var(--serif);font-size:18px;font-weight:700;color:var(--charcoal);}
+.rate-sheet-sub{font-size:13px;color:var(--muted);margin:4px 0 14px;}
+.rate-sheet-row{display:flex;justify-content:center;gap:4px;}
+.rate-sheet-btn{background:none;border:none;cursor:pointer;width:56px;height:64px;display:inline-flex;align-items:center;justify-content:center;border-radius:12px;}
+.rate-sheet-btn:active{background:rgba(0,0,0,0.06);}
+.rate-sheet-actions{display:flex;justify-content:center;gap:10px;margin-top:14px;}
+.rate-sheet-clear,.rate-sheet-cancel{min-height:44px;padding:0 20px;border-radius:22px;font-family:var(--sans);font-size:14px;font-weight:600;cursor:pointer;}
+.rate-sheet-clear{background:#fff;border:1px solid var(--border);color:var(--terra);}
+.rate-sheet-cancel{background:#fff;border:1px solid var(--border);color:var(--charcoal);}
 </style>
 <style>
 /* LOGIN SCREEN */
@@ -1816,11 +1830,17 @@ function remoteIcon(size, lit) {
 }
 
 function remoteRating(list, id, rating) {
-  // Same look as every other rating row; .remote-btn's invisible ::before
-  // gives each remote a 44pt-tall tap area.
-  var html='<div style="display:flex;gap:0;">';
-  for(var n=1;n<=5;n++){var isLit=n<=rating;html+='<button class="remote-btn" aria-label="Rate '+n+' of 5" style="padding:0 1.5px;opacity:'+(isLit?'1':'0.22')+'" onclick="rate(\''+list+'\',\''+id+'\','+n+')">'+remoteIcon(13,isLit)+'</button>';}
-  return html+'</div>';
+  // On tiles the remotes are a compact display; tapping them opens the
+  // rating sheet with big, easy-to-hit remotes (openRateSheet).
+  return rateTriggerHTML(rating, "openRateSheet('"+list+"','"+id+"','')");
+}
+function rateTriggerHTML(rating, call) {
+  var icons = '';
+  for (var n = 1; n <= 5; n++) icons += '<span style="opacity:'+(n<=rating?'1':'0.22')+';display:inline-flex;">'+remoteIcon(13, n<=rating)+'</span>';
+  return '<button type="button" class="rate-trigger" aria-label="'+(rating?'Your rating: '+rating+' of 5. Tap to change':'Tap to rate')+'" onclick="event.stopPropagation();'+call+'">'
+    + '<span style="display:inline-flex;gap:3px;">'+icons+'</span>'
+    + (rating ? '' : '<span class="rate-trigger-hint">Tap to rate</span>')
+    + '</button>';
 }
 
 // Rating from inside a Living Room card (your own self-tile, or a friend's
@@ -1832,10 +1852,52 @@ window.rateFromLivingRoomCard = function(list, id, n, viewingId){
   showFriend(viewingId);
 };
 function remoteRatingLR(list, id, rating, viewingId) {
-  var html='<div style="display:flex;gap:0;">';
-  for(var n=1;n<=5;n++){var isLit=n<=rating;html+='<button class="remote-btn" aria-label="Rate '+n+' of 5" style="padding:0 1.5px;opacity:'+(isLit?'1':'0.22')+'" onclick="rateFromLivingRoomCard(\''+list+'\',\''+id+'\','+n+',\''+viewingId+'\')">'+remoteIcon(13,isLit)+'</button>';}
-  return html+'</div>';
+  return rateTriggerHTML(rating, "openRateSheet('"+list+"','"+id+"','"+viewingId+"')");
 }
+
+// ---- Rating sheet: five large remotes in a panel from the bottom ----
+// Tap a remote to set that rating (the sheet closes); "Clear rating" removes
+// it. Goes through rate() / rateFromLivingRoomCard(), which toggle -- so a
+// tap on the rating you already have just closes the sheet.
+var _rateSheet = null;
+window.openRateSheet = function(list, id, viewingId) {
+  var show = (state[list]||[]).find(function(x){ return x.id === id; });
+  if (!show) return;
+  _rateSheet = { list: list, id: id, viewingId: viewingId, current: show.rating || 0 };
+  closeRateSheet();
+  var cur = _rateSheet.current;
+  var btns = '';
+  for (var n = 1; n <= 5; n++) {
+    btns += '<button type="button" class="rate-sheet-btn" aria-label="'+n+' of 5" style="opacity:'+(n<=cur?'1':'0.3')+'" onclick="chooseRateSheet('+n+')">'+remoteIcon(26, n<=cur)+'</button>';
+  }
+  var ov = document.createElement('div');
+  ov.id = 'rate-sheet';
+  ov.className = 'rate-sheet-overlay';
+  ov.onclick = function(e){ if (e.target === ov) closeRateSheet(); };
+  ov.innerHTML = '<div class="rate-sheet" role="dialog" aria-label="Rate this show">'
+    + '<div class="rate-sheet-title">'+escAttr(show.title)+'</div>'
+    + '<div class="rate-sheet-sub">'+(cur ? 'Your rating: '+cur+' of 5' : 'How many remotes?')+'</div>'
+    + '<div class="rate-sheet-row">'+btns+'</div>'
+    + '<div class="rate-sheet-actions">'
+    + (cur ? '<button type="button" class="rate-sheet-clear" onclick="chooseRateSheet(0)">Clear rating</button>' : '')
+    + '<button type="button" class="rate-sheet-cancel" onclick="closeRateSheet()">Cancel</button>'
+    + '</div></div>';
+  document.body.appendChild(ov);
+};
+window.closeRateSheet = function() {
+  var el = document.getElementById('rate-sheet');
+  if (el) el.remove();
+};
+window.chooseRateSheet = function(n) {
+  var r = _rateSheet;
+  closeRateSheet();
+  if (!r) return;
+  // rate() toggles: same value = clear. Clear = send the current value.
+  var send = n === 0 ? r.current : n;
+  if (!send || (n !== 0 && n === r.current)) return;
+  if (r.viewingId) rateFromLivingRoomCard(r.list, r.id, send, r.viewingId);
+  else rate(r.list, r.id, send);
+};
 
 function remoteStatic(rating) {
   var html='<div style="display:flex;gap:3px;">';
