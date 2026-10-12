@@ -110,7 +110,7 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
 .alerts-card-btn{background:var(--terra);color:#fff;border:none;border-radius:8px;padding:8px 14px;font-family:var(--sans);font-size:13px;font-weight:700;cursor:pointer;}
 .alerts-card-later{background:none;border:none;color:var(--muted);font-family:var(--sans);font-size:13px;cursor:pointer;padding:8px 4px;}
 
-.bottom-nav{position:fixed;bottom:0;left:0;right:0;background:#EDE8DC;border-top:1px solid var(--border);display:flex;justify-content:space-around;align-items:center;height:60px;z-index:100;padding-bottom:env(safe-area-inset-bottom);}
+.bottom-nav{position:fixed;bottom:0;left:0;right:0;background:#EDE8DC;border-top:1px solid var(--border);display:flex;justify-content:space-around;align-items:center;height:calc(60px + env(safe-area-inset-bottom));z-index:100;padding-bottom:env(safe-area-inset-bottom);}
 .back-to-top{position:fixed;right:16px;bottom:calc(72px + env(safe-area-inset-bottom));width:42px;height:42px;border-radius:50%;background:var(--fig);color:#fff;border:none;box-shadow:0 4px 14px rgba(0,0,0,0.28);font-size:20px;line-height:1;cursor:pointer;z-index:150;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transform:translateY(10px);transition:opacity 0.2s,transform 0.2s;}
 .back-to-top.visible{opacity:0.92;pointer-events:auto;transform:none;}
 .back-to-top:active{transform:scale(0.92);}
@@ -127,7 +127,7 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
 .debug-badge{position:fixed;bottom:12px;left:12px;z-index:9999;background:rgba(0,0,0,0.78);color:#fff;font-family:monospace;font-size:11px;line-height:1.6;padding:8px 10px;border-radius:8px;max-width:260px;display:none;}
 @keyframes boot-spin{to{transform:rotate(360deg);}}
 
-.content{flex:1;padding:24px 20px 84px;max-width:700px;margin:0 auto;width:100%;}
+.content{flex:1;padding:24px 20px calc(84px + env(safe-area-inset-bottom));max-width:700px;margin:0 auto;width:100%;}
 .page-title{font-family:var(--serif);font-size:22px;margin-bottom:4px;}
 .page-sub{font-size:13px;color:var(--muted);margin-bottom:20px;}
 
