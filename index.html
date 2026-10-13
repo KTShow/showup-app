@@ -337,6 +337,7 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
 .hot-seg button{flex:1;min-height:44px;border-radius:10px;border:1.5px solid var(--terra);background:none;color:var(--terra);font-family:var(--sans);font-size:14px;font-weight:700;cursor:pointer;}
 .hot-seg button.active{background:var(--terra);color:#fff;}
 .rank-action-col{flex-shrink:0;width:72px;margin-left:8px;text-align:right;}
+.rank-onlist-line{margin-top:3px;}
 .rank-platform{font-size:10px;font-weight:700;color:white;background:var(--olive);padding:2px 8px;border-radius:10px;white-space:nowrap;flex-shrink:0;}
 .rank-remotes-inline{display:flex;gap:3px;align-items:center;flex-shrink:0;}
 .rank-count-inline{font-size:11px;color:var(--muted);flex-shrink:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
@@ -595,10 +596,17 @@ html.native-cover .status-shield{display:block;position:fixed;top:0;left:0;right
 .card-corner .on-list-badge{text-align:center;line-height:1.2;}
 .lr-rate-line{margin-top:5px;}
 .lr-rate-line .lr-rating-owner{display:inline-block;min-width:38px;}
-.btn-shared-taste{background:#fff;border:1px solid var(--border);color:var(--charcoal);border-radius:16px;padding:6px 12px;min-height:34px;font-family:var(--sans);font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;}
+.btn-shared-taste{background:#fff;border:1px solid var(--border);color:var(--charcoal);border-radius:20px;padding:0 14px;min-height:40px;font-family:var(--sans);font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;}
 .frv-ratings{margin-top:6px;}
 .frv-ratings .lr-rate-line:first-child{margin-top:0;}
-.lr-rate-line .lr-rating-owner{display:inline-block;width:64px;min-width:64px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;vertical-align:middle;}
+.lr-rate-line .lr-rating-owner{display:inline-block;width:76px;min-width:76px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;vertical-align:middle;}
+/* Friend-room tile: summary + each friend's row use the same 76px label
+   column as the owner / You rows above, so all the remotes line up. */
+.fr-aligned .fr-toggle-btn{gap:3px;}
+.fr-aligned .fr-chevron{display:inline-block;width:76px;min-width:76px;text-align:left;color:var(--muted);}
+.fr-aligned .fr-individual{margin:6px 0 0 0 !important;}
+.fr-aligned .fr-individual > div{gap:3px !important;}
+.fr-aligned .fr-name{width:76px;min-width:76px;font-size:10px !important;font-weight:800 !important;text-transform:uppercase;letter-spacing:0.04em;color:var(--muted) !important;}
 .fr-toggle-btn{flex-wrap:wrap;text-align:left;row-gap:2px;}
 .fr-toggle-btn > span:last-child{white-space:nowrap;}
 .fr-name{display:inline-block;width:64px;min-width:64px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
@@ -682,7 +690,6 @@ html.native-cover .status-shield{display:block;position:fixed;top:0;left:0;right
 <!-- DONE WATCHING MODAL -->
 <div id="dwm-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:600;align-items:center;justify-content:center;padding:20px;box-sizing:border-box;">
   <div style="background:white;border-radius:20px;padding:28px 24px;max-width:360px;width:100%;text-align:center;box-shadow:0 12px 48px rgba(0,0,0,0.2);position:relative;">
-    <button id="dwm-cancel-btn" onclick="cancelDoneWatching()" title="Wrong button? Put it back" style="display:none;position:absolute;top:14px;right:14px;background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer;line-height:1;">&#x2715;</button>
     <div id="dwm-emoji" style="font-size:36px;margin-bottom:6px;">🍿</div>
     <div id="dwm-heading" style="font-family:var(--serif);font-size:21px;font-weight:700;color:var(--terra);margin-bottom:4px;">You binged it!</div>
     <div id="dwm-title" style="font-size:14px;color:var(--muted);margin-bottom:22px;"></div>
@@ -690,7 +697,8 @@ html.native-cover .status-shield{display:block;position:fixed;top:0;left:0;right
     <div id="dwm-remotes" style="display:flex;justify-content:center;gap:10px;margin-bottom:22px;"></div>
     <input id="dwm-comment" placeholder="Leave a comment for friends... (optional)" style="width:100%;box-sizing:border-box;border:1px solid var(--border);border-radius:10px;padding:11px 14px;font-family:var(--sans);font-size:13px;color:var(--charcoal);outline:none;margin-bottom:16px;" />
     <button onclick="submitDoneWatching()" style="background:var(--terra);color:white;border:none;border-radius:10px;padding:13px;font-family:var(--sans);font-size:14px;font-weight:700;cursor:pointer;width:100%;margin-bottom:8px;">Save</button>
-    <button onclick="skipDoneWatching()" style="background:none;border:none;color:var(--muted);font-family:var(--sans);font-size:13px;cursor:pointer;width:100%;">Skip rating</button>
+    <button onclick="skipDoneWatching()" style="background:none;border:none;color:var(--muted);font-family:var(--sans);font-size:13px;cursor:pointer;width:100%;min-height:44px;">Skip rating</button>
+    <button id="dwm-cancel-btn" onclick="cancelDoneWatching()" title="Wrong button? Put it back" style="display:none;background:none;border:1.5px solid var(--border);border-radius:10px;color:var(--charcoal);font-family:var(--sans);font-size:14px;font-weight:600;cursor:pointer;width:100%;min-height:44px;margin-top:4px;">Cancel</button>
   </div>
 </div>
 
@@ -1895,6 +1903,7 @@ window.chooseRateSheet = function(n) {
   if (!send || (n !== 0 && n === r.current)) return;
   if (r.viewingId) rateFromLivingRoomCard(r.list, r.id, send, r.viewingId);
   else rate(r.list, r.id, send);
+  if (_sharedTasteFriendId) renderSharedTasteList(_sharedTasteFriendId);
 };
 
 function remoteStatic(rating) {
@@ -1953,8 +1962,12 @@ function friendRatingsFor(title, excludeId, pool) {
 // stacked above the content instead of beside it once the row gets tight
 // (exactly what was happening on narrow cards). Plain DOM toggle, no
 // re-render needed, same pattern as toggleCardMenu.
-function friendRatingsHTML(title, excludeId, pool) {
+// roomView: on someone else's room tile, where their rating and yours are
+// already shown on their own rows -- leave you out (so you don't appear
+// twice) and line the rows up with those (.fr-aligned).
+function friendRatingsHTML(title, excludeId, pool, roomView) {
   var raters=friendRatingsFor(title,excludeId,pool);
+  if(roomView) raters=raters.filter(function(r){ return r.name!=='You'; });
   if(!raters.length) return '';
   var avg=Math.round((raters.reduce(function(a,r){return a+r.rating;},0)/raters.length)*10)/10;
   var summaryBtn='<button type="button" onclick="toggleFriendRatingsDisclosure(this)" class="fr-toggle-btn">'
@@ -1967,7 +1980,7 @@ function friendRatingsHTML(title, excludeId, pool) {
         return '<div style="display:flex;align-items:center;gap:6px;"><span class="fr-name" style="font-size:11px;font-weight:600;color:var(--charcoal);">'+escAttr(r.name)+'</span>'+remoteStatic(r.rating)+'</div>';
       }).join('')
     + '</div>';
-  return '<div class="fr-disclosure">'+summaryBtn+individual+'</div>';
+  return '<div class="fr-disclosure'+(roomView?' fr-aligned':'')+'">'+summaryBtn+individual+'</div>';
 }
 window.toggleFriendRatingsDisclosure = function(btn, id){
   var wrap = btn.closest('.fr-disclosure');
@@ -3000,7 +3013,7 @@ window.handleNewThisWeekAdd = function(idx){
 
 function statusLabelForSharedTaste(s, lk){
   if (lk==='w') return 'Watching';
-  if (lk==='wl') return s.waitingForSeason ? 'Waiting for Season' : 'My List';
+  if (lk==='wl') return s.waitingForSeason ? 'Waiting' : 'My List';
   if (lk==='wd') return s.dnf ? "Didn't Finish" : 'Binged';
   return '';
 }
@@ -3016,7 +3029,7 @@ function buildSharedTasteList(friendId){
         if (!s || !s.title) return;
         if (isFriend && s.hidden) return;
         var key = s.title.toLowerCase().trim();
-        if (!m[key]) m[key] = { title:s.title, platform:s.platform, poster_path:s.poster_path, tmdb_id:s.tmdb_id, rating:s.rating||0, statusLabel: statusLabelForSharedTaste(s, lk) };
+        if (!m[key]) m[key] = { id:s.id, list:{w:'watching',wl:'watchlist',wd:'watched'}[lk], title:s.title, platform:s.platform, poster_path:s.poster_path, tmdb_id:s.tmdb_id, rating:s.rating||0, statusLabel: statusLabelForSharedTaste(s, lk) };
       });
     });
     return m;
@@ -3031,6 +3044,7 @@ function buildSharedTasteList(friendId){
         platform: mine[key].platform || theirs[key].platform,
         poster_path: mine[key].poster_path || theirs[key].poster_path,
         tmdb_id: mine[key].tmdb_id || theirs[key].tmdb_id,
+        myId: mine[key].id, myList: mine[key].list,
         myRating: mine[key].rating, myStatus: mine[key].statusLabel,
         theirRating: theirs[key].rating, theirStatus: theirs[key].statusLabel,
       });
@@ -3040,7 +3054,9 @@ function buildSharedTasteList(friendId){
   return shared;
 }
 
+var _sharedTasteFriendId = null;
 window.openSharedTasteModal = function(friendId){
+  _sharedTasteFriendId = friendId;
   var f = (state.friends||[]).find(function(x){ return x.id===friendId; });
   var titleEl = document.getElementById('shared-taste-title');
   if (titleEl) titleEl.textContent = '\u{1F49D} You & ' + (f ? f.name : 'them');
@@ -3049,6 +3065,7 @@ window.openSharedTasteModal = function(friendId){
 };
 
 window.closeSharedTasteModal = function(){
+  _sharedTasteFriendId = null;
   document.getElementById('shared-taste-modal').classList.remove('active');
 };
 
@@ -3067,7 +3084,8 @@ function renderSharedTasteList(friendId){
     var thumb = s.poster_path
       ? '<img src="'+TMDB_IMG+s.poster_path+'"'+thumbClick+'width:46px;height:46px;border-radius:8px;object-fit:cover;flex-shrink:0;margin-right:12px;" />'
       : '<div'+thumbClick+'width:46px;height:46px;border-radius:8px;background:var(--olive);flex-shrink:0;margin-right:12px;display:flex;align-items:center;justify-content:center;font-size:18px;">&#128252;</div>';
-    var myR = s.myRating ? remoteStatic(s.myRating) : '<span style="font-size:11px;color:var(--muted);">Not rated</span>';
+    // Your side opens the same tap-to-rate sheet as your tiles.
+    var myR = rateTriggerHTML(s.myRating || 0, "openRateSheet('"+s.myList+"','"+s.myId+"','"+friendId+"')");
     var theirR = s.theirRating ? remoteStatic(s.theirRating) : '<span style="font-size:11px;color:var(--muted);">Not rated</span>';
     return '<div class="show-card"><div class="show-card-top">'+thumb
       +'<div class="show-info"><div class="show-title">'+escAttr(s.title)+'</div>'
@@ -3424,7 +3442,7 @@ async function showFriend(id) {
         if(!isSelf) corner+= mineExisting
           ? '<span class="on-list-badge">'+onListBadgeContent(mineExisting)+'</span>'
           : '<button class="btn-add-prominent" onclick="addFromFriendCard(\''+s.id+'\')" title="Add to my list">+ Add</button>';
-        var otherRatings=friendRatingsHTML(s.title,f.id,state.friends);
+        var otherRatings=friendRatingsHTML(s.title,f.id,state.friends,!isSelf);
         html+='<div class="show-card" id="card-'+s.id+'"><div class="show-card-top">'+showTile(s)+'<div class="show-info"><div class="show-title">'+s.title+'</div></div><div class="card-corner">'+corner+'</div></div>'+((ratingBlock||otherRatings)?'<div class="frv-ratings">'+ratingBlock+(otherRatings?'<div style="margin-top:4px;">'+otherRatings+'</div>':'')+'</div>':'')+'<div class="react-area">'+talkPreviewHTML(s.title,state.friends)+reactToggle+'</div></div>';
       });
       html+='</div></div>';
@@ -3469,7 +3487,7 @@ async function showFriend(id) {
   var dnfKey='frv:'+f.id+':dnf';
   var dnfCollapsed=_collapsedSections[dnfKey]!==false;
   var backLabel = (_friendDetailReturn && _friendDetailReturn.label) || '← Back to Living Room';
-  dv.innerHTML='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;"><button class="back-btn" style="white-space:nowrap;" aria-label="'+escAttr(backLabel.replace(/^← */,''))+'" onclick="backToFriends()">'+escAttr(backLabel.replace(/^← *Back to */,'‹ '))+'</button><div style="display:flex;gap:4px;align-items:center;">'+sharedTasteBtn+muteBtn+removeBtn+'</div></div>'
+  dv.innerHTML='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;"><button class="back-btn" style="white-space:nowrap;margin-bottom:0;" aria-label="'+escAttr(backLabel.replace(/^← */,''))+'" onclick="backToFriends()">'+escAttr(backLabel.replace(/^← *Back to */,'‹ '))+'</button><div style="display:flex;gap:4px;align-items:center;">'+sharedTasteBtn+muteBtn+removeBtn+'</div></div>'
     +'<div class="friend-header"><div class="friend-header-av" style="background:'+fColor+';font-size:18px;font-weight:700;font-family:var(--sans);">'+fInitials+'</div>'
     +'<div><div style="font-family:Georgia,serif;font-size:20px;font-weight:700">'+roomTitle+'</div>'
     +cityLine+'</div></div>'
@@ -3505,7 +3523,7 @@ async function showFriend(id) {
                 +'<div style="margin-top:3px;"><span class="dnf-badge">Didn&#39;t Finish</span>'
                 +'<span style="font-size:11px;color:var(--muted);margin-left:6px;">'+s.platform+'</span>'
                 +'</div>'+dnfRatingRow
-                +(friendRatingsHTML(s.title,f.id,state.friends)?'<div style="margin-top:4px;">'+friendRatingsHTML(s.title,f.id,state.friends)+'</div>':'')
+                +(friendRatingsHTML(s.title,f.id,state.friends,!isSelf)?'<div style="margin-top:4px;">'+friendRatingsHTML(s.title,f.id,state.friends,!isSelf)+'</div>':'')
                 +'</div>'+(dnfActions?'<div class="card-corner">'+dnfActions+'</div>':'')+'</div>'
                 +'<div class="react-area">'+talkPreviewHTML(s.title,state.friends)+reactToggle+'</div>'
                 +'</div>';
@@ -4214,10 +4232,11 @@ function rankScoreLineHTML(avg, countText, extraText) {
   return parts.length ? '<div class="rank-score-line">' + parts.join('<span aria-hidden="true">&middot;</span>') + '</div>' : '';
 }
 
-// Display-only "it's on your list" badge (no tap of its own in the list).
+// Display-only "it's on your list" line under the title (no tap of its own
+// in the list). Lives in the text column, so the title gets the full width.
 function rankListBadgeHTML(s) {
   var mine = findMyShowByTitle(s.title);
-  return '<span class="rank-action-col">' + (mine ? '<span class="on-list-badge">' + onListBadgeContent(mine) + '</span>' : '') + '</span>';
+  return mine ? '<div class="rank-onlist-line"><span class="on-list-badge">' + onListBadgeContent(mine, true) + '</span></div>' : '';
 }
 
 // "Your rating" (show already on your lists: tap to rate, saves) or "Seen
@@ -4260,8 +4279,10 @@ window.rateFromDetail = function(kind, idx, n) {
   refreshDetailYourRating();
 };
 window.seenItRate = function(kind, idx, n) {
-  // Remembered only briefly, so a cancelled add can't pre-fill a later one.
-  _seenItRating = { n: n, at: Date.now() };
+  // Tied to this one show (and only briefly), so backing out of the add
+  // can't pre-fill the rating popup for some other show added later.
+  var s = _rankCacheFor(kind)[idx];
+  _seenItRating = { n: n, at: Date.now(), title: s ? s.title : null };
   if (kind === 'pt') handlePrimeTimeAdd(idx);
   else if (kind === 'ff') handleRankAdd(idx);
   else if (kind === 'st') handleShowTalkAdd(idx);
@@ -4305,9 +4326,9 @@ function _hotRow(s, i, rankLabel) {
     + rankThumbHTML(s)
     + '<div class="rank-info">'
     + '<div class="rank-title-text">' + escAttr(s.title || '') + '</div>'
-    + platform + score
+    + platform + score + rankListBadgeHTML(s)
     + '</div>'
-    + rankListBadgeHTML(s) + '<span class="rank-chev">&rsaquo;</span>'
+    + '<span class="rank-chev">&rsaquo;</span>'
     + '</div>';
 }
 
@@ -4397,6 +4418,7 @@ window.showFullLineupDetail = function(idx){
   var s=_fullLineupListCache[idx];
   if(!s)return;
   var panel=document.getElementById('full-lineup-detail-view');
+  panel.setAttribute('data-idx', idx);
   var hasRating = s.avg_rating != null;
   var avgNum = hasRating ? Number(s.avg_rating) : 0;
   var remotes=''; for(var n=1;n<=5;n++){var lit=n<=Math.floor(avgNum);remotes+='<span style="opacity:'+(lit?'1':'0.18')+';display:inline-block;">'+remoteIcon(16,lit)+'</span>';}
@@ -4454,7 +4476,7 @@ function renderPrimeTimeList() {
   listEl.innerHTML = matchLabel + list.map(function(s, i){
     var rank = i+1; var isGold = rank<=3;
     var thumb = rankThumbHTML(s);
-    var mineBadge = rankListBadgeHTML(s) + '<span class="rank-chev">&rsaquo;</span>';
+    var mineBadge = '<span class="rank-chev">&rsaquo;</span>';
     return '<div class="rank-card" onclick="showPrimeTimeDetail('+i+')">'
       +'<span class="rank-badge'+(isGold?' gold':'')+'">'+rank+'</span>'
       +thumb
@@ -4462,6 +4484,7 @@ function renderPrimeTimeList() {
       +'<div class="rank-title-text">'+escAttr(s.title)+'</div>'
       +(s.platform?'<div class="rank-meta-line"><span class="rank-platform">'+escAttr(s.platform)+'</span></div>':'')
       +rankScoreLineHTML(s.avg, s.count+' rated')
+      +rankListBadgeHTML(s)
       +'</div>'
       +mineBadge
       +'</div>';
@@ -4972,8 +4995,9 @@ function renderShowTalk(){
       +'<div class="rank-title-text">'+escAttr(s.title||'')+'</div>'
       +(s.platform?'<div class="rank-meta-line"><span class="rank-platform">'+escAttr(s.platform)+'</span></div>':'')
       +rankScoreLineHTML(s.avgRating||null, n+' comment'+(n===1?'':'s'))
+      +rankListBadgeHTML(s)
       +'</div>'
-      +rankListBadgeHTML(s)+'<span class="rank-chev">&rsaquo;</span>'
+      +'<span class="rank-chev">&rsaquo;</span>'
       +'</div>';
   }).join('');
 }
@@ -5775,8 +5799,9 @@ function renderRankings(){
       +'<div class="rank-title-text">'+escAttr(s.title||'')+'</div>'
       +(s.platform?'<div class="rank-meta-line"><span class="rank-platform">'+escAttr(s.platform)+'</span></div>':'')
       +rankScoreLineHTML(s.avg, s.count+' rated')
+      +rankListBadgeHTML(s)
       +'</div>'
-      +rankListBadgeHTML(s)+'<span class="rank-chev">&rsaquo;</span>'
+      +'<span class="rank-chev">&rsaquo;</span>'
       +'</div>';
   }).join('');
 }
@@ -5788,6 +5813,7 @@ function showRankDetail(idx){
   var s=_rankingsListCache[idx];
   if(!s)return;
   var panel=document.getElementById('rank-detail-panel');
+  panel.setAttribute('data-idx', idx);
   var remotes=''; for(var n=1;n<=5;n++){var lit=n<=Math.floor(s.avg);remotes+='<span style="opacity:'+(lit?'1':'0.18')+';display:inline-block;">'+remoteIcon(16,lit)+'</span>';}
   var rows=s.raters.slice().sort(function(a,b){return (b.isMe?1:0)-(a.isMe?1:0)||b.rating-a.rating;}).map(function(r){
     var rR=''; for(var n=1;n<=5;n++){rR+='<span style="opacity:'+(n<=r.rating?'1':'0.18')+';display:inline-block;">'+remoteIcon(13,n<=r.rating)+'</span>';}
@@ -7204,6 +7230,13 @@ window.cancelDoneWatching = async function(){
   document.getElementById('dwm-overlay').style.display = 'none';
   _dwmPending = null; _dwmRating = 0; _dwmUndo = null;
   if (!show || !undo) return;
+  if (undo.removeNew) {
+    // Just added from a ranked list / search -- take it back off.
+    await removeShow(undo.currentList, show.id);
+    showToast('Cancelled \u2014 "' + show.title + '" was not added.');
+    refreshOpenRankDetail();
+    return;
+  }
   var idx = state[undo.currentList].findIndex(function(x){ return x.id === show.id; });
   if (idx === -1) return;
   var s = state[undo.currentList].splice(idx, 1)[0];
@@ -7211,8 +7244,21 @@ window.cancelDoneWatching = async function(){
   state[undo.originalList].push(s);
   renderList(undo.currentList); renderList(undo.originalList);
   showToast('Moved back to ' + (ADD_LIST_LABELS[undo.originalList] || 'your list') + '.');
+  refreshOpenRankDetail();
   try { await updateShowStatus(show.id, undo.dbStatus, undo.dbExtra); } catch(e) { console.error('cancelDoneWatching error:', e); }
 };
+
+// Re-draws whichever ranked-list detail page is open (its "On <list>" /
+// "Add" button and rating row depend on what's on your lists).
+function refreshOpenRankDetail() {
+  var shown = function(id) { var el = document.getElementById(id); return el && el.style.display === 'block'; };
+  if (_showTalkDetailIdx != null && shown(stIds().detail)) showShowTalkDetail(_showTalkDetailIdx);
+  var rp = document.getElementById('rank-detail-panel');
+  if (shown('rank-detail-panel') && rp.getAttribute('data-idx') != null) showRankDetail(Number(rp.getAttribute('data-idx')));
+  if (_primeTimeDetailIdx != null && shown('prime-time-detail-view')) showPrimeTimeDetail(_primeTimeDetailIdx);
+  var fp = document.getElementById('full-lineup-detail-view');
+  if (shown('full-lineup-detail-view') && fp.getAttribute('data-idx') != null) showFullLineupDetail(Number(fp.getAttribute('data-idx')));
+}
 
 window.markWatched = async function(id) {
   var idx = state.watching.findIndex(function(x) { return x.id === id; });
@@ -9109,10 +9155,17 @@ window.chooseAddDestination = async function(destKey) {
   var waitingSince = isWaiting ? new Date().toISOString() : null;
   var existing = findMyShowByTitle(info.title);
   var resultShow;
+  var addUndo = null; // what the rating popup's Cancel puts back
 
   if (existing) {
     var srcList = existing.list;
     var s = existing.show;
+    addUndo = {
+      currentList: destList, originalList: srcList,
+      restoreFields: { dnf: !!s.dnf, waitingForSeason: !!s.waitingForSeason, waitingSince: s.waitingSince || null },
+      dbStatus: srcList === 'watched' ? (s.dnf ? 'dnf' : 'watched') : srcList,
+      dbExtra: { dnf: !!s.dnf, waiting_for_season: !!s.waitingForSeason, waiting_since: s.waitingSince || null },
+    };
     state[srcList] = state[srcList].filter(function(x) { return x.id !== s.id; });
     s.dnf = isDnf;
     s.waitingForSeason = isWaiting;
@@ -9145,6 +9198,7 @@ window.chooseAddDestination = async function(destKey) {
       };
       state[destList].push(resultShow);
       renderList(destList);
+      addUndo = { currentList: destList, removeNew: true };
       showToast('Added "' + info.title + '" to ' + ADD_DEST_DISPLAY_LABELS[destKey] + '.');
     } catch(e) {
       console.error('chooseAddDestination add error:', e);
@@ -9182,8 +9236,8 @@ window.chooseAddDestination = async function(destKey) {
   if (ADD_DEST_RATES[destKey]) {
     var heading = isDnf ? "Didn't finish? Rate it anyway" : (isWaiting ? 'Rate it so far' : 'You binged it!');
     var emoji = isDnf ? '🎬' : (isWaiting ? '⏳' : '🍿');
-    openDWM(resultShow, heading, emoji);
-    if (_seenItRating && Date.now() - _seenItRating.at < 5 * 60 * 1000) { _dwmRating = _seenItRating.n; renderDWMRemotes(); }
+    openDWM(resultShow, heading, emoji, addUndo);
+    if (_seenItRating && _seenItRating.title === info.title && Date.now() - _seenItRating.at < 5 * 60 * 1000) { _dwmRating = _seenItRating.n; renderDWMRemotes(); }
   }
   _seenItRating = null;
   refreshDetailYourRating();
