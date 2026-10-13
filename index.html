@@ -328,7 +328,6 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
    label) plus a small buffer -- the previous 50px/92px reserved far more
    than any row actually used, which on a narrow mobile card both showed
    up as visible dead space AND starved the title column next to it. */
-.rank-rating-col{flex-shrink:0;width:40px;margin-left:8px;font-size:13px;color:var(--muted);white-space:nowrap;text-align:right;}
 /* Prime Time / Hot Right Now: the rating sits on its own line under the
    title ("remote 4.6 · 12 rated") instead of a fixed right-hand column,
    which overlapped the count at larger text sizes. Wraps, never overlaps. */
@@ -338,7 +337,6 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
 .hot-seg button{flex:1;min-height:44px;border-radius:10px;border:1.5px solid var(--terra);background:none;color:var(--terra);font-family:var(--sans);font-size:14px;font-weight:700;cursor:pointer;}
 .hot-seg button.active{background:var(--terra);color:#fff;}
 .rank-action-col{flex-shrink:0;width:72px;margin-left:8px;text-align:right;}
-.rank-add-btn{display:inline-flex;align-items:center;gap:4px;background:none;border:1px solid var(--terra);color:var(--terra);border-radius:8px;padding:2px 8px;font-family:var(--sans);font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;}
 .rank-platform{font-size:10px;font-weight:700;color:white;background:var(--olive);padding:2px 8px;border-radius:10px;white-space:nowrap;flex-shrink:0;}
 .rank-remotes-inline{display:flex;gap:3px;align-items:center;flex-shrink:0;}
 .rank-count-inline{font-size:11px;color:var(--muted);flex-shrink:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
@@ -4225,10 +4223,17 @@ function rankListBadgeHTML(s) {
 // "Your rating" (show already on your lists: tap to rate, saves) or "Seen
 // it? Rate it" (not yours yet: opens the normal add step, then the rating
 // popup with that rating filled in) -- Prime Time + Hot Right Now detail.
-// kind: 'pt' (Prime Time) or 'hot' (Hot Right Now); idx into its list cache.
+// kind: 'pt' (Prime Time), 'hot' (Hot Right Now), 'ff' (Friends' Favorites)
+// or 'st' (Show Talk); idx into that list's cache.
 var _seenItRating = null;
+function _rankCacheFor(kind) {
+  return kind === 'pt' ? _primeTimeListCache
+    : kind === 'ff' ? _rankingsListCache
+    : kind === 'st' ? _showTalkListCache
+    : _fullLineupListCache;
+}
 function rankYourRatingHTML(kind, idx) {
-  var s = (kind === 'pt' ? _primeTimeListCache : _fullLineupListCache)[idx];
+  var s = _rankCacheFor(kind)[idx];
   if (!s) return '';
   var mine = findMyShowByTitle(s.title);
   var current = mine && mine.show ? (mine.show.rating || 0) : 0;
@@ -4248,7 +4253,7 @@ function refreshDetailYourRating() {
   });
 }
 window.rateFromDetail = function(kind, idx, n) {
-  var s = (kind === 'pt' ? _primeTimeListCache : _fullLineupListCache)[idx];
+  var s = _rankCacheFor(kind)[idx];
   var mine = s && findMyShowByTitle(s.title);
   if (!mine || !mine.show) return;
   rate(mine.list, mine.show.id, n);
@@ -4257,7 +4262,10 @@ window.rateFromDetail = function(kind, idx, n) {
 window.seenItRate = function(kind, idx, n) {
   // Remembered only briefly, so a cancelled add can't pre-fill a later one.
   _seenItRating = { n: n, at: Date.now() };
-  if (kind === 'pt') handlePrimeTimeAdd(idx); else handleFullLineupAdd(idx);
+  if (kind === 'pt') handlePrimeTimeAdd(idx);
+  else if (kind === 'ff') handleRankAdd(idx);
+  else if (kind === 'st') handleShowTalkAdd(idx);
+  else handleFullLineupAdd(idx);
 };
 
 // The detail view's buttons: About this show + go to / add to your list.
@@ -4448,7 +4456,7 @@ function renderPrimeTimeList() {
     var thumb = rankThumbHTML(s);
     var mineBadge = rankListBadgeHTML(s) + '<span class="rank-chev">&rsaquo;</span>';
     return '<div class="rank-card" onclick="showPrimeTimeDetail('+i+')">'
-      +'<span class="rank-badge'+(isGold?' gold':'')+'">#'+rank+'</span>'
+      +'<span class="rank-badge'+(isGold?' gold':'')+'">'+rank+'</span>'
       +thumb
       +'<div class="rank-info">'
       +'<div class="rank-title-text">'+escAttr(s.title)+'</div>'
@@ -4952,25 +4960,20 @@ function renderShowTalk(){
       : '<div class="empty"><div class="empty-icon">&#128483;&#65039;</div>No comments yet &mdash; be the first to say something about a show.</div>';
     return;
   }
+  // Same row as Hot Right Now: the whole row opens the detail (Add lives
+  // there). Plain number circles -- this is sorted by conversation, not
+  // rating, so no gold "top 3".
   el.innerHTML=list.map(function(s,i){
-    var thumbClick = s.tmdb_id ? ' onclick="event.stopPropagation();openShowDetails('+s.tmdb_id+')" title="Show details" style="cursor:pointer;' : ' style="';
-    var thumb=s.poster_path
-      ? '<img src="'+TMDB_IMG+s.poster_path+'"'+thumbClick+'width:46px;height:46px;border-radius:8px;object-fit:cover;flex-shrink:0;margin-right:12px;" />'
-      : '<div'+thumbClick+'width:46px;height:46px;border-radius:8px;background:var(--olive);flex-shrink:0;margin-right:12px;display:flex;align-items:center;justify-content:center;font-size:18px;">&#128252;</div>';
-    var ratingHTML = '<span class="rank-rating-col">' + (s.avgRating ? remoteAvgLabel(s.avgRating.toFixed(1)) : '') + '</span>';
+    var n=s.comments.length;
     return '<div class="rank-card" onclick="showShowTalkDetail('+i+')">'
       +'<span class="rank-badge">'+(i+1)+'</span>'
-      +thumb
+      +rankThumbHTML(s)
       +'<div class="rank-info">'
-      +'<div class="rank-title-text">'+(s.title||'')+'</div>'
-      +'<div class="rank-meta-line">'
-      +(s.platform?'<span class="rank-platform">'+s.platform+'</span>':'')
-      +'<span class="rank-count-inline">'+s.comments.length+' comment'+(s.comments.length===1?'':'s')+'</span>'
-      +'</div></div>'
-      +ratingHTML
-      +'<span class="rank-action-col">'+(function(){ var mine=findMyShowByTitle(s.title); return mine
-        ? onListBadgeHTML(mine)
-        : '<button onclick="event.stopPropagation();handleShowTalkAdd('+i+')" class="rank-add-btn">&#10133; Add</button>'; })()+'</span>'
+      +'<div class="rank-title-text">'+escAttr(s.title||'')+'</div>'
+      +(s.platform?'<div class="rank-meta-line"><span class="rank-platform">'+escAttr(s.platform)+'</span></div>':'')
+      +rankScoreLineHTML(s.avgRating||null, n+' comment'+(n===1?'':'s'))
+      +'</div>'
+      +rankListBadgeHTML(s)+'<span class="rank-chev">&rsaquo;</span>'
       +'</div>';
   }).join('');
 }
@@ -5019,10 +5022,6 @@ function showShowTalkDetail(idx){
     var remotes=''; for(var n=1;n<=5;n++){var lit=n<=Math.floor(s.avgRating);remotes+='<span style="opacity:'+(lit?'1':'0.18')+';display:inline-block;">'+remoteIcon(16,lit)+'</span>';}
     ratingHTML='<div style="display:flex;align-items:center;gap:6px;margin:2px 0 6px;">'+remotes+'<span style="font-size:13px;color:var(--muted);">'+s.avgRating.toFixed(1)+' ('+s.ratingCount+' rating'+(s.ratingCount===1?'':'s')+')</span></div>';
   }
-  var mine=findMyShowByTitle(s.title);
-  var addBtn=mine
-    ? onListBadgeHTML(mine, null, true)
-    : '<button onclick="handleShowTalkAdd('+idx+')" style="display:inline-flex;align-items:center;gap:4px;background:none;border:1px solid var(--terra);color:var(--terra);border-radius:8px;padding:2px 8px;font-family:var(--sans);font-size:11px;font-weight:700;cursor:pointer;line-height:1.6;white-space:nowrap;flex-shrink:0;">&#10133; Add</button>';
   var reactBoxId='showtalk-react-'+idx;
   var reactHTML='<div class="inline-react" style="margin:4px 0 12px;"><input class="react-input" id="'+reactBoxId+'" placeholder="What did you think? 😊" /><button class="btn-send" onclick="submitShowTalkReact('+idx+')">Send</button><button class="btn-cancel" onclick="document.getElementById(&quot;'+reactBoxId+'&quot;).value=\'\'">Cancel</button></div>';
   panel.style.display='block';
@@ -5031,13 +5030,12 @@ function showShowTalkDetail(idx){
     +'<div style="display:flex;gap:12px;align-items:flex-start;margin-bottom:4px;">'
     +thumb
     +'<div style="flex:1;min-width:0;">'
-    +'<div class="rank-detail-title">'+s.title+'</div>'
-    +'<div style="display:flex;align-items:center;gap:8px;margin:0 0 6px 0;">'
-    +(s.platform?'<span class="rank-platform" style="margin:0;display:inline-block;">'+s.platform+'</span>':'')
-    +addBtn
-    +'</div>'
+    +'<div class="rank-detail-title">'+escAttr(s.title)+'</div>'
+    +(s.platform?'<span class="rank-platform" style="margin:0 0 6px 0;display:inline-block;">'+escAttr(s.platform)+'</span>':'')
     +ratingHTML
     +'</div></div>'
+    +rankDetailActionsHTML(s, 'handleShowTalkAdd('+idx+')')
+    +rankYourRatingHTML('st', idx)
     +reactHTML
     +'<div class="rank-detail-sub">'+s.comments.length+' comment'+(s.comments.length===1?'':'s')+'</div>'
     +rows+'</div>';
@@ -5769,23 +5767,16 @@ function renderRankings(){
   }
   el.innerHTML=list.map(function(s,i){
     var rank=i+1; var isGold=rank<=3;
-    var thumbClick = s.tmdb_id ? ' onclick="event.stopPropagation();openShowDetails('+s.tmdb_id+')" title="Show details" style="cursor:pointer;' : ' style="';
-    var thumb=s.poster_path
-      ? '<img src="'+TMDB_IMG+s.poster_path+'"'+thumbClick+'width:46px;height:46px;border-radius:8px;object-fit:cover;flex-shrink:0;margin-right:12px;" />'
-      : '<div'+thumbClick+'width:46px;height:46px;border-radius:8px;background:var(--olive);flex-shrink:0;margin-right:12px;display:flex;align-items:center;justify-content:center;font-size:18px;">&#128252;</div>';
+    // Same row as Hot Right Now: the whole row opens the detail.
     return '<div class="rank-card" onclick="showRankDetail('+i+')">'
-      +'<span class="rank-badge'+(isGold?' gold':'')+'">#'+rank+'</span>'
-      +thumb
+      +'<span class="rank-badge'+(isGold?' gold':'')+'">'+rank+'</span>'
+      +rankThumbHTML(s)
       +'<div class="rank-info">'
-      +'<div class="rank-title-text">'+(s.title||'')+'</div>'
-      +'<div class="rank-meta-line">'
-      +(s.platform?'<span class="rank-platform">'+s.platform+'</span>':'')
-      +'<span class="rank-count-inline">'+s.count+' rated</span>'
-      +'</div></div>'
-      +'<span class="rank-rating-col">'+remoteAvgLabel(s.avg.toFixed(1))+'</span>'
-      +'<span class="rank-action-col">'+(function(){ var mine=findMyShowByTitle(s.title); return mine
-        ? onListBadgeHTML(mine)
-        : '<button onclick="event.stopPropagation();handleRankAdd('+i+')" class="rank-add-btn">&#10133; Add</button>'; })()+'</span>'
+      +'<div class="rank-title-text">'+escAttr(s.title||'')+'</div>'
+      +(s.platform?'<div class="rank-meta-line"><span class="rank-platform">'+escAttr(s.platform)+'</span></div>':'')
+      +rankScoreLineHTML(s.avg, s.count+' rated')
+      +'</div>'
+      +rankListBadgeHTML(s)+'<span class="rank-chev">&rsaquo;</span>'
       +'</div>';
   }).join('');
 }
@@ -5810,20 +5801,17 @@ function showRankDetail(idx){
   var thumb=s.poster_path
     ? '<img src="'+TMDB_IMG+s.poster_path+'"'+clickAttr+' style="width:84px;height:84px;border-radius:10px;object-fit:cover;flex-shrink:0;" />'
     : '<div'+clickAttr+' style="width:84px;height:84px;border-radius:10px;background:var(--olive);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:30px;">&#128252;</div>';
-  var mine=findMyShowByTitle(s.title);
-  var addBtn=mine
-    ? onListBadgeHTML(mine, null, true)
-    : '<button onclick="handleRankAdd('+idx+')" style="display:inline-flex;align-items:center;gap:4px;background:none;border:1px solid var(--terra);color:var(--terra);border-radius:8px;padding:2px 8px;font-family:var(--sans);font-size:11px;font-weight:700;cursor:pointer;line-height:1.6;white-space:nowrap;">&#10133; Add</button>';
   panel.style.display='block';
   panel.innerHTML='<button class="rank-close" onclick="backToRankings()">\u2190 Back to rankings</button>'
     +'<div class="rank-detail">'
     +'<div style="display:flex;gap:12px;align-items:flex-start;margin-bottom:4px;">'
     +thumb
     +'<div style="flex:1;min-width:0;">'
-    +'<div class="rank-detail-title">'+s.title+'</div>'
-    +(s.platform?'<span class="rank-platform" style="margin:0 0 6px 0;display:inline-block;">'+s.platform+'</span>':'')
-    +'<div>'+addBtn+'</div>'
+    +'<div class="rank-detail-title">'+escAttr(s.title)+'</div>'
+    +(s.platform?'<span class="rank-platform" style="margin:0 0 6px 0;display:inline-block;">'+escAttr(s.platform)+'</span>':'')
     +'</div></div>'
+    +rankDetailActionsHTML(s, 'handleRankAdd('+idx+')')
+    +rankYourRatingHTML('ff', idx)
     +'<div style="display:flex;align-items:baseline;gap:10px;margin-bottom:4px;">'
     +'<span class="rank-detail-avg">'+s.avg.toFixed(1)+'</span>'
     +'<div style="display:flex;gap:2px;">'+remotes+'</div>'
