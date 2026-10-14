@@ -598,6 +598,7 @@ html.native-cover .status-shield{display:block;position:fixed;top:0;left:0;right
 .lr-rate-line .lr-rating-owner{display:inline-block;min-width:38px;}
 .btn-shared-taste{background:#fff;border:1px solid var(--border);color:var(--charcoal);border-radius:20px;padding:0 14px;min-height:40px;font-family:var(--sans);font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;}
 .frv-ratings{margin-top:6px;}
+.lr-unrated{font-size:12px;color:var(--muted);font-style:italic;}
 .frv-ratings .lr-rate-line:first-child{margin-top:0;}
 .lr-rate-line .lr-rating-owner{display:inline-block;width:76px;min-width:76px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;vertical-align:middle;}
 /* Friend-room tile: summary + each friend's row use the same 76px label
@@ -2351,6 +2352,22 @@ function friendsWhoHaveShow(title) {
   return names;
 }
 
+// Friends from any of your rooms with this show on any list (Watching,
+// My List, Binged), skipping ones they've hidden. Used on Hot Right Now,
+// whose server counts are anonymous by design -- this only ever names
+// people you already share a room with.
+function friendsWithShowOnAnyList(title) {
+  var key=(title||'').toLowerCase().trim();
+  if(!key) return [];
+  var seen={}; var names=[];
+  (state.allFriendsAcrossRooms||[]).concat(state.friends||[]).forEach(function(f){
+    if(!f || seen[f.id] || (state.user && f.id===state.user.id)) return;
+    var hit=(f.watching||[]).concat(f.watchlist||[], f.watched||[]).some(function(x){ return !x.hidden && (x.title||'').toLowerCase().trim()===key; });
+    if(hit){ seen[f.id]=true; names.push(f.name); }
+  });
+  return names;
+}
+
 // Per-device (localStorage), not per-account — collapsed state doesn't
 // follow you across browsers/devices, only remembered on this one.
 var _collapsedSections = (function(){
@@ -3431,11 +3448,11 @@ async function showFriend(id) {
         if (lk==='w'||lk==='wd') {
           if (isSelf) {
             ratingBlock = '<div class="lr-rate-line">'+remoteRatingLR(lk==='w'?'watching':'watched', s.id, s.rating, f.id)+'</div>';
-          } else if (mineExisting) {
-            ratingBlock = '<div class="lr-rate-line">'+lrRatingPair(firstNameOf(f.name), remoteStatic(s.rating))+'</div>'
-              + '<div class="lr-rate-line">'+lrRatingPair('You', remoteRatingLR(mineExisting.list, mineExisting.show.id, mineExisting.show.rating, f.id))+'</div>';
           } else {
-            ratingBlock = '<div class="lr-rate-line">'+remoteStatic(s.rating)+'</div>';
+            // Always name the owner's row, and say "Not rated yet" rather than
+            // a row of blank remotes nobody can place.
+            ratingBlock = '<div class="lr-rate-line">'+lrRatingPair(firstNameOf(f.name), s.rating ? remoteStatic(s.rating) : '<span class="lr-unrated">Not rated yet</span>')+'</div>'
+              + (mineExisting ? '<div class="lr-rate-line">'+lrRatingPair('You', remoteRatingLR(mineExisting.list, mineExisting.show.id, mineExisting.show.rating, f.id))+'</div>' : '');
           }
         }
         var corner='<button class="btn-recommend" onclick="openRecommendPicker(\''+s.id+'\')" title="Recommend to a friend">&#127919;</button>';
@@ -4430,7 +4447,11 @@ window.showFullLineupDetail = function(idx){
     ? '<div style="display:flex;align-items:baseline;gap:10px;margin-bottom:4px;"><span class="rank-detail-avg">'+avgNum.toFixed(1)+'</span><div style="display:flex;gap:2px;">'+remotes+'</div></div>'
       +'<div class="rank-detail-sub">rated by '+s.rating_count+' across ShowUp</div>'
     : '<div class="rank-detail-sub">'+((s.trending && !s.people) ? 'Trending in the US &mdash; not on ShowUp yet. Be the first!' : 'Not yet rated by anyone on ShowUp.')+'</div>';
-  if (s.people) ratingLine += '<div class="rank-detail-sub" style="margin-top:-8px;">'+s.people+(s.people==1?' person on ShowUp has this on a list':' people on ShowUp have this on a list')+'</div>';
+  if (s.people) {
+    var fNames = friendsWithShowOnAnyList(s.title);
+    var fLine = fNames.length ? ' &mdash; including '+escAttr(fNames.slice(0,3).join(', '))+(fNames.length>3?' +'+(fNames.length-3)+' more':'') : '';
+    ratingLine += '<div class="rank-detail-sub" style="margin-top:-8px;">'+s.people+(s.people==1?' person on ShowUp has this on a list':' people on ShowUp have this on a list')+fLine+'</div>';
+  }
   panel.innerHTML='<div class="rank-detail">'
     +'<div style="display:flex;gap:12px;align-items:flex-start;margin-bottom:4px;">'
     +thumb
@@ -4511,7 +4532,7 @@ window.showPrimeTimeDetail = function(idx){
     var rowAttr = isLink ? ' class="rank-detail-row rank-detail-row-link" onclick="'+jump+'"' : ' class="rank-detail-row"';
     var nameHTML = isLink ? '<span class="name-pill">'+escAttr(r.name)+'</span>' : escAttr(r.name);
     return '<div'+rowAttr+'><div class="rank-detail-av" style="background:#888">'+escAttr(r.initials||'?')+'</div><div class="rank-detail-name">'+nameHTML+'</div><div style="display:flex;gap:2px;">'+rR+'</div>'
-      +(isLink?'<span class="rank-chev" style="font-size:18px;">&rsaquo;</span>':'')+'</div>';
+      +'<span class="rank-chev" style="font-size:18px;'+(isLink?'':'visibility:hidden;')+'">&rsaquo;</span></div>';
   }).join('');
   if(neighbors.length){
     var nAvg=neighbors.reduce(function(a,r){return a+r.rating;},0)/neighbors.length;
@@ -4519,7 +4540,8 @@ window.showPrimeTimeDetail = function(idx){
     rows+='<div class="rank-detail-row"><div class="rank-detail-av" style="background:#888">N</div>'
       +'<div class="rank-detail-name">'+neighbors.length+(neighbors.length===1?' neighbor':' neighbors')+'</div>'
       +'<span style="font-size:12px;color:var(--muted);margin-right:6px;flex-shrink:0;">'+(Math.round(nAvg*10)/10).toFixed(1)+'</span>'
-      +'<div style="display:flex;gap:2px;">'+nR+'</div></div>';
+      +'<div style="display:flex;gap:2px;">'+nR+'</div>'
+      +'<span class="rank-chev" style="font-size:18px;visibility:hidden;">&rsaquo;</span></div>';
   }
   var clickAttr=s.tmdb_id?' class="poster-clickable" onclick="openShowDetails('+s.tmdb_id+')"':'';
   var thumb=s.poster_path
