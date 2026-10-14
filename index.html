@@ -4441,15 +4441,9 @@ window.showFullLineupDetail = function(idx){
     // like names we left out.
     var fNames = friendsWithShowOnAnyList(s.title).map(shortPersonName);
     var others = Math.max(0, s.people - fNames.length);
-    var listLine;
-    if (!fNames.length) {
-      listLine = s.people+(s.people==1?' person on ShowUp has this on a list':' people on ShowUp have this on a list');
-    } else {
-      var joined = fNames.length===1 ? fNames[0] : fNames.slice(0,-1).join(', ')+' and '+fNames[fNames.length-1];
-      listLine = '<b>'+escAttr(joined)+'</b> '+(fNames.length===1?'has':'have')+' this on a list'
-        + (others ? '. '+others+(others===1?' other person':' other people')+' on ShowUp '+(others===1?'does':'do')+' too' : '')
-        + '.';
-    }
+    var listLine = fNames.length
+      ? 'On lists: <b>'+escAttr(fNames.join(', '))+'</b>'+(others ? ' &middot; '+others+(others===1?' other':' others')+' on ShowUp' : '')
+      : 'On '+s.people+(s.people==1?' list':' lists')+' on ShowUp';
     ratingLine += '<div class="rank-detail-sub" style="margin-top:-8px;">'+listLine+'</div>';
   }
   panel.innerHTML='<div class="rank-detail">'
