@@ -2340,22 +2340,17 @@ function groupByService(items) {
 // Friends (by title match, respecting their hidden-from-friends flag)
 // who have this show as watched or currently watching — surfaced on My
 // List cards so a big backlog has a signal for what to start next.
-function friendsWhoHaveShow(title) {
-  var key=(title||'').toLowerCase().trim();
-  if(!key) return [];
-  var seen={}; var names=[];
-  (state.friends||[]).forEach(function(f){
-    if(!f || seen[f.id]) return;
-    var hit=(f.watched||[]).concat(f.watching||[]).some(function(s){ return !s.hidden && (s.title||'').toLowerCase().trim()===key; });
-    if(hit){ seen[f.id]=true; names.push(f.name); }
-  });
-  return names;
-}
-
 // Friends from any of your rooms with this show on any list (Watching,
 // My List, Binged), skipping ones they've hidden. Used on Hot Right Now,
 // whose server counts are anonymous by design -- this only ever names
 // people you already share a room with.
+// "Kathleen Teehan" -> "Kathleen T." (names already shortened pass through).
+function shortPersonName(name) {
+  var parts=String(name||'').trim().split(/\s+/);
+  if(parts.length<2) return parts[0]||'';
+  var last=parts[parts.length-1];
+  return parts[0]+' '+(/\.$/.test(last)?last:last[0]+'.');
+}
 function friendsWithShowOnAnyList(title) {
   var key=(title||'').toLowerCase().trim();
   if(!key) return [];
@@ -2691,16 +2686,9 @@ function buildWatchlistCard(s) {
     var recName=state.influencerNames[s.influencedBy];
     if(recName) recommendedBadge='<div style="font-size:11px;color:var(--fig);font-weight:600;margin-top:2px;">&#127919; Recommended by '+recName+'</div>';
   }
-  var watchedByBadge='';
-  var watchedByNames=friendsWhoHaveShow(s.title);
-  if(watchedByNames.length){
-    var shownNames=watchedByNames.slice(0,2).join(', ');
-    var extraCount=watchedByNames.length>2?' +'+(watchedByNames.length-2)+' more':'';
-    watchedByBadge='<div style="font-size:11px;color:var(--muted);margin-top:2px;">&#128064; Watched or watching: '+shownNames+extraCount+'</div>';
-  }
   var otherRatingsList=ownCardRatingsHTML(s.title, 'watchlist', sid, s.rating);
 
-  return '<div class="show-card'+(s.hidden?' is-hidden':'')+'" id="card-'+sid+'"><div class="show-card-top">'+showTile(s)+'<div class="show-info"><div class="show-title">'+s.title+(s.hidden?'<span class="hidden-badge">Hidden from friends</span>':'')+'</div>'+platformRow+recommendedBadge+watchedByBadge+'</div>'+recommendBtn(sid)+menuHTML+'</div>'
+  return '<div class="show-card'+(s.hidden?' is-hidden':'')+'" id="card-'+sid+'"><div class="show-card-top">'+showTile(s)+'<div class="show-info"><div class="show-title">'+s.title+(s.hidden?'<span class="hidden-badge">Hidden from friends</span>':'')+'</div>'+platformRow+recommendedBadge+'</div>'+recommendBtn(sid)+menuHTML+'</div>'
     + otherRatingsList
     + '<div class="show-move"><button class="btn-start" onclick="moveToWatching(\''+sid+'\')">Watch Now</button>' + (isDocFilm(s) ? '' : '<button class="waiting-season-btn" onclick="markWaitingFromList(\''+sid+'\')">Waiting for New Season &#8987;</button>') + '</div>'
     + '<div class="react-area">'+talkPreviewHTML(s.title)+reactToggle+'</div>'
@@ -4448,9 +4436,21 @@ window.showFullLineupDetail = function(idx){
       +'<div class="rank-detail-sub">rated by '+s.rating_count+' across ShowUp</div>'
     : '<div class="rank-detail-sub">'+((s.trending && !s.people) ? 'Trending in the US &mdash; not on ShowUp yet. Be the first!' : 'Not yet rated by anyone on ShowUp.')+'</div>';
   if (s.people) {
-    var fNames = friendsWithShowOnAnyList(s.title);
-    var fLine = fNames.length ? ' &mdash; including '+escAttr(fNames.slice(0,3).join(', '))+(fNames.length>3?' +'+(fNames.length-3)+' more':'') : '';
-    ratingLine += '<div class="rank-detail-sub" style="margin-top:-8px;">'+s.people+(s.people==1?' person on ShowUp has this on a list':' people on ShowUp have this on a list')+fLine+'</div>';
+    // Friends by name (everyone, no "+N more"), then anyone outside your
+    // rooms as an explicit "other people" count -- so a number never reads
+    // like names we left out.
+    var fNames = friendsWithShowOnAnyList(s.title).map(shortPersonName);
+    var others = Math.max(0, s.people - fNames.length);
+    var listLine;
+    if (!fNames.length) {
+      listLine = s.people+(s.people==1?' person on ShowUp has this on a list':' people on ShowUp have this on a list');
+    } else {
+      var joined = fNames.length===1 ? fNames[0] : fNames.slice(0,-1).join(', ')+' and '+fNames[fNames.length-1];
+      listLine = '<b>'+escAttr(joined)+'</b> '+(fNames.length===1?'has':'have')+' this on a list'
+        + (others ? '. '+others+(others===1?' other person':' other people')+' on ShowUp '+(others===1?'does':'do')+' too' : '')
+        + '.';
+    }
+    ratingLine += '<div class="rank-detail-sub" style="margin-top:-8px;">'+listLine+'</div>';
   }
   panel.innerHTML='<div class="rank-detail">'
     +'<div style="display:flex;gap:12px;align-items:flex-start;margin-bottom:4px;">'
