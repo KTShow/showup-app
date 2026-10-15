@@ -155,7 +155,7 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
 
 .show-card{background:var(--cream);border:1px solid var(--border);border-radius:var(--radius);padding:9px 12px;box-shadow:var(--shadow);transition:box-shadow 0.2s;}
 .show-card:hover{box-shadow:0 4px 20px rgba(100,50,20,0.14);}
-.show-card-top{display:flex;align-items:center;gap:12px;flex-wrap:wrap;}
+.show-card-top{display:flex;align-items:center;gap:16px;flex-wrap:wrap;}
 .tv-tile{width:52px;height:78px;border-radius:9px;background:var(--olive);display:flex;align-items:center;justify-content:center;flex-shrink:0;}
 .tv-tile svg{width:28px;height:28px;}
 .show-poster{width:52px;height:78px;border-radius:9px;object-fit:cover;flex-shrink:0;}
@@ -548,7 +548,7 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
 .tmdb-dropdown.open{display:block;}
 .dup-hint{align-items:center;gap:5px;margin-top:7px;font-size:12px;font-weight:600;color:var(--fig);cursor:pointer;}
 .dup-hint:active{opacity:0.6;}
-.tmdb-result{display:flex;align-items:center;gap:10px;padding:8px 12px;cursor:pointer;border-bottom:1px solid var(--border);}
+.tmdb-result{display:flex;align-items:center;gap:14px;padding:8px 12px;cursor:pointer;border-bottom:1px solid var(--border);}
 .tmdb-result:last-child{border-bottom:none;}
 .tmdb-result:hover{background:var(--sand);}
 .tmdb-poster{width:40px;height:60px;border-radius:4px;object-fit:cover;flex-shrink:0;}
@@ -2978,8 +2978,8 @@ function renderNewThisWeekList(){
   el.innerHTML = items.map(function(item, i){
     var thumbClick = item.tmdb_id ? ' onclick="openShowDetails('+item.tmdb_id+')" title="Show details" style="cursor:pointer;' : ' style="';
     var thumb = item.poster_path
-      ? '<img src="'+TMDB_IMG+item.poster_path+'"'+thumbClick+'width:48px;height:72px;border-radius:8px;object-fit:cover;flex-shrink:0;margin-right:12px;" />'
-      : '<div'+thumbClick+'width:48px;height:72px;border-radius:8px;background:var(--olive);flex-shrink:0;margin-right:12px;display:flex;align-items:center;justify-content:center;font-size:18px;">&#128252;</div>';
+      ? '<img src="'+TMDB_IMG+item.poster_path+'"'+thumbClick+'width:48px;height:72px;border-radius:8px;object-fit:cover;flex-shrink:0;margin-right:16px;" />'
+      : '<div'+thumbClick+'width:48px;height:72px;border-radius:8px;background:var(--olive);flex-shrink:0;margin-right:16px;display:flex;align-items:center;justify-content:center;font-size:18px;">&#128252;</div>';
     var destKey = item.list==='watched' ? (item.dnf?'dnf':'watched') : item.list==='watchlist' ? (item.waitingForSeason?'waiting':'watchlist') : 'watching';
     var destLabel = destKey === 'dnf' ? 'Did Not Finish' : ADD_DEST_DISPLAY_LABELS[destKey];
     var subLine = (item.mine ? 'You' : escAttr(item.friendName)) + ' added this to ' + destLabel;
@@ -3091,8 +3091,8 @@ function renderSharedTasteList(friendId){
   el.innerHTML = list.map(function(s){
     var thumbClick = s.tmdb_id ? ' onclick="openShowDetails('+s.tmdb_id+')" title="Show details" style="cursor:pointer;' : ' style="';
     var thumb = s.poster_path
-      ? '<img src="'+TMDB_IMG+s.poster_path+'"'+thumbClick+'width:48px;height:72px;border-radius:8px;object-fit:cover;flex-shrink:0;margin-right:12px;" />'
-      : '<div'+thumbClick+'width:48px;height:72px;border-radius:8px;background:var(--olive);flex-shrink:0;margin-right:12px;display:flex;align-items:center;justify-content:center;font-size:18px;">&#128252;</div>';
+      ? '<img src="'+TMDB_IMG+s.poster_path+'"'+thumbClick+'width:48px;height:72px;border-radius:8px;object-fit:cover;flex-shrink:0;margin-right:16px;" />'
+      : '<div'+thumbClick+'width:48px;height:72px;border-radius:8px;background:var(--olive);flex-shrink:0;margin-right:16px;display:flex;align-items:center;justify-content:center;font-size:18px;">&#128252;</div>';
     // Your side opens the same tap-to-rate sheet as your tiles.
     var myR = rateTriggerHTML(s.myRating || 0, "openRateSheet('"+s.myList+"','"+s.myId+"','"+friendId+"')");
     var theirR = s.theirRating ? remoteStatic(s.theirRating) : '<span style="font-size:11px;color:var(--muted);">Not rated</span>';
@@ -4230,8 +4230,8 @@ window.backFromFullLineupView = function() {
 // recognize, so it gets the room the old number circle used to take.
 function rankThumbHTML(s) {
   return s.poster_path
-    ? '<img src="https://image.tmdb.org/t/p/w185'+s.poster_path+'" alt="" style="width:56px;height:84px;border-radius:8px;object-fit:cover;flex-shrink:0;margin-right:12px;" />'
-    : '<div style="width:56px;height:84px;border-radius:8px;background:var(--olive);flex-shrink:0;margin-right:12px;display:flex;align-items:center;justify-content:center;font-size:20px;">&#128252;</div>';
+    ? '<img src="https://image.tmdb.org/t/p/w185'+s.poster_path+'" alt="" style="width:56px;height:84px;border-radius:8px;object-fit:cover;flex-shrink:0;margin-right:16px;" />'
+    : '<div style="width:56px;height:84px;border-radius:8px;background:var(--olive);flex-shrink:0;margin-right:16px;display:flex;align-items:center;justify-content:center;font-size:20px;">&#128252;</div>';
 }
 // Small rank pill at the start of the title (gold for a top 3).
 function rankNumHTML(n, gold) {
@@ -4464,7 +4464,7 @@ window.showFullLineupDetail = function(idx){
     ratingLine += '<div class="rank-detail-sub" style="margin-top:-8px;">'+listLine+'</div>';
   }
   panel.innerHTML='<div class="rank-detail">'
-    +'<div style="display:flex;gap:12px;align-items:flex-start;margin-bottom:4px;">'
+    +'<div style="display:flex;gap:16px;align-items:flex-start;margin-bottom:4px;">'
     +thumb
     +'<div style="flex:1;min-width:0;">'
     +'<div class="rank-detail-title">'+escAttr(s.title)+'</div>'
@@ -4555,7 +4555,7 @@ window.showPrimeTimeDetail = function(idx){
   }
   var thumb=detailPosterHTML(s);
   panel.innerHTML='<div class="rank-detail">'
-    +'<div style="display:flex;gap:12px;align-items:flex-start;margin-bottom:4px;">'
+    +'<div style="display:flex;gap:16px;align-items:flex-start;margin-bottom:4px;">'
     +thumb
     +'<div style="flex:1;min-width:0;">'
     +'<div class="rank-detail-title">'+escAttr(s.title)+'</div>'
@@ -5076,7 +5076,7 @@ function showShowTalkDetail(idx){
   panel.style.display='block';
   panel.innerHTML=(_showTalkHubMode ? '' : '<button class="rank-close" onclick="backToShowTalk()">← Back to Show Talk</button>')
     +'<div class="rank-detail">'
-    +'<div style="display:flex;gap:12px;align-items:flex-start;margin-bottom:4px;">'
+    +'<div style="display:flex;gap:16px;align-items:flex-start;margin-bottom:4px;">'
     +thumb
     +'<div style="flex:1;min-width:0;">'
     +'<div class="rank-detail-title">'+escAttr(s.title)+'</div>'
@@ -5851,7 +5851,7 @@ function showRankDetail(idx){
   panel.style.display='block';
   panel.innerHTML='<button class="rank-close" onclick="backToRankings()">\u2190 Back to rankings</button>'
     +'<div class="rank-detail">'
-    +'<div style="display:flex;gap:12px;align-items:flex-start;margin-bottom:4px;">'
+    +'<div style="display:flex;gap:16px;align-items:flex-start;margin-bottom:4px;">'
     +thumb
     +'<div style="flex:1;min-width:0;">'
     +'<div class="rank-detail-title">'+escAttr(s.title)+'</div>'
