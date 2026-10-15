@@ -313,8 +313,8 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
 
 .rank-card{background:var(--cream);border:1px solid var(--border);border-radius:var(--radius);padding:13px 15px;box-shadow:var(--shadow);display:flex;align-items:center;cursor:pointer;transition:box-shadow 0.2s;margin-bottom:9px;gap:0;}
 .rank-card:hover{box-shadow:0 4px 20px rgba(100,50,20,0.14);}
-.rank-badge{display:inline-flex;align-items:center;justify-content:center;background:var(--fig);color:white;font-size:13px;font-weight:800;min-width:38px;height:38px;border-radius:50%;margin-right:12px;flex-shrink:0;}
-.rank-badge.gold{background:var(--gold);}
+.rank-num{display:inline-block;background:var(--fig);color:white;font-size:11px;font-weight:800;line-height:17px;min-width:17px;padding:0 5px;border-radius:9px;text-align:center;margin-right:6px;vertical-align:1px;box-sizing:border-box;}
+.rank-num.gold{background:var(--gold);}
 .rank-info{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px;}
 /* Wraps to 2 lines instead of hard-truncating with "..." -- on narrow
    mobile cards a one-line ellipsis was cutting real show titles down to
@@ -4226,10 +4226,16 @@ window.backFromFullLineupView = function() {
 // tappable (a 46px poster + a small badge/Add packed into one row meant
 // thumbs kept hitting the wrong one). The other actions are big buttons in
 // the detail view instead -- see rankDetailActionsHTML.
+// Real 2:3 poster shape at a sharper TMDB size -- the poster is what people
+// recognize, so it gets the room the old number circle used to take.
 function rankThumbHTML(s) {
   return s.poster_path
-    ? '<img src="'+TMDB_IMG+s.poster_path+'" alt="" style="width:46px;height:46px;border-radius:8px;object-fit:cover;flex-shrink:0;margin-right:12px;" />'
-    : '<div style="width:46px;height:46px;border-radius:8px;background:var(--olive);flex-shrink:0;margin-right:12px;display:flex;align-items:center;justify-content:center;font-size:18px;">&#128252;</div>';
+    ? '<img src="https://image.tmdb.org/t/p/w185'+s.poster_path+'" alt="" style="width:56px;height:84px;border-radius:8px;object-fit:cover;flex-shrink:0;margin-right:12px;" />'
+    : '<div style="width:56px;height:84px;border-radius:8px;background:var(--olive);flex-shrink:0;margin-right:12px;display:flex;align-items:center;justify-content:center;font-size:20px;">&#128252;</div>';
+}
+// Small rank pill at the start of the title (gold for a top 3).
+function rankNumHTML(n, gold) {
+  return '<span class="rank-num'+(gold?' gold':'')+'">'+n+'</span>';
 }
 
 // "remote 4.6 · 12 rated" line under the title (see .rank-score-line).
@@ -4341,10 +4347,9 @@ function _hotRow(s, i, rankLabel) {
     ? rankScoreLineHTML(s.avg_rating ? Number(s.avg_rating) : null, 'On ' + s.people + (s.people == 1 ? ' list' : ' lists'), since)
     : (since ? '<div class="rank-score-line">' + since + '</div>' : '');
   return '<div class="rank-card" onclick="showFullLineupDetail(' + i + ')">'
-    + '<span class="rank-badge' + (rankLabel <= 3 ? ' gold' : '') + '">' + rankLabel + '</span>'
     + rankThumbHTML(s)
     + '<div class="rank-info">'
-    + '<div class="rank-title-text">' + escAttr(s.title || '') + '</div>'
+    + '<div class="rank-title-text">' + rankNumHTML(rankLabel, rankLabel <= 3) + escAttr(s.title || '') + '</div>'
     + platform + score + rankListBadgeHTML(s)
     + '</div>'
     + '<span class="rank-chev">&rsaquo;</span>'
@@ -4505,10 +4510,9 @@ function renderPrimeTimeList() {
     var thumb = rankThumbHTML(s);
     var mineBadge = '<span class="rank-chev">&rsaquo;</span>';
     return '<div class="rank-card" onclick="showPrimeTimeDetail('+i+')">'
-      +'<span class="rank-badge'+(isGold?' gold':'')+'">'+rank+'</span>'
       +thumb
       +'<div class="rank-info">'
-      +'<div class="rank-title-text">'+escAttr(s.title)+'</div>'
+      +'<div class="rank-title-text">'+rankNumHTML(rank, isGold)+escAttr(s.title)+'</div>'
       +(s.platform?'<div class="rank-meta-line"><span class="rank-platform">'+escAttr(s.platform)+'</span></div>':'')
       +rankScoreLineHTML(s.avg, s.count+' rated')
       +rankListBadgeHTML(s)
@@ -5010,14 +5014,13 @@ function renderShowTalk(){
   }
   // Same row as Hot Right Now: the whole row opens the detail (Add lives
   // there). Plain number circles -- this is sorted by conversation, not
-  // rating, so no gold "top 3".
+  // rating, so no gold "top 3" numbers.
   el.innerHTML=list.map(function(s,i){
     var n=s.comments.length;
     return '<div class="rank-card" onclick="showShowTalkDetail('+i+')">'
-      +'<span class="rank-badge">'+(i+1)+'</span>'
       +rankThumbHTML(s)
       +'<div class="rank-info">'
-      +'<div class="rank-title-text">'+escAttr(s.title||'')+'</div>'
+      +'<div class="rank-title-text">'+rankNumHTML(i+1, false)+escAttr(s.title||'')+'</div>'
       +(s.platform?'<div class="rank-meta-line"><span class="rank-platform">'+escAttr(s.platform)+'</span></div>':'')
       +rankScoreLineHTML(s.avgRating||null, n+' comment'+(n===1?'':'s'))
       +rankListBadgeHTML(s)
@@ -5815,10 +5818,9 @@ function renderRankings(){
     var rank=i+1; var isGold=rank<=3;
     // Same row as Hot Right Now: the whole row opens the detail.
     return '<div class="rank-card" onclick="showRankDetail('+i+')">'
-      +'<span class="rank-badge'+(isGold?' gold':'')+'">'+rank+'</span>'
       +rankThumbHTML(s)
       +'<div class="rank-info">'
-      +'<div class="rank-title-text">'+escAttr(s.title||'')+'</div>'
+      +'<div class="rank-title-text">'+rankNumHTML(rank, isGold)+escAttr(s.title||'')+'</div>'
       +(s.platform?'<div class="rank-meta-line"><span class="rank-platform">'+escAttr(s.platform)+'</span></div>':'')
       +rankScoreLineHTML(s.avg, s.count+' rated')
       +rankListBadgeHTML(s)
