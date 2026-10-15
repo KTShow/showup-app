@@ -160,6 +160,10 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
 .tv-tile svg{width:28px;height:28px;}
 .show-poster{width:51px;height:51px;border-radius:9px;object-fit:cover;flex-shrink:0;}
 .poster-clickable{cursor:pointer;}
+.detail-poster{position:relative;width:130px;height:195px;flex-shrink:0;border-radius:10px;overflow:hidden;background:var(--olive);}
+.detail-poster img{width:100%;height:100%;object-fit:cover;display:block;}
+.detail-poster-empty{width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:40px;}
+.detail-poster-i{position:absolute;right:6px;bottom:6px;width:22px;height:22px;border-radius:50%;background:rgba(0,0,0,0.55);color:#fff;font:italic 600 14px/22px Georgia,serif;text-align:center;pointer-events:none;}
 .cast-scroll{display:flex;gap:10px;overflow-x:auto;padding-bottom:4px;}
 .cast-card{flex-shrink:0;width:70px;text-align:center;}
 .cast-photo{width:70px;height:70px;border-radius:50%;object-fit:cover;background:var(--sand);}
@@ -4304,8 +4308,18 @@ function rankDetailActionsHTML(s, addCall) {
   } else {
     html += '<button type="button" class="rank-act-btn primary" onclick="'+addCall+'">&#10133; Add to my list</button>';
   }
-  if (s.tmdb_id) html += '<button type="button" class="rank-act-btn" onclick="openShowDetails('+s.tmdb_id+')">About this show</button>';
   return html + '</div>';
+}
+
+// The detail view's poster: real 2:3 shape at a sharper TMDB size. Tapping
+// it opens the show's details (that replaced the old "About this show"
+// button) -- the small "i" badge is the hint that it's tappable.
+function detailPosterHTML(s) {
+  var click = s.tmdb_id ? ' poster-clickable" onclick="openShowDetails('+s.tmdb_id+')' : '';
+  var inner = s.poster_path
+    ? '<img src="https://image.tmdb.org/t/p/w342'+s.poster_path+'" alt="" />'
+    : '<div class="detail-poster-empty">&#128252;</div>';
+  return '<div class="detail-poster'+click+'">'+inner+(s.tmdb_id ? '<span class="detail-poster-i">i</span>' : '')+'</div>';
 }
 
 // Hot Right Now (lives in the old Full Lineup view/ids): two tabs, each its
@@ -4427,22 +4441,20 @@ window.showFullLineupDetail = function(idx){
   var hasRating = s.avg_rating != null;
   var avgNum = hasRating ? Number(s.avg_rating) : 0;
   var remotes=''; for(var n=1;n<=5;n++){var lit=n<=Math.floor(avgNum);remotes+='<span style="opacity:'+(lit?'1':'0.18')+';display:inline-block;">'+remoteIcon(16,lit)+'</span>';}
-  var clickAttr=s.tmdb_id?' class="poster-clickable" onclick="openShowDetails('+s.tmdb_id+')"':'';
-  var thumb=s.poster_path
-    ? '<img src="'+TMDB_IMG+s.poster_path+'"'+clickAttr+' style="width:84px;height:84px;border-radius:10px;object-fit:cover;flex-shrink:0;" />'
-    : '<div'+clickAttr+' style="width:84px;height:84px;border-radius:10px;background:var(--olive);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:30px;">&#128252;</div>';
+  var thumb=detailPosterHTML(s);
   var ratingLine = hasRating
     ? '<div style="display:flex;align-items:baseline;gap:10px;margin-bottom:4px;"><span class="rank-detail-avg">'+avgNum.toFixed(1)+'</span><div style="display:flex;gap:2px;">'+remotes+'</div></div>'
       +'<div class="rank-detail-sub">rated by '+s.rating_count+' across ShowUp</div>'
     : '<div class="rank-detail-sub">'+((s.trending && !s.people) ? 'Trending in the US &mdash; not on ShowUp yet. Be the first!' : 'Not yet rated by anyone on ShowUp.')+'</div>';
   if (s.people) {
     // Friends by name (everyone, no "+N more"), then anyone outside your
-    // rooms as an explicit "other people" count -- so a number never reads
-    // like names we left out.
+    // rooms as a "neighbors" count (same word as Prime Time; you aren't one
+    // of them) -- so a number never reads like names we left out.
     var fNames = friendsWithShowOnAnyList(s.title).map(shortPersonName);
-    var others = Math.max(0, s.people - fNames.length);
+    var mineHas = findMyShowByTitle(s.title) ? 1 : 0;
+    var others = Math.max(0, s.people - fNames.length - mineHas);
     var listLine = fNames.length
-      ? 'On lists: <b>'+escAttr(fNames.join(', '))+'</b>'+(others ? ' &middot; '+others+(others===1?' other':' others')+' on ShowUp' : '')
+      ? 'On lists: <b>'+escAttr(fNames.join(', '))+'</b>'+(others ? ' &middot; '+others+(others===1?' neighbor':' neighbors') : '')
       : 'On '+s.people+(s.people==1?' list':' lists')+' on ShowUp';
     ratingLine += '<div class="rank-detail-sub" style="margin-top:-8px;">'+listLine+'</div>';
   }
@@ -4537,10 +4549,7 @@ window.showPrimeTimeDetail = function(idx){
       +'<div style="display:flex;gap:2px;">'+nR+'</div>'
       +'<span class="rank-chev" style="font-size:18px;visibility:hidden;">&rsaquo;</span></div>';
   }
-  var clickAttr=s.tmdb_id?' class="poster-clickable" onclick="openShowDetails('+s.tmdb_id+')"':'';
-  var thumb=s.poster_path
-    ? '<img src="'+TMDB_IMG+s.poster_path+'"'+clickAttr+' style="width:84px;height:84px;border-radius:10px;object-fit:cover;flex-shrink:0;" />'
-    : '<div'+clickAttr+' style="width:84px;height:84px;border-radius:10px;background:var(--olive);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:30px;">&#128252;</div>';
+  var thumb=detailPosterHTML(s);
   panel.innerHTML='<div class="rank-detail">'
     +'<div style="display:flex;gap:12px;align-items:flex-start;margin-bottom:4px;">'
     +thumb
@@ -5053,10 +5062,7 @@ function showShowTalkDetail(idx){
       +'<div class="conversation-time">'+timeAgo(c.reactedAt)+'</div>'
       +'</div>'+actionBtns+'</div>';
   }).join('');
-  var clickAttr=s.tmdb_id?' class="poster-clickable" onclick="openShowDetails('+s.tmdb_id+')"':'';
-  var thumb=s.poster_path
-    ? '<img src="'+TMDB_IMG+s.poster_path+'"'+clickAttr+' style="width:84px;height:84px;border-radius:10px;object-fit:cover;flex-shrink:0;" />'
-    : '<div'+clickAttr+' style="width:84px;height:84px;border-radius:10px;background:var(--olive);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:30px;">&#128252;</div>';
+  var thumb=detailPosterHTML(s);
   var ratingHTML='';
   if(s.avgRating){
     var remotes=''; for(var n=1;n<=5;n++){var lit=n<=Math.floor(s.avgRating);remotes+='<span style="opacity:'+(lit?'1':'0.18')+';display:inline-block;">'+remoteIcon(16,lit)+'</span>';}
@@ -5839,10 +5845,7 @@ function showRankDetail(idx){
     var nameHTML = r.isMe ? 'You' : (isLink ? '<span class="name-pill">'+escAttr(r.name)+'</span>' : escAttr(r.name));
     return '<div class="rank-detail-row"><div class="rank-detail-av" style="background:'+r.color+'">'+r.initials+'</div><div'+nameAttr+'>'+nameHTML+'</div><div style="display:flex;gap:2px;">'+rR+'</div></div>';
   }).join('');
-  var clickAttr=s.tmdb_id?' class="poster-clickable" onclick="openShowDetails('+s.tmdb_id+')"':'';
-  var thumb=s.poster_path
-    ? '<img src="'+TMDB_IMG+s.poster_path+'"'+clickAttr+' style="width:84px;height:84px;border-radius:10px;object-fit:cover;flex-shrink:0;" />'
-    : '<div'+clickAttr+' style="width:84px;height:84px;border-radius:10px;background:var(--olive);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:30px;">&#128252;</div>';
+  var thumb=detailPosterHTML(s);
   panel.style.display='block';
   panel.innerHTML='<button class="rank-close" onclick="backToRankings()">\u2190 Back to rankings</button>'
     +'<div class="rank-detail">'
