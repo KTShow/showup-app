@@ -156,9 +156,9 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
 .show-card{background:var(--cream);border:1px solid var(--border);border-radius:var(--radius);padding:9px 12px;box-shadow:var(--shadow);transition:box-shadow 0.2s;}
 .show-card:hover{box-shadow:0 4px 20px rgba(100,50,20,0.14);}
 .show-card-top{display:flex;align-items:center;gap:12px;flex-wrap:wrap;}
-.tv-tile{width:46px;height:46px;border-radius:9px;background:var(--olive);display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.tv-tile{width:52px;height:78px;border-radius:9px;background:var(--olive);display:flex;align-items:center;justify-content:center;flex-shrink:0;}
 .tv-tile svg{width:28px;height:28px;}
-.show-poster{width:51px;height:51px;border-radius:9px;object-fit:cover;flex-shrink:0;}
+.show-poster{width:52px;height:78px;border-radius:9px;object-fit:cover;flex-shrink:0;}
 .poster-clickable{cursor:pointer;}
 .detail-poster{position:relative;width:130px;height:195px;flex-shrink:0;border-radius:10px;overflow:hidden;background:var(--olive);}
 .detail-poster img{width:100%;height:100%;object-fit:cover;display:block;}
@@ -551,8 +551,8 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
 .tmdb-result{display:flex;align-items:center;gap:10px;padding:8px 12px;cursor:pointer;border-bottom:1px solid var(--border);}
 .tmdb-result:last-child{border-bottom:none;}
 .tmdb-result:hover{background:var(--sand);}
-.tmdb-poster{width:30px;height:45px;border-radius:4px;object-fit:cover;flex-shrink:0;}
-.tmdb-poster-empty{width:30px;height:45px;border-radius:4px;background:var(--sand);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:14px;}
+.tmdb-poster{width:40px;height:60px;border-radius:4px;object-fit:cover;flex-shrink:0;}
+.tmdb-poster-empty{width:40px;height:60px;border-radius:4px;background:var(--sand);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:14px;}
 .tmdb-result-title{font-size:13px;font-weight:600;color:var(--charcoal);line-height:1.3;}
 .tmdb-result-year{font-size:11px;color:var(--muted);margin-top:1px;}
 .tmdb-doc-tag{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.3px;color:var(--fig);background:rgba(107,45,78,0.1);border-radius:4px;padding:1px 5px;vertical-align:middle;white-space:nowrap;}
@@ -1512,8 +1512,8 @@ function renderTop5() {
     var tmdbId = typeof s === 'object' && s.tmdb_id ? s.tmdb_id : null;
     var clickAttr = tmdbId ? ' onclick="openShowDetails(' + tmdbId + ')" class="poster-clickable"' : '';
     var thumb = poster
-      ? '<img src="https://image.tmdb.org/t/p/w92' + poster + '"' + clickAttr + ' style="width:32px;height:32px;border-radius:6px;object-fit:cover;flex-shrink:0;" />'
-      : '<div' + clickAttr + ' style="width:32px;height:32px;border-radius:6px;background:var(--olive);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:14px;">📺</div>';
+      ? '<img src="https://image.tmdb.org/t/p/w154' + poster + '"' + clickAttr + ' style="width:32px;height:48px;border-radius:6px;object-fit:cover;flex-shrink:0;" />'
+      : '<div' + clickAttr + ' style="width:32px;height:48px;border-radius:6px;background:var(--olive);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:14px;">📺</div>';
     var upVis = i === 0 ? 'visibility:hidden;' : '';
     var downVis = i === shows.length - 1 ? 'visibility:hidden;' : '';
     return '<div style="display:flex;align-items:center;gap:8px;background:var(--sand);border-radius:8px;padding:8px 12px;">'
@@ -1551,8 +1551,8 @@ function renderBingedTop5() {
     var tmdbId = typeof s === 'object' && s.tmdb_id ? s.tmdb_id : null;
     var clickAttr = tmdbId ? ' onclick="openShowDetails(' + tmdbId + ')" class="poster-clickable"' : '';
     var thumb = poster
-      ? '<img src="https://image.tmdb.org/t/p/w92' + poster + '"' + clickAttr + ' style="width:32px;height:32px;border-radius:6px;object-fit:cover;flex-shrink:0;" />'
-      : '<div' + clickAttr + ' style="width:32px;height:32px;border-radius:6px;background:var(--olive);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:14px;">📺</div>';
+      ? '<img src="https://image.tmdb.org/t/p/w154' + poster + '"' + clickAttr + ' style="width:32px;height:48px;border-radius:6px;object-fit:cover;flex-shrink:0;" />'
+      : '<div' + clickAttr + ' style="width:32px;height:48px;border-radius:6px;background:var(--olive);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:14px;">📺</div>';
     var upVis = i === 0 ? 'visibility:hidden;' : '';
     var downVis = i === shows.length - 1 ? 'visibility:hidden;' : '';
     return '<div style="display:flex;align-items:center;gap:8px;background:var(--sand);border-radius:8px;padding:8px 12px;">'
@@ -1821,7 +1821,7 @@ function tvIcon() {
 function showTile(s) {
   if (s && s.poster_path) {
     var click = s.tmdb_id ? ' poster-clickable" onclick="openShowDetails(' + s.tmdb_id + ')' : '';
-    return '<img class="show-poster' + click + '" src="https://image.tmdb.org/t/p/w92' + s.poster_path + '" />';
+    return '<img class="show-poster' + click + '" src="https://image.tmdb.org/t/p/w154' + s.poster_path + '" />';
   }
   return tvIcon();
 }
@@ -2978,8 +2978,8 @@ function renderNewThisWeekList(){
   el.innerHTML = items.map(function(item, i){
     var thumbClick = item.tmdb_id ? ' onclick="openShowDetails('+item.tmdb_id+')" title="Show details" style="cursor:pointer;' : ' style="';
     var thumb = item.poster_path
-      ? '<img src="'+TMDB_IMG+item.poster_path+'"'+thumbClick+'width:46px;height:46px;border-radius:8px;object-fit:cover;flex-shrink:0;margin-right:12px;" />'
-      : '<div'+thumbClick+'width:46px;height:46px;border-radius:8px;background:var(--olive);flex-shrink:0;margin-right:12px;display:flex;align-items:center;justify-content:center;font-size:18px;">&#128252;</div>';
+      ? '<img src="'+TMDB_IMG+item.poster_path+'"'+thumbClick+'width:48px;height:72px;border-radius:8px;object-fit:cover;flex-shrink:0;margin-right:12px;" />'
+      : '<div'+thumbClick+'width:48px;height:72px;border-radius:8px;background:var(--olive);flex-shrink:0;margin-right:12px;display:flex;align-items:center;justify-content:center;font-size:18px;">&#128252;</div>';
     var destKey = item.list==='watched' ? (item.dnf?'dnf':'watched') : item.list==='watchlist' ? (item.waitingForSeason?'waiting':'watchlist') : 'watching';
     var destLabel = destKey === 'dnf' ? 'Did Not Finish' : ADD_DEST_DISPLAY_LABELS[destKey];
     var subLine = (item.mine ? 'You' : escAttr(item.friendName)) + ' added this to ' + destLabel;
@@ -3091,8 +3091,8 @@ function renderSharedTasteList(friendId){
   el.innerHTML = list.map(function(s){
     var thumbClick = s.tmdb_id ? ' onclick="openShowDetails('+s.tmdb_id+')" title="Show details" style="cursor:pointer;' : ' style="';
     var thumb = s.poster_path
-      ? '<img src="'+TMDB_IMG+s.poster_path+'"'+thumbClick+'width:46px;height:46px;border-radius:8px;object-fit:cover;flex-shrink:0;margin-right:12px;" />'
-      : '<div'+thumbClick+'width:46px;height:46px;border-radius:8px;background:var(--olive);flex-shrink:0;margin-right:12px;display:flex;align-items:center;justify-content:center;font-size:18px;">&#128252;</div>';
+      ? '<img src="'+TMDB_IMG+s.poster_path+'"'+thumbClick+'width:48px;height:72px;border-radius:8px;object-fit:cover;flex-shrink:0;margin-right:12px;" />'
+      : '<div'+thumbClick+'width:48px;height:72px;border-radius:8px;background:var(--olive);flex-shrink:0;margin-right:12px;display:flex;align-items:center;justify-content:center;font-size:18px;">&#128252;</div>';
     // Your side opens the same tap-to-rate sheet as your tiles.
     var myR = rateTriggerHTML(s.myRating || 0, "openRateSheet('"+s.myList+"','"+s.myId+"','"+friendId+"')");
     var theirR = s.theirRating ? remoteStatic(s.theirRating) : '<span style="font-size:11px;color:var(--muted);">Not rated</span>';
@@ -3158,8 +3158,8 @@ function renderShowsByPlatform(q){
   el.innerHTML=matchLabel+list.map(function(s,i){
     var thumbClick = s.tmdb_id ? ' onclick="openShowDetails('+s.tmdb_id+')" title="Show details" style="cursor:pointer;' : ' style="';
     var thumb=s.poster_path
-      ? '<img src="'+TMDB_IMG+s.poster_path+'"'+thumbClick+'width:100%;aspect-ratio:1;border-radius:8px;object-fit:cover;" />'
-      : '<div'+thumbClick+'width:100%;aspect-ratio:1;border-radius:8px;background:var(--olive);display:flex;align-items:center;justify-content:center;font-size:22px;">&#128252;</div>';
+      ? '<img src="'+TMDB_IMG+s.poster_path+'"'+thumbClick+'width:100%;aspect-ratio:2/3;border-radius:8px;object-fit:cover;" />'
+      : '<div'+thumbClick+'width:100%;aspect-ratio:2/3;border-radius:8px;background:var(--olive);display:flex;align-items:center;justify-content:center;font-size:22px;">&#128252;</div>';
     var ratings=s.people.filter(function(p){return p.rating>0;});
     var avg=ratings.length ? (ratings.reduce(function(a,b){return a+b.rating;},0)/ratings.length) : null;
     var ratingLine = avg ? (remoteAvgLabel(avg.toFixed(1))+' &middot; '+ratings.length+' rated') : 'Not yet rated';
@@ -5694,7 +5694,7 @@ function renderRecommendationBanners(){
     var senderName = r.fromName || 'Someone';
     var posterClick = r.tmdb_id ? ' onclick="openShowDetails('+r.tmdb_id+')" title="Show details" style="cursor:pointer;' : ' style="';
     var poster = r.poster_path
-      ? '<img src="https://image.tmdb.org/t/p/w92'+r.poster_path+'"'+posterClick+'width:52px;height:78px;border-radius:8px;object-fit:cover;flex-shrink:0;" />'
+      ? '<img src="https://image.tmdb.org/t/p/w154'+r.poster_path+'"'+posterClick+'width:52px;height:78px;border-radius:8px;object-fit:cover;flex-shrink:0;" />'
       : '<div'+posterClick+'width:52px;height:78px;border-radius:8px;background:rgba(255,255,255,0.2);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:22px;">&#128252;</div>';
     return '<div class="rec-banner">'
       + '<div class="rec-banner-top">' + poster
@@ -8121,7 +8121,8 @@ window.moveTop5Down = async function(idx) {
 // ============================================================
 
 var TMDB_KEY = 'b1fd269e9a38591e0e4ded8a1b269d12';
-var TMDB_IMG = 'https://image.tmdb.org/t/p/w92';
+// w154: sharp at list-poster sizes on retina phones (w92 was blurry).
+var TMDB_IMG = 'https://image.tmdb.org/t/p/w154';
 
 // TMDB's number_of_seasons counts every season it has a record for, including
 // ones that are announced/in production but haven't aired yet -- using it
