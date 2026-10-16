@@ -1256,8 +1256,8 @@ html.native-cover .status-shield{display:block;position:fixed;top:0;left:0;right
       <div class="settings-card">
         <div class="settings-row" style="cursor:default;">
           <span class="settings-row-icon">&#128172;</span>
-          <span class="settings-row-label">Friends&rsquo; comments<span class="settings-row-sub">When someone in your Living Room comments on a show</span></span>
-          <button type="button" class="switch" id="pref-comments" role="switch" aria-checked="true" aria-label="Friends' comments" onclick="toggleNotifPref('comments')"></button>
+          <span class="settings-row-label">Comments &amp; recommendations<span class="settings-row-sub">When someone in your Living Room comments on a show, or a friend recommends you one</span></span>
+          <button type="button" class="switch" id="pref-comments" role="switch" aria-checked="true" aria-label="Comments and recommendations" onclick="toggleNotifPref('comments')"></button>
         </div>
         <div class="settings-row" style="cursor:default;">
           <span class="settings-row-icon">&#128250;</span>
@@ -5695,6 +5695,9 @@ window.sendRecommendation = async function(){
     const { error } = await sb.from('recommendations').insert(rows);
     if(error) throw error;
     showToast('Sent to ' + names.join(', ') + '!');
+    // The insert trigger (sql/add_recommendation_alerts.sql) queued the
+    // recipients' alerts; deliver them now, same as comments.
+    fetch('/api/push', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' }).catch(function() {});
   } catch(e) {
     console.error('sendRecommendation error:', e);
     showToast("Couldn't send — try again in a moment.");
@@ -5751,6 +5754,7 @@ window.acceptRecommendation = async function(recId){
     }
     rec.status='added'; rec.resolved_at=new Date().toISOString();
     renderRecommendationBanners();
+    _clearRecommendationNotif(recId);
     renderTastemakersBanner();
     await sb.from('recommendations').update({ status:'added', resolved_at:new Date().toISOString() }).eq('id', recId);
   } catch(e) {
@@ -5759,11 +5763,21 @@ window.acceptRecommendation = async function(recId){
   }
 };
 
+// Once a recommendation is added or dismissed, its bell row has done its job.
+function _clearRecommendationNotif(recId){
+  var now = new Date().toISOString();
+  state.notifications = (state.notifications||[]).filter(function(n){ return !(n.type==='recommendation' && n.entity_id===recId); });
+  renderNotifBell();
+  if (state.user) sb.from('notifications').update({ dismissed_at: now }).eq('user_id', state.user.id).eq('type', 'recommendation').eq('entity_id', recId).is('dismissed_at', null)
+    .then(function(r){ if (r.error) console.error('clear rec notif error:', r.error); });
+}
+
 window.dismissRecommendation = async function(recId){
   var rec = (state.recommendations||[]).find(function(r){return r.id===recId;});
   if(!rec) return;
   rec.status='dismissed'; rec.resolved_at=new Date().toISOString();
   renderRecommendationBanners();
+  _clearRecommendationNotif(recId);
   try {
     await sb.from('recommendations').update({ status:'dismissed', resolved_at:new Date().toISOString() }).eq('id', recId);
   } catch(e) { console.error('dismissRecommendation error:', e); }
@@ -8280,13 +8294,14 @@ function mapProviderToPlatform(name) {
 // date, ~2-3 weeks out). The table and this code are shaped so comment /
 // invite types can be added without a rework.
 
-var NOTIF_ICON = { new_season: '🎉', season_upcoming: '🗓️', lounge_reply: '☕', comment: '💬' };
+var NOTIF_ICON = { new_season: '🎉', season_upcoming: '🗓️', lounge_reply: '☕', comment: '💬', recommendation: '🎯' };
 
-// The bell is for new seasons only. Comment / Lounge-reply rows still live
+// The bell is for new seasons and recommendations (a recommendation is
+// personal and otherwise only shows inside a room). Comment / Lounge-reply rows still live
 // in the table -- they power phone alerts (a tapped alert opens its row via
 // ?notif=) and the weekly email recap -- but the Living Room's own unread
 // counts already cover them, so they stay out of the bell's list and dot.
-var BELL_TYPES = ['new_season', 'season_upcoming'];
+var BELL_TYPES = ['new_season', 'season_upcoming', 'recommendation'];
 function _bellItems() {
   return (state.notifications || []).filter(function(n) { return BELL_TYPES.indexOf(n.type) >= 0; });
 }
@@ -8465,6 +8480,10 @@ window.openNotification = async function(id) {
     return;
   }
 
+  // A recommendation: its banner is at the top of the Living Room (any
+  // room), so open the current room -- or your first -- and show it.
+  if (n.type === 'recommendation') { _openRecommendationNotification(); return; }
+
   // A comment: open that show's conversation (Show Talk, pooled across
   // every room you're in, so it works whichever room it was said in).
   if (n.type === 'comment') { _openCommentNotification(n); return; }
@@ -8558,6 +8577,23 @@ window.toggleNotifPref = async function(key) {
     showToast("Couldn't save that — try again in a moment.");
   }
 };
+
+async function _openRecommendationNotification() {
+  var lrBtn = document.getElementById('btab-living-room');
+  if (lrBtn) showTab('living-room', lrBtn);
+  if (!state.myRoomsLoaded) await loadAndRenderRoomPicker();
+  var room = (state.currentRoomId && (state.myRooms||[]).find(function(r){ return r.id === state.currentRoomId; })) || (state.myRooms||[])[0];
+  if (!room) return;
+  await enterLivingRoom(room.id);
+  setTimeout(function(){
+    var el = document.getElementById('recommendations-banner');
+    if (el && el.firstChild) {
+      el.scrollIntoView({ behavior:'smooth', block:'center' });
+      el.firstChild.classList.add('flash-pulse');
+      setTimeout(function(){ el.firstChild && el.firstChild.classList.remove('flash-pulse'); }, 2500);
+    }
+  }, 350);
+}
 
 function _jumpToMyShow(showId) {
   var tab = state.watching.find(function(s) { return s.id === showId; }) ? 'watching'
