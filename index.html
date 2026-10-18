@@ -281,6 +281,7 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
 .lounge-reply-btn{display:inline-flex;align-items:center;gap:6px;min-height:44px;padding:0 18px;border-radius:22px;background:white;border:1.5px solid var(--terra);color:var(--terra);font-family:var(--sans);font-size:14px;font-weight:700;cursor:pointer;}
 .lounge-reply-btn:active{transform:scale(0.97);}
 .lounge-link.lounge-link-reply{font-size:13px;color:var(--terra);}
+.lounge-actions .btn-more-react{margin-left:auto;}
 .lounge-replyto{font-size:11px;font-weight:700;color:var(--muted);margin-bottom:2px;}
 .lounge-link{background:none;border:none;padding:0;font-family:var(--sans);font-size:11px;font-weight:700;color:var(--muted);cursor:pointer;}
 .lounge-link:hover{color:var(--terra);}
@@ -5361,6 +5362,19 @@ var _loungeRoomsOpen = false;     // composer's room checklist expanded?
 function _loungeName(row){ return (row.first_name || 'Someone') + (row.last_initial ? ' ' + row.last_initial + '.' : ''); }
 function _loungeCanDelete(ownerId){ return state.user && (state.user.id === ownerId || state.currentRoomIsOwner); }
 
+// Edit / Delete / Report live in the same "···" menu Show Talk uses, so
+// the thread only shows Reply. kind = 'post' | 'reply'.
+function _loungeMenuBtn(kind, row){
+  var myId = state.user ? state.user.id : null;
+  var items = [];
+  if (row.user_id === myId) items.push({ label: 'Edit', call: "startEditLounge('" + kind + "','" + row.id + "')" });
+  if (_loungeCanDelete(row.user_id)) items.push(kind === 'post'
+    ? { label: 'Delete', call: "deleteLoungePost('" + row.id + "')", danger: true }
+    : { label: 'Delete', call: "deleteLoungeReply('" + row.id + "')", danger: true, confirm: 'Delete this reply?' });
+  if (row.user_id !== myId) items.push({ label: 'Report', call: "openReport('lounge_" + kind + "','" + row.id + "','" + row.user_id + "','" + _loungeName(row).replace(/'/g, '') + "')" });
+  return items.length ? itemMenuBtnHTML(items, 'More options') : '';
+}
+
 async function loadLounge(roomId){
   if (!roomId){ state.lounge = { posts:[], replies:[], seenAt:null }; return; }
   try {
@@ -5442,9 +5456,7 @@ function renderLounge(){
 
     var actions = state.currentRoomIsAdminView ? '' : '<div class="lounge-actions">'
       + '<button class="lounge-reply-btn" onclick="toggleLoungeReply(\'' + p.id + '\')">💬 Reply</button>'
-      + (p.user_id === myId ? '<button class="lounge-link" onclick="startEditLounge(\'post\',\'' + p.id + '\')">Edit</button>' : '')
-      + (_loungeCanDelete(p.user_id) ? '<button class="lounge-link" onclick="deleteLoungePost(\'' + p.id + '\')">Delete</button>' : '')
-      + (p.user_id !== myId ? '<button class="lounge-link" onclick="openReport(\'lounge_post\',\'' + p.id + '\',\'' + p.user_id + '\',\'' + escAttr(_loungeName(p)).replace(/'/g, '') + '\')">Report</button>' : '')
+      + _loungeMenuBtn('post', p)
       + '</div>';
 
     var replyRows = replies.map(function(r){
@@ -5456,9 +5468,7 @@ function renderLounge(){
         : '<div class="lounge-body">' + escAttr(r.body) + '</div>';
       var rActions = state.currentRoomIsAdminView ? '' : '<div class="lounge-actions">'
           + '<button class="lounge-link lounge-link-reply" onclick="replyToLoungeReply(\'' + p.id + '\',\'' + r.id + '\')">Reply</button>'
-          + (r.user_id === myId ? '<button class="lounge-link" onclick="startEditLounge(\'reply\',\'' + r.id + '\')">Edit</button>' : '')
-          + (_loungeCanDelete(r.user_id) ? '<button class="lounge-link" onclick="deleteLoungeReply(\'' + r.id + '\')">Delete</button>' : '')
-          + (r.user_id !== myId ? '<button class="lounge-link" onclick="openReport(\'lounge_reply\',\'' + r.id + '\',\'' + r.user_id + '\',\'' + escAttr(_loungeName(r)).replace(/'/g, '') + '\')">Report</button>' : '')
+          + _loungeMenuBtn('reply', r)
           + '</div>';
       var to = r.reply_to_id && replies.find(function(x){ return x.id === r.reply_to_id; });
       return '<div class="lounge-reply">' + (to ? '<div class="lounge-replyto">↩ to ' + escAttr(_loungeName(to)) + '</div>' : '')
