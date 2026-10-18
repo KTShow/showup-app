@@ -277,7 +277,11 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
 .lounge-author{font-size:12px;font-weight:800;color:var(--charcoal);}
 .lounge-time{font-size:11px;color:var(--muted);}
 .lounge-body{font-size:13px;color:var(--charcoal);line-height:1.5;white-space:pre-wrap;word-break:break-word;}
-.lounge-actions{display:flex;gap:12px;margin-top:7px;}
+.lounge-actions{display:flex;align-items:center;gap:12px;margin-top:7px;}
+.lounge-reply-btn{display:inline-flex;align-items:center;gap:6px;min-height:44px;padding:0 18px;border-radius:22px;background:white;border:1.5px solid var(--terra);color:var(--terra);font-family:var(--sans);font-size:14px;font-weight:700;cursor:pointer;}
+.lounge-reply-btn:active{transform:scale(0.97);}
+.lounge-link.lounge-link-reply{font-size:13px;color:var(--terra);}
+.lounge-replyto{font-size:11px;font-weight:700;color:var(--muted);margin-bottom:2px;}
 .lounge-link{background:none;border:none;padding:0;font-family:var(--sans);font-size:11px;font-weight:700;color:var(--muted);cursor:pointer;}
 .lounge-link:hover{color:var(--terra);}
 .lounge-replies{margin:8px 0 0 12px;border-left:2px solid var(--border);padding-left:12px;}
@@ -5349,6 +5353,7 @@ window.markConversationsSeen = async function(){
 // ============================================================
 var _loungeViewed = false;
 var _loungeReplyOpen = {};        // { postId: true } -- which reply boxes are open
+var _loungeReplyTo = {};          // { postId: replyId } -- open box is answering this reply
 var _loungeEditing = null;        // { kind:'post'|'reply', id } | null
 var _loungeSkipRooms = {};        // { roomId: true } -- rooms unticked in the composer (default: post to all)
 var _loungeRoomsOpen = false;     // composer's room checklist expanded?
@@ -5436,7 +5441,7 @@ function renderLounge(){
       : '<div class="lounge-body">' + escAttr(p.body) + '</div>';
 
     var actions = state.currentRoomIsAdminView ? '' : '<div class="lounge-actions">'
-      + '<button class="lounge-link" onclick="toggleLoungeReply(\'' + p.id + '\')">Reply</button>'
+      + '<button class="lounge-reply-btn" onclick="toggleLoungeReply(\'' + p.id + '\')">💬 Reply</button>'
       + (p.user_id === myId ? '<button class="lounge-link" onclick="startEditLounge(\'post\',\'' + p.id + '\')">Edit</button>' : '')
       + (_loungeCanDelete(p.user_id) ? '<button class="lounge-link" onclick="deleteLoungePost(\'' + p.id + '\')">Delete</button>' : '')
       + (p.user_id !== myId ? '<button class="lounge-link" onclick="openReport(\'lounge_post\',\'' + p.id + '\',\'' + p.user_id + '\',\'' + escAttr(_loungeName(p)).replace(/'/g, '') + '\')">Report</button>' : '')
@@ -5450,17 +5455,22 @@ function renderLounge(){
           + '<button class="btn-cancel" onclick="cancelEditLounge()">Cancel</button></div>'
         : '<div class="lounge-body">' + escAttr(r.body) + '</div>';
       var rActions = state.currentRoomIsAdminView ? '' : '<div class="lounge-actions">'
+          + '<button class="lounge-link lounge-link-reply" onclick="replyToLoungeReply(\'' + p.id + '\',\'' + r.id + '\')">Reply</button>'
           + (r.user_id === myId ? '<button class="lounge-link" onclick="startEditLounge(\'reply\',\'' + r.id + '\')">Edit</button>' : '')
           + (_loungeCanDelete(r.user_id) ? '<button class="lounge-link" onclick="deleteLoungeReply(\'' + r.id + '\')">Delete</button>' : '')
           + (r.user_id !== myId ? '<button class="lounge-link" onclick="openReport(\'lounge_reply\',\'' + r.id + '\',\'' + r.user_id + '\',\'' + escAttr(_loungeName(r)).replace(/'/g, '') + '\')">Report</button>' : '')
           + '</div>';
-      return '<div class="lounge-reply"><div class="lounge-head"><span class="lounge-author">' + escAttr(_loungeName(r))
+      var to = r.reply_to_id && replies.find(function(x){ return x.id === r.reply_to_id; });
+      return '<div class="lounge-reply">' + (to ? '<div class="lounge-replyto">↩ to ' + escAttr(_loungeName(to)) + '</div>' : '')
+        + '<div class="lounge-head"><span class="lounge-author">' + escAttr(_loungeName(r))
         + '</span><span class="lounge-time">' + timeAgo(r.created_at) + (r.updated_at ? ' · edited' : '') + '</span></div>'
         + rBody + rActions + '</div>';
     }).join('');
 
+    var replyingTo = _loungeReplyTo[p.id] && replies.find(function(x){ return x.id === _loungeReplyTo[p.id]; });
     var replyBox = _loungeReplyOpen[p.id]
-      ? '<div class="inline-react" style="margin-top:8px;"><textarea class="react-input" rows="1" id="lounge-reply-' + p.id + '" placeholder="Reply…" maxlength="4000"></textarea>'
+      ? (replyingTo ? '<div class="lounge-replyto" style="margin-top:8px;">↩ Replying to ' + escAttr(_loungeName(replyingTo)) + '</div>' : '')
+        + '<div class="inline-react" style="margin-top:' + (replyingTo ? 2 : 8) + 'px;"><textarea class="react-input" rows="1" id="lounge-reply-' + p.id + '" placeholder="' + (replyingTo ? 'Reply to ' + escAttr(_loungeName(replyingTo)) : 'Reply') + '…" maxlength="4000"></textarea>'
         + '<button class="btn-send" onclick="submitLoungeReply(\'' + p.id + '\')">Send</button>'
         + '<button class="btn-cancel" onclick="toggleLoungeReply(\'' + p.id + '\')">Cancel</button></div>'
       : '';
@@ -5568,10 +5578,22 @@ window.submitLoungePost = async function(){
 };
 
 window.toggleLoungeReply = function(postId){
+  delete _loungeReplyTo[postId];
   if (_loungeReplyOpen[postId]) delete _loungeReplyOpen[postId];
   else _loungeReplyOpen[postId] = true;
   renderLounge();
   if (_loungeReplyOpen[postId]) setTimeout(function(){
+    var i = document.getElementById('lounge-reply-' + postId); if (i) i.focus();
+  }, 50);
+};
+
+// Reply to a specific reply: same thread (one level deep), tagged
+// "to <name>", and that person's alert says "replied to you".
+window.replyToLoungeReply = function(postId, replyId){
+  _loungeReplyOpen[postId] = true;
+  _loungeReplyTo[postId] = replyId;
+  renderLounge();
+  setTimeout(function(){
     var i = document.getElementById('lounge-reply-' + postId); if (i) i.focus();
   }, 50);
 };
@@ -5582,17 +5604,20 @@ window.submitLoungeReply = async function(postId){
   var body = el.value.trim();
   if (_isObjectionable(body)) return;
   if (!body || !state.user) return;
+  var replyTo = _loungeReplyTo[postId];
+  if (replyTo && String(replyTo).indexOf('tmp-') === 0) replyTo = null; // not saved yet
   delete _loungeReplyOpen[postId];
+  delete _loungeReplyTo[postId];
   var tmpId = 'tmp-' + Date.now();
   var now = new Date().toISOString();
-  state.lounge.replies.push({ id: tmpId, post_id: postId, user_id: state.user.id, body: body,
+  state.lounge.replies.push({ id: tmpId, post_id: postId, user_id: state.user.id, body: body, reply_to_id: replyTo || null,
     created_at: now, updated_at: null, first_name: state.user.first, last_initial: state.user.last || '' });
   var post = state.lounge.posts.find(function(x){ return x.id === postId; });
   if (post) post.last_activity_at = now;
   _resortLoungePosts();
   renderLounge();
   try {
-    var res = await sb.rpc('add_lounge_reply', { p_post_id: postId, p_body: body });
+    var res = await sb.rpc('add_lounge_reply', { p_post_id: postId, p_body: body, p_reply_to: replyTo || null });
     if (res.error) throw res.error;
     var r = state.lounge.replies.find(function(x){ return x.id === tmpId; });
     if (r && res.data){ r.id = res.data.id; r.created_at = res.data.created_at; }
