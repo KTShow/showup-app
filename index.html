@@ -263,6 +263,11 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
 .lr-toggle-btn.active{background:var(--fig);color:white;border-color:var(--fig);}
 /* --- The Lounge --- */
 .lounge-composer{background:var(--cream);border:1px solid var(--border);border-radius:var(--radius);padding:12px 14px;box-shadow:var(--shadow);margin-bottom:16px;}
+.lounge-rooms{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:8px;}
+.lounge-rooms-label{font-size:11px;font-weight:700;color:var(--muted);margin-right:2px;}
+.lounge-room-chip{font-family:var(--sans);font-size:12px;font-weight:700;border-radius:14px;padding:5px 11px;min-height:30px;cursor:pointer;border:1px solid var(--border);background:white;color:var(--muted);}
+.lounge-room-chip.on{background:var(--burnt);border-color:var(--burnt);color:#fff;}
+.lounge-room-chip:disabled{cursor:default;opacity:1;}
 .lounge-textarea{width:100%;box-sizing:border-box;background:white;border:1px solid var(--border);border-radius:10px;padding:9px 12px;font-family:var(--sans);font-size:13px;color:var(--charcoal);outline:none;resize:vertical;min-height:44px;line-height:1.45;}
 .lounge-post{background:var(--cream);border:1px solid var(--border);border-left:3px solid var(--fig);border-radius:var(--radius);padding:12px 14px;box-shadow:var(--shadow);margin-bottom:10px;}
 .lounge-post.is-new{background:#FBF3E0;}
@@ -5343,6 +5348,7 @@ window.markConversationsSeen = async function(){
 var _loungeViewed = false;
 var _loungeReplyOpen = {};        // { postId: true } -- which reply boxes are open
 var _loungeEditing = null;        // { kind:'post'|'reply', id } | null
+var _loungeSkipRooms = {};        // { roomId: true } -- rooms unticked in the composer (default: post to all)
 
 function _loungeName(row){ return (row.first_name || 'Someone') + (row.last_initial ? ' ' + row.last_initial + '.' : ''); }
 function _loungeCanDelete(ownerId){ return state.user && (state.user.id === ownerId || state.currentRoomIsOwner); }
@@ -5394,11 +5400,16 @@ function renderLounge(){
   var list = document.getElementById('lounge-list');
   if (!wrap || !list) return;
 
+  // Keep a half-written post across re-renders.
+  var draftEl = document.getElementById('lounge-input');
+  var draft = draftEl ? draftEl.value : '';
   wrap.innerHTML = state.currentRoomIsAdminView ? '' :
     '<div class="lounge-composer">'
     + '<textarea class="lounge-textarea" id="lounge-input" placeholder="Ask the room something, or start a thought…" maxlength="4000"></textarea>'
+    + _loungeRoomChips()
     + '<div style="text-align:right;margin-top:8px;"><button class="btn-send" onclick="submitLoungePost()">Post</button></div>'
     + '</div>';
+  if (draft){ var ta = document.getElementById('lounge-input'); if (ta) ta.value = draft; }
 
   var posts = state.lounge.posts || [];
   if (!posts.length){
@@ -5452,12 +5463,55 @@ function renderLounge(){
 
     return '<div class="lounge-post' + (isNew ? ' is-new' : '') + '" id="lounge-post-' + p.id + '">'
       + '<div class="lounge-head"><span class="lounge-author">' + escAttr(_loungeName(p))
-      + '</span><span class="lounge-time">' + timeAgo(p.created_at) + (p.updated_at ? ' · edited' : '') + '</span></div>'
+      + '</span><span class="lounge-time">' + timeAgo(p.created_at) + (p.updated_at ? ' · edited' : '') + (p.group_count > 1 ? ' · in ' + p.group_count + ' rooms' : '') + '</span></div>'
       + body + actions
       + (replyRows ? '<div class="lounge-replies">' + replyRows + '</div>' : '')
       + replyBox
       + '</div>';
   }).join('');
+}
+
+// "Post to:" chips -- every room you're in, all ticked by default. Each
+// chosen room gets its own copy (shared group_id) so replies stay in-room.
+// The room you're in is always included.
+function _loungeRoomChips(){
+  var rooms = state.myRooms || [];
+  if (rooms.length < 2) return '';
+  var cur = state.currentRoomId;
+  var sorted = rooms.slice().sort(function(a,b){
+    if (a.id === cur) return -1; if (b.id === cur) return 1;
+    return a.name.localeCompare(b.name);
+  });
+  return '<div class="lounge-rooms"><span class="lounge-rooms-label">Post to:</span>'
+    + sorted.map(function(r){
+        var isCur = r.id === cur;
+        var on = isCur || !_loungeSkipRooms[r.id];
+        return '<button type="button" class="lounge-room-chip' + (on ? ' on' : '') + '"'
+          + (isCur ? ' disabled title="The room you’re in"' : ' onclick="toggleLoungeRoom(this,\'' + r.id + '\')"')
+          + ' aria-pressed="' + on + '">' + escAttr(r.name) + '</button>';
+      }).join('')
+    + '</div>';
+}
+
+window.toggleLoungeRoom = function(btn, roomId){
+  if (_loungeSkipRooms[roomId]) delete _loungeSkipRooms[roomId];
+  else _loungeSkipRooms[roomId] = true;
+  var on = !_loungeSkipRooms[roomId];
+  btn.classList.toggle('on', on);
+  btn.setAttribute('aria-pressed', on);
+};
+
+function _loungeTargetRooms(){
+  var cur = state.currentRoomId;
+  return [cur].concat((state.myRooms || []).map(function(r){ return r.id; })
+    .filter(function(id){ return id !== cur && !_loungeSkipRooms[id]; }));
+}
+
+function _newUuid(){
+  if (window.crypto && crypto.randomUUID) return crypto.randomUUID();
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c){
+    var r = Math.random() * 16 | 0; return (c === 'x' ? r : (r & 3 | 8)).toString(16);
+  });
 }
 
 window.submitLoungePost = async function(){
@@ -5468,19 +5522,25 @@ window.submitLoungePost = async function(){
   if (!body) return;
   if (!state.currentRoomId || !state.user) return;
   el.value = '';
+  var roomIds = _loungeTargetRooms();
+  var groupId = roomIds.length > 1 ? _newUuid() : null;
   var tmpId = 'tmp-' + Date.now();
   var now = new Date().toISOString();
   state.lounge.posts.unshift({ id: tmpId, user_id: state.user.id, body: body, created_at: now,
-    updated_at: null, last_activity_at: now, first_name: state.user.first, last_initial: state.user.last || '' });
+    updated_at: null, last_activity_at: now, group_id: groupId, group_count: groupId ? roomIds.length : null,
+    first_name: state.user.first, last_initial: state.user.last || '' });
   renderLounge();
   try {
     var res = await sb.from('lounge_posts')
-      .insert({ living_room_id: state.currentRoomId, user_id: state.user.id, body: body })
-      .select().single();
+      .insert(roomIds.map(function(id){ return { living_room_id: id, user_id: state.user.id, body: body, group_id: groupId }; }))
+      .select();
     if (res.error) throw res.error;
+    var mine = (res.data || []).find(function(x){ return x.living_room_id === state.currentRoomId; });
     var p = state.lounge.posts.find(function(x){ return x.id === tmpId; });
-    if (p){ p.id = res.data.id; p.created_at = res.data.created_at; p.last_activity_at = res.data.last_activity_at; }
+    if (p && mine){ p.id = mine.id; p.created_at = mine.created_at; p.last_activity_at = mine.last_activity_at; }
+    _loungeSkipRooms = {};
     renderLounge();
+    if (roomIds.length > 1) showToast('Posted to ' + roomIds.length + ' rooms');
     // The insert trigger (sql/add_lounge_alerts.sql) queued the room's
     // alerts; deliver them now, same as comments.
     fetch('/api/push', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' }).catch(function() {});
@@ -5560,7 +5620,10 @@ window.submitEditLounge = async function(kind, id){
   _loungeEditing = null;
   renderLounge();
   try {
-    var res = await sb.from(table).update({ body: body, updated_at: now }).eq('id', id);
+    var q = sb.from(table).update({ body: body, updated_at: now });
+    // Your own multi-room post: edit every copy.
+    var res = await (kind === 'post' && row.group_id && row.user_id === state.user.id
+      ? q.eq('group_id', row.group_id).eq('user_id', state.user.id) : q.eq('id', id));
     if (res.error) throw res.error;
   } catch(e){
     console.error('submitEditLounge error:', e);
@@ -5570,12 +5633,18 @@ window.submitEditLounge = async function(kind, id){
 };
 
 window.deleteLoungePost = async function(id){
-  if (!confirm('Delete this post and all its replies?')) return;
+  var post = state.lounge.posts.find(function(x){ return x.id === id; });
+  // Your own multi-room post goes from every room; a room owner removing
+  // someone else's post only removes this room's copy.
+  var everywhere = post && post.group_id && post.group_count > 1 && state.user && post.user_id === state.user.id;
+  if (!confirm(everywhere ? 'Delete this post and its replies from all ' + post.group_count + ' rooms?' : 'Delete this post and all its replies?')) return;
   state.lounge.posts = state.lounge.posts.filter(function(x){ return x.id !== id; });
   state.lounge.replies = state.lounge.replies.filter(function(x){ return x.post_id !== id; });
   renderLounge();
   try {
-    var res = await sb.from('lounge_posts').delete().eq('id', id);
+    var res = await (everywhere
+      ? sb.from('lounge_posts').delete().eq('group_id', post.group_id).eq('user_id', state.user.id)
+      : sb.from('lounge_posts').delete().eq('id', id));
     if (res.error) throw res.error;
   } catch(e){
     console.error('deleteLoungePost error:', e);
