@@ -282,6 +282,7 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
 .lounge-reply-btn:active{transform:scale(0.97);}
 .lounge-link.lounge-link-reply{font-size:13px;color:var(--terra);}
 .lounge-actions .btn-more-react{margin-left:auto;}
+.lounge-seenby{font-size:11px;color:var(--muted);margin:-2px 0 5px;}
 .lounge-replyto{font-size:11px;font-weight:700;color:var(--muted);margin-bottom:2px;}
 .lounge-link{background:none;border:none;padding:0;font-family:var(--sans);font-size:11px;font-weight:700;color:var(--muted);cursor:pointer;}
 .lounge-link:hover{color:var(--terra);}
@@ -5360,6 +5361,15 @@ var _loungeSkipRooms = {};        // { roomId: true } -- rooms unticked in the c
 var _loungeRoomsOpen = false;     // composer's room checklist expanded?
 
 function _loungeName(row){ return (row.first_name || 'Someone') + (row.last_initial ? ' ' + row.last_initial + '.' : ''); }
+// Multi-room posts are one conversation across rooms: "Seen by Family
+// Room, Book Club + 2 other rooms" (only names rooms you're in).
+function _loungeSeenBy(p){
+  var names = p.seen_by_rooms || [];
+  var others = p.seen_by_others || 0;
+  if (names.length + others < 2) return '';
+  return '<div class="lounge-seenby">Seen by ' + escAttr(names.join(', '))
+    + (others ? (names.length ? ' + ' : '') + others + (others === 1 ? ' other room' : ' other rooms') : '') + '</div>';
+}
 function _loungeCanDelete(ownerId){ return state.user && (state.user.id === ownerId || state.currentRoomIsOwner); }
 
 // Edit / Delete / Report live in the same "···" menu Show Talk uses, so
@@ -5368,7 +5378,7 @@ function _loungeMenuBtn(kind, row){
   var myId = state.user ? state.user.id : null;
   var items = [];
   if (row.user_id === myId) items.push({ label: 'Edit', call: "startEditLounge('" + kind + "','" + row.id + "')" });
-  if (_loungeCanDelete(row.user_id)) items.push(kind === 'post'
+  if (row.user_id === myId || (_loungeCanDelete(row.user_id) && row.own_copy !== false)) items.push(kind === 'post'
     ? { label: 'Delete', call: "deleteLoungePost('" + row.id + "')", danger: true }
     : { label: 'Delete', call: "deleteLoungeReply('" + row.id + "')", danger: true, confirm: 'Delete this reply?' });
   if (row.user_id !== myId) items.push({ label: 'Report', call: "openReport('lounge_" + kind + "','" + row.id + "','" + row.user_id + "','" + _loungeName(row).replace(/'/g, '') + "')" });
@@ -5487,7 +5497,8 @@ function renderLounge(){
 
     return '<div class="lounge-post' + (isNew ? ' is-new' : '') + '" id="lounge-post-' + p.id + '">'
       + '<div class="lounge-head"><span class="lounge-author">' + escAttr(_loungeName(p))
-      + '</span><span class="lounge-time">' + timeAgo(p.created_at) + (p.updated_at ? ' · edited' : '') + (p.group_count > 1 ? ' · in ' + p.group_count + ' rooms' : '') + '</span></div>'
+      + '</span><span class="lounge-time">' + timeAgo(p.created_at) + (p.updated_at ? ' · edited' : '') + '</span></div>'
+      + _loungeSeenBy(p)
       + body + actions
       + (replyRows ? '<div class="lounge-replies">' + replyRows + '</div>' : '')
       + replyBox
@@ -5562,6 +5573,8 @@ window.submitLoungePost = async function(){
   var now = new Date().toISOString();
   state.lounge.posts.unshift({ id: tmpId, user_id: state.user.id, body: body, created_at: now,
     updated_at: null, last_activity_at: now, group_id: groupId, group_count: groupId ? roomIds.length : null,
+    seen_by_rooms: groupId ? roomIds.map(function(id){ var r = (state.myRooms || []).find(function(x){ return x.id === id; }); return r ? r.name : ''; }).filter(Boolean) : null,
+    seen_by_others: 0,
     first_name: state.user.first, last_initial: state.user.last || '' });
   renderLounge();
   try {
