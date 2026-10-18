@@ -263,11 +263,13 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
 .lr-toggle-btn.active{background:var(--fig);color:white;border-color:var(--fig);}
 /* --- The Lounge --- */
 .lounge-composer{background:var(--cream);border:1px solid var(--border);border-radius:var(--radius);padding:12px 14px;box-shadow:var(--shadow);margin-bottom:16px;}
-.lounge-rooms{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:8px;}
-.lounge-rooms-label{font-size:11px;font-weight:700;color:var(--muted);margin-right:2px;}
-.lounge-room-chip{font-family:var(--sans);font-size:12px;font-weight:700;border-radius:14px;padding:5px 11px;min-height:30px;cursor:pointer;border:1px solid var(--border);background:white;color:var(--muted);}
-.lounge-room-chip.on{background:var(--burnt);border-color:var(--burnt);color:#fff;}
-.lounge-room-chip:disabled{cursor:default;opacity:1;}
+.lounge-compose-foot{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:8px;}
+.lounge-rooms-line{font-size:12px;color:var(--muted);}
+.lounge-rooms-list{margin-top:6px;border-top:1px solid var(--border);}
+.lounge-room-row{display:flex;align-items:center;gap:10px;min-height:42px;font-size:13px;color:var(--charcoal);border-bottom:1px solid var(--border);cursor:pointer;}
+.lounge-room-row input{width:18px;height:18px;accent-color:var(--burnt);flex-shrink:0;margin:0;}
+.lounge-room-row.is-current{cursor:default;}
+.lounge-room-here{font-size:11px;color:var(--muted);}
 .lounge-textarea{width:100%;box-sizing:border-box;background:white;border:1px solid var(--border);border-radius:10px;padding:9px 12px;font-family:var(--sans);font-size:13px;color:var(--charcoal);outline:none;resize:vertical;min-height:44px;line-height:1.45;}
 .lounge-post{background:var(--cream);border:1px solid var(--border);border-left:3px solid var(--fig);border-radius:var(--radius);padding:12px 14px;box-shadow:var(--shadow);margin-bottom:10px;}
 .lounge-post.is-new{background:#FBF3E0;}
@@ -5349,6 +5351,7 @@ var _loungeViewed = false;
 var _loungeReplyOpen = {};        // { postId: true } -- which reply boxes are open
 var _loungeEditing = null;        // { kind:'post'|'reply', id } | null
 var _loungeSkipRooms = {};        // { roomId: true } -- rooms unticked in the composer (default: post to all)
+var _loungeRoomsOpen = false;     // composer's room checklist expanded?
 
 function _loungeName(row){ return (row.first_name || 'Someone') + (row.last_initial ? ' ' + row.last_initial + '.' : ''); }
 function _loungeCanDelete(ownerId){ return state.user && (state.user.id === ownerId || state.currentRoomIsOwner); }
@@ -5406,10 +5409,11 @@ function renderLounge(){
   wrap.innerHTML = state.currentRoomIsAdminView ? '' :
     '<div class="lounge-composer">'
     + '<textarea class="lounge-textarea" id="lounge-input" placeholder="Ask the room something, or start a thought…" maxlength="4000"></textarea>'
-    + _loungeRoomChips()
-    + '<div style="text-align:right;margin-top:8px;"><button class="btn-send" onclick="submitLoungePost()">Post</button></div>'
+    + '<div class="lounge-compose-foot"><span id="lounge-rooms-line"></span><button class="btn-send" onclick="submitLoungePost()">Post</button></div>'
+    + '<div id="lounge-rooms-list"></div>'
     + '</div>';
   if (draft){ var ta = document.getElementById('lounge-input'); if (ta) ta.value = draft; }
+  _renderLoungeRooms();
 
   var posts = state.lounge.posts || [];
   if (!posts.length){
@@ -5471,34 +5475,44 @@ function renderLounge(){
   }).join('');
 }
 
-// "Post to:" chips -- every room you're in, all ticked by default. Each
+// Which rooms a new post goes to: a quiet "Posting to all 4 rooms ·
+// Change" line; Change opens a checklist. All ticked by default. Each
 // chosen room gets its own copy (shared group_id) so replies stay in-room.
 // The room you're in is always included.
-function _loungeRoomChips(){
+function _renderLoungeRooms(){
+  var line = document.getElementById('lounge-rooms-line');
+  var list = document.getElementById('lounge-rooms-list');
+  if (!line || !list) return;
   var rooms = state.myRooms || [];
-  if (rooms.length < 2) return '';
+  if (rooms.length < 2){ line.innerHTML = ''; list.innerHTML = ''; return; }
   var cur = state.currentRoomId;
+  var n = _loungeTargetRooms().length;
+  line.innerHTML = '<span class="lounge-rooms-line">'
+    + (n === rooms.length ? 'Posting to all ' + rooms.length + ' rooms' : n === 1 ? 'Posting to this room only' : 'Posting to ' + n + ' of ' + rooms.length + ' rooms')
+    + ' · </span><button type="button" class="lounge-link" onclick="toggleLoungeRoomsOpen()">' + (_loungeRoomsOpen ? 'Done' : 'Change') + '</button>';
+  if (!_loungeRoomsOpen){ list.innerHTML = ''; return; }
   var sorted = rooms.slice().sort(function(a,b){
     if (a.id === cur) return -1; if (b.id === cur) return 1;
     return a.name.localeCompare(b.name);
   });
-  return '<div class="lounge-rooms"><span class="lounge-rooms-label">Post to:</span>'
-    + sorted.map(function(r){
-        var isCur = r.id === cur;
-        var on = isCur || !_loungeSkipRooms[r.id];
-        return '<button type="button" class="lounge-room-chip' + (on ? ' on' : '') + '"'
-          + (isCur ? ' disabled title="The room you’re in"' : ' onclick="toggleLoungeRoom(this,\'' + r.id + '\')"')
-          + ' aria-pressed="' + on + '">' + escAttr(r.name) + '</button>';
-      }).join('')
-    + '</div>';
+  list.innerHTML = '<div class="lounge-rooms-list">' + sorted.map(function(r){
+    var isCur = r.id === cur;
+    return '<label class="lounge-room-row' + (isCur ? ' is-current' : '') + '">'
+      + '<input type="checkbox"' + (isCur || !_loungeSkipRooms[r.id] ? ' checked' : '')
+      + (isCur ? ' disabled' : ' onchange="toggleLoungeRoom(\'' + r.id + '\')"') + '>'
+      + '<span>' + escAttr(r.name) + (isCur ? ' <span class="lounge-room-here">(this room)</span>' : '') + '</span></label>';
+  }).join('') + '</div>';
 }
 
-window.toggleLoungeRoom = function(btn, roomId){
+window.toggleLoungeRoomsOpen = function(){
+  _loungeRoomsOpen = !_loungeRoomsOpen;
+  _renderLoungeRooms();
+};
+
+window.toggleLoungeRoom = function(roomId){
   if (_loungeSkipRooms[roomId]) delete _loungeSkipRooms[roomId];
   else _loungeSkipRooms[roomId] = true;
-  var on = !_loungeSkipRooms[roomId];
-  btn.classList.toggle('on', on);
-  btn.setAttribute('aria-pressed', on);
+  _renderLoungeRooms();
 };
 
 function _loungeTargetRooms(){
@@ -5539,6 +5553,7 @@ window.submitLoungePost = async function(){
     var p = state.lounge.posts.find(function(x){ return x.id === tmpId; });
     if (p && mine){ p.id = mine.id; p.created_at = mine.created_at; p.last_activity_at = mine.last_activity_at; }
     _loungeSkipRooms = {};
+    _loungeRoomsOpen = false;
     renderLounge();
     if (roomIds.length > 1) showToast('Posted to ' + roomIds.length + ' rooms');
     // The insert trigger (sql/add_lounge_alerts.sql) queued the room's
