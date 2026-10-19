@@ -55,7 +55,11 @@ async function nativeTokensFor(userIds) {
 
 // Push to every iPhone app install; prune tokens Apple says are gone
 // (app deleted, or alerts turned off long enough that iOS dropped it).
+// Apple's answers for anything that failed, returned to the caller so a
+// problem (bad key, wrong team) is visible without digging through logs.
+let lastNativeErrors = [];
 async function deliverNative(jobs) {
+  lastNativeErrors = [];
   if (!jobs.length) return 0;
   let sent = 0;
   try {
@@ -66,10 +70,12 @@ async function deliverNative(jobs) {
         await sb('/rest/v1/native_push_tokens?token=eq.' + r.token, { method: 'DELETE' });
       } else {
         console.error('apns failed', r.status, r.reason, r.token.slice(0, 8));
+        lastNativeErrors.push(r.status + ' ' + (r.reason || ''));
       }
     }));
   } catch (e) {
     console.error('apns error', e.message);
+    lastNativeErrors.push('error ' + e.message);
   }
   return sent;
 }
@@ -123,7 +129,7 @@ async function flush() {
     deliver(jobs, (j) => payloadForNotification(j._n)),
     deliverNative(nativeJobs),
   ]);
-  return { claimed: rows.length, sent, sent_native: sentNative };
+  return { claimed: rows.length, sent, sent_native: sentNative, native_ready: apnsConfigured(), native_errors: lastNativeErrors };
 }
 
 async function test(req) {
