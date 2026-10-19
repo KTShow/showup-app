@@ -4663,7 +4663,8 @@ function _placeLineupAZ(){
   if (!bar || !list || !list.offsetWidth) return;
   var right = list.getBoundingClientRect().right;
   var room = document.documentElement.clientWidth - right;
-  bar.style.right = room > 40 ? (room - 34) + 'px' : '2px';
+  var scale = (bar.getBoundingClientRect().width / bar.offsetWidth) || 1; // Text size zoom
+  bar.style.right = room > 40 * scale ? Math.max(2, (room - 34 * scale) / scale) + 'px' : '2px';
 }
 window.addEventListener('resize', _placeLineupAZ);
 
