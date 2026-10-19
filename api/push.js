@@ -20,7 +20,7 @@
 // ============================================================
 
 const { sendPush } = require('./_lib/webpush');
-const { sendApns, apnsConfigured } = require('./_lib/apns');
+const { sendApns, apnsConfigured, apnsKeyInfo } = require('./_lib/apns');
 
 const SUPABASE_URL = process.env.SUPABASE_URL || 'https://sgnulweruogjfdddwboe.supabase.co';
 const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -116,7 +116,7 @@ function payloadForNotification(n) {
 
 async function flush() {
   const rows = (await sb('/rest/v1/rpc/claim_pending_pushes', { method: 'POST', body: '{}' })) || [];
-  if (!rows.length) return { claimed: 0, sent: 0 };
+  if (!rows.length) return { claimed: 0, sent: 0, build: (process.env.VERCEL_GIT_COMMIT_SHA || '').slice(0, 7) };
   const byUser = {};
   rows.forEach((n) => { (byUser[n.user_id] = byUser[n.user_id] || []).push(n); });
   const ids = Object.keys(byUser);
@@ -129,7 +129,7 @@ async function flush() {
     deliver(jobs, (j) => payloadForNotification(j._n)),
     deliverNative(nativeJobs),
   ]);
-  return { claimed: rows.length, sent, sent_native: sentNative, native_ready: apnsConfigured(), native_errors: lastNativeErrors };
+  return { claimed: rows.length, sent, sent_native: sentNative, native_ready: apnsConfigured(), native_errors: lastNativeErrors, native_key: lastNativeErrors.length ? apnsKeyInfo() : undefined, build: (process.env.VERCEL_GIT_COMMIT_SHA || '').slice(0, 7) };
 }
 
 async function test(req) {

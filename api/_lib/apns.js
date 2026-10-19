@@ -85,4 +85,16 @@ function sendApns(jobs) {
   });
 }
 
-module.exports = { sendApns, apnsConfigured: configured };
+// Short fingerprint of the key in use (a hash of its PUBLIC half -- safe to
+// show) so a wrong/stale key in the env can be spotted.
+function keyInfo() {
+  if (!configured()) return null;
+  try {
+    const pub = crypto.createPublicKey(process.env.APNS_KEY.replace(/\\n/g, '\n')).export({ type: 'spki', format: 'der' });
+    return { kid: process.env.APNS_KEY_ID, team: process.env.APNS_TEAM_ID, fp: crypto.createHash('sha256').update(pub).digest('hex').slice(0, 10) };
+  } catch (e) {
+    return { kid: process.env.APNS_KEY_ID, error: 'key unreadable: ' + e.message };
+  }
+}
+
+module.exports = { sendApns, apnsConfigured: configured, apnsKeyInfo: keyInfo };
