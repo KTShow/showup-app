@@ -9356,8 +9356,8 @@ window.closeInstallGuide = function() {
 // who gets what. On iPhone, web alerts only exist when ShowUp is opened from
 // its Home Screen icon (iOS 16.4+) -- in a Safari tab PushManager is
 // missing, so the card there nudges people to add it to the Home Screen
-// instead. Nothing here runs inside the TestFlight app (IS_NATIVE_APP);
-// that gets native push separately.
+// instead. Inside the iPhone app (IS_NATIVE_APP) web push is skipped and
+// Apple's own alerts are used instead -- see NATIVE ALERTS below.
 var VAPID_PUBLIC_KEY = 'BG2kXjoiKVotzmcJ1T1NCl-FL3DC8fMdoCCpwmdVdeRaGRc9V9jN6ikRHurIOMC1Wio9ZmfqJQv_6vJdgtx2Y9w';
 var ALERTS_SNOOZE_KEY = 'showup_alerts_snooze_until';
 var PENDING_NOTIF_ID = (function() { try { return new URLSearchParams(window.location.search).get('notif'); } catch (e) { return null; } })();
@@ -9404,7 +9404,8 @@ async function _subscribeThisDevice(reg) {
 function renderAlertsUI() {
   var mode = null;
   if (state.user) {
-    if (_pushSupported() && Notification.permission === 'default') mode = 'enable';
+    if (IS_NATIVE_APP) { if (_nativePushPlugin() && _nativePushPerm && _nativePushPerm.indexOf('prompt') === 0) mode = 'enable'; }
+    else if (_pushSupported() && Notification.permission === 'default') mode = 'enable';
     else if (_isIOSBrowserTab()) mode = 'homescreen';
   }
   var card = document.getElementById('alerts-card');
@@ -9426,9 +9427,18 @@ function renderAlertsUI() {
 
   var row = document.getElementById('settings-device-alerts-row');
   if (!row) return;
-  if (IS_NATIVE_APP) { row.style.display = 'none'; return; }
   var sub = document.getElementById('settings-device-alerts-sub');
   var sbtn = document.getElementById('settings-device-alerts-btn');
+  if (IS_NATIVE_APP) {
+    document.getElementById('settings-device-alerts-label').textContent = 'Phone alerts';
+    row.style.display = '';
+    sbtn.style.display = 'none';
+    if (!_nativePushPlugin()) sub.textContent = 'Update ShowUp to the newest version to turn these on';
+    else if (_nativePushPerm === 'granted') sub.textContent = 'On';
+    else if (_nativePushPerm === 'denied') sub.textContent = 'Off — turn on in iPhone Settings → ShowUp → Notifications';
+    else { sub.textContent = 'Off — get a ping when friends comment or a new season drops'; sbtn.style.display = 'inline-block'; }
+    return;
+  }
   var isPhone = _isIOSDevice() || /Android|Mobi/i.test(navigator.userAgent || '');
   document.getElementById('settings-device-alerts-label').textContent = isPhone ? 'Phone alerts' : 'Computer alerts';
   var where = isPhone ? 'phone' : 'computer';
@@ -9456,6 +9466,7 @@ window.snoozeAlertsCard = function() {
 };
 
 window.enablePushAlerts = function() {
+  if (IS_NATIVE_APP) { _enableNativePush(); return; }
   if (!_pushSupported()) return;
   // Requested straight from the tap -- iOS ignores a permission request
   // that doesn't come directly from a user gesture.
@@ -9480,6 +9491,7 @@ window.enablePushAlerts = function() {
 // device's subscription if alerts were already allowed (new login on the
 // same phone, or the browser rotated it), and handles a tapped alert's link.
 async function initPushAlerts() {
+  if (IS_NATIVE_APP) await _initNativePush();
   renderAlertsUI();
   if (_pushSupported()) {
     try {
@@ -9491,10 +9503,95 @@ async function initPushAlerts() {
     var id = PENDING_NOTIF_ID;
     PENDING_NOTIF_ID = null;
     try { history.replaceState(null, '', window.location.pathname); } catch (e) {}
-    // loadNotifications() is already in flight from boot -- wait for it.
-    var has = function() { return (state.notifications || []).some(function(n) { return n.id === id; }); };
-    for (var i = 0; i < 25 && !has(); i++) await new Promise(function(r) { setTimeout(r, 200); });
-    if (has()) openNotification(id);
+    await _openTappedNotification(id);
+  }
+}
+
+async function _openTappedNotification(id) {
+  // loadNotifications() may still be in flight -- wait for it.
+  var has = function() { return (state.notifications || []).some(function(n) { return n.id === id; }); };
+  for (var i = 0; i < 25 && !has(); i++) await new Promise(function(r) { setTimeout(r, 200); });
+  if (has()) openNotification(id);
+}
+
+// ============================================================
+// NATIVE ALERTS (iPhone app)
+// ============================================================
+// The app shell (showup-native repo) carries @capacitor/push-notifications.
+// We ask permission, iOS hands back an Apple device token, we store it via
+// save_native_push_token (sql/add_native_push.sql) and /api/push sends the
+// same alerts to it through Apple. Older app builds without the plugin
+// just say "update the app" in Settings.
+var NATIVE_TOKEN_KEY = 'showup_native_push_token';
+var _nativePushPerm = null;      // 'granted' | 'denied' | 'prompt' | ...
+var _nativePushJustEnabled = false;
+var _nativePushWired = false;
+
+function _nativePushPlugin() {
+  var C = window.Capacitor;
+  if (!IS_NATIVE_APP || !C || !C.Plugins) return null;
+  if (C.isPluginAvailable && !C.isPluginAvailable('PushNotifications')) return null;
+  return C.Plugins.PushNotifications || null;
+}
+
+function _wireNativePush(P) {
+  if (_nativePushWired) return;
+  _nativePushWired = true;
+  P.addListener('registration', async function(t) {
+    try {
+      var res = await sb.rpc('save_native_push_token', { p_token: t.value, p_platform: 'ios' });
+      if (res.error) throw res.error;
+      try { localStorage.setItem(NATIVE_TOKEN_KEY, t.value); } catch (e) {}
+      if (_nativePushJustEnabled) {
+        _nativePushJustEnabled = false;
+        showToast('Alerts are on — we’ll let you know when friends comment or a new season drops.');
+        var r = await sb.auth.getSession();
+        var token = r && r.data && r.data.session && r.data.session.access_token;
+        if (token) fetch('/api/push', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token }, body: JSON.stringify({ test: true, native: true }) }).catch(function() {});
+      }
+    } catch (e) { console.error('save_native_push_token error:', e); }
+  });
+  P.addListener('registrationError', function(e) {
+    console.error('native push registration error:', e);
+    if (_nativePushJustEnabled) { _nativePushJustEnabled = false; showToast('Couldn’t turn on alerts — try again in a moment.'); }
+  });
+  // Tapped an alert. The plugin holds the tap until we listen, so a cold
+  // start from an alert lands here too.
+  P.addListener('pushNotificationActionPerformed', function(a) {
+    var url = a && a.notification && a.notification.data && a.notification.data.url;
+    var m = url && /[?&]notif=([0-9a-f-]{36})/i.exec(url);
+    if (!m) return;
+    TAPPED_NOTIF_ID = m[1];
+    if (!(state.notifications || []).some(function(n) { return n.id === m[1]; })) loadNotifications();
+    _openTappedNotification(m[1]);
+  });
+}
+
+async function _initNativePush() {
+  var P = _nativePushPlugin();
+  if (!P) return;
+  try {
+    _wireNativePush(P);
+    _nativePushPerm = (await P.checkPermissions()).receive;
+    // Already allowed: re-register so this account owns the token (new
+    // login on the same phone, or iOS rotated it).
+    if (_nativePushPerm === 'granted') await P.register();
+  } catch (e) { console.error('initNativePush error:', e); }
+}
+
+async function _enableNativePush() {
+  var P = _nativePushPlugin();
+  if (!P) return;
+  try {
+    _wireNativePush(P);
+    _nativePushPerm = (await P.requestPermissions()).receive;
+    renderAlertsUI();
+    if (_nativePushPerm !== 'granted') return;
+    _nativePushJustEnabled = true;
+    await P.register();
+  } catch (e) {
+    console.error('enableNativePush error:', e);
+    showToast('Couldn’t turn on alerts — try again in a moment.');
   }
 }
 
@@ -9525,6 +9622,12 @@ async function _openCommentNotification(n) {
 // Signing out: stop this device getting the old account's alerts.
 async function forgetThisDeviceForAlerts() {
   try {
+    if (IS_NATIVE_APP) {
+      var t = null;
+      try { t = localStorage.getItem(NATIVE_TOKEN_KEY); localStorage.removeItem(NATIVE_TOKEN_KEY); } catch (e) {}
+      if (t) await sb.rpc('delete_native_push_token', { p_token: t });
+      return;
+    }
     if (!_pushSupported()) return;
     var reg = await navigator.serviceWorker.getRegistration('/');
     var sub = reg && await reg.pushManager.getSubscription();

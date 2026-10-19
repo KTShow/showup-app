@@ -13,9 +13,14 @@
 //
 // Env (Vercel > Project > Settings > Environment Variables):
 //   SUPABASE_SERVICE_ROLE_KEY, VAPID_PRIVATE_KEY
+//   APNS_KEY, APNS_KEY_ID, APNS_TEAM_ID (iPhone app, see _lib/apns.js)
+//
+// Each alert goes to the user's web subscriptions (Home Screen web app,
+// computers) AND their iPhone app tokens (native_push_tokens).
 // ============================================================
 
 const { sendPush } = require('./_lib/webpush');
+const { sendApns, apnsConfigured } = require('./_lib/apns');
 
 const SUPABASE_URL = process.env.SUPABASE_URL || 'https://sgnulweruogjfdddwboe.supabase.co';
 const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -41,6 +46,32 @@ async function sb(path, init) {
 async function subscriptionsFor(userIds) {
   if (!userIds.length) return [];
   return sb('/rest/v1/push_subscriptions?select=id,user_id,endpoint,p256dh,auth&user_id=in.(' + userIds.join(',') + ')');
+}
+
+async function nativeTokensFor(userIds) {
+  if (!userIds.length || !apnsConfigured()) return [];
+  return sb('/rest/v1/native_push_tokens?select=id,user_id,token&user_id=in.(' + userIds.join(',') + ')');
+}
+
+// Push to every iPhone app install; prune tokens Apple says are gone
+// (app deleted, or alerts turned off long enough that iOS dropped it).
+async function deliverNative(jobs) {
+  if (!jobs.length) return 0;
+  let sent = 0;
+  try {
+    const results = await sendApns(jobs);
+    await Promise.all(results.map(async (r) => {
+      if (r.status === 200) sent++;
+      else if (r.status === 410 || r.reason === 'BadDeviceToken' || r.reason === 'Unregistered') {
+        await sb('/rest/v1/native_push_tokens?token=eq.' + r.token, { method: 'DELETE' });
+      } else {
+        console.error('apns failed', r.status, r.reason, r.token.slice(0, 8));
+      }
+    }));
+  } catch (e) {
+    console.error('apns error', e.message);
+  }
+  return sent;
 }
 
 // Push to every device; prune subscriptions the push service says are gone.
@@ -82,11 +113,17 @@ async function flush() {
   if (!rows.length) return { claimed: 0, sent: 0 };
   const byUser = {};
   rows.forEach((n) => { (byUser[n.user_id] = byUser[n.user_id] || []).push(n); });
-  const subs = await subscriptionsFor(Object.keys(byUser));
+  const ids = Object.keys(byUser);
+  const [subs, tokens] = await Promise.all([subscriptionsFor(ids), nativeTokensFor(ids)]);
   const jobs = [];
   subs.forEach((s) => byUser[s.user_id].forEach((n) => jobs.push(Object.assign({}, s, { _n: n }))));
-  const sent = await deliver(jobs, (j) => payloadForNotification(j._n));
-  return { claimed: rows.length, sent };
+  const nativeJobs = [];
+  tokens.forEach((t) => byUser[t.user_id].forEach((n) => nativeJobs.push({ token: t.token, payload: payloadForNotification(n) })));
+  const [sent, sentNative] = await Promise.all([
+    deliver(jobs, (j) => payloadForNotification(j._n)),
+    deliverNative(nativeJobs),
+  ]);
+  return { claimed: rows.length, sent, sent_native: sentNative };
 }
 
 async function test(req) {
@@ -95,14 +132,22 @@ async function test(req) {
   const res = await fetch(SUPABASE_URL + '/auth/v1/user', { headers: { apikey: SERVICE_KEY, Authorization: 'Bearer ' + token } });
   if (!res.ok) return { status: 401, body: { error: 'Not signed in' } };
   const user = await res.json();
-  const subs = await subscriptionsFor([user.id]);
-  const sent = await deliver(subs, () => ({
+  const testPayload = {
     title: "🔔 You're all set",
     body: "You'll get an alert when someone in your Living Room comments on a show or posts in the Lounge, a friend recommends you one, or a show you follow gets a new season.",
     url: '/',
     tag: 'test',
-  }));
-  return { status: 200, body: { sent } };
+  };
+  // {"test": true, "native": true} = only the iPhone app (just turned on there).
+  const [subs, tokens] = await Promise.all([
+    req.body.native ? [] : subscriptionsFor([user.id]),
+    nativeTokensFor([user.id]),
+  ]);
+  const [sent, sentNative] = await Promise.all([
+    deliver(subs, () => testPayload),
+    deliverNative(tokens.map((t) => ({ token: t.token, payload: testPayload }))),
+  ]);
+  return { status: 200, body: { sent, sent_native: sentNative } };
 }
 
 module.exports = async (req, res) => {
