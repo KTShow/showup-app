@@ -1078,6 +1078,14 @@ html.native-cover .status-shield{display:block;position:fixed;top:0;left:0;right
           </div>
           <div class="tastemakers-banner-arrow">&#8250;</div>
         </div>
+        <div class="tastemakers-banner" onclick="openLineupView()" style="margin-bottom:16px;background:linear-gradient(135deg,#5C6B3A,#3F4A26);">
+          <div class="tastemakers-banner-icon">&#128220;</div>
+          <div class="tastemakers-banner-text">
+            <div class="tastemakers-banner-title">The Full Lineup</div>
+            <div class="tastemakers-banner-sub">Every show on ShowUp, and how it's rated</div>
+          </div>
+          <div class="tastemakers-banner-arrow">&#8250;</div>
+        </div>
         <div class="tastemakers-banner" onclick="openPrimeTimeView()" style="margin-bottom:16px;">
           <div class="tastemakers-banner-icon">&#128225;</div>
           <div class="tastemakers-banner-text">
@@ -1118,6 +1126,13 @@ html.native-cover .status-shield{display:block;position:fixed;top:0;left:0;right
         <div class="lr-search-wrap" id="full-lineup-search-wrap"><input type="text" id="full-lineup-search" class="lr-search-input" placeholder="Search shows or platforms..." oninput="renderFullLineup();toggleSearchClearBtn(this)" autocomplete="off" /><button class="lr-search-clear" type="button" aria-label="Clear search" onclick="clearSearchInput('full-lineup-search')">&#10005;</button></div>
         <div id="full-lineup-list"></div>
         <div id="full-lineup-detail-view" style="display:none"></div>
+      </div>
+      <div id="lineup-view" style="display:none">
+        <div class="page-title"><button class="nav-back" onclick="backFromLineupView()" style="margin-right:6px;">&#8592;</button>&#128220;&nbsp; The Full Lineup</div>
+        <div class="page-sub">Every show on ShowUp, A to Z, and how it's rated.</div>
+        <div class="lr-search-wrap" id="lineup-search-wrap"><input type="text" id="lineup-search" class="lr-search-input" placeholder="Search shows or platforms..." oninput="renderLineup();toggleSearchClearBtn(this)" autocomplete="off" /><button class="lr-search-clear" type="button" aria-label="Clear search" onclick="clearSearchInput('lineup-search')">&#10005;</button></div>
+        <div id="lineup-list"></div>
+        <div id="lineup-detail-view" style="display:none"></div>
       </div>
       <div id="friends-view" style="display:none">
         <div class="page-title"><button class="nav-back" onclick="backToRoomPicker()" style="margin-right:6px;">&#8592;</button>&#127968;&nbsp; <span id="current-room-name">The Living Room</span><button id="rename-room-btn" onclick="renameCurrentRoom()" style="display:none;background:none;border:none;cursor:pointer;font-size:14px;margin-left:6px;color:var(--muted);vertical-align:middle;" title="Rename this room">&#9998;&#65049;</button><button id="delete-room-btn" onclick="deleteCurrentRoom()" style="display:none;background:none;border:none;cursor:pointer;font-size:14px;margin-left:6px;color:var(--muted);vertical-align:middle;" title="Delete this room">&#128465;&#65049;</button><button id="leave-room-btn" onclick="leaveCurrentRoom()" style="display:none;background:none;border:none;cursor:pointer;font-size:14px;margin-left:6px;color:var(--muted);vertical-align:middle;" title="Leave this room">&#128075; Leave Room</button></div>
@@ -3951,7 +3966,7 @@ window.jumpToAllRoomsSearchMatch = function(pi, si) {
 // to hide all of them first, not just whichever one happened to trigger
 // the jump, or two panels end up visible at once.
 function hideLivingRoomTopPanels(){
-  ['room-picker-view','prime-time-view','showtalk-hub-view','full-lineup-view'].forEach(function(id){
+  ['room-picker-view','prime-time-view','showtalk-hub-view','full-lineup-view','lineup-view'].forEach(function(id){
     var el = document.getElementById(id);
     if (el) el.style.display = 'none';
   });
@@ -4297,6 +4312,7 @@ function rankListBadgeHTML(s) {
 var _seenItRating = null;
 function _rankCacheFor(kind) {
   return kind === 'pt' ? _primeTimeListCache
+    : kind === 'fl' ? _lineupListCache
     : kind === 'ff' ? _rankingsListCache
     : kind === 'st' ? _showTalkListCache
     : _fullLineupListCache;
@@ -4334,6 +4350,7 @@ window.seenItRate = function(kind, idx, n) {
   var s = _rankCacheFor(kind)[idx];
   _seenItRating = { n: n, at: Date.now(), title: s ? s.title : null };
   if (kind === 'pt') handlePrimeTimeAdd(idx);
+  else if (kind === 'fl') handleLineupAdd(idx);
   else if (kind === 'ff') handleRankAdd(idx);
   else if (kind === 'st') handleShowTalkAdd(idx);
   else handleFullLineupAdd(idx);
@@ -4522,6 +4539,133 @@ window.backToFullLineupList = function(){
   var searchWrap=document.getElementById('full-lineup-search-wrap');
   if(searchWrap)searchWrap.style.display='block';
   window.scrollTo(0,_fullLineupScrollY);
+};
+
+// ---- The Full Lineup: every show on ShowUp, A to Z ----
+// Removed 2026-10-07 when Hot Right Now took over its view (and its
+// full-lineup-* ids), restored 2026-10-19 under its own lineup-* ids.
+// get_full_lineup() (sql/add_full_lineup_rpc.sql) pools every show on all
+// of ShowUp and never returns rater identity -- so, unlike Prime Time, the
+// detail has no "who rated it" rows, just the aggregate.
+var _lineupData = null;
+var _lineupListCache = [];
+var _lineupScrollY = 0;
+
+async function loadLineupData() {
+  if (_lineupData) return _lineupData;
+  try {
+    const { data, error } = await sb.rpc('get_full_lineup');
+    if (error) throw error;
+    _lineupData = data || { shows: [] };
+  } catch(e) {
+    console.error('get_full_lineup error:', e);
+    return { shows: [] }; // not cached, so the next open retries
+  }
+  return _lineupData;
+}
+
+window.openLineupView = async function() {
+  _friendDetailReturn = null;
+  hideLivingRoomTopPanels();
+  document.getElementById('friends-view').style.display = 'none';
+  document.getElementById('friend-detail-view').style.display = 'none';
+  document.getElementById('lineup-view').style.display = 'block';
+  document.getElementById('lineup-detail-view').style.display = 'none';
+  var searchWrap = document.getElementById('lineup-search-wrap');
+  if (searchWrap) searchWrap.style.display = 'block';
+  var listEl = document.getElementById('lineup-list');
+  listEl.style.display = 'block';
+  if (!_lineupData) listEl.innerHTML = '<div class="empty"><div class="empty-icon">&#8987;</div>Loading&hellip;</div>';
+  window.scrollTo(0, 0);
+  await loadLineupData();
+  renderLineup();
+};
+
+window.backFromLineupView = function() {
+  var d = document.getElementById('lineup-detail-view');
+  if (d && d.style.display === 'block') { backToLineupList(); return; }
+  document.getElementById('lineup-view').style.display = 'none';
+  document.getElementById('room-picker-view').style.display = 'block';
+};
+
+function renderLineup() {
+  var el = document.getElementById('lineup-list');
+  if (!el || !_lineupData) return;
+  var list = (_lineupData.shows || []).filter(function(s){ return s.title; });
+  var q = ((document.getElementById('lineup-search')||{}).value||'').trim().toLowerCase();
+  if (q) list = list.filter(function(s){ return s.title.toLowerCase().indexOf(q) !== -1 || (s.platform||'').toLowerCase().indexOf(q) !== -1; });
+  list.sort(function(a,b){ return a.title.toLowerCase().localeCompare(b.title.toLowerCase()); });
+  _lineupListCache = list;
+  var matchLabel = isPlatformQuery(q)
+    ? '<div style="font-size:12px;color:var(--muted);margin-bottom:8px;">Showing: <b style="color:var(--terra);">'+matchedPlatformNames(q).map(escAttr).join(', ')+'</b></div>'
+    : '';
+  if (!list.length) {
+    el.innerHTML = matchLabel + (q
+      ? '<div class="empty"><div class="empty-icon">&#128269;</div>No shows match "'+escAttr(q)+'".</div>'
+      : '<div class="empty"><div class="empty-icon">&#128220;</div>No shows yet.</div>');
+    return;
+  }
+  el.innerHTML = matchLabel + list.map(function(s, i){
+    return '<div class="rank-card" onclick="showLineupDetail('+i+')">'
+      + rankThumbHTML(s)
+      + '<div class="rank-info">'
+      + '<div class="rank-title-text">'+escAttr(s.title)+'</div>'
+      + (s.platform && s.platform !== 'None' ? '<div class="rank-meta-line"><span class="rank-platform">'+escAttr(s.platform)+'</span></div>' : '')
+      + (s.rating_count ? rankScoreLineHTML(s.avg_rating, s.rating_count+' rated') : '<div class="rank-score-line"><span>Not rated yet</span></div>')
+      + rankListBadgeHTML(s)
+      + '</div>'
+      + '<span class="rank-chev">&rsaquo;</span>'
+      + '</div>';
+  }).join('');
+}
+
+window.handleLineupAdd = function(idx){
+  var s = _lineupListCache[idx];
+  if (!s) return;
+  _currentShowDetails = {
+    tmdb_id: s.tmdb_id||null, title: s.title, poster_path: s.poster_path||null, platform: s.platform||null,
+    genre: null, original_network: null, first_air_year: null,
+    number_of_seasons: null, show_status: null, overview: null, vote_average: null,
+  };
+  openAddPicker();
+};
+
+window.showLineupDetail = function(idx){
+  _lineupScrollY = window.scrollY;
+  var s = _lineupListCache[idx];
+  if (!s) return;
+  var panel = document.getElementById('lineup-detail-view');
+  var hasRating = s.avg_rating != null && s.rating_count > 0;
+  var avgNum = hasRating ? Number(s.avg_rating) : 0;
+  var remotes=''; for(var n=1;n<=5;n++){var lit=n<=Math.floor(avgNum);remotes+='<span style="opacity:'+(lit?'1':'0.18')+';display:inline-block;">'+remoteIcon(16,lit)+'</span>';}
+  var ratingLine = hasRating
+    ? '<div style="display:flex;align-items:baseline;gap:10px;margin-bottom:4px;"><span class="rank-detail-avg">'+avgNum.toFixed(1)+'</span><div style="display:flex;gap:2px;">'+remotes+'</div></div>'
+      +'<div class="rank-detail-sub">rated by '+s.rating_count+' across ShowUp</div>'
+    : '<div class="rank-detail-sub">Not yet rated by anyone on ShowUp.</div>';
+  panel.innerHTML = '<div class="rank-detail">'
+    + '<div style="display:flex;gap:16px;align-items:flex-start;margin-bottom:4px;">'
+    + detailPosterHTML(s)
+    + '<div style="flex:1;min-width:0;">'
+    + '<div class="rank-detail-title">'+escAttr(s.title)+'</div>'
+    + (s.platform && s.platform !== 'None' ? '<span class="rank-platform" style="margin:0 0 6px 0;display:inline-block;">'+escAttr(s.platform)+'</span>' : '')
+    + '</div></div>'
+    + rankDetailActionsHTML(s, 'handleLineupAdd('+idx+')')
+    + rankYourRatingHTML('fl', idx)
+    + ratingLine
+    + '</div>';
+  document.getElementById('lineup-list').style.display = 'none';
+  var searchWrap = document.getElementById('lineup-search-wrap');
+  if (searchWrap) searchWrap.style.display = 'none';
+  panel.style.display = 'block';
+  panel.scrollIntoView({behavior:'smooth'});
+};
+
+window.backToLineupList = function(){
+  document.getElementById('lineup-detail-view').style.display = 'none';
+  document.getElementById('lineup-list').style.display = 'block';
+  var searchWrap = document.getElementById('lineup-search-wrap');
+  if (searchWrap) searchWrap.style.display = 'block';
+  window.scrollTo(0, _lineupScrollY);
 };
 
 function renderPrimeTimeList() {
