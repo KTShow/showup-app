@@ -544,6 +544,13 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
 .report-block-row{display:flex;align-items:center;gap:10px;min-height:44px;font-size:14px;color:var(--charcoal);cursor:pointer;margin-top:6px;}
 .report-block-row input{width:20px;height:20px;accent-color:var(--terra);}
 .safety-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);font-size:15px;}
+.fb-shot-row{display:flex;align-items:center;gap:10px;margin:10px 0 2px;}
+.fb-shot-btn{background:#fff;border:1px dashed var(--border);border-radius:10px;min-height:44px;padding:0 14px;font-family:var(--sans);font-size:14px;font-weight:600;color:var(--charcoal);cursor:pointer;}
+.fb-shot-thumb{position:relative;}
+.fb-shot-thumb img{height:64px;border-radius:8px;border:1px solid var(--border);display:block;}
+.fb-shot-thumb button{position:absolute;top:-8px;right:-8px;width:24px;height:24px;border-radius:50%;border:none;background:var(--charcoal);color:#fff;font-size:12px;cursor:pointer;}
+.fb-note{font-size:12px;color:var(--muted);margin-top:8px;}
+.fb-inbox-shot{width:100%;border-radius:8px;border:1px solid var(--border);margin-top:8px;}
 .report-card{border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:10px;background:var(--cream);}
 .report-head{font-size:14px;color:var(--charcoal);margin-bottom:4px;}
 .report-meta{font-size:13px;color:var(--muted);margin-bottom:4px;}
@@ -1355,11 +1362,23 @@ html.native-cover .status-shield{display:block;position:fixed;top:0;left:0;right
       </div>
     </div>
 
+    <div class="settings-section">
+      <div class="settings-section-label">Help</div>
+      <div class="settings-card">
+        <button class="settings-row" onclick="openFeedback()">
+          <span class="settings-row-icon">&#128030;</span><span class="settings-row-label">Report a bug or share an idea<span class="settings-row-sub">Goes straight to the ShowUp team</span></span><span class="settings-row-arrow">&#8250;</span>
+        </button>
+      </div>
+    </div>
+
     <div class="settings-section" id="settings-admin-section" style="display:none;">
       <div class="settings-section-label">Admin</div>
       <div class="settings-card">
         <button class="settings-row" onclick="openEditAnnouncementModal()">
           <span class="settings-row-icon">&#128226;</span><span class="settings-row-label">Edit Announcement Banner</span><span class="settings-row-arrow">&#8250;</span>
+        </button>
+        <button class="settings-row" onclick="openFeedbackInbox()">
+          <span class="settings-row-icon">&#128236;</span><span class="settings-row-label">Feedback inbox</span><span class="settings-row-arrow">&#8250;</span>
         </button>
         <button class="settings-row" onclick="openReportsAdmin()">
           <span class="settings-row-icon">&#128681;</span><span class="settings-row-label">Reports</span><span class="settings-row-arrow">&#8250;</span>
@@ -1772,6 +1791,7 @@ function completeOnboard_OLD() {
 var _conversationsViewed = false;
 
 function showTab(tab, btn) {
+  window._lastTab = tab;
   // A genuine, deliberate move away from Living Room -- switching to a
   // different bottom tab -- is what marks the Conversations feed seen.
   // Clicking a conversation item never routes through here: every item,
@@ -8832,6 +8852,7 @@ window.openNotification = async function(id) {
   // A recommendation: its banner is at the top of the Living Room (any
   // room), so open the current room -- or your first -- and show it.
   if (n.type === 'recommendation') { _openRecommendationNotification(); return; }
+  if (n.type === 'feedback') { openFeedbackInbox('open'); return; }
 
   // A comment: open that show's conversation (Show Talk, pooled across
   // every room you're in, so it works whichever room it was said in).
@@ -9926,6 +9947,160 @@ window.resolveReport = async function(id, action) {
   }
 };
 
+// ---- Feedback: "Report a bug or share an idea" (Settings > Help) ----------
+// Saved to the feedback table (sql/add_feedback.sql); admins get a phone
+// alert and read it in Settings > Admin > Feedback inbox. The message is
+// required; a screenshot is optional and shrunk here (max 1280px JPEG) so
+// it can be stored with the message.
+var _fbKind = 'bug';
+var _fbShot = null; // data: URL
+
+window.openFeedback = function() {
+  _fbShot = null;
+  document.getElementById('fb-body').value = '';
+  setFeedbackKind('bug');
+  _renderFeedbackShot();
+  document.getElementById('feedback-modal').classList.add('active');
+};
+window.closeFeedback = function() { document.getElementById('feedback-modal').classList.remove('active'); };
+
+window.setFeedbackKind = function(k) {
+  _fbKind = k;
+  document.querySelectorAll('#fb-kind-seg button').forEach(function(b) { b.classList.toggle('active', b.getAttribute('data-kind') === k); });
+  document.getElementById('fb-body').placeholder = k === 'bug'
+    ? 'What happened? What did you expect to happen?'
+    : 'What would make ShowUp better for you?';
+};
+
+function _renderFeedbackShot() {
+  var row = document.getElementById('fb-shot-row');
+  row.innerHTML = _fbShot
+    ? '<div class="fb-shot-thumb"><img src="' + _fbShot + '" alt="Screenshot"><button type="button" aria-label="Remove screenshot" onclick="removeFeedbackShot()">&#10005;</button></div><span style="font-size:13px;color:var(--muted);">Screenshot attached</span>'
+    : '<button type="button" class="fb-shot-btn" onclick="document.getElementById(\'fb-shot-input\').click()">&#128206; Attach a screenshot (optional)</button>';
+}
+window.removeFeedbackShot = function() { _fbShot = null; _renderFeedbackShot(); };
+
+window.pickFeedbackShot = function(input) {
+  var file = input.files && input.files[0];
+  input.value = '';
+  if (!file) return;
+  var img = new Image();
+  var url = URL.createObjectURL(file);
+  img.onload = function() {
+    var scale = Math.min(1, 1280 / Math.max(img.width, img.height));
+    var c = document.createElement('canvas');
+    c.width = Math.round(img.width * scale); c.height = Math.round(img.height * scale);
+    c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+    URL.revokeObjectURL(url);
+    _fbShot = c.toDataURL('image/jpeg', 0.75);
+    _renderFeedbackShot();
+  };
+  img.onerror = function() { URL.revokeObjectURL(url); showToast("Couldn't read that image — try another."); };
+  img.src = url;
+};
+
+function _feedbackContext() {
+  var ua = navigator.userAgent;
+  var device = /iPhone/.test(ua) ? 'iPhone' : /iPad/.test(ua) ? 'iPad' : /Android/.test(ua) ? 'Android'
+    : /Macintosh/.test(ua) ? 'Mac' : /Windows/.test(ua) ? 'Windows' : 'Other';
+  var browser = /Edg\//.test(ua) ? 'Edge' : /CriOS|Chrome\//.test(ua) ? 'Chrome' : /FxiOS|Firefox\//.test(ua) ? 'Firefox' : /Safari\//.test(ua) ? 'Safari' : '';
+  var room = state.currentRoomId && (state.myRooms || []).find(function(r) { return r.id === state.currentRoomId; });
+  return {
+    where: IS_NATIVE_APP ? 'iPhone app' : (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches ? 'Home Screen web app' : 'Website'),
+    device: device, browser: browser,
+    screen: window.innerWidth + 'x' + window.innerHeight,
+    text_size: window._textSize || 'standard',
+    last_tab: window._lastTab || null,
+    room: room ? room.name : null,
+    ua: ua,
+  };
+}
+
+window.submitFeedback = async function() {
+  var body = document.getElementById('fb-body').value.trim();
+  if (!body) { showToast(_fbKind === 'bug' ? 'Tell us what happened first.' : 'Tell us your idea first.'); return; }
+  if (!state.user) return;
+  var btn = document.getElementById('fb-submit');
+  btn.disabled = true; btn.textContent = 'Sending…';
+  try {
+    var res = await sb.from('feedback').insert({ user_id: state.user.id, kind: _fbKind, body: body, screenshot: _fbShot, context: _feedbackContext() });
+    if (res.error) throw res.error;
+    closeFeedback();
+    showToast('Thanks! Sent to the ShowUp team.');
+    // The insert trigger queued the admins' alerts; deliver them now.
+    fetch('/api/push', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' }).catch(function() {});
+  } catch (e) {
+    console.error('submitFeedback error:', e);
+    showToast("Couldn't send that — try again in a moment.");
+  } finally {
+    btn.disabled = false; btn.textContent = 'Send';
+  }
+};
+
+// ---- Admin: Feedback inbox ----
+var _fbInboxStatus = 'open';
+window.openFeedbackInbox = async function(status) {
+  if (status) _fbInboxStatus = status;
+  document.querySelectorAll('#fb-inbox-seg button').forEach(function(b) { b.classList.toggle('active', b.getAttribute('data-st') === _fbInboxStatus); });
+  var body = document.getElementById('feedback-inbox-list');
+  body.innerHTML = '<div class="empty">Loading…</div>';
+  document.getElementById('feedback-inbox-modal').classList.add('active');
+  try {
+    var res = await sb.rpc('get_feedback', { p_status: _fbInboxStatus });
+    if (res.error) throw res.error;
+    var list = res.data || [];
+    body.innerHTML = list.length ? list.map(function(f) {
+      var c = f.context || {};
+      var where = [c.where, [c.device, c.browser].filter(Boolean).join(' '), c.screen, c.text_size && c.text_size !== 'standard' ? 'text ' + c.text_size : '', c.last_tab ? 'tab: ' + c.last_tab : '', c.room ? 'room: ' + c.room : '']
+        .filter(Boolean).join(' · ');
+      return '<div class="report-card" id="fb-card-' + f.id + '">'
+        + '<div class="report-head">' + (f.kind === 'bug' ? '&#128030; <b>Bug</b>' : '&#128161; <b>Idea</b>') + ' from <b>' + escAttr(f.sender) + '</b> &middot; ' + timeAgo(f.created_at) + '</div>'
+        + '<div class="report-content" style="white-space:pre-wrap;">' + escAttr(f.body) + '</div>'
+        + (where ? '<div class="report-meta" style="font-size:12px;">' + escAttr(where) + '</div>' : '')
+        + '<div id="fb-shot-' + f.id + '"></div>'
+        + '<div class="report-actions">'
+        + (f.has_screenshot ? '<button type="button" class="rank-act-btn" onclick="showFeedbackShot(\'' + f.id + '\')">View screenshot</button>' : '')
+        + (f.status === 'open'
+            ? '<button type="button" class="rank-act-btn primary" onclick="setFeedbackStatus(\'' + f.id + '\',\'done\')">Mark done</button>'
+            : '<button type="button" class="rank-act-btn" onclick="setFeedbackStatus(\'' + f.id + '\',\'open\')">Reopen</button>')
+        + '</div></div>';
+    }).join('') : '<div class="empty">' + (_fbInboxStatus === 'open' ? 'Nothing open. 🎉' : 'Nothing marked done yet.') + '</div>';
+  } catch (e) {
+    console.error('openFeedbackInbox error:', e);
+    body.innerHTML = '<div class="empty">Couldn’t load feedback — try again in a moment.</div>';
+  }
+};
+window.closeFeedbackInbox = function() { document.getElementById('feedback-inbox-modal').classList.remove('active'); };
+
+window.showFeedbackShot = async function(id) {
+  var slot = document.getElementById('fb-shot-' + id);
+  if (!slot) return;
+  slot.innerHTML = '<div class="report-meta">Loading screenshot…</div>';
+  try {
+    var res = await sb.rpc('get_feedback_screenshot', { p_id: id });
+    if (res.error) throw res.error;
+    slot.innerHTML = res.data && /^data:image\//.test(res.data) ? '<img class="fb-inbox-shot" src="' + res.data + '" alt="Screenshot">' : '';
+  } catch (e) {
+    console.error('showFeedbackShot error:', e);
+    slot.innerHTML = '<div class="report-meta">Couldn’t load the screenshot.</div>';
+  }
+};
+
+window.setFeedbackStatus = async function(id, status) {
+  try {
+    var res = await sb.rpc('set_feedback_status', { p_id: id, p_status: status });
+    if (res.error) throw res.error;
+    var card = document.getElementById('fb-card-' + id);
+    if (card) card.remove();
+    showToast(status === 'done' ? 'Marked done.' : 'Reopened.');
+    var list = document.getElementById('feedback-inbox-list');
+    if (list && !list.querySelector('.report-card')) list.innerHTML = '<div class="empty">' + (_fbInboxStatus === 'open' ? 'Nothing open. 🎉' : 'Nothing marked done yet.') + '</div>';
+  } catch (e) {
+    console.error('setFeedbackStatus error:', e);
+    showToast('Couldn’t update that — try again in a moment.');
+  }
+};
+
 // ============================================================
 // SETTINGS BUTTONS
 // ============================================================
@@ -9979,6 +10154,37 @@ bootstrap();
     <div class="invite-modal-sub">You don’t see their comments, posts or shows, and they don’t send you alerts.</div>
     <div id="blocked-list" style="max-height:360px;overflow-y:auto;margin-bottom:12px;"></div>
     <button type="button" class="btn-invite-close" onclick="closeBlockedList()" style="width:100%;">Close</button>
+  </div>
+</div>
+
+<!-- FEEDBACK (bug / idea) -->
+<div class="invite-modal-overlay" id="feedback-modal">
+  <div class="invite-modal">
+    <div class="invite-modal-title">Report a bug or share an idea</div>
+    <div class="invite-modal-sub">Tell us what happened or what you'd love to see. It goes straight to the ShowUp team.</div>
+    <div class="textsize-seg" id="fb-kind-seg" style="margin:0 0 10px;">
+      <button type="button" data-kind="bug" onclick="setFeedbackKind('bug')">&#128030; Bug</button>
+      <button type="button" data-kind="idea" onclick="setFeedbackKind('idea')">&#128161; Idea</button>
+    </div>
+    <textarea class="lounge-textarea" id="fb-body" maxlength="4000" style="min-height:110px;"></textarea>
+    <div class="fb-shot-row" id="fb-shot-row"></div>
+    <input type="file" id="fb-shot-input" accept="image/*" style="display:none;" onchange="pickFeedbackShot(this)">
+    <div class="fb-note">We'll also include your device, app version and the screen you were on, to help us fix it.</div>
+    <button type="button" class="btn-invite-copy" id="fb-submit" onclick="submitFeedback()" style="width:100%;margin:12px 0 10px;">Send</button>
+    <button type="button" class="btn-invite-close" onclick="closeFeedback()" style="width:100%;">Cancel</button>
+  </div>
+</div>
+
+<!-- ADMIN: FEEDBACK INBOX -->
+<div class="invite-modal-overlay" id="feedback-inbox-modal">
+  <div class="invite-modal">
+    <div class="invite-modal-title">Feedback inbox</div>
+    <div class="textsize-seg" id="fb-inbox-seg" style="margin:0 0 10px;">
+      <button type="button" data-st="open" onclick="openFeedbackInbox('open')">Open</button>
+      <button type="button" data-st="done" onclick="openFeedbackInbox('done')">Done</button>
+    </div>
+    <div id="feedback-inbox-list" style="max-height:440px;overflow-y:auto;margin-bottom:12px;"></div>
+    <button type="button" class="btn-invite-close" onclick="closeFeedbackInbox()" style="width:100%;">Close</button>
   </div>
 </div>
 

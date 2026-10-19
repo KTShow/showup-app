@@ -67,6 +67,7 @@ function payloadForNotification(n) {
   const icon = n.type === 'comment' ? '💬 '
     : (n.type === 'lounge_reply' || n.type === 'lounge_post') ? '☕ '
     : n.type === 'recommendation' ? '🎯 '
+    : n.type === 'feedback' ? '🐞 '
     : (n.type === 'new_season' || n.type === 'season_upcoming') ? '📺 ' : '';
   return {
     title: icon + (n.title || 'ShowUp'),
