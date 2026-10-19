@@ -4,8 +4,10 @@
 // Token-based auth: a short JWT (ES256) signed with the .p8 key from
 // developer.apple.com > Keys, sent over HTTP/2 to Apple. No dependencies.
 //
-// Env: APNS_KEY (the whole .p8 file, BEGIN/END lines included),
-//      APNS_KEY_ID, APNS_TEAM_ID, optional APNS_BUNDLE_ID.
+// Env: APNS_KEY (the whole .p8 file, BEGIN/END lines included) -- the only
+// secret. The key's ID and the Apple team ID aren't secret, so they live
+// here (key "ShowUp Push 2", Sandbox & Production; the first key was
+// Sandbox-only and Apple rejected it). New key = new KEY_ID below.
 // TestFlight and App Store builds both use the production APNs host.
 // ============================================================
 
@@ -13,10 +15,12 @@ const http2 = require('http2');
 const crypto = require('crypto');
 
 const HOST = 'https://api.push.apple.com';
-const BUNDLE_ID = process.env.APNS_BUNDLE_ID || 'com.showuproom.app';
+const BUNDLE_ID = 'com.showuproom.app';
+const KEY_ID = 'MXN8G958G7';
+const TEAM_ID = 'Q63VLYFZY4';
 
 function configured() {
-  return !!(process.env.APNS_KEY && process.env.APNS_KEY_ID && process.env.APNS_TEAM_ID);
+  return !!process.env.APNS_KEY;
 }
 
 const b64url = (buf) => Buffer.from(buf).toString('base64').replace(/=+$/, '').replace(/\+/g, '-').replace(/\//g, '_');
@@ -26,8 +30,8 @@ let _jwt = null, _jwtAt = 0;
 function jwt() {
   const now = Math.floor(Date.now() / 1000);
   if (_jwt && now - _jwtAt < 50 * 60) return _jwt;
-  const head = b64url(JSON.stringify({ alg: 'ES256', kid: process.env.APNS_KEY_ID }));
-  const claims = b64url(JSON.stringify({ iss: process.env.APNS_TEAM_ID, iat: now }));
+  const head = b64url(JSON.stringify({ alg: 'ES256', kid: KEY_ID }));
+  const claims = b64url(JSON.stringify({ iss: TEAM_ID, iat: now }));
   // Vercel env values sometimes arrive with literal "\n" instead of newlines.
   const key = process.env.APNS_KEY.replace(/\\n/g, '\n');
   const sig = crypto.sign('sha256', Buffer.from(head + '.' + claims), { key, dsaEncoding: 'ieee-p1363' });
@@ -91,9 +95,9 @@ function keyInfo() {
   if (!configured()) return null;
   try {
     const pub = crypto.createPublicKey(process.env.APNS_KEY.replace(/\\n/g, '\n')).export({ type: 'spki', format: 'der' });
-    return { kid: process.env.APNS_KEY_ID, team: process.env.APNS_TEAM_ID, fp: crypto.createHash('sha256').update(pub).digest('hex').slice(0, 10) };
+    return { kid: KEY_ID, fp: crypto.createHash('sha256').update(pub).digest('hex').slice(0, 10) };
   } catch (e) {
-    return { kid: process.env.APNS_KEY_ID, error: 'key unreadable: ' + e.message };
+    return { kid: KEY_ID, error: 'key unreadable: ' + e.message };
   }
 }
 

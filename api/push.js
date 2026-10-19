@@ -13,7 +13,7 @@
 //
 // Env (Vercel > Project > Settings > Environment Variables):
 //   SUPABASE_SERVICE_ROLE_KEY, VAPID_PRIVATE_KEY
-//   APNS_KEY, APNS_KEY_ID, APNS_TEAM_ID (iPhone app, see _lib/apns.js)
+//   APNS_KEY (iPhone app, see _lib/apns.js)
 //
 // Each alert goes to the user's web subscriptions (Home Screen web app,
 // computers) AND their iPhone app tokens (native_push_tokens).
