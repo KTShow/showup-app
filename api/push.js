@@ -45,7 +45,16 @@ async function sb(path, init) {
 
 async function subscriptionsFor(userIds) {
   if (!userIds.length) return [];
-  return sb('/rest/v1/push_subscriptions?select=id,user_id,endpoint,p256dh,auth&user_id=in.(' + userIds.join(',') + ')');
+  return sb('/rest/v1/push_subscriptions?select=id,user_id,endpoint,p256dh,auth,user_agent&user_id=in.(' + userIds.join(',') + ')');
+}
+
+// Someone with the iPhone app AND the Home Screen web app on their iPhone
+// would get every alert twice. The app wins: drop their iPhone web
+// subscriptions (computers/iPads still get theirs). If they delete the app,
+// Apple retires the token, it's pruned, and the web copy takes over again.
+function withoutIphoneDoubles(subs, tokens) {
+  const hasApp = new Set(tokens.map((t) => t.user_id));
+  return subs.filter((s) => !(hasApp.has(s.user_id) && /iPhone/.test(s.user_agent || '')));
 }
 
 async function nativeTokensFor(userIds) {
@@ -120,7 +129,8 @@ async function flush() {
   const byUser = {};
   rows.forEach((n) => { (byUser[n.user_id] = byUser[n.user_id] || []).push(n); });
   const ids = Object.keys(byUser);
-  const [subs, tokens] = await Promise.all([subscriptionsFor(ids), nativeTokensFor(ids)]);
+  const [allSubs, tokens] = await Promise.all([subscriptionsFor(ids), nativeTokensFor(ids)]);
+  const subs = withoutIphoneDoubles(allSubs, tokens);
   const jobs = [];
   subs.forEach((s) => byUser[s.user_id].forEach((n) => jobs.push(Object.assign({}, s, { _n: n }))));
   const nativeJobs = [];
@@ -145,10 +155,11 @@ async function test(req) {
     tag: 'test',
   };
   // {"test": true, "native": true} = only the iPhone app (just turned on there).
-  const [subs, tokens] = await Promise.all([
+  const [allSubs, tokens] = await Promise.all([
     req.body.native ? [] : subscriptionsFor([user.id]),
     nativeTokensFor([user.id]),
   ]);
+  const subs = withoutIphoneDoubles(allSubs, tokens);
   const [sent, sentNative] = await Promise.all([
     deliver(subs, () => testPayload),
     deliverNative(tokens.map((t) => ({ token: t.token, payload: testPayload }))),
