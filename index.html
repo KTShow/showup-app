@@ -683,6 +683,12 @@ html.native-cover .status-shield{display:block;position:fixed;top:0;left:0;right
 .btn-magic:hover{background:var(--burnt);}
 .btn-magic:disabled{opacity:0.6;cursor:not-allowed;}
 .login-note{text-align:center;margin-top:14px;font-size:12px;color:var(--muted);line-height:1.6;}
+/* One-tap sign-in buttons (Apple's guidelines: black button, white logo). */
+.btn-oauth{width:100%;min-height:48px;display:flex;align-items:center;justify-content:center;gap:10px;border-radius:10px;font-family:var(--sans);font-size:16px;font-weight:600;cursor:pointer;margin-bottom:10px;}
+.btn-oauth-apple{background:#000;color:#fff;border:1px solid #000;}
+.btn-oauth-google{background:#fff;color:#1f1f1f;border:1px solid #c7c7c7;}
+.btn-oauth:disabled{opacity:0.6;cursor:not-allowed;}
+.login-email-toggle{display:block;margin:6px auto 0;min-height:44px;background:none;border:none;font-family:var(--sans);font-size:14px;font-weight:600;color:var(--terra);cursor:pointer;text-decoration:underline;}
 .login-sent{text-align:center;padding:20px 0;}
 .login-sent-icon{font-size:42px;margin-bottom:12px;}
 .login-sent-title{font-family:var(--serif);font-size:20px;color:var(--fig);font-weight:700;margin-bottom:8px;}
@@ -793,17 +799,25 @@ html.native-cover .status-shield{display:block;position:fixed;top:0;left:0;right
         <div id="invite-banner" style="display:none;background:var(--fig);color:white;border-radius:12px;padding:14px 18px;margin-bottom:18px;text-align:center;">
           <div style="font-size:22px;margin-bottom:4px;">🛋️</div>
           <div id="invite-banner-name" style="font-family:var(--serif);font-size:16px;font-weight:700;margin-bottom:3px;">You've been invited to ShowUp!</div>
-          <div style="font-size:13px;opacity:0.85;line-height:1.5;">Enter your email below to pull up a chair.</div>
+          <div style="font-size:13px;opacity:0.85;line-height:1.5;">Sign in below to pull up a chair.</div>
         </div>
         <div class="login-logo">ShowUp</div>
         <div class="login-tag">Good taste lives here.</div>
         <div class="login-sub">Your living room awaits.</div>
         <div class="login-error" id="login-error"></div>
-        <label class="login-label">Enter your email to get started</label>
-        <input class="login-input" id="login-email" type="email" placeholder="you@example.com" />
-        <button class="btn-magic" id="login-btn" onclick="handleMagicLink()">Pull up a chair &rarr;</button>
-        <div class="login-note">We'll send you a 6-digit code — no password needed.<br>
-        By continuing, you agree to our <a href="/terms.html" target="_blank" style="color:var(--terra);">Terms of Use</a> and <a href="/privacy.html" target="_blank" style="color:var(--terra);">Privacy Policy</a>.</div>
+        <!-- One-tap sign-in; shown only for providers switched on in OAUTH_PROVIDERS. -->
+        <div id="oauth-block" style="display:none;">
+          <button type="button" class="btn-oauth btn-oauth-apple" id="oauth-apple-btn" style="display:none;" onclick="signInWithProvider('apple')"><svg width="17" height="20" viewBox="0 0 17 20" aria-hidden="true"><path fill="currentColor" d="M14.1 10.6c0-2.6 2.1-3.8 2.2-3.9-1.2-1.8-3.1-2-3.7-2-1.6-.2-3.1.9-3.9.9-.8 0-2-.9-3.4-.9-1.7 0-3.3 1-4.2 2.6-1.8 3.1-.5 7.7 1.3 10.2.9 1.2 1.9 2.6 3.2 2.6 1.3-.1 1.8-.8 3.3-.8 1.6 0 2 .8 3.4.8 1.4 0 2.3-1.3 3.1-2.5 1-1.4 1.4-2.8 1.4-2.9-.1 0-2.7-1-2.7-4.1zM11.6 3c.7-.9 1.2-2 1.1-3.2-1 0-2.3.7-3 1.6-.7.8-1.2 2-1.1 3.1 1.1.1 2.3-.6 3-1.5z"/></svg>Continue with Apple</button>
+          <button type="button" class="btn-oauth btn-oauth-google" id="oauth-google-btn" style="display:none;" onclick="signInWithProvider('google')"><svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.6l6.8-6.8C35.8 2.4 30.2 0 24 0 14.6 0 6.6 5.4 2.7 13.3l7.9 6.1C12.5 13.6 17.8 9.5 24 9.5z"/><path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.7c-.6 3-2.3 5.5-4.8 7.2l7.7 6c4.5-4.2 6.9-10.3 6.9-17.7z"/><path fill="#FBBC05" d="M10.6 28.6c-.5-1.4-.8-3-.8-4.6s.3-3.2.8-4.6l-7.9-6.1C1 16.6 0 20.2 0 24s1 7.4 2.7 10.7l7.9-6.1z"/><path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-7.7-6c-2.2 1.5-5 2.3-8.2 2.3-6.2 0-11.5-4.1-13.4-9.8l-7.9 6.1C6.6 42.6 14.6 48 24 48z"/></svg>Continue with Google</button>
+          <button type="button" class="login-email-toggle" onclick="showEmailLogin()">Use email instead</button>
+        </div>
+        <div id="email-login-block">
+          <label class="login-label">Enter your email to get started</label>
+          <input class="login-input" id="login-email" type="email" placeholder="you@example.com" />
+          <button class="btn-magic" id="login-btn" onclick="handleMagicLink()">Pull up a chair &rarr;</button>
+          <div class="login-note" style="margin-bottom:-8px;">We'll send you a 6-digit code — no password needed.</div>
+        </div>
+        <div class="login-note">By continuing, you agree to our <a href="/terms.html" target="_blank" style="color:var(--terra);">Terms of Use</a> and <a href="/privacy.html" target="_blank" style="color:var(--terra);">Privacy Policy</a>.</div>
         <button type="button" onclick="showReviewerLogin()" style="display:block;margin:14px auto 0;background:none;border:none;font-family:var(--sans);font-size:11px;color:var(--muted);opacity:0.7;cursor:pointer;text-decoration:underline;">Reviewer sign-in</button>
       </div>
       <div id="login-sent-view" style="display:none;">
@@ -6966,6 +6980,7 @@ async function loadUserIntoState(profile) {
 async function bootstrap() {
   window._mark('bootstrap-start');
   try {
+    if (await handleOAuthReturn()) return;
     // Read session directly from localStorage — never calls getSession() which
     // awaits _initializePromise and deadlocks with supabase-js PKCE flow.
     var stored = (function() {
@@ -7010,6 +7025,7 @@ async function bootstrap() {
 
     if (!profile) {
       showScreen('onboard');
+      prefillOnboardFromAuth(stored.user);
       return;
     }
 
@@ -7047,6 +7063,7 @@ onAuthStateChange(function(session) {
     var profile = await fetchProfileById(session.user.id);
     if (!profile) {
       showScreen('onboard');
+      prefillOnboardFromAuth(session.user);
     } else {
       await loadUserOnce(profile);
     }
@@ -7056,6 +7073,89 @@ onAuthStateChange(function(session) {
 // ============================================================
 // LOGIN
 // ============================================================
+
+// One-tap sign-in. Flip a provider to true only AFTER it's set up in
+// Supabase (Authentication > Providers) -- until then its button stays hidden.
+// Website only for now: inside the iPhone app, Google refuses sign-in from an
+// embedded browser and Apple expects the native sheet, so the app needs a
+// native plugin in a future build.
+var OAUTH_PROVIDERS = { apple: false, google: false };
+
+function setupLoginOptions() {
+  if (IS_NATIVE_APP) return;
+  var any = false;
+  ['apple', 'google'].forEach(function(p) {
+    var btn = document.getElementById('oauth-' + p + '-btn');
+    if (btn && OAUTH_PROVIDERS[p]) { btn.style.display = 'flex'; any = true; }
+  });
+  if (!any) return;
+  // Email becomes the small option under the buttons.
+  document.getElementById('oauth-block').style.display = 'block';
+  document.getElementById('email-login-block').style.display = 'none';
+}
+
+window.showEmailLogin = function() {
+  document.getElementById('oauth-block').style.display = 'none';
+  document.getElementById('email-login-block').style.display = 'block';
+  var el = document.getElementById('login-email');
+  if (el) el.focus();
+};
+
+window.signInWithProvider = async function(provider) {
+  var errEl = document.getElementById('login-error');
+  errEl.style.display = 'none';
+  document.querySelectorAll('.btn-oauth').forEach(function(b) { b.disabled = true; });
+  try {
+    // Come back to the same path, so a /join-room/ invite still joins its room.
+    var { error } = await sb.auth.signInWithOAuth({
+      provider: provider,
+      options: { redirectTo: window.location.origin + window.location.pathname },
+    });
+    if (error) throw error;
+  } catch (e) {
+    console.error('[signInWithProvider]', e);
+    errEl.textContent = 'That didn’t work. Please try again, or use email instead.';
+    errEl.style.display = 'block';
+    document.querySelectorAll('.btn-oauth').forEach(function(b) { b.disabled = false; });
+  }
+};
+
+// Returning from Apple/Google: the URL carries ?code= (or ?error=). Trade the
+// code for a session; onAuthStateChange then routes to onboarding or the app,
+// same as after an email code. Returns true if it took over the page load.
+async function handleOAuthReturn() {
+  var params = new URLSearchParams(window.location.search);
+  var code = params.get('code');
+  var oauthError = params.get('error_description') || params.get('error');
+  if (!code && !oauthError) return false;
+  try { history.replaceState(null, '', window.location.pathname); } catch (e) {}
+  if (code) {
+    try {
+      var { error } = await sb.auth.exchangeCodeForSession(code);
+      if (error) throw error;
+      return true;
+    } catch (e) {
+      console.error('[handleOAuthReturn]', e);
+    }
+  }
+  _bootstrapComplete = true;
+  showScreen('login');
+  var errEl = document.getElementById('login-error');
+  if (errEl) { errEl.textContent = 'Sign-in didn’t finish. Please try again, or use email instead.'; errEl.style.display = 'block'; }
+  return true;
+}
+
+// New Apple/Google users: start the profile form with the name the provider
+// gave us (Google always does; Apple only the first time).
+function prefillOnboardFromAuth(user) {
+  var md = (user && user.user_metadata) || {};
+  var full = md.full_name || md.name || '';
+  var first = md.given_name || full.split(' ')[0] || '';
+  var last = md.family_name || full.split(' ').slice(1).join(' ') || '';
+  var f = document.getElementById('ob-first'), l = document.getElementById('ob-last');
+  if (f && !f.value && first) f.value = capFirst(first);
+  if (l && !l.value && last) l.value = last.charAt(0).toUpperCase();
+}
 
 window.handleMagicLink = async function() {
   var email = document.getElementById('login-email').value.trim();
@@ -7388,6 +7488,7 @@ document.addEventListener('DOMContentLoaded', function() {
     if (banner) banner.style.display = 'block';
   }
   setupNameFieldFormatting();
+  setupLoginOptions();
 });
 
 // Live-formats name/city fields as you type: capitalizes the first letter, and
