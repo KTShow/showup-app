@@ -6425,6 +6425,19 @@ var PENDING_ROOM_ID = (function() {
   return m ? m[1] : null;
 })();
 
+// After an invite link joins a room, open THAT room (it used to leave people
+// on the Living Room tab's room list). Set where PENDING_ROOM_ID is consumed.
+var _inviteLandingRoomId = null;
+async function openInviteLandingRoom() {
+  var roomId = _inviteLandingRoomId;
+  _inviteLandingRoomId = null;
+  if (!roomId) return;
+  try { history.replaceState(null, '', '/'); } catch (e) {}
+  if (!state.myRoomsLoaded) await loadAndRenderRoomPicker();
+  if (!(state.myRooms || []).some(function(r) { return r.id === roomId; })) return;
+  try { await enterLivingRoom(roomId); } catch (e) { console.error('invite landing room error:', e); }
+}
+
 // Clean orphaned PKCE verifiers before the client initializes
 try {
   var sbKeys = Object.keys(localStorage).filter(function(k) { return k.startsWith('sb-') || k.startsWith('supabase'); });
@@ -6930,6 +6943,7 @@ async function loadUserIntoState(profile) {
   // NEW room's invite while already logged in (the normal case) still works.
   if (PENDING_ROOM_ID) {
     await joinLivingRoom(PENDING_ROOM_ID);
+    _inviteLandingRoomId = PENDING_ROOM_ID;
     PENDING_ROOM_ID = null;
   }
   await loadSafetyState(); // before any room data, so blocked/reported content never shows
@@ -6940,6 +6954,7 @@ async function loadUserIntoState(profile) {
   // rather than your own Watching list -- the fresh, social content first.
   var lrTab = document.getElementById('btab-living-room');
   if (lrTab) showTab('living-room', lrTab);
+  openInviteLandingRoom(); // fire-and-forget; no-op unless they came in on a room invite link
   state.friendsPreload = preloadFriendsInBackground(); // fire-and-forget, see function comment
   initPushAlerts(); // fire-and-forget: alerts card, device re-subscribe, ?notif= deep link
 }
@@ -7182,6 +7197,7 @@ window.completeOnboard = async function() {
     }
     if (PENDING_ROOM_ID) {
       await joinLivingRoom(PENDING_ROOM_ID);
+      _inviteLandingRoomId = PENDING_ROOM_ID;
       PENDING_ROOM_ID = null;
     }
     _firstTimeTellMore = true;
@@ -7245,6 +7261,7 @@ window.saveTellMore = async function() {
     renderAll();
     var lrBtn = document.getElementById('btab-living-room');
     if (lrBtn) showTab('living-room', lrBtn);
+    await openInviteLandingRoom();
     openInstallGuide();
   } else {
     showScreen('settings');
@@ -7252,7 +7269,15 @@ window.saveTellMore = async function() {
   }
 };
 
-window.skipTellMore = function() { showScreen('app'); renderAll(); };
+window.skipTellMore = function() {
+  showScreen('app');
+  renderAll();
+  if (_inviteLandingRoomId) {
+    var lrBtn = document.getElementById('btab-living-room');
+    if (lrBtn) showTab('living-room', lrBtn);
+    openInviteLandingRoom();
+  }
+};
 window.backFromTellMore = function() { state.user ? showScreen('settings') : showScreen('app'); renderAll(); };
 window.goToTellMore = function() {
   showScreen('tellmore');
