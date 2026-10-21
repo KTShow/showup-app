@@ -6455,8 +6455,12 @@ async function openInviteLandingRoom() {
 // Clean orphaned PKCE verifiers before the client initializes
 try {
   var sbKeys = Object.keys(localStorage).filter(function(k) { return k.startsWith('sb-') || k.startsWith('supabase'); });
-  var hasToken = sbKeys.some(function(k) { return k.includes('auth-token'); });
-  if (hasToken) {
+  // endsWith, not includes: the verifier's own key is "...-auth-token-code-verifier",
+  // so includes('auth-token') counted it as a session and deleted it -- which
+  // broke the Apple/Google return trip ("PKCE code verifier not found").
+  var hasToken = sbKeys.some(function(k) { return k.endsWith('-auth-token'); });
+  var returningFromOAuth = /[?&]code=/.test(window.location.search);
+  if (hasToken && !returningFromOAuth) {
     sbKeys.filter(function(k) { return k.includes('code-verifier') || k.includes('pkce'); })
           .forEach(function(k) { localStorage.removeItem(k); });
   }
