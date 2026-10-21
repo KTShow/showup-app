@@ -9847,20 +9847,21 @@ window.openInviteModal = function(roomId) {
     _inviteRoom = { id: state.currentRoomId, name: state.currentRoomName };
   }
   var roomName = _inviteRoom.name || 'your Living Room';
-  // Touch screens only: desktop Chrome on Windows also has navigator.share,
-  // but its share dialog is clumsier there than just copying.
-  var canShare = !!navigator.share && window.matchMedia('(pointer:coarse)').matches;
+  // Phones (touch screens) get Text Invite (straight to Messages) and Other
+  // (the share menu). Computers just copy -- desktop Chrome on Windows also
+  // has navigator.share, but its dialog is clumsier there than copying.
+  var isPhone = window.matchMedia('(pointer:coarse)').matches;
+  var canShare = isPhone && !!navigator.share;
   document.getElementById('invite-modal-title').textContent = 'Invite to "' + roomName + '"';
-  document.getElementById('invite-modal-sub').textContent = canShare
-    ? 'Tap Send Invite and pick Messages, Mail, or any app you like. The message is written for you.'
-    : 'Copy the message below and send it however you like — text, email, whatever’s easiest.';
+  document.getElementById('invite-modal-sub').textContent = 'Invite someone to ' + inviteRoomPhrase(roomName) + '. '
+    + (isPhone ? 'Tap Text Invite' + (canShare ? ', or Other for more choices' : '') + '.'
+               : 'Copy the invite and paste it into a text or email.')
+    + ' The invite is written for you.';
   document.getElementById('invite-modal-link').textContent = APP_ORIGIN + '/join-room/' + _inviteRoom.id;
-  // Phones get the share menu as the main button; copy stays as the backup
-  // (and is the only option on computers without a share menu).
+  document.getElementById('invite-text-btn').style.display = isPhone ? 'block' : 'none';
   document.getElementById('invite-share-btn').style.display = canShare ? 'block' : 'none';
-  var copyBtn = document.getElementById('invite-msg-btn');
-  copyBtn.classList.toggle('btn-invite-close', canShare);
-  copyBtn.classList.toggle('btn-invite-copy', !canShare);
+  // On phones the share menu covers copying, so Copy only shows on computers.
+  document.getElementById('invite-msg-btn').style.display = isPhone ? 'none' : 'block';
   document.getElementById('invite-modal').classList.add('active');
 };
 
@@ -9873,6 +9874,20 @@ function inviteMessageText() {
   var roomName = _inviteRoom.name || state.currentRoomName || 'their Living Room';
   return inviterName + ' invited you to join the living room "' + roomName + '" on the ShowUp App. Follow the link, get your access code by email, and you\'ll be taken right in.';
 }
+
+// "your Family living room", but not "your The Living Room living room".
+function inviteRoomPhrase(name) {
+  if (/living room$/i.test(name)) return /^the /i.test(name) ? name : 'your ' + name;
+  return (/^the /i.test(name) ? name : 'your ' + name) + ' living room';
+}
+
+// Opens Messages with the invite filled in; they just pick who to send it to.
+window.textInviteMessage = function() {
+  var link = document.getElementById('invite-modal-link').textContent;
+  var body = encodeURIComponent(inviteMessageText() + '\n\n' + link);
+  closeInviteModal();
+  window.location.href = 'sms:?&body=' + body;
+};
 
 window.shareInviteMessage = function() {
   var link = document.getElementById('invite-modal-link').textContent;
@@ -10379,7 +10394,8 @@ bootstrap();
     <div class="invite-modal-title" id="invite-modal-title">Invite to your Living Room</div>
     <div class="invite-modal-sub" id="invite-modal-sub">Share your link and get your friends on the couch.</div>
     <div class="invite-modal-link" id="invite-modal-link" style="display:none;">https://showuproom.com/join/tracey-m-x7k2</div>
-    <button class="btn-invite-copy" id="invite-share-btn" onclick="shareInviteMessage()" style="display:none;width:100%;margin-bottom:10px;">Send Invite</button>
+    <button class="btn-invite-copy" id="invite-text-btn" onclick="textInviteMessage()" style="display:none;width:100%;margin-bottom:10px;">Text Invite</button>
+    <button class="btn-invite-close" id="invite-share-btn" onclick="shareInviteMessage()" style="display:none;width:100%;margin-bottom:10px;">Other</button>
     <button class="btn-invite-copy" id="invite-msg-btn" onclick="copyInviteMessage()" style="width:100%;margin-bottom:10px;">&#128203; Copy Invite Message</button>
     <button class="btn-invite-close" onclick="closeInviteModal()" style="width:100%;">Close</button>
   </div>
