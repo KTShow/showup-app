@@ -227,6 +227,12 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
 .rcb-new{font-size:14px;color:var(--muted);}
 .rcb-new.has-new{color:var(--terra);font-weight:700;}
 .rcb-cta{margin-top:8px;min-height:44px;border-radius:10px;color:#fff;font-size:15px;font-weight:700;display:flex;align-items:center;justify-content:center;}
+/* Invite buttons: Living Room header + room cards (used to be one small text link). */
+.lr-sub-row{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;}
+.invite-pill{display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:0 16px;background:var(--terra);color:#fff;border:none;border-radius:22px;font-family:var(--sans);font-size:14px;font-weight:700;cursor:pointer;white-space:nowrap;}
+.invite-pill:hover{background:var(--burnt);}
+.room-tile-invite{display:inline-flex;align-items:center;min-height:44px;margin-top:4px;padding:0;background:none;border:none;color:var(--terra);font-family:var(--sans);font-size:13px;font-weight:700;cursor:pointer;}
+.rcb-invite{min-height:44px;border-radius:10px;background:none;border:2px solid var(--terra);color:var(--terra);font-family:var(--sans);font-size:15px;font-weight:700;cursor:pointer;}
 .room-new-pill{display:inline-block;margin-left:6px;background:var(--terra);color:#fff;font-family:var(--sans);font-size:11px;font-weight:700;padding:1px 7px;border-radius:9px;vertical-align:middle;white-space:nowrap;}
 .friends-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(98px,1fr));gap:9px;margin-bottom:24px;}
 .friend-card{position:relative;background:var(--cream);border:1px solid var(--border);border-radius:var(--radius);padding:11px;text-align:left;cursor:pointer;transition:all 0.2s;box-shadow:var(--shadow);}
@@ -1152,7 +1158,7 @@ html.native-cover .status-shield{display:block;position:fixed;top:0;left:0;right
       </div>
       <div id="friends-view" style="display:none">
         <div class="page-title"><button class="nav-back" onclick="backToRoomPicker()" style="margin-right:6px;">&#8592;</button>&#127968;&nbsp; <span id="current-room-name">The Living Room</span><button id="rename-room-btn" onclick="renameCurrentRoom()" style="display:none;background:none;border:none;cursor:pointer;font-size:14px;margin-left:6px;color:var(--muted);vertical-align:middle;" title="Rename this room">&#9998;&#65049;</button><button id="delete-room-btn" onclick="deleteCurrentRoom()" style="display:none;background:none;border:none;cursor:pointer;font-size:14px;margin-left:6px;color:var(--muted);vertical-align:middle;" title="Delete this room">&#128465;&#65049;</button><button id="leave-room-btn" onclick="leaveCurrentRoom()" style="display:none;background:none;border:none;cursor:pointer;font-size:14px;margin-left:6px;color:var(--muted);vertical-align:middle;" title="Leave this room">&#128075; Leave Room</button></div>
-        <div class="page-sub">Your Crowd &mdash; see what everyone's watching &mdash; <a href="#" id="invite-someone-link" onclick="openInviteModal();return false;" style="color:var(--terra);font-weight:600;">Invite someone</a></div>
+        <div class="page-sub lr-sub-row"><span>Your Crowd &mdash; see what everyone's watching</span><button type="button" id="invite-someone-link" class="invite-pill" onclick="openInviteModal()">&#43; Invite</button></div>
         <div id="recommendations-banner"></div>
         <div class="lr-toggle">
           <button class="lr-toggle-btn active" id="toggle-crew" onclick="switchLRView('crew')"><span class="toggle-icon">🛋️</span>Your Crowd</button>
@@ -3896,6 +3902,7 @@ function renderRoomPicker() {
       + '<div class="rcb-people">' + (people ? 'With ' + people : (r.member_count + ' member' + (r.member_count === 1 ? '' : 's'))) + '</div>'
       + '<div class="rcb-new' + (n ? ' has-new' : '') + '">' + (n ? '&#128172; ' + n + ' new comment' + (n === 1 ? '' : 's') : 'See what your crowd is watching') + '</div>'
       + '<div class="rcb-cta" style="background:' + theme.color + ';">Enter your Living Room &rsaquo;</div>'
+      + '<button type="button" class="rcb-invite" onclick="event.stopPropagation();openInviteModal(\'' + r.id + '\')">&#43; Invite friends</button>'
       + '</div>' + createTile;
     return;
   }
@@ -3907,7 +3914,7 @@ function renderRoomPicker() {
     // Names ("You, George +2") rather than a member count; falls back to the
     // count until the background room load has landed.
     var people = _roomPeopleLine(r.id, 2) || (r.member_count+' member'+(r.member_count===1?'':'s'));
-    return '<div class="room-tile" onclick="enterLivingRoom(\''+r.id+'\')" style="border-left:4px solid '+theme.color+';"><div class="room-tile-name">'+escAttr(r.name)+pill+'</div><div class="room-tile-meta">'+people+'</div></div>';
+    return '<div class="room-tile" onclick="enterLivingRoom(\''+r.id+'\')" style="border-left:4px solid '+theme.color+';"><div class="room-tile-name">'+escAttr(r.name)+pill+'</div><div class="room-tile-meta">'+people+'</div><button type="button" class="room-tile-invite" onclick="event.stopPropagation();openInviteModal(\''+r.id+'\')">&#43; Invite</button></div>';
   }).join('');
   grid.innerHTML = tiles + createTile;
 }
@@ -4026,7 +4033,7 @@ window.enterLivingRoom = async function(roomId, roomName, isOwner, isAdminView, 
   var leaveBtn = document.getElementById('leave-room-btn');
   if (leaveBtn) leaveBtn.style.display = (isOwner || isAdminView) ? 'none' : 'inline';
   var inviteLink = document.getElementById('invite-someone-link');
-  if (inviteLink) inviteLink.style.display = isAdminView ? 'none' : 'inline';
+  if (inviteLink) inviteLink.style.display = isAdminView ? 'none' : 'inline-flex';
   switchLRView('crew');
   renderFriends();
   await loadAndRenderFriends();
@@ -9801,25 +9808,65 @@ function updateInviteLinks() {
   document.querySelectorAll('#invite-modal-link').forEach(function(el) { el.textContent = link; });
 }
 
-window.openInviteModal = function() {
-  if (!state.currentRoomId || state.currentRoomIsAdminView) return;
-  var roomName = state.currentRoomName || 'your Living Room';
+// Which room the open invite popup is for. Room cards pass their own room id
+// (you can invite from the room list without entering the room); the Living
+// Room header uses the current room.
+var _inviteRoom = { id: null, name: null };
+
+window.openInviteModal = function(roomId) {
+  if (roomId) {
+    var r = (state.myRooms || []).find(function(x) { return x.id === roomId; });
+    _inviteRoom = { id: roomId, name: r ? r.name : null };
+  } else {
+    if (!state.currentRoomId || state.currentRoomIsAdminView) return;
+    _inviteRoom = { id: state.currentRoomId, name: state.currentRoomName };
+  }
+  var roomName = _inviteRoom.name || 'your Living Room';
+  // Touch screens only: desktop Chrome on Windows also has navigator.share,
+  // but its share dialog is clumsier there than just copying.
+  var canShare = !!navigator.share && window.matchMedia('(pointer:coarse)').matches;
   document.getElementById('invite-modal-title').textContent = 'Invite to "' + roomName + '"';
-  document.getElementById('invite-modal-sub').textContent = 'Copy the message below and send it however you like — text, email, whatever’s easiest.';
-  document.getElementById('invite-modal-link').textContent = APP_ORIGIN + '/join-room/' + state.currentRoomId;
+  document.getElementById('invite-modal-sub').textContent = canShare
+    ? 'Tap Send Invite and pick Messages, Mail, or any app you like. The message is written for you.'
+    : 'Copy the message below and send it however you like — text, email, whatever’s easiest.';
+  document.getElementById('invite-modal-link').textContent = APP_ORIGIN + '/join-room/' + _inviteRoom.id;
+  // Phones get the share menu as the main button; copy stays as the backup
+  // (and is the only option on computers without a share menu).
+  document.getElementById('invite-share-btn').style.display = canShare ? 'block' : 'none';
+  var copyBtn = document.getElementById('invite-msg-btn');
+  copyBtn.classList.toggle('btn-invite-close', canShare);
+  copyBtn.classList.toggle('btn-invite-copy', !canShare);
   document.getElementById('invite-modal').classList.add('active');
 };
 
 window.closeInviteModal = function() { document.getElementById('invite-modal').classList.remove('active'); };
 
-function copyInviteContent(link, btn, resetLabel) {
+// No pronoun: it used to guess "his"/"her" from the gender field.
+function inviteMessageText() {
   var u = state.user;
   var inviterName = u && u.first ? u.first : 'A friend';
-  var roomName = state.currentRoomName || 'their Living Room';
-  var pronoun = u && u.gender === 'Male' ? 'his' : u && u.gender === 'Female' ? 'her' : 'their';
-  var intro = inviterName + ' invited you to join ' + pronoun + ' living room "' + roomName + '" on the ShowUp App.';
-  var html = '<p>' + intro + ' Follow the link, get your access code by email, and you\'ll be taken right in.</p><p><a href="' + link + '">' + link + '</a></p>';
-  var plain = intro + ' Follow the link, get your access code by email, and you\'ll be taken right in.\n\n' + link;
+  var roomName = _inviteRoom.name || state.currentRoomName || 'their Living Room';
+  return inviterName + ' invited you to join the living room "' + roomName + '" on the ShowUp App. Follow the link, get your access code by email, and you\'ll be taken right in.';
+}
+
+window.shareInviteMessage = function() {
+  var link = document.getElementById('invite-modal-link').textContent;
+  navigator.share({ title: 'Join me on ShowUp', text: inviteMessageText(), url: link })
+    .then(function() {
+      closeInviteModal();
+      showToast('Invite sent!');
+    })
+    .catch(function(e) {
+      // AbortError = they closed the share menu; leave the popup open.
+      if (e && e.name === 'AbortError') return;
+      copyInviteMessage();
+    });
+};
+
+function copyInviteContent(link, btn, resetLabel) {
+  var text = inviteMessageText();
+  var html = '<p>' + text + '</p><p><a href="' + link + '">' + link + '</a></p>';
+  var plain = text + '\n\n' + link;
   function onCopied() { btn.textContent = 'Copied! \u2713'; setTimeout(function() { btn.textContent = resetLabel; }, 1800); }
   if (window.ClipboardItem && navigator.clipboard && navigator.clipboard.write) {
     navigator.clipboard.write([new ClipboardItem({
@@ -10307,6 +10354,7 @@ bootstrap();
     <div class="invite-modal-title" id="invite-modal-title">Invite to your Living Room</div>
     <div class="invite-modal-sub" id="invite-modal-sub">Share your link and get your friends on the couch.</div>
     <div class="invite-modal-link" id="invite-modal-link" style="display:none;">https://showuproom.com/join/tracey-m-x7k2</div>
+    <button class="btn-invite-copy" id="invite-share-btn" onclick="shareInviteMessage()" style="display:none;width:100%;margin-bottom:10px;">Send Invite</button>
     <button class="btn-invite-copy" id="invite-msg-btn" onclick="copyInviteMessage()" style="width:100%;margin-bottom:10px;">&#128203; Copy Invite Message</button>
     <button class="btn-invite-close" onclick="closeInviteModal()" style="width:100%;">Close</button>
   </div>
