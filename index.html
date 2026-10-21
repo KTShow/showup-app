@@ -7080,6 +7080,9 @@ onAuthStateChange(function(session) {
 // embedded browser and Apple expects the native sheet, so the app needs a
 // native plugin in a future build.
 var OAUTH_PROVIDERS = { apple: false, google: false };
+// Test mode: showuproom.com/?signin=test shows the Google button to whoever
+// opens that link, before it's switched on for everyone.
+if (/[?&]signin=test\b/.test(window.location.search)) OAUTH_PROVIDERS.google = true;
 
 function setupLoginOptions() {
   if (IS_NATIVE_APP) return;
