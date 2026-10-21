@@ -7132,6 +7132,7 @@ async function handleOAuthReturn() {
   var oauthError = params.get('error_description') || params.get('error');
   if (!code && !oauthError) return false;
   try { history.replaceState(null, '', window.location.pathname); } catch (e) {}
+  var reason = oauthError || '';
   if (code) {
     try {
       var { error } = await sb.auth.exchangeCodeForSession(code);
@@ -7139,12 +7140,15 @@ async function handleOAuthReturn() {
       return true;
     } catch (e) {
       console.error('[handleOAuthReturn]', e);
+      reason = (e && e.message) || String(e);
     }
   }
+  console.error('[handleOAuthReturn] sign-in failed:', reason);
   _bootstrapComplete = true;
   showScreen('login');
   var errEl = document.getElementById('login-error');
-  if (errEl) { errEl.textContent = 'Sign-in didn’t finish. Please try again, or use email instead.'; errEl.style.display = 'block'; }
+  // The reason is technical, but it's what tells us what went wrong.
+  if (errEl) { errEl.textContent = 'Sign-in didn’t finish. Please try again, or use email instead.' + (reason ? ' (' + reason + ')' : ''); errEl.style.display = 'block'; }
   return true;
 }
 
