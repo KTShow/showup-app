@@ -688,6 +688,9 @@ html.native-cover .status-shield{display:block;position:fixed;top:0;left:0;right
 .btn-oauth-apple{background:#000;color:#fff;border:1px solid #000;}
 .btn-oauth-google{background:#fff;color:#1f1f1f;border:1px solid #c7c7c7;}
 .btn-oauth:disabled{opacity:0.6;cursor:not-allowed;}
+.btn-oauth-email{background:none;color:var(--terra);border:2px solid var(--terra);}
+.login-choice-title{font-family:var(--serif);font-size:18px;font-weight:700;color:var(--fig);margin:4px 0 14px;}
+.login-choice-label{font-size:13px;font-weight:600;color:var(--charcoal);margin:4px 0 6px;}
 .login-email-toggle{display:block;margin:6px auto 0;min-height:44px;background:none;border:none;font-family:var(--sans);font-size:14px;font-weight:600;color:var(--terra);cursor:pointer;text-decoration:underline;}
 .login-sent{text-align:center;padding:20px 0;}
 .login-sent-icon{font-size:42px;margin-bottom:12px;}
@@ -807,11 +810,17 @@ html.native-cover .status-shield{display:block;position:fixed;top:0;left:0;right
         <div class="login-error" id="login-error"></div>
         <!-- One-tap sign-in; shown only for providers switched on in OAUTH_PROVIDERS. -->
         <div id="oauth-block" style="display:none;">
+          <div class="login-choice-title">How would you like to sign in?</div>
+          <div class="login-choice-label" id="oauth-apple-label" style="display:none;">On an iPhone?</div>
           <button type="button" class="btn-oauth btn-oauth-apple" id="oauth-apple-btn" style="display:none;" onclick="signInWithProvider('apple')"><svg width="17" height="20" viewBox="0 0 17 20" aria-hidden="true"><path fill="currentColor" d="M14.1 10.6c0-2.6 2.1-3.8 2.2-3.9-1.2-1.8-3.1-2-3.7-2-1.6-.2-3.1.9-3.9.9-.8 0-2-.9-3.4-.9-1.7 0-3.3 1-4.2 2.6-1.8 3.1-.5 7.7 1.3 10.2.9 1.2 1.9 2.6 3.2 2.6 1.3-.1 1.8-.8 3.3-.8 1.6 0 2 .8 3.4.8 1.4 0 2.3-1.3 3.1-2.5 1-1.4 1.4-2.8 1.4-2.9-.1 0-2.7-1-2.7-4.1zM11.6 3c.7-.9 1.2-2 1.1-3.2-1 0-2.3.7-3 1.6-.7.8-1.2 2-1.1 3.1 1.1.1 2.3-.6 3-1.5z"/></svg>Continue with Apple</button>
+          <div class="login-choice-label" id="oauth-google-label" style="display:none;">Have a Gmail address?</div>
           <button type="button" class="btn-oauth btn-oauth-google" id="oauth-google-btn" style="display:none;" onclick="signInWithProvider('google')"><svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.6l6.8-6.8C35.8 2.4 30.2 0 24 0 14.6 0 6.6 5.4 2.7 13.3l7.9 6.1C12.5 13.6 17.8 9.5 24 9.5z"/><path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.7c-.6 3-2.3 5.5-4.8 7.2l7.7 6c4.5-4.2 6.9-10.3 6.9-17.7z"/><path fill="#FBBC05" d="M10.6 28.6c-.5-1.4-.8-3-.8-4.6s.3-3.2.8-4.6l-7.9-6.1C1 16.6 0 20.2 0 24s1 7.4 2.7 10.7l7.9-6.1z"/><path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-7.7-6c-2.2 1.5-5 2.3-8.2 2.3-6.2 0-11.5-4.1-13.4-9.8l-7.9 6.1C6.6 42.6 14.6 48 24 48z"/></svg>Continue with Google</button>
-          <button type="button" class="login-email-toggle" onclick="showEmailLogin()">Use email instead</button>
+          <div class="login-choice-label">Any other email (Yahoo, AOL, Outlook, iCloud&hellip;)</div>
+          <button type="button" class="btn-oauth btn-oauth-email" onclick="showEmailLogin()">Continue with email</button>
+          <div class="login-note" style="margin-top:6px;">Either way works. You can always come back the same way.</div>
         </div>
         <div id="email-login-block">
+          <button type="button" class="login-email-toggle" id="login-back-to-choices" style="display:none;margin:0 0 6px;" onclick="showLoginChoices()">&lsaquo; Other ways to sign in</button>
           <label class="login-label">Enter your email to get started</label>
           <input class="login-input" id="login-email" type="email" placeholder="you@example.com" />
           <button class="btn-magic" id="login-btn" onclick="handleMagicLink()">Pull up a chair &rarr;</button>
@@ -7091,7 +7100,7 @@ onAuthStateChange(function(session) {
 // Website only for now: inside the iPhone app, Google refuses sign-in from an
 // embedded browser and Apple expects the native sheet, so the app needs a
 // native plugin in a future build.
-var OAUTH_PROVIDERS = { apple: false, google: false };
+var OAUTH_PROVIDERS = { apple: false, google: true }; // Google on for everyone 2026-10-22
 // Test mode: showuproom.com/?signin=test shows the Google button to whoever
 // opens that link, before it's switched on for everyone.
 if (/[?&]signin=test\b/.test(window.location.search)) OAUTH_PROVIDERS.google = true;
@@ -7101,17 +7110,30 @@ function setupLoginOptions() {
   var any = false;
   ['apple', 'google'].forEach(function(p) {
     var btn = document.getElementById('oauth-' + p + '-btn');
-    if (btn && OAUTH_PROVIDERS[p]) { btn.style.display = 'flex'; any = true; }
+    var label = document.getElementById('oauth-' + p + '-label');
+    if (btn && OAUTH_PROVIDERS[p]) {
+      btn.style.display = 'flex';
+      if (label) label.style.display = 'block';
+      any = true;
+    }
   });
   if (!any) return;
-  // Email becomes the small option under the buttons.
+  _hasLoginChoices = true;
+  showLoginChoices();
+}
+
+// Choices screen: a plain-English label over each button ("Have a Gmail
+// address?") -- people don't think of Gmail as "Google".
+var _hasLoginChoices = false;
+window.showLoginChoices = function() {
   document.getElementById('oauth-block').style.display = 'block';
   document.getElementById('email-login-block').style.display = 'none';
-}
+};
 
 window.showEmailLogin = function() {
   document.getElementById('oauth-block').style.display = 'none';
   document.getElementById('email-login-block').style.display = 'block';
+  document.getElementById('login-back-to-choices').style.display = _hasLoginChoices ? 'block' : 'none';
   var el = document.getElementById('login-email');
   if (el) el.focus();
 };
