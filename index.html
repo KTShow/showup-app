@@ -7061,6 +7061,7 @@ async function bootstrap() {
 onAuthStateChange(function(session) {
   if (!session) {
     // If bootstrap was waiting for a token refresh that failed, show login now
+    if (_oauthReturning) return; // handleOAuthReturn shows login itself if it fails
     if (!_bootstrapComplete) { _bootstrapComplete = true; showScreen('login'); }
     return;
   }
@@ -7134,6 +7135,10 @@ window.signInWithProvider = async function(provider) {
   }
 };
 
+// True while trading the code for a session. supabase-js reports "no session"
+// first, which used to flash the sign-in screen before the app appeared.
+var _oauthReturning = false;
+
 // Returning from Apple/Google: the URL carries ?code= (or ?error=). Trade the
 // code for a session; onAuthStateChange then routes to onboarding or the app,
 // same as after an email code. Returns true if it took over the page load.
@@ -7145,11 +7150,14 @@ async function handleOAuthReturn() {
   try { history.replaceState(null, '', window.location.pathname); } catch (e) {}
   var reason = oauthError || '';
   if (code) {
+    _oauthReturning = true;
     try {
       var { error } = await sb.auth.exchangeCodeForSession(code);
+      _oauthReturning = false;
       if (error) throw error;
       return true;
     } catch (e) {
+      _oauthReturning = false;
       console.error('[handleOAuthReturn]', e);
       reason = (e && e.message) || String(e);
     }
