@@ -930,8 +930,9 @@ html.native-cover .status-shield{display:block;position:fixed;top:0;left:0;right
       <div class="fs-title">Show your friends what you watch</div>
       <div class="fs-sub">Tap where you are with any show you know. Rate it, even after an episode or two.</div>
       <div id="fs-list"><div class="empty"><div class="empty-icon">&#8987;</div>Loading shows&hellip;</div></div>
-      <div class="fs-search-label">Don't see yours?</div>
-      <div class="fs-search-wrap">
+      <div class="fs-search-label">You can add more shows anytime from your lists.</div>
+      <button type="button" class="fs-change" id="fs-search-open" style="padding:0;margin:-4px 0 14px;" onclick="fsOpenSearch()">Or search for one now</button>
+      <div class="fs-search-wrap" id="fs-search-area" style="display:none;">
         <input type="text" id="fs-search" class="ob-input" placeholder="Search for a show" oninput="fsSearch()" autocomplete="off" />
         <div id="fs-search-results"></div>
       </div>
@@ -2594,6 +2595,20 @@ window.setAllFriendSections = function(fid, sectionKey, collapse){
   saveCollapsedSections();
   showFriend(fid);
 };
+// Every category of one person's room at once: each platform group in On
+// Right Now / Saving a Seat / Waiting / Already Binged, plus Didn't Finish.
+window.setAllFriendCategories = function(fid, collapse){
+  var f = resolveFriendById(fid);
+  if (!f) return;
+  ['on', 'seat', 'waiting', 'binged'].forEach(function(sectionKey){
+    Object.keys(groupByService(friendSectionItems(f, sectionKey))).forEach(function(svc){
+      _collapsedSections['frv:'+fid+':'+sectionKey+':'+svc] = collapse;
+    });
+  });
+  _collapsedSections['frv:'+fid+':dnf'] = collapse;
+  saveCollapsedSections();
+  showFriend(fid);
+};
 function frvSectionToggleControls(fid, sectionKey, arr){
   if (Object.keys(groupByService(arr)).length < 2) return '';
   return '<div class="section-toggle-all"><span onclick="setAllFriendSections(\''+fid+'\',\''+sectionKey+'\',true)">Collapse all</span><span onclick="setAllFriendSections(\''+fid+'\',\''+sectionKey+'\',false)">Expand all</span></div>';
@@ -3645,10 +3660,16 @@ async function showFriend(id) {
   var dnfKey='frv:'+f.id+':dnf';
   var dnfCollapsed=_collapsedSections[dnfKey]!==false;
   var backLabel = (_friendDetailReturn && _friendDetailReturn.label) || '← Back to Living Room';
+  // One switch at the top for every category (the per-category ones stay).
+  var anyFrvShows = onItems.length || seatItems.length || waitingItems.length || bingedItems.length || dnfItems.length;
+  var frvAllControls = anyFrvShows
+    ? '<div class="section-toggle-all section-toggle-all--sticky"><span onclick="setAllFriendCategories(\''+f.id+'\',true)">Collapse all</span><span onclick="setAllFriendCategories(\''+f.id+'\',false)">Expand all</span></div>'
+    : '';
   dv.innerHTML='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;"><button class="back-btn" style="white-space:nowrap;margin-bottom:0;" aria-label="'+escAttr(backLabel.replace(/^← */,''))+'" onclick="backToFriends()">'+escAttr(backLabel.replace(/^← *Back to */,'‹ '))+'</button><div style="display:flex;gap:4px;align-items:center;">'+sharedTasteBtn+muteBtn+removeBtn+'</div></div>'
     +'<div class="friend-header"><div class="friend-header-av" style="background:'+fColor+';font-size:18px;font-weight:700;font-family:var(--sans);">'+fInitials+'</div>'
     +'<div><div style="font-family:Georgia,serif;font-size:20px;font-weight:700">'+roomTitle+'</div>'
     +cityLine+'</div></div>'
+    +frvAllControls
     +'<div style="margin:24px 0 12px;background:var(--fig);color:white;padding:10px 18px;border-radius:8px;font-family:var(--serif);font-size:15px;font-weight:700;letter-spacing:0.2px;display:flex;align-items:center;gap:8px;">&#128250; On Right Now</div>'+frvSectionToggleControls(f.id,'on',onItems)+fGrouped(onItems,'w','on')
     +'<div style="margin:24px 0 12px;background:var(--fig);color:white;padding:10px 18px;border-radius:8px;font-family:var(--serif);font-size:15px;font-weight:700;letter-spacing:0.2px;display:flex;align-items:center;gap:8px;">🛋️ Saving a Seat</div>'+frvSectionToggleControls(f.id,'seat',seatItems)+fGrouped(seatItems,'wl','seat')
   +(waitingItems.length
@@ -7370,9 +7391,10 @@ window.resetLoginForm = function() {
 // away, so leaving halfway loses nothing.
 
 var FS_CHOICES = [
+  // Same order as the app's tabs: Watching, My List, Binged.
   { key: 'watching', label: 'Watching' },
-  { key: 'binged',   label: 'Binged' },
   { key: 'want',     label: 'Want to watch' },
+  { key: 'binged',   label: 'Binged' },
   { key: 'waiting',  label: 'Waiting for new season' },
   { key: 'dnf',      label: 'Didn’t finish' },
 ];
@@ -7548,6 +7570,14 @@ window.fsRate = async function(i, n) {
   if (!it.id) return; // first save still in flight; fsChoose applies it.rating when it lands
   try { await updateShowRating(it.id, it.rating); }
   catch (e) { console.error('[firstShows] rate error:', e); it.rating = prev; renderFirstShows(); showToast('Couldn’t save that rating — try again.'); }
+};
+
+// Search is optional and stays closed: after the easy taps, an open search box
+// read as homework.
+window.fsOpenSearch = function() {
+  document.getElementById('fs-search-open').style.display = 'none';
+  document.getElementById('fs-search-area').style.display = 'block';
+  document.getElementById('fs-search').focus();
 };
 
 var _fsSearchTimer = null, _fsSearchSeq = 0, _fsSearchResults = [];
