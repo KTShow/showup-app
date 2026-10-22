@@ -406,6 +406,29 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
 .onboard-card{background:var(--cream);border:1px solid var(--border);border-radius:20px;padding:32px;width:100%;max-width:420px;box-shadow:0 4px 24px rgba(100,50,20,0.10);}
 .onboard-logo{font-family:var(--serif);font-size:30px;color:var(--terra);font-weight:700;margin-bottom:2px;}
 .onboard-tag{font-size:14px;color:var(--muted);margin-bottom:4px;}
+/* First-shows screen (new accounts) -- see openFirstShows. */
+.fs-card{max-width:520px;}
+.fs-title{font-family:var(--serif);font-size:24px;color:var(--fig);font-weight:700;line-height:1.2;margin-bottom:6px;}
+.fs-sub{font-size:14px;color:var(--charcoal);line-height:1.5;margin-bottom:16px;}
+.fs-row{display:flex;gap:12px;padding:12px 0;border-bottom:1px solid var(--border);}
+.fs-row.fs-new{background:rgba(196,98,45,0.06);}
+.fs-poster{width:46px;height:69px;border-radius:6px;object-fit:cover;flex-shrink:0;background:var(--sand);display:flex;align-items:center;justify-content:center;font-size:20px;}
+.fs-main{flex:1;min-width:0;}
+.fs-show-title{font-family:var(--serif);font-size:16px;font-weight:700;color:var(--fig);line-height:1.25;}
+.fs-tag{font-size:12px;color:var(--muted);margin:2px 0 8px;}
+.fs-chips{display:flex;flex-wrap:wrap;gap:6px;}
+.fs-chip{min-height:36px;padding:0 12px;border-radius:18px;border:1.5px solid var(--border);background:var(--cream);color:var(--charcoal);font-family:var(--sans);font-size:13px;font-weight:600;cursor:pointer;}
+.fs-chip:hover{border-color:var(--terra);color:var(--terra);}
+.fs-chosen{font-size:13px;font-weight:700;color:var(--terra);}
+.fs-change{background:none;border:none;color:var(--muted);font-family:var(--sans);font-size:12px;text-decoration:underline;cursor:pointer;min-height:32px;padding:0 6px;}
+.fs-rate-label{font-size:12px;color:var(--charcoal);margin:6px 0 2px;}
+.fs-remotes{display:flex;gap:2px;}
+.fs-remote{background:none;border:none;cursor:pointer;min-width:40px;min-height:40px;display:inline-flex;align-items:center;justify-content:center;padding:0;}
+.fs-search-label{font-size:13px;font-weight:600;color:var(--charcoal);margin:18px 0 6px;}
+.fs-search-wrap{position:relative;margin-bottom:18px;}
+.fs-result{display:flex;align-items:center;gap:10px;padding:8px;border-bottom:1px solid var(--border);cursor:pointer;background:var(--cream);}
+.fs-result:hover{background:var(--sand);}
+.fs-skip{display:block;width:100%;min-height:44px;margin-top:8px;background:none;border:none;color:var(--muted);font-family:var(--sans);font-size:13px;cursor:pointer;}
 .onboard-sub{font-family:var(--serif);font-size:15px;color:var(--fig);font-style:italic;margin-bottom:22px;}
 .ob-field{margin-bottom:14px;}
 .ob-label{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:5px;display:block;}
@@ -896,6 +919,24 @@ html.native-cover .status-shield{display:block;position:fixed;top:0;left:0;right
       </div>
       <button class="btn-join" onclick="completeOnboard()">Pull up a chair &rarr;</button>
       <div style="text-align:center;margin-top:12px;font-size:11px;color:var(--muted);line-height:1.5;">By joining ShowUp, you agree to our <a href="/terms.html" target="_blank" style="color:var(--terra);">Terms of Use</a> and <a href="/privacy.html" target="_blank" style="color:var(--terra);">Privacy Policy</a>.<br>All private data is never visible to other users.</div>
+    </div>
+  </div>
+</div>
+
+<!-- FIRST SHOWS: right after the profile form, before Tell Us More (new accounts only) -->
+<div id="screen-firstshows" class="screen">
+  <div class="onboard-wrap">
+    <div class="onboard-card fs-card">
+      <div class="fs-title">Show your friends what you watch</div>
+      <div class="fs-sub">Tap where you are with any show you know. Rate it, even after an episode or two.</div>
+      <div id="fs-list"><div class="empty"><div class="empty-icon">&#8987;</div>Loading shows&hellip;</div></div>
+      <div class="fs-search-label">Don't see yours?</div>
+      <div class="fs-search-wrap">
+        <input type="text" id="fs-search" class="ob-input" placeholder="Search for a show" oninput="fsSearch()" autocomplete="off" />
+        <div id="fs-search-results"></div>
+      </div>
+      <button class="btn-join" id="fs-done-btn" onclick="finishFirstShows()">Done &rarr;</button>
+      <button type="button" class="fs-skip" onclick="finishFirstShows()">Skip for now</button>
     </div>
   </div>
 </div>
@@ -7078,7 +7119,9 @@ onAuthStateChange(function(session) {
     // Don't interrupt mid-onboarding or tell-us-more
     var onboarding = document.getElementById('screen-onboard');
     var tellmore = document.getElementById('screen-tellmore');
+    var firstShows = document.getElementById('screen-firstshows');
     if ((onboarding && onboarding.classList.contains('active')) ||
+        (firstShows && firstShows.classList.contains('active')) ||
         (tellmore && tellmore.classList.contains('active'))) return;
     _bootstrapComplete = true;
     var profile = await fetchProfileById(session.user.id);
@@ -7316,6 +7359,251 @@ window.resetLoginForm = function() {
 // ONBOARDING
 // ============================================================
 
+// ============================================================
+// FIRST SHOWS -- "Show your friends what you watch"
+// ============================================================
+// New accounts, between the profile form and Tell Us More. One list (no
+// pop-ups): the room's shows first (what the inviter and friends are
+// watching), topped up from Hot Right Now, plus a search. Pick where you are
+// with a show, THEN the remotes appear -- rating is wanted at any stage
+// (Watching, Waiting, Didn't finish all get rated). Every tap saves right
+// away, so leaving halfway loses nothing.
+
+var FS_CHOICES = [
+  { key: 'watching', label: 'Watching' },
+  { key: 'binged',   label: 'Binged' },
+  { key: 'want',     label: 'Want to watch' },
+  { key: 'waiting',  label: 'Waiting for new season' },
+  { key: 'dnf',      label: 'Didn’t finish' },
+];
+// Same status/flags the rest of the app writes for each list.
+function _fsDbFields(choice) {
+  var now = new Date().toISOString();
+  switch (choice) {
+    case 'watching': return { status: 'watching', extra: { dnf: false, waiting_for_season: false } };
+    case 'binged':   return { status: 'watched',  extra: { dnf: false, waiting_for_season: false } };
+    case 'waiting':  return { status: 'watchlist', extra: { dnf: false, waiting_for_season: true, waiting_since: now } };
+    case 'dnf':      return { status: 'dnf',      extra: { dnf: true, waiting_for_season: false } };
+    default:         return { status: 'watchlist', extra: { dnf: false, waiting_for_season: false, rating: 0 } };
+  }
+}
+
+var _fsItems = [];
+var _fsMax = 10;
+
+window.openFirstShows = async function(roomId) {
+  _fsItems = [];
+  showScreen('firstshows');
+  window.scrollTo(0, 0);
+  try { _fsItems = await _fsBuildItems(roomId); } catch (e) { console.error('[firstShows] load error:', e); }
+  renderFirstShows();
+};
+
+async function _fsBuildItems(roomId) {
+  var items = [], seen = {};
+  function key(title, tmdbId) { return tmdbId ? 'id' + tmdbId : 't' + String(title || '').toLowerCase().trim(); }
+  function push(s, tag) {
+    if (!s || !s.title || items.length >= _fsMax) return;
+    var k = key(s.title, s.tmdb_id), kt = key(s.title);
+    if (seen[k] || seen[kt]) return;
+    seen[k] = seen[kt] = true;
+    items.push({ title: s.title, tmdb_id: s.tmdb_id || null, poster_path: s.poster_path || null,
+      platform: s.platform || null, media_type: s.media_type || 'tv', tag: tag, choice: null, rating: 0, id: null });
+  }
+  // 1. The room they were invited to: what people there are watching, then
+  // what they've finished and rated well. Up to 6, so Hot Right Now still shows.
+  if (roomId) {
+    try {
+      var r = await sb.rpc('get_living_room_data', { p_room_id: roomId });
+      var b = r.data || {};
+      var me = state.user && state.user.id;
+      var names = {};
+      (b.friends || []).forEach(function(f) { if (f.id !== me) names[f.id] = f.first_name; });
+      var shows = (b.shows || []).filter(function(s) { return names[s.user_id] && !s.dnf; });
+      var watching = shows.filter(function(s) { return s.status === 'watching'; });
+      var loved = shows.filter(function(s) { return s.status === 'watched' && s.rating >= 4; })
+        .sort(function(a, c) { return (c.rating || 0) - (a.rating || 0); });
+      var roomCap = 6;
+      watching.forEach(function(s) { if (items.length < roomCap) push(s, names[s.user_id] + ' is watching'); });
+      loved.forEach(function(s) { if (items.length < roomCap) push(s, names[s.user_id] + ' loved it'); });
+    } catch (e) { console.error('[firstShows] room shows error:', e); }
+  }
+  // 2. Top up from Hot Right Now: ShowUp's current shows, then US trending.
+  try {
+    var hot = await loadFullLineupData();
+    (hot.shows || []).forEach(function(s) { push(s, 'Hot right now on ShowUp'); });
+    (hot.trending || []).forEach(function(s) { push(s, 'Trending now'); });
+  } catch (e) { console.error('[firstShows] hot shows error:', e); }
+  return items;
+}
+
+function renderFirstShows() {
+  var el = document.getElementById('fs-list');
+  if (!el) return;
+  if (!_fsItems.length) {
+    el.innerHTML = '<div class="fs-sub" style="margin:8px 0;">Search below for a show you’re watching or have seen.</div>';
+    return;
+  }
+  el.innerHTML = _fsItems.map(function(it, i) {
+    var poster = it.poster_path
+      ? '<img class="fs-poster" src="' + TMDB_IMG + it.poster_path + '" alt="" />'
+      : '<div class="fs-poster">&#128250;</div>';
+    var body;
+    if (!it.choice) {
+      body = '<div class="fs-chips">' + FS_CHOICES.map(function(c) {
+        return '<button type="button" class="fs-chip" onclick="fsChoose(' + i + ',\'' + c.key + '\')">' + c.label + '</button>';
+      }).join('') + '</div>';
+    } else {
+      var label = FS_CHOICES.filter(function(c) { return c.key === it.choice; })[0].label;
+      body = '<div><span class="fs-chosen">&#10003; ' + label + '</span>'
+        + '<button type="button" class="fs-change" onclick="fsChange(' + i + ')">change</button></div>';
+      if (it.choice !== 'want') {
+        var remotes = '';
+        for (var n = 1; n <= 5; n++) {
+          remotes += '<button type="button" class="fs-remote" aria-label="' + n + ' of 5" onclick="fsRate(' + i + ',' + n + ')">'
+            + '<span style="opacity:' + (n <= it.rating ? '1' : '0.25') + ';display:inline-flex;">' + remoteIcon(24, n <= it.rating) + '</span></button>';
+        }
+        body += '<div class="fs-rate-label">' + (it.choice === 'watching' ? 'Your take so far' : 'Your rating') + '</div>'
+          + '<div class="fs-remotes">' + remotes + '</div>';
+      }
+    }
+    return '<div class="fs-row' + (it.isNew ? ' fs-new' : '') + '">' + poster + '<div class="fs-main">'
+      + '<div class="fs-show-title">' + escAttr(it.title) + '</div>'
+      + '<div class="fs-tag">' + escAttr(it.tag || '') + '</div>' + body + '</div></div>';
+  }).join('');
+}
+
+// Fills in the same TMDB details the normal add flow saves (genre, network,
+// seasons, platform) so these shows look like any other on their lists.
+async function _fsDetails(it) {
+  var d = {};
+  if (!it.tmdb_id) return d;
+  try {
+    var doc = it.media_type === 'documentary';
+    var res = await fetch('https://api.themoviedb.org/3/' + (doc ? 'movie/' : 'tv/') + it.tmdb_id + '?api_key=' + TMDB_KEY + '&language=en-US');
+    var j = await res.json();
+    d.poster_path = it.poster_path || j.poster_path || null;
+    d.overview = j.overview || null;
+    d.vote_average = j.vote_average || null;
+    d.show_status = j.status || null;
+    if (doc) {
+      d.genre = 'Documentary';
+      d.original_network = (j.production_companies && j.production_companies.length) ? j.production_companies[0].name : null;
+      d.first_air_year = j.release_date ? parseInt(j.release_date.slice(0, 4), 10) : null;
+    } else {
+      d.genre = j.genres && j.genres.length ? j.genres[0].name : null;
+      d.original_network = j.networks && j.networks.length ? j.networks[0].name : null;
+      d.number_of_seasons = releasedSeasonCount(j);
+      d.first_air_year = j.first_air_date ? parseInt(j.first_air_date.slice(0, 4), 10) : null;
+    }
+  } catch (e) { console.error('[firstShows] details error:', e); }
+  if (!it.platform) {
+    try { it.platform = await fetchAutoPlatform(it.tmdb_id, it.media_type); } catch (e) {}
+  }
+  return d;
+}
+
+window.fsChoose = async function(i, choice) {
+  var it = _fsItems[i];
+  if (!it || it.busy) return;
+  var prev = it.choice;
+  it.choice = choice;
+  if (choice === 'want') it.rating = 0;
+  renderFirstShows();
+  it.busy = true;
+  var f = _fsDbFields(choice);
+  try {
+    if (!it.id) {
+      var d = await _fsDetails(it);
+      var row = await dbAddShow(Object.assign({ title: it.title, platform: it.platform || null, status: f.status,
+        dnf: choice === 'dnf', tmdb_id: it.tmdb_id, media_type: it.media_type }, d));
+      it.id = row.id;
+      if (choice === 'waiting') await updateShowStatus(it.id, f.status, f.extra);
+      if (it.rating) await updateShowRating(it.id, it.rating); // tapped a remote while this was saving
+    } else {
+      await updateShowStatus(it.id, f.status, f.extra);
+    }
+  } catch (e) {
+    console.error('[firstShows] save error:', e);
+    it.choice = prev;
+    renderFirstShows();
+    showToast('Couldn’t save that — try again.');
+  }
+  it.busy = false;
+};
+
+window.fsChange = function(i) {
+  var it = _fsItems[i];
+  if (!it || it.busy) return;
+  it.choice = null; // the row's next status tap updates the same saved show
+  renderFirstShows();
+};
+
+window.fsRate = async function(i, n) {
+  var it = _fsItems[i];
+  if (!it || !it.choice) return;
+  var prev = it.rating;
+  it.rating = (it.rating === n) ? 0 : n; // tap the same remote again to clear
+  renderFirstShows();
+  if (!it.id) return; // first save still in flight; fsChoose applies it.rating when it lands
+  try { await updateShowRating(it.id, it.rating); }
+  catch (e) { console.error('[firstShows] rate error:', e); it.rating = prev; renderFirstShows(); showToast('Couldn’t save that rating — try again.'); }
+};
+
+var _fsSearchTimer = null, _fsSearchSeq = 0, _fsSearchResults = [];
+window.fsSearch = function() {
+  var q = document.getElementById('fs-search').value.trim();
+  var box = document.getElementById('fs-search-results');
+  if (_fsSearchTimer) clearTimeout(_fsSearchTimer);
+  var mySeq = ++_fsSearchSeq;
+  if (q.length < 2) { box.innerHTML = ''; return; }
+  _fsSearchTimer = setTimeout(async function() {
+    try {
+      var res = await fetch('https://api.themoviedb.org/3/search/tv?query=' + encodeURIComponent(q) + '&api_key=' + TMDB_KEY + '&language=en-US&page=1');
+      var data = await res.json();
+      if (mySeq !== _fsSearchSeq) return; // a newer keystroke superseded this one
+      _fsSearchResults = (data.results || []).filter(function(r) { return r.name; })
+        .sort(function(a, b) { return tmdbMatchScore(b.name, q) - tmdbMatchScore(a.name, q); }).slice(0, 6);
+      box.innerHTML = _fsSearchResults.length ? _fsSearchResults.map(function(r, k) {
+        var img = r.poster_path ? '<img class="tmdb-poster" src="' + TMDB_IMG + r.poster_path + '" alt="" />' : '<div class="tmdb-poster-empty">&#128250;</div>';
+        return '<div class="fs-result" onclick="fsPickSearch(' + k + ')">' + img + '<div><div class="tmdb-result-title">' + escAttr(r.name) + '</div>'
+          + (r.first_air_date ? '<div class="tmdb-result-year">' + r.first_air_date.slice(0, 4) + '</div>' : '') + '</div></div>';
+      }).join('') : '<div style="padding:10px 4px;font-size:13px;color:var(--muted);">No results found</div>';
+    } catch (e) { console.error('[firstShows] search error:', e); }
+  }, 400);
+};
+
+window.fsPickSearch = function(k) {
+  var r = _fsSearchResults[k];
+  if (!r) return;
+  document.getElementById('fs-search').value = '';
+  document.getElementById('fs-search-results').innerHTML = '';
+  var already = _fsItems.findIndex(function(it) { return it.tmdb_id === r.id; });
+  if (already === -1) {
+    _fsItems.unshift({ title: r.name, tmdb_id: r.id, poster_path: r.poster_path || null, platform: null,
+      media_type: 'tv', tag: 'Your pick', choice: null, rating: 0, id: null, isNew: true });
+  } else {
+    showToast('It’s already in the list above.');
+  }
+  renderFirstShows();
+  document.getElementById('fs-list').scrollIntoView({ behavior: 'smooth', block: 'start' });
+};
+
+// Done or Skip: load what they saved into their lists, then Tell Us More.
+window.finishFirstShows = async function() {
+  var btn = document.getElementById('fs-done-btn');
+  if (btn) { btn.disabled = true; btn.textContent = 'Saving…'; }
+  try {
+    var shows = await loadShows();
+    state.watching = shows.filter(function(s) { return s.status === 'watching'; }).map(normalizeShow);
+    state.watchlist = shows.filter(function(s) { return s.status === 'watchlist'; }).map(normalizeShow);
+    state.watched = shows.filter(function(s) { return s.status === 'watched' || s.status === 'dnf'; }).map(normalizeShow);
+  } catch (e) { console.error('[firstShows] reload error:', e); }
+  if (btn) { btn.disabled = false; btn.innerHTML = 'Done &rarr;'; }
+  showScreen('tellmore');
+  window.scrollTo(0, 0);
+};
+
 window.completeOnboard = async function() {
   var first = capFirst(document.getElementById('ob-first').value.trim());
   var last  = document.getElementById('ob-last').value.trim().slice(0, 1).toUpperCase();
@@ -7349,7 +7637,7 @@ window.completeOnboard = async function() {
       PENDING_ROOM_ID = null;
     }
     _firstTimeTellMore = true;
-    showScreen('tellmore');
+    openFirstShows(_inviteLandingRoomId); // -> Tell Us More when they tap Done/Skip
   } catch(e) {
     console.error('Onboard error:', e);
     if (btn) { btn.disabled = false; btn.textContent = 'Pull up a chair \u2192'; }
