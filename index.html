@@ -6420,7 +6420,10 @@ init();
 // Loaded after Supabase CDN script
 // ============================================================
 
-const SUPABASE_URL = 'https://sgnulweruogjfdddwboe.supabase.co';
+// Custom domain (2026-10-22) so Google's sign-in screen says auth.showuproom.com
+// instead of the raw project address. The old sgnulweruogjfdddwboe.supabase.co
+// still works (api/*.js still use it).
+const SUPABASE_URL = 'https://auth.showuproom.com';
 // Canonical public origin for share/invite links (custom domain as of 2026-09).
 var APP_ORIGIN = 'https://showuproom.com';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNnbnVsd2VydW9namZkZGR3Ym9lIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkxMzQ0MzMsImV4cCI6MjA5NDcxMDQzM30.bL28eAEx24TjpE8msSmoZHUQOWU5Yj6EfHpMv8V5VrM';
@@ -6472,6 +6475,10 @@ const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
     autoRefreshToken: true,
     detectSessionInUrl: false,
     flowType: 'pkce',
+    // Pinned to the key the old project address produced. supabase-js names it
+    // after the URL's first label, so without this the domain switch would have
+    // made every device forget its login ("sb-auth-auth-token").
+    storageKey: 'sb-sgnulweruogjfdddwboe-auth-token',
     lock: async function(name, acquireTimeout, fn) { return await fn(); }, // bypass navigator.locks
   }
 });
