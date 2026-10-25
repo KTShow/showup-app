@@ -10329,19 +10329,36 @@ window.openInviteModal = function(roomId) {
   document.getElementById('invite-share-btn').style.display = canShare ? 'block' : 'none';
   // On phones the share menu covers copying, so Copy only shows on computers.
   document.getElementById('invite-msg-btn').style.display = isPhone ? 'none' : 'block';
+  setInviteMode('new');
   document.getElementById('invite-modal').classList.add('active');
+};
+
+// New people get the beta/setup message; people already on ShowUp just get
+// the short "I'm adding you to my room" one. Same link either way.
+var _inviteMode = 'new';
+window.setInviteMode = function(mode) {
+  _inviteMode = mode;
+  document.getElementById('invite-mode-new').classList.toggle('selected', mode === 'new');
+  document.getElementById('invite-mode-existing').classList.toggle('selected', mode === 'existing');
 };
 
 window.closeInviteModal = function() { document.getElementById('invite-modal').classList.remove('active'); };
 
-// Tracey's wording (2026-10-21). Names the room instead of "his/her living
-// room" -- the app would have to guess the pronoun from the gender field.
+// Tracey's wording (2026-10-25), one version for new people and one for
+// people already on ShowUp. Written in the sender's voice ("my Family living
+// room"), signed with first name + last initial.
 function inviteMessageText() {
   var u = state.user;
-  var inviterName = u && u.first ? u.first : 'A friend';
-  var roomName = _inviteRoom.name || state.currentRoomName || 'their Living Room';
-  return inviterName + ' is inviting you to join ' + inviteRoomPhrase(roomName).replace(/^your /, 'the ')
-    + ' in the app, ShowUp. ShowUp takes the dinner table conversation of "what are you watching" into a social TV discovery app. I think you\'ll love it. Follow the link and instructions.';
+  var name = u && u.first ? u.first + (u.last ? ' ' + u.last.charAt(0).toUpperCase() : '') : '';
+  var hi = name ? 'Hi, it\'s ' + name + '! ' : 'Hi! ';
+  var roomName = _inviteRoom.name || state.currentRoomName || 'Living Room';
+  var room = inviteRoomPhrase(roomName).replace(/^your /, 'my ');
+  if (_inviteMode === 'existing') {
+    return hi + 'I\'m adding you to ' + room + ' on ShowUp. Tap the link and it\'ll show up in your app alongside your other rooms. See you in there!';
+  }
+  return hi + 'A friend of mine is building a new app called ShowUp, and it\'s in beta testing right now. I love it, and I\'d like you to join ' + room + '. '
+    + 'ShowUp takes the dinner-table conversation of "what are you watching?" and turns it into a social TV discovery app. '
+    + 'Tap the link and follow the steps. You\'ll add ShowUp to your home screen and turn on notifications so you don\'t miss anything. We can\'t wait to hear what you think!';
 }
 
 // "your Family living room", but not "your The Living Room living room".
@@ -10862,6 +10879,10 @@ bootstrap();
   <div class="invite-modal">
     <div class="invite-modal-title" id="invite-modal-title">Invite to your Living Room</div>
     <div class="invite-modal-sub" id="invite-modal-sub">Share your link and get your friends on the couch.</div>
+    <div style="display:flex;gap:8px;margin-bottom:16px;">
+      <button class="pill-btn selected" id="invite-mode-new" onclick="setInviteMode('new')" style="flex:1;">New to ShowUp</button>
+      <button class="pill-btn" id="invite-mode-existing" onclick="setInviteMode('existing')" style="flex:1;">Already on ShowUp</button>
+    </div>
     <div class="invite-modal-link" id="invite-modal-link" style="display:none;">https://showuproom.com/join/tracey-m-x7k2</div>
     <button class="btn-invite-copy" id="invite-text-btn" onclick="textInviteMessage()" style="display:none;width:100%;margin-bottom:10px;">Text Invite</button>
     <button class="btn-invite-close" id="invite-share-btn" onclick="shareInviteMessage()" style="display:none;width:100%;margin-bottom:10px;">Other</button>
