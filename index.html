@@ -3987,7 +3987,6 @@ function renderRoomPicker() {
       + '<div class="rcb-people">' + (people ? 'With ' + people : (r.member_count + ' member' + (r.member_count === 1 ? '' : 's'))) + '</div>'
       + '<div class="rcb-new' + (n ? ' has-new' : '') + '">' + (n ? '&#128172; ' + n + ' new comment' + (n === 1 ? '' : 's') : 'See what your crowd is watching') + '</div>'
       + '<div class="rcb-cta" style="background:' + theme.color + ';">Enter your Living Room &rsaquo;</div>'
-      + '<button type="button" class="rcb-invite" onclick="event.stopPropagation();openInviteModal(\'' + r.id + '\')">Invite a Friend</button>'
       + '</div>' + createTile;
     return;
   }
@@ -3999,7 +3998,7 @@ function renderRoomPicker() {
     // Names ("You, George +2") rather than a member count; falls back to the
     // count until the background room load has landed.
     var people = _roomPeopleLine(r.id, 2) || (r.member_count+' member'+(r.member_count===1?'':'s'));
-    return '<div class="room-tile" onclick="enterLivingRoom(\''+r.id+'\')" style="border-left:4px solid '+theme.color+';"><div class="room-tile-name">'+escAttr(r.name)+pill+'</div><div class="room-tile-meta">'+people+'</div><button type="button" class="room-tile-invite" onclick="event.stopPropagation();openInviteModal(\''+r.id+'\')">Invite a Friend</button></div>';
+    return '<div class="room-tile" onclick="enterLivingRoom(\''+r.id+'\')" style="border-left:4px solid '+theme.color+';"><div class="room-tile-name">'+escAttr(r.name)+pill+'</div><div class="room-tile-meta">'+people+'</div></div>';
   }).join('');
   grid.innerHTML = tiles + createTile;
 }
@@ -4109,6 +4108,9 @@ window.enterLivingRoom = async function(roomId, roomName, isOwner, isAdminView, 
   hideLivingRoomTopPanels();
   document.getElementById('friends-view').style.display = 'block';
   document.getElementById('friend-detail-view').style.display = 'none';
+  // Open at the top (header + Invite a Friend), not wherever the room list
+  // was scrolled to. Jumps to a specific show scroll again after this.
+  window.scrollTo(0, 0);
   var nameEl = document.getElementById('current-room-name');
   if (nameEl) nameEl.textContent = roomName + (isAdminView ? ' 👁️ Admin View' : '');
   var renameBtn = document.getElementById('rename-room-btn');
@@ -10357,7 +10359,7 @@ function inviteMessageText() {
     return hi + 'I\'m adding you to ' + room + ' on ShowUp. Tap the link and you\'ll find it in your app alongside your other rooms. See you in there!';
   }
   return hi + 'A friend of mine is building a new app called ShowUp, and it\'s in beta testing right now. I love it, and I\'d like you to join ' + room + '. '
-    + 'ShowUp takes the dinner-table conversation of "what are you watching?" and turns it into a social TV discovery app. '
+    + 'ShowUp takes the dinner-table conversation of "what are you watching?" and turns it into a place to share what we\'re all watching and get recommendations from people whose taste you actually trust. '
     + 'Tap the link and follow the steps. You\'ll add ShowUp to your home screen and turn on notifications so you don\'t miss anything. We can\'t wait to hear what you think!';
 }
 
