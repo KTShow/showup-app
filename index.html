@@ -1399,7 +1399,7 @@ html.native-cover .status-shield{display:block;position:fixed;top:0;left:0;right
         </div>
         <div class="settings-row" style="cursor:default;">
           <span class="settings-row-icon">&#127916;</span>
-          <span class="settings-row-label">Daily show question<span class="settings-row-sub">Once a day, a quick rate-or-add for 1&ndash;2 shows (this device)</span></span>
+          <span class="settings-row-label" onclick="showToast('Daily show question: ' + _dpWhy)" style="cursor:pointer;">Daily show question<span class="settings-row-sub">Once a day, a quick rate-or-add for 1&ndash;2 shows (this device)</span></span>
           <button type="button" class="switch" id="pref-daily-prompt" role="switch" aria-checked="true" aria-label="Daily show question" onclick="toggleDailyPrompt()"></button>
         </div>
       </div>
@@ -7699,19 +7699,25 @@ function _dpShowKey(title, tmdbId) {
   return tmdbId ? 'id' + tmdbId : 't' + String(title || '').toLowerCase().trim();
 }
 
+// Why it last did or didn't show -- tap "Daily show question" in Settings.
+var _dpWhy = 'hasn’t checked yet';
+function _dpNo(why) { _dpWhy = why; return false; }
+
 function _dpIsDue() {
   var u = state.user;
-  if (!u) return false;
+  if (!u) return _dpNo('not signed in yet');
   var p = _dpPrefs();
-  if (p.off || p.last === _dpToday()) return false;
-  if (p.pauseUntil && Date.now() < p.pauseUntil) return false;
+  if (p.off) return _dpNo('turned off on this device');
+  if (p.last === _dpToday()) return _dpNo('already shown today on this device');
+  if (p.pauseUntil && Date.now() < p.pauseUntil) return _dpNo('resting after 3 Not nows, until ' + new Date(p.pauseUntil).toLocaleDateString());
   var joined = u.createdAt ? new Date(u.createdAt).getTime() : 0;
-  if (joined ? Date.now() - joined < 20 * 3600 * 1000 : (u.sessionCount || 0) < 2) return false;
+  if (joined ? Date.now() - joined < 20 * 3600 * 1000 : (u.sessionCount || 0) < 2) return _dpNo('first day on ShowUp');
   // Already added a show today? No nudge needed.
   var today = _dpToday();
-  return !['watching', 'watchlist', 'watched'].some(function(lk) {
+  var added = ['watching', 'watchlist', 'watched'].some(function(lk) {
     return (state[lk] || []).some(function(s) { return s.addedAt && new Date(s.addedAt).toDateString() === today; });
   });
+  return added ? _dpNo('you already added a show today') : true;
 }
 
 // Something on their own lists with no rating yet. Watching first: "how is
@@ -7792,17 +7798,21 @@ var _dpChecking = false;
 async function maybeShowDailyPrompt() {
   if (_dpChecking || !_dpIsDue()) return;
   _dpChecking = true;
-  try { await _dpCheckAndOpen(); } finally { _dpChecking = false; }
+  try { await _dpCheckAndOpen(); }
+  catch (e) { _dpWhy = 'error: ' + (e && e.message); console.error('[dailyPrompt]', e); }
+  finally { _dpChecking = false; }
 }
 async function _dpCheckAndOpen() {
-  if (_inviteLandingRoomId || /[?&]notif=/.test(location.search)) return; // they came here for something else
+  if (_inviteLandingRoomId || /[?&]notif=/.test(location.search)) { _dpWhy = 'opened from an invite or alert'; return; }
   try { await loadAllRoomsSearchData(); } catch (e) {}
   try { await state.friendsPreload; } catch (e) {}
   var nope = _dpPrefs().nope || {};
   var items = [_dpPickOwn(nope, _dpPrefs().later || {}), _dpPickFriend(nope)].filter(Boolean);
-  if (!items.length) return;
+  if (!items.length) { _dpWhy = 'no shows to ask about'; return; }
   var app = document.getElementById('screen-app');
-  if (!app || !app.classList.contains('active') || _bttOverlayOpen()) return;
+  if (!app || !app.classList.contains('active')) { _dpWhy = 'you were on another screen'; return; }
+  if (_bttOverlayOpen()) { _dpWhy = 'another window was open'; return; }
+  _dpWhy = 'shown today';
   var p = _dpPrefs();
   p.last = _dpToday();
   _dpSave(p);
