@@ -7486,9 +7486,10 @@ function renderFirstShows() {
 // picked. Shared by First Shows (ns 'fs') and the daily popup (ns 'dp');
 // ns picks which onclick handlers the buttons call.
 function _showPickRowHTML(it, i, ns) {
+  var tap = it.tmdb_id ? ' onclick="' + ns + 'Details(' + i + ')" style="cursor:pointer;"' : '';
   var poster = it.poster_path
-    ? '<img class="fs-poster" src="' + TMDB_IMG + it.poster_path + '" alt="" />'
-    : '<div class="fs-poster">&#128250;</div>';
+    ? '<img class="fs-poster" src="' + TMDB_IMG + it.poster_path + '" alt=""' + tap + ' />'
+    : '<div class="fs-poster"' + tap + '>&#128250;</div>';
   var body;
   if (!it.choice) {
     body = '<div class="fs-chips">' + FS_CHOICES.map(function(c) {
@@ -7509,7 +7510,7 @@ function _showPickRowHTML(it, i, ns) {
     }
   }
   return '<div class="fs-row' + (it.isNew ? ' fs-new' : '') + '">' + poster + '<div class="fs-main">'
-    + '<div class="fs-show-title">' + escAttr(it.title) + '</div>'
+    + '<div class="fs-show-title"' + tap + '>' + escAttr(it.title) + '</div>'
     + '<div class="fs-tag">' + escAttr(it.tag || '') + '</div>'
     + (it.note ? '<div class="dp-note">&#8220;' + escAttr(it.note) + '&#8221;</div>' : '')
     + body
@@ -7547,6 +7548,7 @@ async function _fsDetails(it) {
   return d;
 }
 
+window.fsDetails = function(i) { var it = _fsItems[i]; if (it) openShowDetails(it.tmdb_id, null, { noAdd: true }); };
 window.fsChoose = function(i, choice) { return _showPickChoose(_fsItems, i, choice, renderFirstShows); };
 window.fsChange = function(i) { _showPickChange(_fsItems, i, renderFirstShows); };
 window.fsRate = function(i, n) { return _showPickRate(_fsItems, i, n, renderFirstShows); };
@@ -7667,7 +7669,9 @@ window.finishFirstShows = async function() {
 // your lists that you haven't rated yet, and one friends in your rooms are
 // watching or loved. Same status-then-remotes rows as First Shows. Not on
 // someone's first day (they just did First Shows). Three "Not now"s in a
-// row and it rests for 3 days. Its memory is per device (localStorage).
+// row and it rests for 3 days. "Haven't started yet" on one of your own
+// shows asks again in 2 weeks; "Not for me" on a friend's show is for good.
+// Its memory is per device (localStorage).
 
 var DP_KEY = 'showup_daily_prompt';
 var _dpItems = [];
@@ -7701,7 +7705,7 @@ function _dpIsDue() {
 
 // Something on their own lists with no rating yet. Watching first: "how is
 // it so far?" is the easiest rating to get.
-function _dpPickOwn(nope) {
+function _dpPickOwn(nope, later) {
   var pools = [
     { list: state.watching, choice: 'watching', tag: 'You’re watching this. How is it so far?' },
     { list: (state.watchlist || []).filter(function(s) { return s.waitingForSeason; }), choice: 'waiting', tag: 'You’re waiting for the next season. How was the last one?' },
@@ -7709,12 +7713,15 @@ function _dpPickOwn(nope) {
     { list: (state.watched || []).filter(function(s) { return !s.dnf; }), choice: 'binged', tag: 'You finished this one. How was it?' },
   ];
   for (var k = 0; k < pools.length; k++) {
-    var c = (pools[k].list || []).filter(function(s) { return !s.rating && !nope[_dpShowKey(s.title, s.tmdb_id)]; });
+    var c = (pools[k].list || []).filter(function(s) {
+      var k2 = _dpShowKey(s.title, s.tmdb_id);
+      return !s.rating && !nope[k2] && !(later[k2] && Date.now() < later[k2]);
+    });
     if (!c.length) continue;
     var s = c[Math.floor(Math.random() * c.length)];
     return { title: s.title, tmdb_id: s.tmdb_id, poster_path: s.poster_path, platform: s.platform || null,
       media_type: s.media_type || 'tv', tag: pools[k].tag, choice: pools[k].choice, rating: 0, id: s.id,
-      nopeLabel: 'Skip this one' };
+      nopeLabel: pools[k].choice === 'watching' ? 'Haven’t started yet' : 'Ask me later', later: true };
   }
   return null;
 }
@@ -7762,8 +7769,12 @@ function _dpPickFriend(nope) {
       return !!r;
     });
   });
+  var friendRatings = e.loved.concat(e.watching).map(function(p) {
+    var mineOf = (p.shows || []).find(function(x) { return x.title === s.title; });
+    return { name: p.first_name, rating: mineOf ? mineOf.rating : 0 };
+  });
   return { title: s.title, tmdb_id: s.tmdb_id || null, poster_path: s.poster_path || null, platform: s.platform || null,
-    media_type: s.media_type || 'tv', tag: tag, note: note, choice: null, rating: 0, id: null, nopeLabel: 'Not for me' };
+    media_type: s.media_type || 'tv', tag: tag, note: note, friendRatings: friendRatings, choice: null, rating: 0, id: null, nopeLabel: 'Not for me' };
 }
 
 async function maybeShowDailyPrompt() {
@@ -7772,7 +7783,7 @@ async function maybeShowDailyPrompt() {
   try { await loadAllRoomsSearchData(); } catch (e) {}
   try { await state.friendsPreload; } catch (e) {}
   var nope = _dpPrefs().nope || {};
-  var items = [_dpPickOwn(nope), _dpPickFriend(nope)].filter(Boolean);
+  var items = [_dpPickOwn(nope, _dpPrefs().later || {}), _dpPickFriend(nope)].filter(Boolean);
   if (!items.length) return;
   var app = document.getElementById('screen-app');
   if (!app || !app.classList.contains('active') || _bttOverlayOpen()) return;
@@ -7800,6 +7811,7 @@ function _dpTouched() {
   _dpSave(p);
 }
 
+window.dpDetails = function(i) { var it = _dpItems[i]; if (it) openShowDetails(it.tmdb_id, it.friendRatings, { noAdd: true }); };
 window.dpChoose = function(i, choice) { _dpTouched(); return _showPickChoose(_dpItems, i, choice, renderDailyPrompt); };
 window.dpChange = function(i) { _showPickChange(_dpItems, i, renderDailyPrompt); };
 window.dpRate = function(i, n) { _dpTouched(); return _showPickRate(_dpItems, i, n, renderDailyPrompt); };
@@ -7807,8 +7819,9 @@ window.dpNope = function(i) {
   var it = _dpItems[i];
   if (!it) return;
   var p = _dpPrefs();
-  p.nope = p.nope || {};
-  p.nope[_dpShowKey(it.title, it.tmdb_id)] = true;
+  var k = _dpShowKey(it.title, it.tmdb_id);
+  if (it.later) { p.later = p.later || {}; p.later[k] = Date.now() + 14 * 86400 * 1000; } // ask again in 2 weeks
+  else { p.nope = p.nope || {}; p.nope[k] = true; }
   _dpSave(p);
   _dpItems.splice(i, 1);
   _dpTouched();
@@ -9889,7 +9902,7 @@ var TMDB_CAST_IMG = 'https://image.tmdb.org/t/p/w185';
 
 var _currentShowDetails = null;
 
-window.openShowDetails = async function(tmdbId, friendRatings) {
+window.openShowDetails = async function(tmdbId, friendRatings, opts) {
   if (!tmdbId) return;
   var overlay = document.getElementById('sd-overlay');
   var body = document.getElementById('sd-body');
@@ -9965,7 +9978,7 @@ window.openShowDetails = async function(tmdbId, friendRatings) {
       number_of_seasons: isDocFilm ? null : releasedSeasonCount(d), show_status: d.status || null,
       overview: d.overview || null, vote_average: d.vote_average || null,
     };
-    if (addBtn && _currentShowDetails.title) addBtn.style.display = 'block';
+    if (addBtn && _currentShowDetails.title && !(opts && opts.noAdd)) addBtn.style.display = 'block';
   } catch(e) {
     console.error('TMDB details error:', e);
     body.innerHTML = '<div style="padding:30px 0;color:var(--muted);font-size:14px;">Couldn\'t load show details.</div>';
