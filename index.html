@@ -427,6 +427,9 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
 .fs-search-wrap{position:relative;margin-bottom:18px;}
 .fs-result{display:flex;align-items:center;gap:10px;padding:8px;border-bottom:1px solid var(--border);cursor:pointer;background:var(--cream);}
 .fs-result:hover{background:var(--sand);}
+.invite-modal-overlay.daily-sheet-overlay{align-items:flex-end;padding:0;}
+.daily-sheet{background:var(--cream);border-radius:20px 20px 0 0;width:100%;max-width:520px;max-height:75vh;overflow-y:auto;padding:22px 20px calc(16px + env(safe-area-inset-bottom));box-shadow:0 -6px 30px rgba(0,0,0,0.18);}
+.dp-note{font-size:13px;font-style:italic;color:var(--charcoal);margin:-4px 0 8px;line-height:1.4;}
 .fs-skip{display:block;width:100%;min-height:44px;margin-top:8px;background:none;border:none;color:var(--muted);font-family:var(--sans);font-size:13px;cursor:pointer;}
 .onboard-sub{font-family:var(--serif);font-size:15px;color:var(--fig);font-style:italic;margin-bottom:22px;}
 .ob-field{margin-bottom:14px;}
@@ -1388,6 +1391,11 @@ html.native-cover .status-shield{display:block;position:fixed;top:0;left:0;right
           <span class="settings-row-icon">&#9993;&#65039;</span>
           <span class="settings-row-label">Weekly email recap<span class="settings-row-sub">A Sunday email of comments you missed &mdash; sent only if phone alerts are off</span></span>
           <button type="button" class="switch" id="pref-email-digest" role="switch" aria-checked="true" aria-label="Weekly email recap" onclick="toggleNotifPref('email_digest')"></button>
+        </div>
+        <div class="settings-row" style="cursor:default;">
+          <span class="settings-row-icon">&#127916;</span>
+          <span class="settings-row-label">Daily show question<span class="settings-row-sub">Once a day, a quick rate-or-add for 1&ndash;2 shows (this device)</span></span>
+          <button type="button" class="switch" id="pref-daily-prompt" role="switch" aria-checked="true" aria-label="Daily show question" onclick="toggleDailyPrompt()"></button>
         </div>
       </div>
       <div style="font-size:11px;color:var(--muted);margin-top:6px;padding-left:4px;">New seasons also show in the &#128276; inside ShowUp; comments show in your Living Room.</div>
@@ -6994,6 +7002,7 @@ async function loadUserIntoState(profile) {
     watchFreq: profile.watch_freq || '',
     discovery: profile.discovery || [],
     sessionCount: profile.session_count || 0,
+    createdAt: profile.created_at || null,
     conversationsLastSeenAt: profile.conversations_last_seen_at || null,
     isAdmin: profile.is_admin || false,
   };
@@ -7055,6 +7064,8 @@ async function loadUserIntoState(profile) {
   openInviteLandingRoom(); // fire-and-forget; no-op unless they came in on a room invite link
   state.friendsPreload = preloadFriendsInBackground(); // fire-and-forget, see function comment
   initPushAlerts(); // fire-and-forget: alerts card, device re-subscribe, ?notif= deep link
+  renderDailyPromptPref();
+  setTimeout(maybeShowDailyPrompt, 2500); // once a day, after the room has settled
 }
 
 // ============================================================
@@ -7468,33 +7479,42 @@ function renderFirstShows() {
     el.innerHTML = '<div class="fs-sub" style="margin:8px 0;">Search below for a show you’re watching or have seen.</div>';
     return;
   }
-  el.innerHTML = _fsItems.map(function(it, i) {
-    var poster = it.poster_path
-      ? '<img class="fs-poster" src="' + TMDB_IMG + it.poster_path + '" alt="" />'
-      : '<div class="fs-poster">&#128250;</div>';
-    var body;
-    if (!it.choice) {
-      body = '<div class="fs-chips">' + FS_CHOICES.map(function(c) {
-        return '<button type="button" class="fs-chip" onclick="fsChoose(' + i + ',\'' + c.key + '\')">' + c.label + '</button>';
-      }).join('') + '</div>';
-    } else {
-      var label = FS_CHOICES.filter(function(c) { return c.key === it.choice; })[0].label;
-      body = '<div><span class="fs-chosen">&#10003; ' + label + '</span>'
-        + '<button type="button" class="fs-change" onclick="fsChange(' + i + ')">change</button></div>';
-      if (it.choice !== 'want') {
-        var remotes = '';
-        for (var n = 1; n <= 5; n++) {
-          remotes += '<button type="button" class="fs-remote" aria-label="' + n + ' of 5" onclick="fsRate(' + i + ',' + n + ')">'
-            + '<span style="opacity:' + (n <= it.rating ? '1' : '0.25') + ';display:inline-flex;">' + remoteIcon(24, n <= it.rating) + '</span></button>';
-        }
-        body += '<div class="fs-rate-label">' + (it.choice === 'watching' ? 'Your take so far' : 'Your rating') + '</div>'
-          + '<div class="fs-remotes">' + remotes + '</div>';
+  el.innerHTML = _fsItems.map(function(it, i) { return _showPickRowHTML(it, i, 'fs'); }).join('');
+}
+
+// One show row: poster, status chips, then the remotes once a status is
+// picked. Shared by First Shows (ns 'fs') and the daily popup (ns 'dp');
+// ns picks which onclick handlers the buttons call.
+function _showPickRowHTML(it, i, ns) {
+  var poster = it.poster_path
+    ? '<img class="fs-poster" src="' + TMDB_IMG + it.poster_path + '" alt="" />'
+    : '<div class="fs-poster">&#128250;</div>';
+  var body;
+  if (!it.choice) {
+    body = '<div class="fs-chips">' + FS_CHOICES.map(function(c) {
+      return '<button type="button" class="fs-chip" onclick="' + ns + 'Choose(' + i + ',\'' + c.key + '\')">' + c.label + '</button>';
+    }).join('') + '</div>';
+  } else {
+    var label = FS_CHOICES.filter(function(c) { return c.key === it.choice; })[0].label;
+    body = '<div><span class="fs-chosen">&#10003; ' + label + '</span>'
+      + '<button type="button" class="fs-change" onclick="' + ns + 'Change(' + i + ')">change</button></div>';
+    if (it.choice !== 'want') {
+      var remotes = '';
+      for (var n = 1; n <= 5; n++) {
+        remotes += '<button type="button" class="fs-remote" aria-label="' + n + ' of 5" onclick="' + ns + 'Rate(' + i + ',' + n + ')">'
+          + '<span style="opacity:' + (n <= it.rating ? '1' : '0.25') + ';display:inline-flex;">' + remoteIcon(24, n <= it.rating) + '</span></button>';
       }
+      body += '<div class="fs-rate-label">' + (it.choice === 'watching' ? 'Your take so far' : 'Your rating') + '</div>'
+        + '<div class="fs-remotes">' + remotes + '</div>';
     }
-    return '<div class="fs-row' + (it.isNew ? ' fs-new' : '') + '">' + poster + '<div class="fs-main">'
-      + '<div class="fs-show-title">' + escAttr(it.title) + '</div>'
-      + '<div class="fs-tag">' + escAttr(it.tag || '') + '</div>' + body + '</div></div>';
-  }).join('');
+  }
+  return '<div class="fs-row' + (it.isNew ? ' fs-new' : '') + '">' + poster + '<div class="fs-main">'
+    + '<div class="fs-show-title">' + escAttr(it.title) + '</div>'
+    + '<div class="fs-tag">' + escAttr(it.tag || '') + '</div>'
+    + (it.note ? '<div class="dp-note">&#8220;' + escAttr(it.note) + '&#8221;</div>' : '')
+    + body
+    + (it.nopeLabel ? '<button type="button" class="fs-change" onclick="' + ns + 'Nope(' + i + ')">' + it.nopeLabel + '</button>' : '')
+    + '</div></div>';
 }
 
 // Fills in the same TMDB details the normal add flow saves (genre, network,
@@ -7527,13 +7547,17 @@ async function _fsDetails(it) {
   return d;
 }
 
-window.fsChoose = async function(i, choice) {
-  var it = _fsItems[i];
+window.fsChoose = function(i, choice) { return _showPickChoose(_fsItems, i, choice, renderFirstShows); };
+window.fsChange = function(i) { _showPickChange(_fsItems, i, renderFirstShows); };
+window.fsRate = function(i, n) { return _showPickRate(_fsItems, i, n, renderFirstShows); };
+
+async function _showPickChoose(items, i, choice, rerender) {
+  var it = items[i];
   if (!it || it.busy) return;
   var prev = it.choice;
   it.choice = choice;
   if (choice === 'want') it.rating = 0;
-  renderFirstShows();
+  rerender();
   it.busy = true;
   var f = _fsDbFields(choice);
   try {
@@ -7550,29 +7574,29 @@ window.fsChoose = async function(i, choice) {
   } catch (e) {
     console.error('[firstShows] save error:', e);
     it.choice = prev;
-    renderFirstShows();
+    rerender();
     showToast('Couldn’t save that — try again.');
   }
   it.busy = false;
-};
+}
 
-window.fsChange = function(i) {
-  var it = _fsItems[i];
+function _showPickChange(items, i, rerender) {
+  var it = items[i];
   if (!it || it.busy) return;
   it.choice = null; // the row's next status tap updates the same saved show
-  renderFirstShows();
-};
+  rerender();
+}
 
-window.fsRate = async function(i, n) {
-  var it = _fsItems[i];
+async function _showPickRate(items, i, n, rerender) {
+  var it = items[i];
   if (!it || !it.choice) return;
   var prev = it.rating;
   it.rating = (it.rating === n) ? 0 : n; // tap the same remote again to clear
-  renderFirstShows();
-  if (!it.id) return; // first save still in flight; fsChoose applies it.rating when it lands
+  rerender();
+  if (!it.id) return; // first save still in flight; _showPickChoose applies it.rating when it lands
   try { await updateShowRating(it.id, it.rating); }
-  catch (e) { console.error('[firstShows] rate error:', e); it.rating = prev; renderFirstShows(); showToast('Couldn’t save that rating — try again.'); }
-};
+  catch (e) { console.error('[firstShows] rate error:', e); it.rating = prev; rerender(); showToast('Couldn’t save that rating — try again.'); }
+}
 
 // Search is optional and stays closed: after the easy taps, an open search box
 // read as homework.
@@ -7634,6 +7658,192 @@ window.finishFirstShows = async function() {
   if (btn) { btn.disabled = false; btn.innerHTML = 'Done &rarr;'; }
   showScreen('tellmore');
   window.scrollTo(0, 0);
+};
+
+// ============================================================
+// DAILY SHOW POPUP
+// ============================================================
+// Once a day at most, a half-screen sheet with 1-2 shows: one already on
+// your lists that you haven't rated yet, and one friends in your rooms are
+// watching or loved. Same status-then-remotes rows as First Shows. Not on
+// someone's first day (they just did First Shows). Three "Not now"s in a
+// row and it rests for 3 days. Its memory is per device (localStorage).
+
+var DP_KEY = 'showup_daily_prompt';
+var _dpItems = [];
+var _dpEngaged = false;
+
+function _dpPrefs() {
+  try { return JSON.parse(localStorage.getItem(DP_KEY)) || {}; } catch (e) { return {}; }
+}
+function _dpSave(p) {
+  try { localStorage.setItem(DP_KEY, JSON.stringify(p)); } catch (e) {}
+}
+function _dpToday() { return new Date().toDateString(); }
+function _dpShowKey(title, tmdbId) {
+  return tmdbId ? 'id' + tmdbId : 't' + String(title || '').toLowerCase().trim();
+}
+
+function _dpIsDue() {
+  var u = state.user;
+  if (!u) return false;
+  var p = _dpPrefs();
+  if (p.off || p.last === _dpToday()) return false;
+  if (p.pauseUntil && Date.now() < p.pauseUntil) return false;
+  var joined = u.createdAt ? new Date(u.createdAt).getTime() : 0;
+  if (joined ? Date.now() - joined < 20 * 3600 * 1000 : (u.sessionCount || 0) < 2) return false;
+  // Already added a show today? No nudge needed.
+  var today = _dpToday();
+  return !['watching', 'watchlist', 'watched'].some(function(lk) {
+    return (state[lk] || []).some(function(s) { return s.addedAt && new Date(s.addedAt).toDateString() === today; });
+  });
+}
+
+// Something on their own lists with no rating yet. Watching first: "how is
+// it so far?" is the easiest rating to get.
+function _dpPickOwn(nope) {
+  var pools = [
+    { list: state.watching, choice: 'watching', tag: 'You’re watching this. How is it so far?' },
+    { list: (state.watchlist || []).filter(function(s) { return s.waitingForSeason; }), choice: 'waiting', tag: 'You’re waiting for the next season. How was the last one?' },
+    { list: (state.watched || []).filter(function(s) { return s.dnf; }), choice: 'dnf', tag: 'You didn’t finish this one. How was it?' },
+    { list: (state.watched || []).filter(function(s) { return !s.dnf; }), choice: 'binged', tag: 'You finished this one. How was it?' },
+  ];
+  for (var k = 0; k < pools.length; k++) {
+    var c = (pools[k].list || []).filter(function(s) { return !s.rating && !nope[_dpShowKey(s.title, s.tmdb_id)]; });
+    if (!c.length) continue;
+    var s = c[Math.floor(Math.random() * c.length)];
+    return { title: s.title, tmdb_id: s.tmdb_id, poster_path: s.poster_path, platform: s.platform || null,
+      media_type: s.media_type || 'tv', tag: pools[k].tag, choice: pools[k].choice, rating: 0, id: s.id,
+      nopeLabel: 'Skip this one' };
+  }
+  return null;
+}
+
+// A show friends in any of your rooms are watching or loved, that isn't on
+// your lists. Names them, plus a friend's own comment on it when the room
+// data loaded in the background has one.
+function _dpPickFriend(nope) {
+  var mine = {};
+  ['watching', 'watchlist', 'watched'].forEach(function(lk) {
+    (state[lk] || []).forEach(function(s) { mine[_dpShowKey(s.title, s.tmdb_id)] = mine[_dpShowKey(s.title)] = true; });
+  });
+  var byShow = {};
+  (state.allRoomsSearchData || []).forEach(function(p) {
+    (p.shows || []).forEach(function(s) {
+      if (!s || !s.title || s.dnf) return;
+      var loved = s.status === 'watched' && s.rating >= 4;
+      if (s.status !== 'watching' && !loved) return;
+      var k = _dpShowKey(s.title, s.tmdb_id);
+      if (mine[k] || mine[_dpShowKey(s.title)] || nope[k]) return;
+      var e = byShow[k] || (byShow[k] = { show: s, watching: [], loved: [], score: 0 });
+      if (loved) e.loved.push(p); else e.watching.push(p);
+      e.score += loved ? 2 : 1;
+    });
+  });
+  var list = Object.keys(byShow).map(function(k) { return byShow[k]; });
+  if (!list.length) return null;
+  list.sort(function(a, b) { return b.score - a.score; });
+  var top = list.slice(0, 5); // a little variety day to day
+  var e = top[Math.floor(Math.random() * top.length)];
+  function names(ps) {
+    var n = ps.map(function(p) { return p.first_name; });
+    return n.length <= 2 ? n.join(' and ') : n[0] + ' and ' + (n.length - 1) + ' others';
+  }
+  var tag = e.loved.length ? names(e.loved) + ' loved it' : '';
+  if (e.watching.length) tag += (tag ? '. ' : '') + names(e.watching) + (e.watching.length === 1 ? ' is' : ' are') + ' watching';
+  var s = e.show, note = '';
+  e.loved.concat(e.watching).some(function(p) {
+    var f = (state.friends || []).find(function(x) { return x.id === p.user_id; });
+    if (!f) return false;
+    return ['watching', 'watchlist', 'watched'].some(function(lk) {
+      var fs = (f[lk] || []).find(function(x) { return x.title === s.title; });
+      var r = fs && (fs.reactions || []).find(function(x) { return x.reactorId === f.id && x.text; });
+      if (r) note = p.first_name + ': ' + r.text;
+      return !!r;
+    });
+  });
+  return { title: s.title, tmdb_id: s.tmdb_id || null, poster_path: s.poster_path || null, platform: s.platform || null,
+    media_type: s.media_type || 'tv', tag: tag, note: note, choice: null, rating: 0, id: null, nopeLabel: 'Not for me' };
+}
+
+async function maybeShowDailyPrompt() {
+  if (!_dpIsDue()) return;
+  if (_inviteLandingRoomId || /[?&]notif=/.test(location.search)) return; // they came here for something else
+  try { await loadAllRoomsSearchData(); } catch (e) {}
+  try { await state.friendsPreload; } catch (e) {}
+  var nope = _dpPrefs().nope || {};
+  var items = [_dpPickOwn(nope), _dpPickFriend(nope)].filter(Boolean);
+  if (!items.length) return;
+  var app = document.getElementById('screen-app');
+  if (!app || !app.classList.contains('active') || _bttOverlayOpen()) return;
+  var p = _dpPrefs();
+  p.last = _dpToday();
+  _dpSave(p);
+  _dpItems = items;
+  _dpEngaged = false;
+  renderDailyPrompt();
+  document.getElementById('daily-prompt').classList.add('active');
+}
+
+function renderDailyPrompt() {
+  document.getElementById('dp-list').innerHTML = _dpItems.map(function(it, i) { return _showPickRowHTML(it, i, 'dp'); }).join('')
+    || '<div class="fs-sub" style="margin:12px 0;">All set for today. Thanks!</div>';
+  var btn = document.getElementById('dp-close-btn');
+  btn.textContent = _dpEngaged ? 'Done' : 'Not now';
+  btn.className = _dpEngaged ? 'btn-invite-copy' : 'fs-skip';
+}
+
+function _dpTouched() {
+  _dpEngaged = true;
+  var p = _dpPrefs();
+  p.skips = 0;
+  _dpSave(p);
+}
+
+window.dpChoose = function(i, choice) { _dpTouched(); return _showPickChoose(_dpItems, i, choice, renderDailyPrompt); };
+window.dpChange = function(i) { _showPickChange(_dpItems, i, renderDailyPrompt); };
+window.dpRate = function(i, n) { _dpTouched(); return _showPickRate(_dpItems, i, n, renderDailyPrompt); };
+window.dpNope = function(i) {
+  var it = _dpItems[i];
+  if (!it) return;
+  var p = _dpPrefs();
+  p.nope = p.nope || {};
+  p.nope[_dpShowKey(it.title, it.tmdb_id)] = true;
+  _dpSave(p);
+  _dpItems.splice(i, 1);
+  _dpTouched();
+  renderDailyPrompt();
+};
+
+window.closeDailyPrompt = async function(e) {
+  if (e && e.target !== e.currentTarget) return; // a tap inside the sheet, not the dim area
+  document.getElementById('daily-prompt').classList.remove('active');
+  if (!_dpEngaged) {
+    var p = _dpPrefs();
+    p.skips = (p.skips || 0) + 1;
+    if (p.skips >= 3) { p.skips = 0; p.pauseUntil = Date.now() + 3 * 86400 * 1000; }
+    _dpSave(p);
+    return;
+  }
+  // Pull what they saved back into their lists.
+  try {
+    var shows = await loadShows();
+    state.watching = shows.filter(function(s) { return s.status === 'watching'; }).map(normalizeShow);
+    state.watchlist = shows.filter(function(s) { return s.status === 'watchlist'; }).map(normalizeShow);
+    state.watched = shows.filter(function(s) { return s.status === 'watched' || s.status === 'dnf'; }).map(normalizeShow);
+    renderAll();
+  } catch (err) { console.error('[dailyPrompt] reload error:', err); }
+};
+
+function renderDailyPromptPref() {
+  var el = document.getElementById('pref-daily-prompt');
+  if (el) el.setAttribute('aria-checked', _dpPrefs().off ? 'false' : 'true');
+}
+window.toggleDailyPrompt = function() {
+  var p = _dpPrefs();
+  p.off = !p.off;
+  _dpSave(p);
+  renderDailyPromptPref();
 };
 
 window.completeOnboard = async function() {
@@ -10890,6 +11100,16 @@ bootstrap();
     <button class="btn-invite-close" id="invite-share-btn" onclick="shareInviteMessage()" style="display:none;width:100%;margin-bottom:10px;">Other</button>
     <button class="btn-invite-copy" id="invite-msg-btn" onclick="copyInviteMessage()" style="width:100%;margin-bottom:10px;">&#128203; Copy Invite Message</button>
     <button class="btn-invite-close" onclick="closeInviteModal()" style="width:100%;">Close</button>
+  </div>
+</div>
+
+<!-- DAILY SHOW POPUP -->
+<div class="invite-modal-overlay daily-sheet-overlay" id="daily-prompt" onclick="closeDailyPrompt(event)">
+  <div class="daily-sheet">
+    <div class="fs-title" style="font-size:20px;">Quick one before you scroll</div>
+    <div class="fs-sub" style="margin-bottom:4px;">Your ratings are how your friends find their next show.</div>
+    <div id="dp-list"></div>
+    <button type="button" id="dp-close-btn" class="fs-skip" onclick="closeDailyPrompt()" style="width:100%;margin-top:12px;">Not now</button>
   </div>
 </div>
 
