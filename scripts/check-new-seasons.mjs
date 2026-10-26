@@ -25,6 +25,13 @@
 // A user can get both notifications for one season: the dated heads-up
 // ~2-3 weeks out, then the "it's out" on air day.
 //
+// Also: new-episode alerts for weekly shows on Currently Watching. The
+// morning after an episode airs (Paramount+ posts CBS shows the next day;
+// HBO's Sunday-night episodes are there by Monday morning) -> one
+// 'new_episode' notification per user per day, combining their shows.
+// Skips season premieres and whole-season drops (the new-season alert
+// covers those).
+//
 // Zero dependencies: Node 20+ global fetch, Supabase REST, TMDB REST.
 // The dedup unique index on notifications means re-running is always safe.
 // ============================================================
@@ -73,6 +80,18 @@ function upcomingSeason(tmdb, releasedCount) {
   if (nx.season_number == null || nx.season_number <= releasedCount) return null;
   if (new Date(nx.air_date) <= new Date()) return null;
   return { season_number: nx.season_number, air_date: nx.air_date };
+}
+
+// The episode that aired yesterday (US date, as TMDB lists it), if it's a
+// weekly follow-up episode rather than a premiere or a binge drop.
+function yesterdaysEpisode(tmdb) {
+  const ep = tmdb.last_episode_to_air;
+  if (!ep || !ep.air_date || ep.episode_number <= 1) return null;
+  const y = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+  if (ep.air_date !== y) return null;
+  const season = (tmdb.seasons || []).find((x) => x.season_number === ep.season_number);
+  if (season && season.air_date === ep.air_date) return null; // whole season out at once
+  return { season_number: ep.season_number, episode_number: ep.episode_number };
 }
 
 function fmtDate(iso) {
@@ -156,6 +175,9 @@ async function main() {
   const prefRows = await sbGet('notification_prefs?select=user_id,new_season&new_season=is.false');
   const mutedNewSeason = new Set(prefRows.map((r) => r.user_id));
   if (mutedNewSeason.size) console.log(`[new-seasons] ${mutedNewSeason.size} user(s) muted new-season alerts`);
+  const epPrefRows = await sbGet('notification_prefs?select=user_id&new_episode=is.false');
+  const mutedNewEpisode = new Set(epPrefRows.map((r) => r.user_id));
+  const newEpisodes = new Map(); // user_id -> [{ show, ep }]
 
   // Group candidate rows by tmdb_id.
   const byTmdb = new Map();
@@ -193,6 +215,7 @@ async function main() {
     const count = released.length;
     const latest = released[released.length - 1];
     const upcoming = upcomingSeason(tmdb, count);
+    const newEp = yesterdaysEpisode(tmdb);
     checked++;
 
     // 3. Upsert the shared registry row.
@@ -216,6 +239,10 @@ async function main() {
     // 4. Reconcile each user's copy of the show.
     for (const s of byTmdb.get(tmdbId)) {
       if (s.status === 'watched') continue; // registry only, see step 1
+      if (newEp && s.status === 'watching' && !mutedNewEpisode.has(s.user_id)) {
+        if (!newEpisodes.has(s.user_id)) newEpisodes.set(s.user_id, []);
+        newEpisodes.get(s.user_id).push({ show: s, ep: newEp });
+      }
       try {
         const alertsMuted = mutedNewSeason.has(s.user_id);
 
@@ -291,6 +318,40 @@ async function main() {
     await sleep(120); // be polite to TMDB
   }
 
+  // 4c. New episodes: one notification per user per day. The dedup key is
+  //     the date (season_count = yyyymmdd), so a re-run never repeats it.
+  const dayKey = Number(new Date(Date.now() - 86400000).toISOString().slice(0, 10).replace(/-/g, ''));
+  let episodeAlerts = 0;
+  for (const [userId, list] of newEpisodes) {
+    list.sort((a, b) => a.show.title.localeCompare(b.show.title));
+    const first = list[0];
+    const titles = list.map((x) => x.show.title);
+    const body = list.length === 1
+      ? `New episode is ready to watch (S${first.ep.season_number} E${first.ep.episode_number})`
+      : (titles.length === 2 ? titles.join(' and ') : titles.slice(0, -1).join(', ') + ' and ' + titles[titles.length - 1]) + ' have new episodes';
+    try {
+      await sbUpsert(
+        'notifications',
+        {
+          user_id: userId,
+          type: 'new_episode',
+          title: list.length === 1 ? first.show.title : 'New episodes are ready',
+          body,
+          show_id: first.show.id,
+          tmdb_id: first.show.tmdb_id,
+          season_count: dayKey,
+          season_number: first.ep.season_number,
+          push_pending: true,
+        },
+        { ignoreDuplicates: true, onConflict: 'user_id,type,tmdb_id,season_count' }
+      );
+      episodeAlerts++;
+    } catch (e) {
+      console.error(`[new-seasons] new-episode alert failed for user ${userId}: ${e.message}`);
+      errors++;
+    }
+  }
+
   // 5. Phone alerts: rows above went in with push_pending; /api/push (the
   //    same sender comment alerts use) claims and delivers them to anyone
   //    with alerts on. Duplicate rows were ignored, so nothing re-pushes.
@@ -308,7 +369,7 @@ async function main() {
   }
 
   console.log(
-    `[new-seasons] done: checked=${checked} baselined=${baselined} notified=${notified} headsups=${headsups} muted=${muted} skipped=${skipped} errors=${errors}`
+    `[new-seasons] done: checked=${checked} baselined=${baselined} notified=${notified} headsups=${headsups} muted=${muted} episodeAlerts=${episodeAlerts} skipped=${skipped} errors=${errors}`
   );
   if (errors > 0) process.exitCode = 1;
 }

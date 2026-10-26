@@ -1387,6 +1387,11 @@ html.native-cover .status-shield{display:block;position:fixed;top:0;left:0;right
           <span class="settings-row-label">New seasons<span class="settings-row-sub">When a show you follow has a new season coming or out</span></span>
           <button type="button" class="switch" id="pref-new-season" role="switch" aria-checked="true" aria-label="New seasons" onclick="toggleNotifPref('new_season')"></button>
         </div>
+        <div class="settings-row" style="cursor:default;">
+          <span class="settings-row-icon">&#9654;&#65039;</span>
+          <span class="settings-row-label">New episodes<span class="settings-row-sub">The morning after a new episode of a show you're watching comes out</span></span>
+          <button type="button" class="switch" id="pref-new-episode" role="switch" aria-checked="true" aria-label="New episodes" onclick="toggleNotifPref('new_episode')"></button>
+        </div>
         <div class="settings-row" id="settings-email-digest-row" style="cursor:default;">
           <span class="settings-row-icon">&#9993;&#65039;</span>
           <span class="settings-row-label">Weekly email recap<span class="settings-row-sub">A Sunday email of comments you missed &mdash; sent only if phone alerts are off</span></span>
@@ -9387,14 +9392,14 @@ function mapProviderToPlatform(name) {
 // date, ~2-3 weeks out). The table and this code are shaped so comment /
 // invite types can be added without a rework.
 
-var NOTIF_ICON = { new_season: '🎉', season_upcoming: '🗓️', lounge_reply: '☕', lounge_post: '☕', comment: '💬', recommendation: '🎯' };
+var NOTIF_ICON = { new_season: '🎉', season_upcoming: '🗓️', new_episode: '📺', lounge_reply: '☕', lounge_post: '☕', comment: '💬', recommendation: '🎯' };
 
 // The bell is for new seasons and recommendations (a recommendation is
 // personal and otherwise only shows inside a room). Comment / Lounge-reply rows still live
 // in the table -- they power phone alerts (a tapped alert opens its row via
 // ?notif=) and the weekly email recap -- but the Living Room's own unread
 // counts already cover them, so they stay out of the bell's list and dot.
-var BELL_TYPES = ['new_season', 'season_upcoming', 'recommendation'];
+var BELL_TYPES = ['new_season', 'season_upcoming', 'new_episode', 'recommendation'];
 function _bellItems() {
   return (state.notifications || []).filter(function(n) { return BELL_TYPES.indexOf(n.type) >= 0; });
 }
@@ -9640,17 +9645,17 @@ async function loadNotificationPrefs() {
   try {
     var res = await sb.from('notification_prefs').select('*').eq('user_id', state.user.id).maybeSingle();
     if (res.error) throw res.error;
-    if (res.data) state.notificationPrefs = { new_season: res.data.new_season !== false, comments: res.data.comments !== false, lounge: res.data.lounge !== false, email_digest: res.data.email_digest !== false };
-    else state.notificationPrefs = { new_season: true, comments: true, lounge: true, email_digest: true };
+    if (res.data) state.notificationPrefs = { new_season: res.data.new_season !== false, new_episode: res.data.new_episode !== false, comments: res.data.comments !== false, lounge: res.data.lounge !== false, email_digest: res.data.email_digest !== false };
+    else state.notificationPrefs = { new_season: true, new_episode: true, comments: true, lounge: true, email_digest: true };
   } catch (e) {
     console.error('loadNotificationPrefs error:', e);
-    state.notificationPrefs = { new_season: true, comments: true, lounge: true, email_digest: true };
+    state.notificationPrefs = { new_season: true, new_episode: true, comments: true, lounge: true, email_digest: true };
   }
   renderNotifPrefs();
 }
 
 function renderNotifPrefs() {
-  [['pref-new-season', 'new_season'], ['pref-comments', 'comments'], ['pref-lounge', 'lounge'], ['pref-email-digest', 'email_digest']].forEach(function(p) {
+  [['pref-new-season', 'new_season'], ['pref-new-episode', 'new_episode'], ['pref-comments', 'comments'], ['pref-lounge', 'lounge'], ['pref-email-digest', 'email_digest']].forEach(function(p) {
     var el = document.getElementById(p[0]);
     if (el) el.setAttribute('aria-checked', state.notificationPrefs[p[1]] !== false ? 'true' : 'false');
   });
@@ -9662,7 +9667,7 @@ window.toggleNotifPref = async function(key) {
   renderNotifPrefs();
   try {
     var res = await sb.from('notification_prefs')
-      .upsert({ user_id: state.user.id, new_season: state.notificationPrefs.new_season !== false, comments: state.notificationPrefs.comments !== false, lounge: state.notificationPrefs.lounge !== false, email_digest: state.notificationPrefs.email_digest !== false, updated_at: new Date().toISOString() }, { onConflict: 'user_id' });
+      .upsert({ user_id: state.user.id, new_season: state.notificationPrefs.new_season !== false, new_episode: state.notificationPrefs.new_episode !== false, comments: state.notificationPrefs.comments !== false, lounge: state.notificationPrefs.lounge !== false, email_digest: state.notificationPrefs.email_digest !== false, updated_at: new Date().toISOString() }, { onConflict: 'user_id' });
     if (res.error) throw res.error;
   } catch (e) {
     console.error('toggleNotifPref error:', e);
