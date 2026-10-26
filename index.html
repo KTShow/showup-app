@@ -1399,7 +1399,7 @@ html.native-cover .status-shield{display:block;position:fixed;top:0;left:0;right
         </div>
         <div class="settings-row" style="cursor:default;">
           <span class="settings-row-icon">&#127916;</span>
-          <span class="settings-row-label" onclick="showToast('Daily show question: ' + _dpWhy)" style="cursor:pointer;">Daily show question<span class="settings-row-sub">Once a day, a quick rate-or-add for 1&ndash;2 shows (this device)</span></span>
+          <span class="settings-row-label" onclick="dpSettingsTap()" style="cursor:pointer;">Daily show question<span class="settings-row-sub">Once a day, a quick rate-or-add for 1&ndash;2 shows (this device)</span></span>
           <button type="button" class="switch" id="pref-daily-prompt" role="switch" aria-checked="true" aria-label="Daily show question" onclick="toggleDailyPrompt()"></button>
         </div>
       </div>
@@ -7812,14 +7812,15 @@ async function _dpCheckAndOpen() {
   var app = document.getElementById('screen-app');
   if (!app || !app.classList.contains('active')) { _dpWhy = 'you were on another screen'; return; }
   if (_bttOverlayOpen()) { _dpWhy = 'another window was open'; return; }
-  _dpWhy = 'shown today';
-  var p = _dpPrefs();
-  p.last = _dpToday();
-  _dpSave(p);
   _dpItems = items;
   _dpEngaged = false;
   renderDailyPrompt();
   document.getElementById('daily-prompt').classList.add('active');
+  _dpWhy = 'shown today';
+  var p = _dpPrefs();
+  p.last = _dpToday();
+  p.how = 'it opened, and hasn’t been closed with Not now or Done';
+  _dpSave(p);
 }
 
 function renderDailyPrompt() {
@@ -7854,9 +7855,13 @@ window.dpNope = function(i) {
   renderDailyPrompt();
 };
 
-window.closeDailyPrompt = async function(e) {
-  if (e && e.target !== e.currentTarget) return; // a tap inside the sheet, not the dim area
+// Only the Not now / Done button closes it -- a stray tap on the dim area
+// right as it slid up used to dismiss it unseen.
+window.closeDailyPrompt = async function() {
   document.getElementById('daily-prompt').classList.remove('active');
+  var p0 = _dpPrefs();
+  p0.how = _dpEngaged ? 'you answered it' : 'you tapped Not now';
+  _dpSave(p0);
   if (!_dpEngaged) {
     var p = _dpPrefs();
     p.skips = (p.skips || 0) + 1;
@@ -7872,6 +7877,19 @@ window.closeDailyPrompt = async function(e) {
     state.watched = shows.filter(function(s) { return s.status === 'watched' || s.status === 'dnf'; }).map(normalizeShow);
     renderAll();
   } catch (err) { console.error('[dailyPrompt] reload error:', err); }
+};
+
+window.dpSettingsTap = function() {
+  var p = _dpPrefs();
+  if (p.last === _dpToday() && !p.off) {
+    showToast('Daily show question: shown today (' + (p.how || 'no details') + '). Showing it again…');
+    delete p.last;
+    _dpSave(p);
+    backFromSettings();
+    setTimeout(maybeShowDailyPrompt, 600);
+    return;
+  }
+  showToast('Daily show question: ' + _dpWhy);
 };
 
 function renderDailyPromptPref() {
@@ -11143,7 +11161,7 @@ bootstrap();
 </div>
 
 <!-- DAILY SHOW POPUP -->
-<div class="invite-modal-overlay daily-sheet-overlay" id="daily-prompt" onclick="closeDailyPrompt(event)">
+<div class="invite-modal-overlay daily-sheet-overlay" id="daily-prompt">
   <div class="daily-sheet">
     <div class="fs-title" style="font-size:20px;">Quick one before you scroll</div>
     <div class="fs-sub" style="margin-bottom:4px;">Your ratings are how your friends find their next show.</div>
