@@ -7073,6 +7073,12 @@ async function loadUserIntoState(profile) {
   setTimeout(maybeShowDailyPrompt, 2500); // once a day, after the room has settled
 }
 
+// Phones mostly resume ShowUp from the background rather than reloading it,
+// so check again whenever the app comes back to the front (still once a day).
+document.addEventListener('visibilitychange', function() {
+  if (document.visibilityState === 'visible' && state.user) setTimeout(maybeShowDailyPrompt, 1500);
+});
+
 // ============================================================
 // AUTH BOOTSTRAP — runs on every page load
 // ============================================================
@@ -7782,8 +7788,13 @@ function _dpPickFriend(nope) {
     media_type: s.media_type || 'tv', tag: tag, note: note, friendRatings: friendRatings, choice: null, rating: 0, id: null, nopeLabel: 'Not for me' };
 }
 
+var _dpChecking = false;
 async function maybeShowDailyPrompt() {
-  if (!_dpIsDue()) return;
+  if (_dpChecking || !_dpIsDue()) return;
+  _dpChecking = true;
+  try { await _dpCheckAndOpen(); } finally { _dpChecking = false; }
+}
+async function _dpCheckAndOpen() {
   if (_inviteLandingRoomId || /[?&]notif=/.test(location.search)) return; // they came here for something else
   try { await loadAllRoomsSearchData(); } catch (e) {}
   try { await state.friendsPreload; } catch (e) {}
