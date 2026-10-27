@@ -4355,9 +4355,10 @@ function _tmdbHotItem(r) {
 
 // "Popular on <service>" and "Brand new" tabs. TMDB provider ids (US); a
 // service can have more than one id (ad / premium tiers).
+// Alphabetical (Tracey 2026-10-27: a "yours first" order looked random).
 var HOT_SERVICES = [
-  { name: 'Netflix', ids: '8' }, { name: 'HBO Max', ids: '1899' }, { name: 'Apple TV+', ids: '350' },
-  { name: 'Hulu', ids: '15' }, { name: 'Amazon Prime', ids: '9' }, { name: 'Disney+', ids: '337' },
+  { name: 'Amazon Prime', ids: '9' }, { name: 'Apple TV+', ids: '350' }, { name: 'Disney+', ids: '337' },
+  { name: 'HBO Max', ids: '1899' }, { name: 'Hulu', ids: '15' }, { name: 'Netflix', ids: '8' },
   { name: 'Paramount+', ids: '2303|2616' }, { name: 'Peacock', ids: '386|387' }
 ];
 function _hotPlatformCounts() {
@@ -4367,7 +4368,8 @@ function _hotPlatformCounts() {
   });
   return count;
 }
-// Your services first: the ones most of your own shows are on.
+// Most-used first (the one most of your own shows are on). Only used to
+// pick which service the tab opens on; the pills stay alphabetical.
 function _hotServicesOrdered() {
   var count = _hotPlatformCounts();
   return HOT_SERVICES.map(function(svc, i) { return { svc: svc, n: count[svc.name] || 0, i: i }; })
@@ -4412,7 +4414,7 @@ function _loadHotService(name) {
     .catch(function(e) { console.error('hot service error:', e); _hotSvcData[name] = []; })
     .then(_rerenderHotIfOpen);
 }
-// Brand new: series that premiered in the last two weeks (a 7-day window
+// Just premiered: series that premiered in the last two weeks (a 7-day window
 // is often only a handful) on your services, most popular first.
 function _loadHotNew() {
   if (_hotNewData || _hotNewLoading) return;
@@ -4717,15 +4719,14 @@ function renderFullLineup(){
   };
   var seg = '<div class="hot-seg hot-seg-4" role="tablist">'
     + tabBtn('trending', '&#128200; Trending') + tabBtn('service', '&#128250; By service')
-    + tabBtn('new', '&#10024; Brand new') + tabBtn('showup', '&#128293; On ShowUp')
+    + tabBtn('new', '&#10024; Just premiered') + tabBtn('showup', '&#128293; On ShowUp')
     + '</div>';
   var sub = function(t) { return '<div style="font-size:12px;color:var(--muted);margin:-6px 0 10px;">' + t + '</div>'; };
   var html = seg;
   if (_hotTab === 'service') {
-    var svcs = _hotServicesOrdered();
-    if (!_hotSvc) _hotSvc = svcs[0].name;
+    if (!_hotSvc) _hotSvc = _hotServicesOrdered()[0].name;
     _loadHotService(_hotSvc);
-    html += '<div class="hot-svc-row">' + svcs.map(function(svc) {
+    html += '<div class="hot-svc-row">' + HOT_SERVICES.map(function(svc) {
       return '<button type="button" class="pill-btn' + (svc.name === _hotSvc ? ' selected' : '') + '" onclick="setHotService(\'' + escAttr(svc.name) + '\')">' + escAttr(svc.name) + '</button>';
     }).join('') + '</div>';
     var sd = _hotSvcData[_hotSvc];
@@ -4742,7 +4743,7 @@ function renderFullLineup(){
   } else if (_hotTab === 'new') {
     _loadHotNew();
     var mySvcs = _hotMyServices().map(function(x) { return x.name; });
-    html += sub('Brand-new shows from the last two weeks' + (mySvcs.length < HOT_SERVICES.length ? ' on your services (' + escAttr(mySvcs.join(', ')) + ')' : ''));
+    html += sub('New series that started in the last 2 weeks' + (mySvcs.length < HOT_SERVICES.length ? ' on your services (' + escAttr(mySvcs.slice().sort().join(', ')) + ')' : ''));
     if (!_hotNewData) html += '<div class="empty">Loading&hellip;</div>';
     else {
       var newList = _hotNewData.map(withCrowd).filter(match);
@@ -4750,7 +4751,7 @@ function renderFullLineup(){
       _fullLineupListCache = _fullLineupListCache.concat(newList);
       html += newList.length
         ? newList.map(function(s, j) { return _hotRow(s, nbase + j, j + 1); }).join('')
-        : '<div class="empty"><div class="empty-icon">&#10024;</div>' + (q ? 'No shows match "' + escAttr(q) + '".' : 'No brand-new shows in the last two weeks.') + '</div>';
+        : '<div class="empty"><div class="empty-icon">&#10024;</div>' + (q ? 'No shows match "' + escAttr(q) + '".' : 'No new series in the last 2 weeks.') + '</div>';
     }
   } else if (_hotTab === 'trending') {
     html += sub('Trending in the US this week');
@@ -4758,7 +4759,7 @@ function renderFullLineup(){
       ? trending.map(function(s, j) { return _hotRow(s, crowd.length + j, j + 1); }).join('')
       : '<div class="empty"><div class="empty-icon">&#128200;</div>' + (q ? 'No trending shows match "' + escAttr(q) + '".' : 'Trending list unavailable right now.') + '</div>';
   } else {
-    html += sub('Current shows people on ShowUp are watching and rating');
+    html += sub('What people on ShowUp added, finished or talked about in the last 30 days');
     html += crowd.length
       ? crowd.map(function(s, i) { return _hotRow(s, i, i + 1); }).join('')
       : '<div class="empty"><div class="empty-icon">&#128293;</div>' + (q ? 'No ShowUp shows match "' + escAttr(q) + '".' : 'Nothing yet.') + '</div>';
