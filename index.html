@@ -586,6 +586,15 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
 .mem-summary div{background:rgba(196,98,45,0.07);border-radius:10px;padding:8px 10px;}
 .mem-summary b{display:block;font-size:20px;color:var(--terra);}
 .mem-summary span{font-size:12px;color:var(--muted);}
+.mem-row{display:grid;grid-template-columns:1.5fr 1.2fr 0.6fr 0.8fr;gap:6px;align-items:center;width:100%;background:none;border:none;border-top:1px solid var(--border);padding:10px 2px;font-family:var(--sans);font-size:13px;color:var(--charcoal);text-align:left;cursor:pointer;}
+.mem-head{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.03em;border-top:none;cursor:default;padding-top:2px;}
+.mem-name{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.mem-new{font-style:normal;font-size:10px;font-weight:700;color:#fff;background:#4A6B8A;border-radius:6px;padding:1px 5px;margin-left:2px;}
+.mem-st{color:var(--muted);}
+.mem-st.on{color:#45591f;font-weight:600;}
+.mem-when{color:var(--muted);text-align:right;}
+.mem-more{display:none;font-size:12px;color:var(--muted);padding:0 2px 10px;line-height:1.5;}
+.mem-item.open .mem-more{display:block;}
 .mem-tags{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 4px;}
 .mem-tag{font-size:12px;padding:2px 8px;border-radius:10px;background:#f1ece6;color:var(--muted);}
 .mem-tag.on{background:rgba(85,107,47,0.14);color:#45591f;font-weight:600;}
@@ -11349,49 +11358,51 @@ function _memAgo(d) {
 function _memPct(n, of) { return of ? Math.round(n * 100 / of) + '%' : '0%'; }
 function renderMembersAdmin() {
   var all = _membersData || [];
-  document.querySelectorAll('#members-seg button').forEach(function(b) { b.classList.toggle('active', b.getAttribute('data-t') === _membersTab); });
-  var active = all.filter(function(m) { var d = _memDays(m.last_visit); return d != null && d < 7; }).length;
+  var isActive = function(m) { var d = _memDays(m.last_visit); return d != null && d < 7; };
+  var onPhone = function(m) { return m.uses_app || m.home_screen; };
+  var active = all.filter(isActive).length;
   var alerts = all.filter(function(m) { return m.alerts_on; }).length;
-  var installed = all.filter(function(m) { return m.uses_app || m.home_screen; }).length;
-  var newCount = all.filter(function(m) { return _memDays(m.joined) < 14; }).length;
+  var installed = all.filter(onPhone).length;
   document.getElementById('members-summary').innerHTML =
     '<div><b>' + all.length + '</b><span>members</span></div>'
     + '<div><b>' + active + '</b><span>active this week</span></div>'
     + '<div><b>' + _memPct(alerts, all.length) + '</b><span>alerts on</span></div>'
     + '<div><b>' + _memPct(installed, all.length) + '</b><span>app or Home Screen</span></div>';
+
+  // Filters: everyone / not on the Home Screen (or app) / alerts off.
+  var filters = {
+    all: { label: 'All', fn: function() { return true; } },
+    nohome: { label: 'Not on Home Screen', fn: function(m) { return !onPhone(m); } },
+    noalerts: { label: 'Alerts off', fn: function(m) { return !m.alerts_on; } }
+  };
+  if (!filters[_membersTab]) _membersTab = 'all';
+  document.getElementById('members-seg').innerHTML = Object.keys(filters).map(function(k) {
+    var n = all.filter(filters[k].fn).length;
+    return '<button type="button" class="' + (k === _membersTab ? 'active' : '') + '" onclick="setMembersTab(\'' + k + '\')">' + filters[k].label + ' ' + n + '</button>';
+  }).join('');
+
+  // Most recent visit first: someone in yesterday is the best one to nudge.
+  var list = all.filter(filters[_membersTab].fn).sort(function(a, b) {
+    return new Date(b.last_visit || 0) - new Date(a.last_visit || 0);
+  });
   var el = document.getElementById('members-list');
-  var yes = function(on, label) { return '<span class="mem-tag' + (on ? ' on' : '') + '">' + (on ? '&#10003; ' : '&#10007; ') + label + '</span>'; };
-
-  if (_membersTab === 'invites') {
-    var by = {};
-    all.forEach(function(m) { if (m.invited_by) (by[m.invited_by] = by[m.invited_by] || []).push(m); });
-    var keys = Object.keys(by).sort(function(a, b) { return by[b].length - by[a].length; });
-    el.innerHTML = keys.length ? keys.map(function(k) {
-      var list = by[k];
-      var act = list.filter(function(m) { var d = _memDays(m.last_visit); return d != null && d < 7; }).length;
-      return '<div class="report-card"><div class="report-head"><b>' + escAttr(k) + '</b> &middot; ' + list.length + ' joined &middot; ' + act + ' active this week</div>'
-        + '<div class="report-meta" style="font-size:13px;">' + list.map(function(m) { return escAttr(m.name) + ' (' + _memAgo(m.last_visit) + ')'; }).join(', ') + '</div></div>';
-    }).join('') + '<div class="fb-note">Counts people invited since invite links started recording who sent them (Oct 27); older joins only show when the room owner was recorded.</div>'
-      : '<div class="empty">No invites recorded yet. Invites sent from Oct 27 on will show here.</div>';
-    return;
-  }
-
-  var list = _membersTab === 'new'
-    ? all.filter(function(m) { return _memDays(m.joined) < 14; }).sort(function(a, b) { return new Date(b.joined) - new Date(a.joined); })
-    : all;
-  el.innerHTML = list.length ? list.map(function(m) {
-    var head = '<div class="report-head"><b>' + escAttr(m.name) + '</b> &middot; ' + escAttr(_memHow(m)) + '</div>';
-    var meta = _membersTab === 'new'
-      ? 'Joined ' + _memAgo(m.joined) + (m.invited_by ? ' &middot; invited by ' + escAttr(m.invited_by) : '')
-      : m.shows + ' shows &middot; ' + m.visits + ' visits &middot; last in ' + _memAgo(m.last_visit) + (m.invited_by ? ' &middot; invited by ' + escAttr(m.invited_by) : '');
-    var tags = _membersTab === 'new'
-      ? yes(m.shows >= 3, m.shows + ' shows') + yes(m.return_days > 0, 'came back') + yes(m.alerts_on, 'alerts')
-      : yes(m.alerts_on, 'alerts');
-    return '<div class="report-card">' + head
-      + '<div class="report-meta" style="font-size:13px;">' + meta + '</div>'
-      + '<div class="mem-tags">' + tags + '</div>'
-      + '<div class="report-meta" style="font-size:12px;">' + escAttr(m.email || '') + '</div></div>';
-  }).join('') : '<div class="empty">' + (_membersTab === 'new' ? 'Nobody new in the last 2 weeks.' : 'No members yet.') + '</div>';
+  if (!list.length) { el.innerHTML = '<div class="empty">Nobody here. 🎉</div>'; return; }
+  el.innerHTML = '<div class="mem-row mem-head"><span>Name</span><span>Uses</span><span>Alerts</span><span>Last in</span></div>'
+    + list.map(function(m) {
+      var how = _memHow(m);
+      var isNew = _memDays(m.joined) < 14;
+      return '<div class="mem-item">'
+        + '<button type="button" class="mem-row" onclick="this.parentNode.classList.toggle(\'open\')">'
+        + '<span class="mem-name">' + escAttr(m.name) + (isNew ? ' <em class="mem-new">NEW</em>' : '') + '</span>'
+        + '<span class="mem-st' + (onPhone(m) ? ' on' : '') + '">' + escAttr(how) + '</span>'
+        + '<span class="mem-st' + (m.alerts_on ? ' on' : '') + '">' + (m.alerts_on ? 'On' : 'Off') + '</span>'
+        + '<span class="mem-when">' + _memAgo(m.last_visit) + '</span>'
+        + '</button>'
+        + '<div class="mem-more">' + m.shows + ' shows &middot; ' + m.visits + ' visits &middot; joined ' + _memAgo(m.joined)
+        + (m.invited_by ? ' &middot; invited by ' + escAttr(m.invited_by) : '')
+        + '<br>' + escAttr(m.email || '') + '</div>'
+        + '</div>';
+    }).join('');
 }
 
 // ---- Admin: Feedback inbox ----
@@ -11550,11 +11561,7 @@ bootstrap();
   <div class="invite-modal">
     <div class="invite-modal-title">Member report</div>
     <div id="members-summary" class="mem-summary"></div>
-    <div class="textsize-seg" id="members-seg" style="margin:0 0 10px;">
-      <button type="button" data-t="all" onclick="setMembersTab('all')">Everyone</button>
-      <button type="button" data-t="new" onclick="setMembersTab('new')">New</button>
-      <button type="button" data-t="invites" onclick="setMembersTab('invites')">Invites</button>
-    </div>
+    <div class="textsize-seg" id="members-seg" style="margin:0 0 10px;"></div>
     <div id="members-list" style="max-height:440px;overflow-y:auto;margin-bottom:12px;"></div>
     <button type="button" class="btn-invite-close" onclick="closeMembersAdmin()" style="width:100%;">Close</button>
   </div>
