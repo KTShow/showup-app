@@ -78,6 +78,28 @@ function subjectFor(items) {
 
 const MAX_SHOWS = 10;
 
+// "3 people added shows you shared this week" from the week's shared_add
+// bell rows (one per day; each body is "Name: Show · Name: Show").
+function sharedLineFor(rows) {
+  const people = new Set();
+  let shows = 0;
+  rows.forEach((r) => (r.body || '').split(' · ').forEach((part) => {
+    const m = part.match(/^(.+?): /);
+    if (m) { people.add(m[1]); shows++; }
+  }));
+  if (!shows) return '';
+  return people.size === 1
+    ? `${[...people][0]} added ${shows === 1 ? 'a show' : shows + ' shows'} you shared this week.`
+    : `${people.size} people added shows you shared this week.`;
+}
+
+async function sharedFor(userId) {
+  try {
+    const since = new Date(Date.now() - 7 * 864e5).toISOString();
+    return await get(`/notifications?select=body&user_id=eq.${userId}&type=eq.shared_add&created_at=gt.${since}`);
+  } catch (e) { return []; }
+}
+
 // One entry per show (newest comment row wins; rows arrive newest-first),
 // capped at MAX_SHOWS. Every row's id is still stamped as emailed.
 function byShow(rows) {
@@ -95,6 +117,7 @@ function render(row) {
   const more = all.length - items.length;
   const hi = row.first_name ? `Hi ${esc(row.first_name)},` : 'Hi,';
   const unsub = unsubscribeUrl(row.user_id);
+  const sharedLine = sharedLineFor(row.shared || []);
   const blocks = items.map((it) => `
       <tr><td style="padding:14px 0;border-top:1px solid #eee;">
         <div style="font-size:16px;font-weight:700;color:#3A3A3A;">${esc(it.title)}</div>
@@ -110,6 +133,7 @@ function render(row) {
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;background:#fff;border-radius:12px;padding:24px;">
       <tr><td style="font-size:22px;font-weight:800;color:#C4622D;padding-bottom:12px;">ShowUp</td></tr>
       <tr><td style="font-size:16px;color:#3A3A3A;padding-bottom:8px;">${hi}</td></tr>
+      ${sharedLine ? `<tr><td style="font-size:16px;color:#3A3A3A;padding:4px 0 14px;">&#128588; ${esc(sharedLine)}</td></tr>` : ''}
       <tr><td style="font-size:16px;color:#3A3A3A;padding-bottom:6px;">Here's what your crowd talked about this week:</td></tr>
       ${blocks}
       <tr><td style="padding-top:20px;font-size:12px;color:#999;line-height:1.5;border-top:1px solid #eee;">
@@ -120,7 +144,7 @@ function render(row) {
   </td></tr></table></body></html>`;
 
   const text = [
-    row.first_name ? `Hi ${row.first_name},` : 'Hi,', '', "Here's what your crowd talked about this week:", '',
+    row.first_name ? `Hi ${row.first_name},` : 'Hi,', '', ...(sharedLine ? [sharedLine, ''] : []), "Here's what your crowd talked about this week:", '',
     ...items.flatMap((it) => [it.title, it.body || '', `${SITE}/?notif=${it.id}`, '']),
     ...(more > 0 ? [`...and ${more} more. ${SITE}/`, ''] : []),
     `Stop these emails: ${unsub}`,
@@ -191,6 +215,7 @@ async function main() {
 
   let sent = 0, failed = 0;
   for (const row of rows) {
+    row.shared = await sharedFor(row.user_id);
     const msg = render(row);
     if (DRY_RUN) {
       console.log(`-> ${row.email}: "${msg.subject}" (${row.items.length} item(s))`);

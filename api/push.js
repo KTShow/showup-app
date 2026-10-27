@@ -114,6 +114,8 @@ function payloadForNotification(n) {
     : (n.type === 'lounge_reply' || n.type === 'lounge_post') ? '☕ '
     : n.type === 'recommendation' ? '🎯 '
     : n.type === 'feedback' ? '🐞 '
+    : n.type === 'room_join' ? '👋 '
+    : (n.type === 'admin_new_user' || n.type === 'admin_new_room') ? '🆕 '
     : (n.type === 'new_season' || n.type === 'season_upcoming' || n.type === 'new_episode') ? '📺 ' : '';
   return {
     title: icon + (n.title || 'ShowUp'),

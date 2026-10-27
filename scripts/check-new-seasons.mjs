@@ -352,6 +352,58 @@ async function main() {
     }
   }
 
+  // 4d. "Shows you shared": once a day, tell each person which friends
+  //     added a show through them in the last 24h (shows.source =
+  //     living_room / lounge / show_talk, influenced_by = them -- set by the
+  //     app only for someone in one of their rooms). Bell only, no push.
+  //     Dedup key: tmdb_id 0 + the date, so a re-run never repeats it.
+  let sharedAlerts = 0;
+  try {
+    const since = new Date(Date.now() - 86400000).toISOString();
+    const adds = await sbGet(
+      'shows?select=user_id,title,influenced_by,added_at' +
+        '&source=in.(living_room,lounge,show_talk)&influenced_by=not.is.null' +
+        `&added_at=gte.${since}&order=added_at.asc`
+    );
+    const mutedShared = new Set(
+      (await sbGet('notification_prefs?select=user_id&shared_add=is.false')).map((r) => r.user_id)
+    );
+    const byInfluencer = new Map();
+    for (const a of adds) {
+      if (a.influenced_by === a.user_id || mutedShared.has(a.influenced_by)) continue;
+      if (!byInfluencer.has(a.influenced_by)) byInfluencer.set(a.influenced_by, []);
+      byInfluencer.get(a.influenced_by).push(a);
+    }
+    const adderIds = [...new Set(adds.map((a) => a.user_id))];
+    const names = new Map();
+    if (adderIds.length) {
+      const us = await sbGet(`users?select=id,first_name,last_initial&id=in.(${adderIds.join(',')})`);
+      us.forEach((u) => names.set(u.id, u.first_name + (u.last_initial ? ' ' + u.last_initial + '.' : '')));
+    }
+    const todayKey = Number(new Date().toISOString().slice(0, 10).replace(/-/g, ''));
+    for (const [influencer, list] of byInfluencer) {
+      const people = [...new Set(list.map((a) => names.get(a.user_id) || 'A friend'))];
+      const title = people.length === 1
+        ? `${people[0]} added ${list.length === 1 ? 'a show' : list.length + ' shows'} you shared`
+        : `${people[0]} and ${people.length - 1} other${people.length > 2 ? 's' : ''} added shows you shared`;
+      const parts = list.map((a) => `${names.get(a.user_id) || 'A friend'}: ${a.title}`);
+      const body = parts.slice(0, 4).join(' · ') + (parts.length > 4 ? ` · +${parts.length - 4} more` : '');
+      try {
+        await sbUpsert(
+          'notifications',
+          { user_id: influencer, type: 'shared_add', title, body, tmdb_id: 0, season_count: todayKey, push_pending: false },
+          { ignoreDuplicates: true, onConflict: 'user_id,type,tmdb_id,season_count' }
+        );
+        sharedAlerts++;
+      } catch (e) {
+        console.error(`[new-seasons] shared-add alert failed for ${influencer}: ${e.message}`);
+      }
+    }
+  } catch (e) {
+    // e.g. sql/add_join_and_share_alerts.sql not run yet (no shared_add column)
+    console.error(`[new-seasons] shared-add step skipped: ${e.message}`);
+  }
+
   // 5. Phone alerts: rows above went in with push_pending; /api/push (the
   //    same sender comment alerts use) claims and delivers them to anyone
   //    with alerts on. Duplicate rows were ignored, so nothing re-pushes.
@@ -369,7 +421,7 @@ async function main() {
   }
 
   console.log(
-    `[new-seasons] done: checked=${checked} baselined=${baselined} notified=${notified} headsups=${headsups} muted=${muted} episodeAlerts=${episodeAlerts} skipped=${skipped} errors=${errors}`
+    `[new-seasons] done: checked=${checked} baselined=${baselined} notified=${notified} headsups=${headsups} muted=${muted} episodeAlerts=${episodeAlerts} sharedAlerts=${sharedAlerts} skipped=${skipped} errors=${errors}`
   );
   if (errors > 0) process.exitCode = 1;
 }
