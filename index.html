@@ -1486,17 +1486,17 @@ html.native-cover .status-shield{display:block;position:fixed;top:0;left:0;right
     <div class="settings-section" id="settings-admin-section" style="display:none;">
       <div class="settings-section-label">Admin</div>
       <div class="settings-card">
+        <button class="settings-row" onclick="openMembersAdmin()">
+          <span class="settings-row-icon">&#128101;</span><span class="settings-row-label">Member report<span class="settings-row-sub">Who's active, alerts on, Home Screen, invites</span></span><span class="settings-row-arrow">&#8250;</span>
+        </button>
         <button class="settings-row" onclick="openEditAnnouncementModal()">
           <span class="settings-row-icon">&#128226;</span><span class="settings-row-label">Edit Announcement Banner</span><span class="settings-row-arrow">&#8250;</span>
         </button>
         <button class="settings-row" onclick="openFeedbackInbox()">
           <span class="settings-row-icon">&#128236;</span><span class="settings-row-label">Feedback inbox</span><span class="settings-row-arrow">&#8250;</span>
         </button>
-        <button class="settings-row" onclick="openMembersAdmin()">
-          <span class="settings-row-icon">&#128101;</span><span class="settings-row-label">Members</span><span class="settings-row-arrow">&#8250;</span>
-        </button>
         <button class="settings-row" onclick="openReportsAdmin()">
-          <span class="settings-row-icon">&#128681;</span><span class="settings-row-label">Reports</span><span class="settings-row-arrow">&#8250;</span>
+          <span class="settings-row-icon">&#128681;</span><span class="settings-row-label">Flagged content<span class="settings-row-sub">Comments and people someone reported</span></span><span class="settings-row-arrow">&#8250;</span>
         </button>      </div>
     </div>
 
@@ -11205,7 +11205,7 @@ window.openReportsAdmin = async function() {
         + (r.target_type !== 'user' ? '<button type="button" class="rank-act-btn primary" onclick="resolveReport(\'' + r.id + '\',\'remove\')">Remove it</button>' : '')
         + '<button type="button" class="rank-act-btn" onclick="resolveReport(\'' + r.id + '\',\'dismiss\')">Dismiss</button>'
         + '</div></div>';
-    }).join('') : '<div class="empty">No open reports. 🎉</div>';
+    }).join('') : '<div class="empty">Nothing flagged right now. 🎉</div>';
   } catch (e) {
     console.error('openReportsAdmin error:', e);
     body.innerHTML = '<div class="empty">Couldn’t load reports — try again in a moment.</div>';
@@ -11548,7 +11548,7 @@ bootstrap();
 <!-- ADMIN: MEMBERS -->
 <div class="invite-modal-overlay" id="members-modal">
   <div class="invite-modal">
-    <div class="invite-modal-title">Members</div>
+    <div class="invite-modal-title">Member report</div>
     <div id="members-summary" class="mem-summary"></div>
     <div class="textsize-seg" id="members-seg" style="margin:0 0 10px;">
       <button type="button" data-t="all" onclick="setMembersTab('all')">Everyone</button>
@@ -11563,8 +11563,8 @@ bootstrap();
 <!-- ADMIN: REPORTS -->
 <div class="invite-modal-overlay" id="reports-modal">
   <div class="invite-modal">
-    <div class="invite-modal-title">Reports</div>
-    <div class="invite-modal-sub">Open reports, newest first. Aim to act within 24 hours.</div>
+    <div class="invite-modal-title">Flagged content</div>
+    <div class="invite-modal-sub">Comments and people someone reported, newest first.</div>
     <div id="reports-list" style="max-height:420px;overflow-y:auto;margin-bottom:12px;"></div>
     <button type="button" class="btn-invite-close" onclick="closeReportsAdmin()" style="width:100%;">Close</button>
   </div>
