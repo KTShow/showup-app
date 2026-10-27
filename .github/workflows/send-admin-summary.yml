@@ -1,0 +1,32 @@
+name: Send Monday admin numbers
+
+# Headline numbers to ShowUp admins (Tracey + George). No names or emails.
+# See scripts/send-admin-summary.mjs.
+
+on:
+  schedule:
+    - cron: '0 13 * * 1' # Mondays 13:00 UTC (9am ET summer, 8am ET winter)
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Just print the email in the log (send nothing)'
+        type: boolean
+        default: false
+
+concurrency:
+  group: send-admin-summary
+  cancel-in-progress: false
+
+jobs:
+  send:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v5
+      - name: Send numbers
+        run: node scripts/send-admin-summary.mjs
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          DRY_RUN: ${{ inputs.dry_run && '1' || '' }}
