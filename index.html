@@ -4399,13 +4399,15 @@ function _hotDiscover(svc, extra) {
 }
 var _hotSvcData = {}, _hotSvc = null, _hotNewData = null, _hotNewLoading = false;
 function _hotDay(n) { return new Date(Date.now() + n * 864e5).toISOString().slice(0, 10); }
-// Popular on a service: shows with an episode out in the last 30 days.
+// Popular on a service: shows with an episode out in the last 30 days that
+// started in the last 8 years (else long-running network shows with old
+// seasons on the service, like Grey's Anatomy on Netflix, top every list).
 function _loadHotService(name) {
   if (_hotSvcData[name]) return;
   var svc = HOT_SERVICES.find(function(x) { return x.name === name; });
   if (!svc) return;
   _hotSvcData[name] = 'loading';
-  _hotDiscover(svc, '&air_date.gte=' + _hotDay(-30) + '&air_date.lte=' + _hotDay(1))
+  _hotDiscover(svc, '&air_date.gte=' + _hotDay(-30) + '&air_date.lte=' + _hotDay(1) + '&first_air_date.gte=' + _hotDay(-8 * 365))
     .then(function(list) { _hotSvcData[name] = list.slice(0, 10); })
     .catch(function(e) { console.error('hot service error:', e); _hotSvcData[name] = []; })
     .then(_rerenderHotIfOpen);
@@ -5952,12 +5954,14 @@ function _loungeCatalogAdd(map, title, tmdbId) {
   map[key] = { title: title.trim(), tmdb_id: tmdbId };
 }
 function _loungeBuildCatalog() {
+  // First source wins for a title: the platform-wide pool first, so a
+  // same-named show on someone's own list (a wrong pick) can't win.
   var map = {};
+  ((_lineupData && _lineupData.shows) || []).forEach(function(x) { _loungeCatalogAdd(map, x.title, x.tmdb_id); });
+  ((_fullLineupData && _fullLineupData.trending) || []).forEach(function(x) { _loungeCatalogAdd(map, x.title, x.tmdb_id); });
   ['watching', 'watchlist', 'watched'].forEach(function(lk) {
     (state[lk] || []).forEach(function(x) { _loungeCatalogAdd(map, x.title, x.tmdb_id); });
   });
-  ((_lineupData && _lineupData.shows) || []).forEach(function(x) { _loungeCatalogAdd(map, x.title, x.tmdb_id); });
-  ((_fullLineupData && _fullLineupData.trending) || []).forEach(function(x) { _loungeCatalogAdd(map, x.title, x.tmdb_id); });
   var keys = Object.keys(map).sort(function(a, b) { return b.length - a.length; });
   var re = keys.length ? new RegExp('(^|[^A-Za-z0-9])(' + keys.map(function(k) {
     return k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\s+/g, '\\s+');
