@@ -282,6 +282,7 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
 .lounge-author{font-size:12px;font-weight:800;color:var(--charcoal);}
 .lounge-time{font-size:11px;color:var(--muted);}
 .lounge-body{font-size:13px;color:var(--charcoal);line-height:1.5;white-space:pre-wrap;word-break:break-word;}
+.lounge-show-link{background:none;border:none;padding:0;margin:0;font:inherit;color:var(--fig);font-weight:700;text-decoration:underline;text-decoration-thickness:1px;text-underline-offset:2px;cursor:pointer;}
 .lounge-actions{display:flex;align-items:center;gap:12px;margin-top:7px;}
 .lounge-reply-btn{display:inline-flex;align-items:center;gap:6px;min-height:44px;padding:0 18px;border-radius:22px;background:white;border:1.5px solid var(--terra);color:var(--terra);font-family:var(--sans);font-size:14px;font-weight:700;cursor:pointer;}
 .lounge-reply-btn:active{transform:scale(0.97);}
@@ -371,6 +372,10 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
 .hot-seg{display:flex;gap:6px;margin:4px 0 14px;}
 .hot-seg button{flex:1;min-height:44px;border-radius:10px;border:1.5px solid var(--terra);background:none;color:var(--terra);font-family:var(--sans);font-size:14px;font-weight:700;cursor:pointer;}
 .hot-seg button.active{background:var(--terra);color:#fff;}
+.hot-seg-4{flex-wrap:wrap;}
+.hot-seg-4 button{flex:1 1 calc(50% - 3px);font-size:13px;min-height:40px;}
+.hot-svc-row{display:flex;gap:6px;overflow-x:auto;padding:0 0 10px;margin:-4px 0 6px;-webkit-overflow-scrolling:touch;}
+.hot-svc-row .pill-btn{flex:0 0 auto;white-space:nowrap;}
 .rank-action-col{flex-shrink:0;width:72px;margin-left:8px;text-align:right;}
 .rank-onlist-line{margin-top:3px;}
 .rank-platform{font-size:10px;font-weight:700;color:white;background:var(--olive);padding:2px 8px;border-radius:10px;white-space:nowrap;flex-shrink:0;}
@@ -587,6 +592,11 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
 .report-meta{font-size:13px;color:var(--muted);margin-bottom:4px;}
 .report-content{font-size:14px;color:var(--charcoal);background:#fff;border-radius:8px;padding:8px 10px;margin:6px 0;}
 .report-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;}
+/* Note-for-friends box that appears under a detail view's rating. */
+.detail-note{flex-basis:100%;width:100%;margin-top:10px;}
+.detail-note .react-input{width:100%;box-sizing:border-box;}
+.detail-note-btns{display:flex;gap:8px;margin-top:6px;}
+.detail-note-saved{flex-basis:100%;margin-top:8px;font-size:13px;color:var(--muted);}
 /* "Your rating" / "Seen it? Rate it" row in Prime Time + Hot Right Now detail. */
 .rank-your-rating{display:flex;align-items:center;flex-wrap:wrap;gap:6px 10px;margin:0 0 14px;padding:10px 12px;background:rgba(196,98,45,0.06);border-radius:10px;}
 .rank-your-rating-label{font-size:13px;font-weight:700;color:var(--charcoal);}
@@ -4319,32 +4329,108 @@ window.backFromShowTalkHub = function() {
 
 var _fullLineupData = null;
 
-// TMDB's popular current shows streaming in the US: an episode in the last
-// ~6 weeks (binge drops included), English-language, minus news / reality /
-// talk / soap / kids / animation, and only series that STARTED in the last
-// 8 years -- otherwise decades-old procedurals (Law & Order, NCIS) crowd out
-// the buzzy hits people asked for.
+// TMDB's trending TV for THIS WEEK (2026-10-27: was a 6-week popularity
+// window, which barely moved). English-language, minus news / reality /
+// talk / soap / kids / animation. Platforms are filled in afterwards.
+var HOT_SKIP_GENRES = [10763, 10764, 10766, 10767, 10762, 16];
 async function _loadTrendingUS() {
-  var d = function(n) { return new Date(Date.now() + n * 864e5).toISOString().slice(0, 10); };
-  var base = 'https://api.themoviedb.org/3/discover/tv?api_key=' + TMDB_KEY
-    + '&language=en-US&watch_region=US&with_watch_monetization_types=flatrate%7Cads%7Cfree'
-    + '&with_original_language=en&sort_by=popularity.desc&include_null_first_air_dates=false'
-    + '&air_date.gte=' + d(-42) + '&air_date.lte=' + d(1)
-    + '&first_air_date.gte=' + d(-8 * 365)
-    + '&without_genres=10763%2C10764%2C10766%2C10767%2C10762%2C16';
-  var pages = await Promise.all([1, 2].map(function(p) {
-    return fetch(base + '&page=' + p).then(function(res) {
-      if (!res.ok) throw new Error('TMDB discover ' + res.status);
-      return res.json();
-    });
+  var pages = await Promise.all([1, 2, 3].map(function(p) {
+    return fetch('https://api.themoviedb.org/3/trending/tv/week?api_key=' + TMDB_KEY + '&language=en-US&page=' + p)
+      .then(function(res) {
+        if (!res.ok) throw new Error('TMDB trending ' + res.status);
+        return res.json();
+      });
   }));
-  var results = [].concat(pages[0].results || [], pages[1].results || []);
-  return results.map(function(r) {
-    return { trending: true, title: r.name, tmdb_id: r.id, poster_path: r.poster_path || null,
-             platform: null, avg_rating: null, rating_count: 0,
-             year: r.first_air_date ? r.first_air_date.slice(0, 4) : null };
+  var results = [].concat(pages[0].results || [], pages[1].results || [], pages[2].results || []);
+  return results.filter(function(r) {
+    return r.name && r.poster_path && r.original_language === 'en'
+      && !(r.genre_ids || []).some(function(g) { return HOT_SKIP_GENRES.indexOf(g) >= 0; });
+  }).map(_tmdbHotItem);
+}
+function _tmdbHotItem(r) {
+  return { trending: true, title: r.name, tmdb_id: r.id, poster_path: r.poster_path || null,
+           platform: null, avg_rating: null, rating_count: 0,
+           year: r.first_air_date ? r.first_air_date.slice(0, 4) : null };
+}
+
+// "Popular on <service>" and "Brand new" tabs. TMDB provider ids (US); a
+// service can have more than one id (ad / premium tiers).
+var HOT_SERVICES = [
+  { name: 'Netflix', ids: '8' }, { name: 'HBO Max', ids: '1899' }, { name: 'Apple TV+', ids: '350' },
+  { name: 'Hulu', ids: '15' }, { name: 'Amazon Prime', ids: '9' }, { name: 'Disney+', ids: '337' },
+  { name: 'Paramount+', ids: '2303|2616' }, { name: 'Peacock', ids: '386|387' }
+];
+function _hotPlatformCounts() {
+  var count = {};
+  ['watching', 'watchlist', 'watched'].forEach(function(lk) {
+    (state[lk] || []).forEach(function(x) { if (x.platform) count[x.platform] = (count[x.platform] || 0) + 1; });
+  });
+  return count;
+}
+// Your services first: the ones most of your own shows are on.
+function _hotServicesOrdered() {
+  var count = _hotPlatformCounts();
+  return HOT_SERVICES.map(function(svc, i) { return { svc: svc, n: count[svc.name] || 0, i: i }; })
+    .sort(function(a, b) { return (b.n - a.n) || (a.i - b.i); })
+    .map(function(x) { return x.svc; });
+}
+function _hotMyServices() {
+  var count = _hotPlatformCounts();
+  var mine = _hotServicesOrdered().filter(function(svc) { return count[svc.name]; });
+  return mine.length ? mine : HOT_SERVICES;
+}
+function _hotDiscover(svc, extra) {
+  var url = 'https://api.themoviedb.org/3/discover/tv?api_key=' + TMDB_KEY
+    + '&language=en-US&watch_region=US&with_watch_monetization_types=flatrate%7Cads%7Cfree'
+    + '&with_watch_providers=' + encodeURIComponent(svc.ids)
+    + '&with_original_language=en&sort_by=popularity.desc'
+    + '&without_genres=' + HOT_SKIP_GENRES.join('%2C') + extra;
+  return fetch(url).then(function(res) {
+    if (!res.ok) throw new Error('TMDB discover ' + res.status);
+    return res.json();
+  }).then(function(d) {
+    return (d.results || []).filter(function(r) { return r.name && r.poster_path; }).map(function(r) {
+      var it = _tmdbHotItem(r);
+      it.platform = svc.name;
+      it._pop = r.popularity || 0;
+      return it;
+    });
   });
 }
+var _hotSvcData = {}, _hotSvc = null, _hotNewData = null, _hotNewLoading = false;
+function _hotDay(n) { return new Date(Date.now() + n * 864e5).toISOString().slice(0, 10); }
+// Popular on a service: shows with an episode out in the last 30 days.
+function _loadHotService(name) {
+  if (_hotSvcData[name]) return;
+  var svc = HOT_SERVICES.find(function(x) { return x.name === name; });
+  if (!svc) return;
+  _hotSvcData[name] = 'loading';
+  _hotDiscover(svc, '&air_date.gte=' + _hotDay(-30) + '&air_date.lte=' + _hotDay(1))
+    .then(function(list) { _hotSvcData[name] = list.slice(0, 10); })
+    .catch(function(e) { console.error('hot service error:', e); _hotSvcData[name] = []; })
+    .then(_rerenderHotIfOpen);
+}
+// Brand new: series that premiered in the last two weeks (a 7-day window
+// is often only a handful) on your services, most popular first.
+function _loadHotNew() {
+  if (_hotNewData || _hotNewLoading) return;
+  _hotNewLoading = true;
+  var range = '&first_air_date.gte=' + _hotDay(-14) + '&first_air_date.lte=' + _hotDay(0);
+  Promise.all(_hotMyServices().map(function(svc) {
+    return _hotDiscover(svc, range).catch(function() { return []; });
+  })).then(function(lists) {
+    var seen = {}, all = [];
+    lists.forEach(function(l) { l.forEach(function(it) { if (!seen[it.tmdb_id]) { seen[it.tmdb_id] = 1; all.push(it); } }); });
+    all.sort(function(a, b) { return b._pop - a._pop; });
+    _hotNewData = all.slice(0, 15);
+  }).then(function() { _hotNewLoading = false; _rerenderHotIfOpen(); });
+}
+function _rerenderHotIfOpen() {
+  var view = document.getElementById('full-lineup-view');
+  var detail = document.getElementById('full-lineup-detail-view');
+  if (view && view.style.display === 'block' && !(detail && detail.style.display === 'block')) renderFullLineup();
+}
+window.setHotService = function(name) { _hotSvc = name; renderFullLineup(); };
 
 async function loadFullLineupData() {
   if (_fullLineupData) return _fullLineupData;
@@ -4467,11 +4553,58 @@ function rankYourRatingHTML(kind, idx) {
   }
   return '<div class="rank-your-rating" data-kind="'+kind+'" data-idx="'+idx+'">'
     + '<span class="rank-your-rating-label">'+(mine ? 'Your rating' : 'Seen it? Rate it')+'</span>'
-    + '<div style="display:flex;gap:2px;">'+btns+'</div></div>';
+    + '<div style="display:flex;gap:2px;">'+btns+'</div>'
+    + _detailNoteHTML(kind, idx, s, mine, current)
+    + '</div>';
 }
+
+// Right after you rate from a detail view, offer a note for your friends
+// there and then (it saves as a normal comment on your own card) instead of
+// sending you back to Watching to write it. Optional: "No thanks" hides it.
+// Keyed by title; 'open' -> box, 'saved' -> a one-line confirmation.
+var _detailNote = {};
+function _detailNoteHTML(kind, idx, s, mine, current) {
+  var st = _detailNote[s.title];
+  if (!st || !mine || !mine.show || !current) return '';
+  if (st === 'saved') return '<div class="detail-note-saved">&#10003; Note saved. Your friends will see it.</div>';
+  var inpId = 'dnote-' + kind + '-' + idx;
+  return '<div class="detail-note">'
+    + '<textarea class="react-input" rows="2" id="' + inpId + '" placeholder="Add a note for your friends (optional)"></textarea>'
+    + '<div class="detail-note-btns">'
+    + '<button type="button" class="btn-send" onclick="saveDetailNote(\'' + kind + '\',' + idx + ')">Save</button>'
+    + '<button type="button" class="btn-cancel" onclick="dismissDetailNote(\'' + kind + '\',' + idx + ')">No thanks</button>'
+    + '</div></div>';
+}
+window.saveDetailNote = async function(kind, idx) {
+  var s = _rankCacheFor(kind)[idx];
+  var mine = s && findMyShowByTitle(s.title);
+  var inp = document.getElementById('dnote-' + kind + '-' + idx);
+  if (!mine || !mine.show || !inp) return;
+  var txt = inp.value.trim();
+  if (!txt) { inp.focus(); return; }
+  if (_isObjectionable(txt)) return;
+  var show = mine.show, u = state.user;
+  var sentiment = detectSentiment(txt);
+  var newReact = { id: null, reactorId: u ? u.id : null, user: u ? (u.first + (u.last ? ' ' + u.last : '')) : 'You', initials: u ? u.initials : 'Y', color: '#C4622D', text: txt, sentiment: sentiment, reactedAt: new Date().toISOString() };
+  show.reactions = show.reactions || [];
+  show.reactions.push(newReact);
+  _detailNote[s.title] = 'saved';
+  refreshDetailYourRating();
+  renderList(mine.list);
+  try { var data = await dbAddReaction(show.id, txt, sentiment); if (data && data.id) newReact.id = data.id; }
+  catch (e) { console.error('detail note error:', e); showToast("Couldn't save your note. Try again from your list."); }
+};
+window.dismissDetailNote = function(kind, idx) {
+  var s = _rankCacheFor(kind)[idx];
+  if (s) delete _detailNote[s.title];
+  refreshDetailYourRating();
+};
 function refreshDetailYourRating() {
   document.querySelectorAll('.rank-your-rating').forEach(function(el){
+    var ta = el.querySelector('.detail-note textarea');
+    var draft = ta ? ta.value : '';
     el.outerHTML = rankYourRatingHTML(el.getAttribute('data-kind'), Number(el.getAttribute('data-idx')));
+    if (draft && ta) { var again = document.getElementById(ta.id); if (again) again.value = draft; }
   });
 }
 window.rateFromDetail = function(kind, idx, n) {
@@ -4479,6 +4612,7 @@ window.rateFromDetail = function(kind, idx, n) {
   var mine = s && findMyShowByTitle(s.title);
   if (!mine || !mine.show) return;
   rate(mine.list, mine.show.id, n);
+  if (_detailNote[s.title] !== 'saved') _detailNote[s.title] = 'open';
   refreshDetailYourRating();
 };
 window.seenItRate = function(kind, idx, n) {
@@ -4561,7 +4695,12 @@ function renderFullLineup(){
   crowd = crowd.filter(match);
   trending = trending.filter(match);
   _fullLineupListCache = crowd.concat(trending);
-  if (!_fullLineupListCache.length) {
+  var withCrowd = function(t) {
+    var c = byTmdb[t.tmdb_id];
+    if (c) { t.avg_rating = c.avg_rating; t.rating_count = c.rating_count; t.people = c.people; }
+    return t;
+  };
+  if (!_fullLineupListCache.length && _hotTab !== 'service' && _hotTab !== 'new') {
     el.innerHTML = q
       ? '<div class="empty"><div class="empty-icon">&#128269;</div>No shows match "'+escAttr(q)+'".</div>'
       : '<div class="empty"><div class="empty-icon">&#128293;</div>Nothing to show right now &mdash; check back soon.</div>';
@@ -4571,14 +4710,48 @@ function renderFullLineup(){
   // reach the second list). Trending first: it's never empty and it's the
   // "what's big right now" people asked for.
   if (!crowd.length && _hotTab === 'showup' && !q) _hotTab = 'trending';
-  var seg = '<div class="hot-seg" role="tablist">'
-    + '<button type="button" role="tab" class="' + (_hotTab === 'trending' ? 'active' : '') + '" onclick="setHotTab(\'trending\')">&#128200; Trending in the US</button>'
-    + '<button type="button" role="tab" class="' + (_hotTab === 'showup' ? 'active' : '') + '" onclick="setHotTab(\'showup\')">&#128293; Hot on ShowUp</button>'
+  var tabBtn = function(key, label) {
+    return '<button type="button" role="tab" class="' + (_hotTab === key ? 'active' : '') + '" onclick="setHotTab(\'' + key + '\')">' + label + '</button>';
+  };
+  var seg = '<div class="hot-seg hot-seg-4" role="tablist">'
+    + tabBtn('trending', '&#128200; Trending') + tabBtn('service', '&#128250; By service')
+    + tabBtn('new', '&#10024; Brand new') + tabBtn('showup', '&#128293; On ShowUp')
     + '</div>';
   var sub = function(t) { return '<div style="font-size:12px;color:var(--muted);margin:-6px 0 10px;">' + t + '</div>'; };
   var html = seg;
-  if (_hotTab === 'trending') {
-    html += sub('Popular on US streaming right now');
+  if (_hotTab === 'service') {
+    var svcs = _hotServicesOrdered();
+    if (!_hotSvc) _hotSvc = svcs[0].name;
+    _loadHotService(_hotSvc);
+    html += '<div class="hot-svc-row">' + svcs.map(function(svc) {
+      return '<button type="button" class="pill-btn' + (svc.name === _hotSvc ? ' selected' : '') + '" onclick="setHotService(\'' + escAttr(svc.name) + '\')">' + escAttr(svc.name) + '</button>';
+    }).join('') + '</div>';
+    var sd = _hotSvcData[_hotSvc];
+    html += sub('Most popular on ' + escAttr(_hotSvc) + ' right now, with episodes out in the last month');
+    if (sd === 'loading' || !sd) html += '<div class="empty">Loading&hellip;</div>';
+    else {
+      var svcList = sd.map(withCrowd).filter(match);
+      var base = _fullLineupListCache.length;
+      _fullLineupListCache = _fullLineupListCache.concat(svcList);
+      html += svcList.length
+        ? svcList.map(function(s, j) { return _hotRow(s, base + j, j + 1); }).join('')
+        : '<div class="empty"><div class="empty-icon">&#128250;</div>' + (q ? 'No shows match "' + escAttr(q) + '".' : 'Nothing found for ' + escAttr(_hotSvc) + ' right now.') + '</div>';
+    }
+  } else if (_hotTab === 'new') {
+    _loadHotNew();
+    var mySvcs = _hotMyServices().map(function(x) { return x.name; });
+    html += sub('Brand-new shows from the last two weeks' + (mySvcs.length < HOT_SERVICES.length ? ' on your services (' + escAttr(mySvcs.join(', ')) + ')' : ''));
+    if (!_hotNewData) html += '<div class="empty">Loading&hellip;</div>';
+    else {
+      var newList = _hotNewData.map(withCrowd).filter(match);
+      var nbase = _fullLineupListCache.length;
+      _fullLineupListCache = _fullLineupListCache.concat(newList);
+      html += newList.length
+        ? newList.map(function(s, j) { return _hotRow(s, nbase + j, j + 1); }).join('')
+        : '<div class="empty"><div class="empty-icon">&#10024;</div>' + (q ? 'No shows match "' + escAttr(q) + '".' : 'No brand-new shows in the last two weeks.') + '</div>';
+    }
+  } else if (_hotTab === 'trending') {
+    html += sub('Trending in the US this week');
     html += trending.length
       ? trending.map(function(s, j) { return _hotRow(s, crowd.length + j, j + 1); }).join('')
       : '<div class="empty"><div class="empty-icon">&#128200;</div>' + (q ? 'No trending shows match "' + escAttr(q) + '".' : 'Trending list unavailable right now.') + '</div>';
@@ -4639,7 +4812,7 @@ window.showFullLineupDetail = function(idx){
   var ratingLine = hasRating
     ? '<div style="display:flex;align-items:baseline;gap:10px;margin-bottom:4px;"><span class="rank-detail-avg">'+avgNum.toFixed(1)+'</span><div style="display:flex;gap:2px;">'+remotes+'</div></div>'
       +'<div class="rank-detail-sub">rated by '+s.rating_count+' across ShowUp</div>'
-    : '<div class="rank-detail-sub">'+((s.trending && !s.people) ? 'Trending in the US &mdash; not on ShowUp yet. Be the first!' : 'Not yet rated by anyone on ShowUp.')+'</div>';
+    : '<div class="rank-detail-sub">'+((s.trending && !s.people) ? 'Not on ShowUp yet. Be the first!' : 'Not yet rated by anyone on ShowUp.')+'</div>';
   if (s.people) {
     // Friends by name (everyone, no "+N more"), then anyone outside your
     // rooms as a "neighbors" count (same word as Prime Time; you aren't one
@@ -5763,6 +5936,66 @@ window.markLoungeSeen = async function(){
   catch(e){ console.error('markLoungeSeen error:', e); }
 };
 
+// Show names in Lounge posts become tappable (opens the show's details with
+// friends' ratings + Add), so a recommendation is one tap from your list.
+// The catalog is every show on ShowUp (get_full_lineup) + this week's
+// trending + your own lists. To avoid linking ordinary words, a match must
+// be a whole word/phrase starting with a capital letter; short one-word
+// titles only link when written in capitals (CIA, FBI), and a few common
+// one-word titles that double as plain English never link.
+var _loungeShowCatalog = null, _loungeCatalogLoading = false;
+var LOUNGE_TITLE_SKIP = ['you','house','lost','friends','girls','love','community','evil','heroes','monk','bones','castle','home','family','life','dark','chicago','atlanta','dallas','vegas','alone','the show'];
+function _loungeCatalogAdd(map, title, tmdbId) {
+  if (!title || !tmdbId) return;
+  var key = title.toLowerCase().trim();
+  if (key.length < 3 || map[key] || LOUNGE_TITLE_SKIP.indexOf(key) >= 0) return;
+  map[key] = { title: title.trim(), tmdb_id: tmdbId };
+}
+function _loungeBuildCatalog() {
+  var map = {};
+  ['watching', 'watchlist', 'watched'].forEach(function(lk) {
+    (state[lk] || []).forEach(function(x) { _loungeCatalogAdd(map, x.title, x.tmdb_id); });
+  });
+  ((_lineupData && _lineupData.shows) || []).forEach(function(x) { _loungeCatalogAdd(map, x.title, x.tmdb_id); });
+  ((_fullLineupData && _fullLineupData.trending) || []).forEach(function(x) { _loungeCatalogAdd(map, x.title, x.tmdb_id); });
+  var keys = Object.keys(map).sort(function(a, b) { return b.length - a.length; });
+  var re = keys.length ? new RegExp('(^|[^A-Za-z0-9])(' + keys.map(function(k) {
+    return k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\s+/g, '\\s+');
+  }).join('|') + ')(?![A-Za-z0-9])', 'gi') : null;
+  _loungeShowCatalog = { map: map, re: re };
+}
+function _loungeEnsureCatalog() {
+  if (_loungeShowCatalog || _loungeCatalogLoading) return;
+  _loungeCatalogLoading = true;
+  Promise.all([loadLineupData(), loadFullLineupData().catch(function() {})]).then(function() {
+    _loungeBuildCatalog();
+    _loungeCatalogLoading = false;
+    var v = document.getElementById('lounge-list');
+    if (v && v.offsetParent !== null) renderLounge();
+  });
+}
+function loungeBodyHTML(text) {
+  var cat = _loungeShowCatalog;
+  if (!cat || !cat.re || !text) return escAttr(text);
+  var out = '', last = 0;
+  text.replace(cat.re, function(m, pre, name, offset) {
+    var start = offset + pre.length;
+    var hit = cat.map[name.toLowerCase().replace(/\s+/g, ' ')];
+    var okCase = /^[A-Z0-9]/.test(name) && (name.indexOf(' ') >= 0 || name.length >= 4 || name === name.toUpperCase());
+    if (!hit || !okCase) return m;
+    out += escAttr(text.slice(last, start))
+      + '<button type="button" class="lounge-show-link" onclick="openLoungeShow(' + Number(hit.tmdb_id) + ')">' + escAttr(name) + '</button>';
+    last = start + name.length;
+    return m;
+  });
+  return out + escAttr(text.slice(last));
+}
+window.openLoungeShow = function(tmdbId) {
+  var map = (_loungeShowCatalog && _loungeShowCatalog.map) || {};
+  var hit = Object.keys(map).map(function(k) { return map[k]; }).find(function(x) { return Number(x.tmdb_id) === tmdbId; });
+  openShowDetails(tmdbId, hit ? friendRatingsFor(hit.title, null) : []);
+};
+
 function renderLounge(){
   var wrap = document.getElementById('lounge-composer-wrap');
   var list = document.getElementById('lounge-list');
@@ -5781,6 +6014,7 @@ function renderLounge(){
   _renderLoungeRooms();
 
   var posts = state.lounge.posts || [];
+  if (posts.length) _loungeEnsureCatalog();
   if (!posts.length){
     list.innerHTML = '<div class="empty"><div class="empty-icon">☕</div>'
       + (state.currentRoomIsAdminView ? 'Nothing in the Lounge yet.' : 'The Lounge is quiet — be the first to say something.')
@@ -5798,7 +6032,7 @@ function renderLounge(){
       ? '<textarea class="lounge-textarea" id="lounge-edit-input" maxlength="4000">' + escAttr(p.body) + '</textarea>'
         + '<div style="text-align:right;margin-top:6px;"><button class="btn-send" onclick="submitEditLounge(\'post\',\'' + p.id + '\')">Save</button> '
         + '<button class="btn-cancel" onclick="cancelEditLounge()">Cancel</button></div>'
-      : '<div class="lounge-body">' + escAttr(p.body) + '</div>';
+      : '<div class="lounge-body">' + loungeBodyHTML(p.body) + '</div>';
 
     var actions = state.currentRoomIsAdminView ? '' : '<div class="lounge-actions">'
       + '<button class="lounge-reply-btn" onclick="toggleLoungeReply(\'' + p.id + '\')">💬 Reply</button>'
@@ -5811,7 +6045,7 @@ function renderLounge(){
         ? '<textarea class="lounge-textarea" id="lounge-edit-input" maxlength="4000">' + escAttr(r.body) + '</textarea>'
           + '<div style="text-align:right;margin-top:6px;"><button class="btn-send" onclick="submitEditLounge(\'reply\',\'' + r.id + '\')">Save</button> '
           + '<button class="btn-cancel" onclick="cancelEditLounge()">Cancel</button></div>'
-        : '<div class="lounge-body">' + escAttr(r.body) + '</div>';
+        : '<div class="lounge-body">' + loungeBodyHTML(r.body) + '</div>';
       var rActions = state.currentRoomIsAdminView ? '' : '<div class="lounge-actions">'
           + '<button class="lounge-link lounge-link-reply" onclick="replyToLoungeReply(\'' + p.id + '\',\'' + r.id + '\')">Reply</button>'
           + _loungeMenuBtn('reply', r)
@@ -8498,6 +8732,7 @@ window.submitDoneWatching = async function() {
     refreshDetailYourRating();
   }
   if (comment) {
+    _detailNote[show.title] = 'saved';
     var u = state.user;
     var txt = comment;
     var sentiment = detectSentiment(txt);
@@ -9332,16 +9567,17 @@ var PLATFORM_SELECT_ID = { w:'w-platform', wl:'wl-platform', wd:'wd-platform', d
 // Every platform dropdown includes "Other" as a catch-all so adding a show
 // is never blocked by a missing option, but picking it used to throw away
 // which platform it actually was (see the None/Other DB cleanup this
-// replaces the need for). This reveals a same-named text field to name it;
-// resolvedPlatformValue() prefers that name over the literal word "Other"
-// when saving. Left blank, it still saves as "Other" -- no new blocking.
+// replaces the need for). The same-named text field is kept in the markup
+// (resolvedPlatformValue() still reads it) but is no longer revealed.
 window.togglePlatformOther = function(selectId) {
   var sel = document.getElementById(selectId);
   var other = document.getElementById(selectId + '-other');
   if (!sel || !other) return;
-  var isOther = sel.value === 'Other';
-  other.style.display = isOther ? 'block' : 'none';
-  if (isOther) other.focus(); else other.value = '';
+  // Tracey's call (2026-10-27): "Other" is a complete answer -- one tap, and
+  // the show lands in the Other group. The follow-up "Which platform?" box
+  // read as one more thing to fill in, so it stays hidden.
+  other.style.display = 'none';
+  other.value = '';
 };
 function resolvedPlatformValue(selectId) {
   var sel = document.getElementById(selectId);
@@ -10555,6 +10791,8 @@ window.chooseAddDestination = async function(destKey) {
     var emoji = isDnf ? '🎬' : (isWaiting ? '⏳' : '🍿');
     openDWM(resultShow, heading, emoji, addUndo);
     if (_seenItRating && _seenItRating.title === info.title && Date.now() - _seenItRating.at < 5 * 60 * 1000) { _dwmRating = _seenItRating.n; renderDWMRemotes(); }
+  } else if (_seenItRating && _seenItRating.title === info.title && _detailNote[info.title] !== 'saved') {
+    _detailNote[info.title] = 'open'; // no rating popup (with its own comment box) on this path
   }
   _seenItRating = null;
   refreshDetailYourRating();
