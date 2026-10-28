@@ -4757,6 +4757,10 @@ function renderFullLineup(){
   if (_hotTab === 'service') {
     if (!_hotSvc) _hotSvc = _hotServicesOrdered()[0].name;
     _loadHotService(_hotSvc);
+    setTimeout(function() {
+      var sel = document.querySelector('.hot-svc-row .pill-btn.selected'), row = sel && sel.parentNode;
+      if (row) row.scrollLeft = sel.offsetLeft - row.offsetLeft - (row.clientWidth - sel.offsetWidth) / 2;
+    }, 0);
     html += '<div class="hot-svc-row">' + HOT_SERVICES.map(function(svc) {
       return '<button type="button" class="pill-btn' + (svc.name === _hotSvc ? ' selected' : '') + '" onclick="setHotService(\'' + escAttr(svc.name) + '\')">' + escAttr(svc.name) + '</button>';
     }).join('') + '</div>';
@@ -5350,10 +5354,13 @@ function buildConversationsFeed(){
   // observing, not actually a member of.
   (state.currentRoomIsAdminView ? [] : ['watching','watchlist','watched']).forEach(function(lk){
     (state[lk]||[]).forEach(function(s){
-      if(inWindow(s.addedAt)) events.push({type:'added',list:lk,showId:s.id,text:'<b>You</b> added '+escAttr(s.title),ts:s.addedAt,isNew:isNew(s.addedAt)});
+      if(inWindow(s.addedAt)) events.push({type:'added',list:lk,showId:s.id,text:'<b>You</b> added '+escAttr(s.title),ts:s.addedAt,isNew:false});
       (s.reactions||[]).forEach(function(r){
         if(r.reactorId && inWindow(r.reactedAt) && (r.reactorId===myId || friendsById[r.reactorId])){
-          events.push({type:'comment',list:lk,showId:s.id,reactionId:r.id,reactorId:r.reactorId,isMine:r.reactorId===myId,commentText:r.text,text:'<b>'+escAttr(nameFor(r.reactorId))+'</b> commented on your '+escAttr(s.title)+': &#8220;'+escAttr(r.text)+'&#8221;',ts:r.reactedAt,isNew:isNew(r.reactedAt)});
+          var mineC=r.reactorId===myId;
+          events.push({type:'comment',list:lk,showId:s.id,reactionId:r.id,reactorId:r.reactorId,isMine:mineC,commentText:r.text,text:mineC
+            ? '<b>You</b> commented on '+escAttr(s.title)+': &#8220;'+escAttr(r.text)+'&#8221;'
+            : '<b>'+escAttr(nameFor(r.reactorId))+'</b> commented on '+escAttr(s.title)+' (on your list): &#8220;'+escAttr(r.text)+'&#8221;',ts:r.reactedAt,isNew:!mineC&&isNew(r.reactedAt)});
         }
       });
     });
@@ -7836,6 +7843,7 @@ function _showPickRowHTML(it, i, ns) {
       }
       body += '<div class="fs-rate-label">' + (it.choice === 'watching' ? 'Your take so far' : 'Your rating') + '</div>'
         + '<div class="fs-remotes">' + remotes + '</div>';
+      if (ns === 'dp' && it.rating && it.id) body += _dpNoteHTML(it, i);
     }
   }
   return '<div class="fs-row' + (it.isNew ? ' fs-new' : '') + '">' + poster + '<div class="fs-main">'
@@ -7999,7 +8007,7 @@ window.finishFirstShows = async function() {
 // watching or loved. Same status-then-remotes rows as First Shows. Not on
 // someone's first day (they just did First Shows). Three "Not now"s in a
 // row and it rests for 3 days. "Haven't started yet" on one of your own
-// shows asks again in 2 weeks; "Not for me" on a friend's show is for good.
+// shows asks again in 2 weeks; "Not right now" on a friend's show, in 90 days.
 // Its memory is per device (localStorage).
 
 var DP_KEY = 'showup_daily_prompt';
@@ -8064,7 +8072,7 @@ function _dpPickOwn(nope, later) {
 // A show friends in any of your rooms are watching or loved, that isn't on
 // your lists. Names them, plus a friend's own comment on it when the room
 // data loaded in the background has one.
-function _dpPickFriend(nope) {
+function _dpPickFriend(nope, later) {
   var mine = {};
   ['watching', 'watchlist', 'watched'].forEach(function(lk) {
     (state[lk] || []).forEach(function(s) { mine[_dpShowKey(s.title, s.tmdb_id)] = mine[_dpShowKey(s.title)] = true; });
@@ -8076,7 +8084,7 @@ function _dpPickFriend(nope) {
       var loved = s.status === 'watched' && s.rating >= 4;
       if (s.status !== 'watching' && !loved) return;
       var k = _dpShowKey(s.title, s.tmdb_id);
-      if (mine[k] || mine[_dpShowKey(s.title)] || nope[k]) return;
+      if (mine[k] || mine[_dpShowKey(s.title)] || nope[k] || (later[k] && Date.now() < later[k])) return;
       var e = byShow[k] || (byShow[k] = { show: s, watching: [], loved: [], score: 0 });
       if (loved) e.loved.push(p); else e.watching.push(p);
       e.score += loved ? 2 : 1;
@@ -8109,7 +8117,7 @@ function _dpPickFriend(nope) {
     return { name: p.first_name, rating: mineOf ? mineOf.rating : 0 };
   });
   return { title: s.title, tmdb_id: s.tmdb_id || null, poster_path: s.poster_path || null, platform: s.platform || null,
-    media_type: s.media_type || 'tv', tag: tag, note: note, friendRatings: friendRatings, choice: null, rating: 0, id: null, nopeLabel: 'Not for me' };
+    media_type: s.media_type || 'tv', tag: tag, note: note, friendRatings: friendRatings, choice: null, rating: 0, id: null, nopeLabel: 'Not right now', later: true, laterDays: 90 };
 }
 
 var _dpChecking = false;
@@ -8125,7 +8133,8 @@ async function _dpCheckAndOpen() {
   try { await loadAllRoomsSearchData(); } catch (e) {}
   try { await state.friendsPreload; } catch (e) {}
   var nope = _dpPrefs().nope || {};
-  var items = [_dpPickOwn(nope, _dpPrefs().later || {}), _dpPickFriend(nope)].filter(Boolean);
+  var later = _dpPrefs().later || {};
+  var items = [_dpPickOwn(nope, later), _dpPickFriend(nope, later)].filter(Boolean);
   if (!items.length) { _dpWhy = 'no shows to ask about'; return; }
   var app = document.getElementById('screen-app');
   if (!app || !app.classList.contains('active')) { _dpWhy = 'you were on another screen'; return; }
@@ -8142,12 +8151,53 @@ async function _dpCheckAndOpen() {
 }
 
 function renderDailyPrompt() {
+  var drafts = {};
+  document.querySelectorAll('#dp-list textarea').forEach(function(t) { drafts[t.id] = t.value; });
   document.getElementById('dp-list').innerHTML = _dpItems.map(function(it, i) { return _showPickRowHTML(it, i, 'dp'); }).join('')
     || '<div class="fs-sub" style="margin:12px 0;">All set for today. Thanks!</div>';
+  Object.keys(drafts).forEach(function(id) { var t = document.getElementById(id); if (t) t.value = drafts[id]; });
   var btn = document.getElementById('dp-close-btn');
   btn.textContent = _dpEngaged ? 'Done' : 'Not now';
   btn.className = _dpEngaged ? 'btn-invite-copy' : 'fs-skip';
 }
+
+// After a rating in the daily popup: an optional comment, saved like any
+// comment on your own card. 'open' -> box, 'saved' -> confirmation.
+function _dpNoteHTML(it, i) {
+  if (it.note2 === 'saved') return '<div class="detail-note-saved">&#10003; Comment saved. Your friends will see it.</div>';
+  if (it.note2 !== 'open') return '<button type="button" class="fs-change" style="padding-left:0;" onclick="dpNoteOpen(' + i + ')">Add a comment</button>';
+  return '<div class="detail-note">'
+    + '<textarea class="react-input" rows="2" id="dpnote-' + i + '" placeholder="Add a comment for your friends"></textarea>'
+    + '<div class="detail-note-btns">'
+    + '<button type="button" class="btn-send" onclick="dpNoteSave(' + i + ')">Save</button>'
+    + '<button type="button" class="btn-cancel" onclick="dpNoteDismiss(' + i + ')">No thanks</button>'
+    + '</div></div>';
+}
+window.dpNoteOpen = function(i) {
+  var it = _dpItems[i]; if (!it) return;
+  _dpTouched(); it.note2 = 'open'; renderDailyPrompt();
+  var ta = document.getElementById('dpnote-' + i); if (ta) ta.focus();
+};
+window.dpNoteDismiss = function(i) { var it = _dpItems[i]; if (it) { it.note2 = null; renderDailyPrompt(); } };
+window.dpNoteSave = async function(i) {
+  var it = _dpItems[i];
+  var inp = document.getElementById('dpnote-' + i);
+  var mine = it && findMyShowByTitle(it.title);
+  if (!it || !inp || !mine || !mine.show) return;
+  var txt = inp.value.trim();
+  if (!txt) { inp.focus(); return; }
+  if (_isObjectionable(txt)) return;
+  var show = mine.show, u = state.user;
+  var sentiment = detectSentiment(txt);
+  var newReact = { id: null, reactorId: u ? u.id : null, user: u ? (u.first + (u.last ? ' ' + u.last : '')) : 'You', initials: u ? u.initials : 'Y', color: '#C4622D', text: txt, sentiment: sentiment, reactedAt: new Date().toISOString() };
+  show.reactions = show.reactions || [];
+  show.reactions.push(newReact);
+  it.note2 = 'saved';
+  renderDailyPrompt();
+  renderList(mine.list);
+  try { var data = await dbAddReaction(show.id, txt, sentiment); if (data && data.id) newReact.id = data.id; }
+  catch (e) { console.error('daily note error:', e); showToast("Couldn't save your comment. Try again from your list."); }
+};
 
 function _dpTouched() {
   _dpEngaged = true;
@@ -8165,7 +8215,7 @@ window.dpNope = function(i) {
   if (!it) return;
   var p = _dpPrefs();
   var k = _dpShowKey(it.title, it.tmdb_id);
-  if (it.later) { p.later = p.later || {}; p.later[k] = Date.now() + 14 * 86400 * 1000; } // ask again in 2 weeks
+  if (it.later) { p.later = p.later || {}; p.later[k] = Date.now() + (it.laterDays || 14) * 86400 * 1000; } // own shows: 2 weeks; friends' shows: 90 days
   else { p.nope = p.nope || {}; p.nope[k] = true; }
   _dpSave(p);
   _dpItems.splice(i, 1);
