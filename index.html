@@ -59,6 +59,7 @@
   --olive:#5C6B3A;--olive-light:#7A8F4E;--charcoal:#3A3A3A;--muted:#6A6A6A;
   --cream:#FBF7F2;--border:rgba(58,58,58,0.10);
   --fig:#6B2D4E;--gold:#C49A3C;
+  --brand:#6B2D4E; /* logo plum -- matches the app icon; room themes don't override it */
   --shadow:0 2px 14px rgba(100,50,20,0.09);
   --serif:Georgia,'Times New Roman',serif;
   --sans:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,sans-serif;
@@ -77,7 +78,9 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
 .screen.active{display:flex;}
 
 .nav{background:#EDE8DC;border-bottom:1px solid var(--border);padding:0 20px;display:flex;align-items:center;justify-content:space-between;height:52px;flex-shrink:0;position:relative;}
-.nav-logo{font-family:var(--serif);font-size:22px;color:var(--terra);font-weight:700;}
+.nav-logo{font-family:var(--serif);font-size:22px;color:var(--brand);font-weight:700;}
+/* Logo lockup (sign-in, welcome, loading): the app icon's S tile beside the word. */
+.brand-mark{width:1.2em;height:1.2em;border-radius:22.5%;flex-shrink:0;display:block;}
 .nav-right{display:flex;align-items:center;gap:10px;}
 .nav-back{display:inline-flex;align-items:center;justify-content:center;gap:4px;min-height:40px;padding:0 14px;border-radius:20px;background:var(--cream);border:1.5px solid var(--fig);color:var(--fig);font-family:var(--sans);font-size:14px;font-weight:600;cursor:pointer;box-shadow:0 1px 4px rgba(0,0,0,0.08);}
 /* Arrow-only back buttons next to page titles: a true circle. */
@@ -121,7 +124,7 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
 .nav-tab-label{font-size:10px;font-weight:600;letter-spacing:0.02em;white-space:nowrap;}
 
 .boot-loader{position:fixed;inset:0;background:var(--sand);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:9999;}
-.boot-loader-logo{font-family:var(--serif);font-size:26px;color:var(--terra);font-weight:700;margin-bottom:16px;}
+.boot-loader-logo{font-family:var(--serif);font-size:26px;color:var(--brand);font-weight:700;margin-bottom:16px;display:inline-flex;align-items:center;gap:10px;}
 .boot-loader-spinner{width:32px;height:32px;border:3px solid rgba(196,98,45,0.22);border-top-color:var(--terra);border-radius:50%;animation:boot-spin 0.8s linear infinite;}
 .boot-loader-log{margin-top:18px;font-family:monospace;font-size:11px;color:var(--muted);text-align:left;max-width:280px;line-height:1.7;}
 .debug-badge{position:fixed;bottom:12px;left:12px;z-index:9999;background:rgba(0,0,0,0.78);color:#fff;font-family:monospace;font-size:11px;line-height:1.6;padding:8px 10px;border-radius:8px;max-width:260px;display:none;}
@@ -408,7 +411,7 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
 
 .onboard-wrap{flex:1;display:flex;align-items:center;justify-content:center;padding:30px 20px;}
 .onboard-card{background:var(--cream);border:1px solid var(--border);border-radius:20px;padding:32px;width:100%;max-width:420px;box-shadow:0 4px 24px rgba(100,50,20,0.10);}
-.onboard-logo{font-family:var(--serif);font-size:30px;color:var(--terra);font-weight:700;margin-bottom:2px;}
+.onboard-logo{font-family:var(--serif);font-size:30px;color:var(--brand);font-weight:700;margin-bottom:2px;display:inline-flex;align-items:center;gap:10px;}
 .onboard-tag{font-size:14px;color:var(--muted);margin-bottom:4px;}
 /* First-shows screen (new accounts) -- see openFirstShows. */
 .fs-card{max-width:520px;}
@@ -725,7 +728,7 @@ html.native-cover .status-shield{display:block;position:fixed;top:0;left:0;right
 /* LOGIN SCREEN */
 .login-wrap{flex:1;display:flex;align-items:center;justify-content:center;padding:30px 20px;background:var(--sand);}
 .login-card{background:var(--cream);border:1px solid var(--border);border-radius:20px;padding:36px 32px;width:100%;max-width:420px;box-shadow:0 4px 24px rgba(100,50,20,0.10);}
-.login-logo{font-family:var(--serif);font-size:34px;color:var(--terra);font-weight:700;margin-bottom:4px;}
+.login-logo{font-family:var(--serif);font-size:34px;color:var(--brand);font-weight:700;margin-bottom:4px;display:inline-flex;align-items:center;gap:10px;}
 .login-tag{font-size:14px;color:var(--muted);margin-bottom:6px;}
 .login-sub{font-family:var(--serif);font-size:15px;color:var(--fig);font-style:italic;margin-bottom:28px;}
 .login-label{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px;display:block;}
@@ -755,7 +758,7 @@ html.native-cover .status-shield{display:block;position:fixed;top:0;left:0;right
 <body>
 <div class="status-shield" aria-hidden="true"></div>
 <div class="boot-loader" id="boot-loader">
-  <div class="boot-loader-logo">ShowUp</div>
+  <div class="boot-loader-logo"><img class="brand-mark" src="/icon-192.png?v=4" alt="">ShowUp</div>
   <div class="boot-loader-spinner"></div>
   <div class="boot-loader-log" id="boot-loader-log"></div>
 </div>
@@ -856,7 +859,7 @@ html.native-cover .status-shield{display:block;position:fixed;top:0;left:0;right
           <div id="invite-banner-name" style="font-family:var(--serif);font-size:16px;font-weight:700;margin-bottom:3px;">You've been invited to ShowUp!</div>
           <div style="font-size:13px;opacity:0.85;line-height:1.5;">Sign in below to pull up a chair.</div>
         </div>
-        <div class="login-logo">ShowUp</div>
+        <div class="login-logo"><img class="brand-mark" src="/icon-192.png?v=4" alt="">ShowUp</div>
         <div class="login-tag">Good taste lives here.</div>
         <div class="login-sub">Your living room awaits.</div>
         <div class="login-error" id="login-error"></div>
@@ -895,7 +898,7 @@ html.native-cover .status-shield{display:block;position:fixed;top:0;left:0;right
       </div>
       <!-- Password sign-in for App Store / TestFlight reviewers only (they can't receive our email codes). -->
       <div id="login-pw-view" style="display:none;">
-        <div class="login-logo">ShowUp</div>
+        <div class="login-logo"><img class="brand-mark" src="/icon-192.png?v=4" alt="">ShowUp</div>
         <div class="login-sub" style="margin-bottom:14px;">Reviewer sign-in</div>
         <div class="login-error" id="login-pw-error"></div>
         <label class="login-label">Email</label>
@@ -913,7 +916,7 @@ html.native-cover .status-shield{display:block;position:fixed;top:0;left:0;right
 <div id="screen-onboard" class="screen">
   <div class="onboard-wrap">
     <div class="onboard-card">
-      <div class="onboard-logo">ShowUp</div>
+      <div class="onboard-logo"><img class="brand-mark" src="/icon-192.png?v=4" alt="">ShowUp</div>
       <div class="onboard-tag">Good taste lives here.</div>
       <div class="onboard-sub">Your living room awaits.</div>
       <div class="ob-row">
