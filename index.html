@@ -1440,7 +1440,7 @@ html.native-cover .status-shield{display:block;position:fixed;top:0;left:0;right
           <button type="button" class="switch" id="pref-daily-prompt" role="switch" aria-checked="true" aria-label="Daily show question" onclick="toggleDailyPrompt()"></button>
         </div>
       </div>
-      <div style="font-size:11px;color:var(--muted);margin-top:6px;padding-left:4px;">New seasons also show in the &#128276; inside ShowUp; comments show in your Living Room.</div>
+      <div style="font-size:11px;color:var(--muted);margin-top:6px;padding-left:4px;">New seasons and Lounge replies also show in the &#128276; inside ShowUp; comments and new Lounge posts show in your Living Room.</div>
     </div>
 
     <div class="settings-section">
@@ -5975,9 +5975,27 @@ window.markLoungeSeen = async function(){
   if (!state.currentRoomId) return;
   state.lounge.seenAt = new Date().toISOString();
   renderLoungeBadge();
+  _markLoungeReplyNotifsRead(state.currentRoomId);
   try { await sb.rpc('mark_lounge_seen', { p_room_id: state.currentRoomId }); }
   catch(e){ console.error('markLoungeSeen error:', e); }
 };
+
+// Reading a room's Lounge counts as reading its reply alerts, so the bell
+// doesn't keep nagging about a conversation you've just seen.
+function _markLoungeReplyNotifsRead(roomId){
+  var hit = (state.notifications || []).filter(function(n){
+    return n.type === 'lounge_reply' && n.room_id === roomId && (!n.read_at || !n.seen_at);
+  });
+  if (!hit.length) return;
+  var now = new Date().toISOString();
+  hit.forEach(function(n){ n.read_at = n.read_at || now; n.seen_at = n.seen_at || now; });
+  renderNotifBell();
+  var panel = document.getElementById('notif-panel');
+  if (panel && !panel.hidden) renderNotifPanel();
+  sb.from('notifications').update({ read_at: now, seen_at: now })
+    .eq('user_id', state.user.id).eq('type', 'lounge_reply').eq('room_id', roomId).is('read_at', null)
+    .then(function(res){ if (res.error) console.error('_markLoungeReplyNotifsRead error:', res.error); });
+}
 
 // Show names in Lounge posts become tappable (opens the show's details with
 // friends' ratings + Add), so a recommendation is one tap from your list.
@@ -9804,12 +9822,14 @@ function mapProviderToPlatform(name) {
 
 var NOTIF_ICON = { new_season: '🎉', season_upcoming: '🗓️', new_episode: '📺', lounge_reply: '☕', lounge_post: '☕', comment: '💬', recommendation: '🎯', room_join: '👋', shared_add: '🙌' };
 
-// The bell is for new seasons and recommendations (a recommendation is
-// personal and otherwise only shows inside a room). Comment / Lounge-reply rows still live
-// in the table -- they power phone alerts (a tapped alert opens its row via
-// ?notif=) and the weekly email recap -- but the Living Room's own unread
-// counts already cover them, so they stay out of the bell's list and dot.
-var BELL_TYPES = ['new_season', 'season_upcoming', 'new_episode', 'recommendation', 'room_join', 'shared_add'];
+// The bell is for things meant for you personally: new seasons/episodes,
+// recommendations, joins, shared adds, and Lounge replies (one row per
+// conversation -- add_lounge_reply collapses unseen ones). Comment and new
+// Lounge-post rows still live in the table -- they power phone alerts (a
+// tapped alert opens its row via ?notif=) and the weekly email recap -- but
+// they're room-wide and would bury season drops, so they stay out of the
+// bell's list and dot; the Living Room's own unread counts cover them.
+var BELL_TYPES = ['new_season', 'season_upcoming', 'new_episode', 'recommendation', 'room_join', 'shared_add', 'lounge_reply'];
 function _bellItems() {
   return (state.notifications || []).filter(function(n) { return BELL_TYPES.indexOf(n.type) >= 0; });
 }
