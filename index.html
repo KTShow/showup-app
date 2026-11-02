@@ -435,8 +435,9 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
 .fs-search-wrap{position:relative;margin-bottom:18px;}
 .fs-result{display:flex;align-items:center;gap:10px;padding:8px;border-bottom:1px solid var(--border);cursor:pointer;background:var(--cream);}
 .fs-result:hover{background:var(--sand);}
-.invite-modal-overlay.daily-sheet-overlay{align-items:flex-end;padding:0;}
-.daily-sheet{background:var(--cream);border-radius:20px 20px 0 0;width:100%;max-width:520px;max-height:75vh;overflow-y:auto;padding:22px 20px calc(16px + env(safe-area-inset-bottom));box-shadow:0 -6px 30px rgba(0,0,0,0.18);}
+/* Centered card, not a bottom sheet: people watching it pop up from the bottom weren't sure what it was. */
+.invite-modal-overlay.daily-sheet-overlay{align-items:center;padding:calc(16px + env(safe-area-inset-top)) 16px calc(16px + env(safe-area-inset-bottom));}
+.daily-sheet{background:var(--cream);border-radius:20px;width:100%;max-width:520px;max-height:85vh;overflow-y:auto;padding:22px 20px 16px;box-shadow:0 8px 40px rgba(0,0,0,0.2);}
 .dp-note{font-size:13px;font-style:italic;color:var(--charcoal);margin:-4px 0 8px;line-height:1.4;}
 .fs-skip{display:block;width:100%;min-height:44px;margin-top:8px;background:none;border:none;color:var(--muted);font-family:var(--sans);font-size:13px;cursor:pointer;}
 .onboard-sub{font-family:var(--serif);font-size:15px;color:var(--fig);font-style:italic;margin-bottom:22px;}
