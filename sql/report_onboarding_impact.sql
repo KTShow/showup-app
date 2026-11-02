@@ -64,3 +64,20 @@ left join shows s
  and s.user_id in (select mm.id from members mm where mm.joined < p.starts)
 group by p.period, p.starts, p.ends
 order by p.period;
+
+-- ---------- 3. From 2026-11-02 on: adds and ratings by screen -----------
+-- Needs sql/add_rated_at.sql. Adds from the show pickers carry a source;
+-- ratings carry a date, so a rating given to a show already on someone's
+-- list now counts too. Change the date to look at a different stretch.
+select coalesce(s.source, 'manual') as came_from,
+       count(*) filter (where s.added_at >= timestamptz '2026-11-02') as shows_added,
+       count(*) filter (where s.rated_at >= timestamptz '2026-11-02') as ratings_given,
+       count(distinct s.user_id) filter (where s.added_at >= timestamptz '2026-11-02'
+                                            or s.rated_at >= timestamptz '2026-11-02') as members
+from shows s
+join users u on u.id = s.user_id
+where not coalesce(u.exclude_from_reports, false)
+  and not coalesce(u.is_admin, false)
+  and (s.added_at >= timestamptz '2026-11-02' or s.rated_at >= timestamptz '2026-11-02')
+group by 1
+order by shows_added desc;
