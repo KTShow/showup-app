@@ -436,8 +436,11 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
 .fs-chosen{font-size:13px;font-weight:700;color:var(--terra);}
 .fs-change{background:none;border:none;color:var(--muted);font-family:var(--sans);font-size:12px;text-decoration:underline;cursor:pointer;min-height:32px;padding:0 6px;}
 .fs-rate-label{font-size:12px;color:var(--charcoal);margin:6px 0 2px;}
+/* Before they rate: an ask, not a label -- most picks were getting a status but no rating. */
+.fs-rate-label.fs-rate-ask{font-size:13px;font-weight:700;color:var(--fig);margin-top:8px;}
+.fs-rate-label.fs-rate-ask span{display:block;font-weight:400;font-size:12px;color:var(--muted);}
 .fs-remotes{display:flex;gap:2px;}
-.fs-remote{background:none;border:none;cursor:pointer;min-width:40px;min-height:40px;display:inline-flex;align-items:center;justify-content:center;padding:0;}
+.fs-remote{background:none;border:none;cursor:pointer;min-width:44px;min-height:44px;display:inline-flex;align-items:center;justify-content:center;padding:0;}
 .fs-search-label{font-size:13px;font-weight:600;color:var(--charcoal);margin:18px 0 6px;}
 .fs-search-wrap{position:relative;margin-bottom:18px;}
 .fs-result{display:flex;align-items:center;gap:10px;padding:8px;border-bottom:1px solid var(--border);cursor:pointer;background:var(--cream);}
@@ -7898,9 +7901,13 @@ function _showPickRowHTML(it, i, ns) {
       var remotes = '';
       for (var n = 1; n <= 5; n++) {
         remotes += '<button type="button" class="fs-remote" aria-label="' + n + ' of 5" onclick="' + ns + 'Rate(' + i + ',' + n + ')">'
-          + '<span style="opacity:' + (n <= it.rating ? '1' : '0.25') + ';display:inline-flex;">' + remoteIcon(24, n <= it.rating) + '</span></button>';
+          + '<span style="opacity:' + (n <= it.rating ? '1' : '0.3') + ';display:inline-flex;">' + remoteIcon(30, n <= it.rating) + '</span></button>';
       }
-      body += '<div class="fs-rate-label">' + (it.choice === 'watching' ? 'Your take so far' : 'Your rating') + '</div>'
+      var rateLabel = it.rating
+        ? '<div class="fs-rate-label">' + (it.choice === 'watching' ? 'Your take so far' : 'Your rating') + '</div>'
+        : '<div class="fs-rate-label fs-rate-ask">' + (it.choice === 'watching' ? 'How is it so far?' : 'How was it?')
+          + '<span>Your rating helps friends pick their next show.</span></div>';
+      body += rateLabel
         + '<div class="fs-remotes">' + remotes + '</div>';
       if (ns === 'dp' && it.rating && it.id) body += _dpNoteHTML(it, i);
     }
