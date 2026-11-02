@@ -158,6 +158,8 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
 /* On a person's page the sticky bar also names whose shows these are, so a
    jump from Conversations deep into the list never loses track of it. */
 .frv-namebar{align-items:center;}
+.mem-tools{display:flex;gap:8px;align-items:center;margin:0 0 10px;}
+.mem-tools input{flex:1;min-width:0;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-family:var(--sans);font-size:16px;background:#fff;}
 .frv-namebar-name{margin-right:auto;display:flex;align-items:center;gap:6px;min-width:0;font-family:var(--serif);font-size:14px;font-weight:700;color:var(--charcoal);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .frv-namebar-name i{width:10px;height:10px;border-radius:50%;flex-shrink:0;}
 
@@ -7794,7 +7796,7 @@ var _fsMode = 'new';
 var FS_COPY = {
   new:    { title: 'Show your friends what you watch', sub: 'Tap where you are with any show you know. Rate it, even after an episode or two.', source: 'first_shows' },
   finish: { title: 'Let’s finish your list', sub: 'Add a few more so your friends can see what you watch. Tap where you are with any you know, and rate it.', source: 'finish_setup' },
-  back:   { title: 'Welcome back!', sub: 'Here’s what your rooms have been watching. Tap where you are with any you know, and rate it.', source: 'welcome_back' },
+  back:   { title: 'Welcome back! Let’s catch you up', sub: 'Here’s what your rooms have been watching while you were away. Tap where you are with any you know, and rate it.', source: 'welcome_back' },
 };
 
 window.openFirstShows = async function(roomId, mode) {
@@ -11497,9 +11499,10 @@ window.submitFeedback = async function() {
 // get_admin_members() (sql/add_admin_members.sql), admins only. Three tabs:
 // Everyone (by last visit), New (joined in the last 14 days: 3+ shows? came
 // back? alerts?), Invites (per inviter: joined / active this week).
-var _membersData = null, _membersTab = 'all';
+var _membersData = null, _membersTab = 'all', _membersSort = 'last';
 window.openMembersAdmin = async function() {
   document.getElementById('members-modal').classList.add('active');
+  document.getElementById('members-search').value = '';
   document.getElementById('members-list').innerHTML = '<div class="empty">Loading…</div>';
   document.getElementById('members-summary').innerHTML = '';
   try {
@@ -11514,6 +11517,7 @@ window.openMembersAdmin = async function() {
 };
 window.closeMembersAdmin = function() { document.getElementById('members-modal').classList.remove('active'); };
 window.setMembersTab = function(t) { _membersTab = t; renderMembersAdmin(); };
+window.setMembersSort = function(k) { _membersSort = k; renderMembersAdmin(); };
 function _memDays(d) { return d ? Math.floor((Date.now() - new Date(d).getTime()) / 864e5) : null; }
 function _memHow(m) {
   if (m.uses_app) return 'iPhone app';
@@ -11550,12 +11554,19 @@ function renderMembersAdmin() {
     return '<button type="button" class="' + (k === _membersTab ? 'active' : '') + '" onclick="setMembersTab(\'' + k + '\')">' + filters[k].label + ' ' + n + '</button>';
   }).join('');
 
-  // Most recent visit first: someone in yesterday is the best one to nudge.
-  var list = all.filter(filters[_membersTab].fn).sort(function(a, b) {
-    return new Date(b.last_visit || 0) - new Date(a.last_visit || 0);
-  });
+  // Last in (default): someone in yesterday is the best one to nudge.
+  // A-Z: for finding a particular person. The search box narrows either.
+  document.getElementById('members-sort').innerHTML = [['last', 'Last in'], ['az', 'A–Z']].map(function(o) {
+    return '<button type="button" class="' + (o[0] === _membersSort ? 'active' : '') + '" onclick="setMembersSort(\'' + o[0] + '\')">' + o[1] + '</button>';
+  }).join('');
+  var q = (document.getElementById('members-search').value || '').trim().toLowerCase();
+  var list = all.filter(filters[_membersTab].fn).filter(function(m) {
+    return !q || (m.name || '').toLowerCase().indexOf(q) >= 0 || (m.email || '').toLowerCase().indexOf(q) >= 0;
+  }).sort(_membersSort === 'az'
+    ? function(a, b) { return (a.name || '').localeCompare(b.name || '', undefined, { sensitivity: 'base' }); }
+    : function(a, b) { return new Date(b.last_visit || 0) - new Date(a.last_visit || 0); });
   var el = document.getElementById('members-list');
-  if (!list.length) { el.innerHTML = '<div class="empty">Nobody here. 🎉</div>'; return; }
+  if (!list.length) { el.innerHTML = '<div class="empty">' + (q ? 'No one matches “' + escAttr(q) + '”.' : 'Nobody here. 🎉') + '</div>'; return; }
   el.innerHTML = '<div class="mem-row mem-head"><span>Name</span><span>Uses</span><span>Alerts</span><span>Last in</span></div>'
     + list.map(function(m) {
       var how = _memHow(m);
@@ -11731,6 +11742,10 @@ bootstrap();
     <div class="invite-modal-title">Member report</div>
     <div id="members-summary" class="mem-summary"></div>
     <div class="textsize-seg" id="members-seg" style="margin:0 0 10px;"></div>
+    <div class="mem-tools">
+      <input type="search" id="members-search" placeholder="Find a member" autocomplete="off" oninput="renderMembersAdmin()" />
+      <div class="textsize-seg" id="members-sort" style="margin:0;flex-shrink:0;"></div>
+    </div>
     <div id="members-list" style="max-height:440px;overflow-y:auto;margin-bottom:12px;"></div>
     <button type="button" class="btn-invite-close" onclick="closeMembersAdmin()" style="width:100%;">Close</button>
   </div>
