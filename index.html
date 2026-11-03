@@ -5219,13 +5219,30 @@ window.openAdminRoomsModal = async function() {
       body.innerHTML = '<div class="empty"><div class="empty-icon">&#128065;</div>No rooms exist yet.</div>';
       return;
     }
-    body.innerHTML = _adminRoomsCache.map(function(r){
+    // Rooms only the owner is in yet go in their own section, newest first,
+    // so a room from an admin_new_room alert is easy to find.
+    var card = function(r, meta){
       return '<div class="rank-card" onclick="enterRoomAsAdmin(\''+r.id+'\')">'
         +'<div class="rank-info">'
         +'<div class="rank-title-text">'+escAttr(r.name)+'</div>'
-        +'<div class="rank-meta-line"><span class="rank-platform">Owner: '+escAttr(r.owner_name||'?')+'</span><span class="rank-count-inline">'+r.member_count+' member'+(r.member_count===1?'':'s')+'</span></div>'
+        +'<div class="rank-meta-line"><span class="rank-platform">Owner: '+escAttr(r.owner_name||'?')+'</span><span class="rank-count-inline">'+meta+'</span></div>'
         +'</div></div>';
+    };
+    var joined = _adminRoomsCache.filter(function(r){ return r.member_count > 0; });
+    var waiting = _adminRoomsCache.filter(function(r){ return !(r.member_count > 0); })
+      .sort(function(a, b){ return new Date(b.created_at || 0) - new Date(a.created_at || 0); });
+    var html = joined.map(function(r){
+      return card(r, r.member_count+' member'+(r.member_count===1?'':'s'));
     }).join('');
+    if (waiting.length) {
+      html += '<div style="font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin:16px 0 6px;">No one joined yet</div>'
+        + waiting.map(function(r){
+          var made = r.created_at ? new Date(r.created_at) : null;
+          var days = made ? Math.floor((Date.now() - made) / 86400000) : null;
+          return card(r, days === null ? 'Just the owner' : days < 1 ? 'Made today' : 'Made ' + days + ' day' + (days === 1 ? '' : 's') + ' ago');
+        }).join('');
+    }
+    body.innerHTML = html;
   } catch(e) {
     console.error('get_all_living_rooms_admin error:', e);
     body.innerHTML = '<div class="empty"><div class="empty-icon">&#9888;&#65039;</div>Could not load rooms.</div>';
