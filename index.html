@@ -7147,10 +7147,32 @@ async function getUserProfile() {
 // Safe to call inside onAuthStateChange — does not call getUser() or getSession(),
 // which would await _initializePromise and deadlock during Supabase initialization.
 async function fetchProfileById(userId) {
-  const { data, error } = await sb.from('users').select('*').eq('id', userId).single();
-  if (error && error.code === 'PGRST116') return null;
-  if (error) throw error;
-  return data;
+  return _shareProfileFetch(userId, async function() {
+    const { data, error } = await sb.from('users').select('*').eq('id', userId).single();
+    if (error && error.code === 'PGRST116') return null;
+    if (error) throw error;
+    return data;
+  });
+}
+// App open: bootstrap and each auth event all want the same profile at the same
+// moment. They share one request while it's in flight.
+var _profileInFlight = {};
+function _shareProfileFetch(userId, load) {
+  if (_profileInFlight[userId]) return _profileInFlight[userId];
+  var p = load();
+  _profileInFlight[userId] = p;
+  var done = function() { delete _profileInFlight[userId]; };
+  p.then(done, done);
+  return p;
+}
+
+// Who's signed in, without a server round trip once the profile has loaded.
+// Each sb.auth.getUser() is a network call and they run one at a time, so these
+// added up at app open. Every query below is still checked by the server.
+async function _signedInUser() {
+  if (state.user && state.user.id) return { id: state.user.id };
+  const { data: { user } } = await sb.auth.getUser();
+  return user;
 }
 
 async function connectViaInvite(inviterUsername) {
@@ -7252,7 +7274,7 @@ async function updateRoom(roomKey) {
 }
 
 async function recordSession() {
-  const { data: { user } } = await sb.auth.getUser();
+  const user = await _signedInUser();
   if (!user) return;
   // how: which way they opened ShowUp, for Admin > Members. Retried
   // without it if sql/add_admin_members.sql hasn't added the column yet.
@@ -7270,7 +7292,7 @@ async function recordSession() {
 // runs after loadUserIntoState in every login path), so this is genuinely "last time
 // they were here" — used to badge friends' activity that happened since then.
 async function getLastVisitTime() {
-  const { data: { user } } = await sb.auth.getUser();
+  const user = await _signedInUser();
   if (!user) return null;
   const { data } = await sb.from('sessions')
     .select('created_at')
@@ -7299,7 +7321,7 @@ async function deleteUserData() {
 // ============================================================
 
 async function loadShows() {
-  const { data: { user } } = await sb.auth.getUser();
+  const user = await _signedInUser();
   if (!user) throw new Error('Not authenticated');
   const { data, error } = await sb.from('shows')
     .select('*, reactions(*)')
@@ -7396,7 +7418,7 @@ function notifyCommentPosted(reactionId) {
 // ============================================================
 
 async function loadTop5() {
-  const { data: { user } } = await sb.auth.getUser();
+  const user = await _signedInUser();
   if (!user) throw new Error('Not authenticated');
   const { data, error } = await sb.from('top5_shows')
     .select('*').eq('user_id', user.id).order('rank', { ascending: true });
@@ -7578,6 +7600,7 @@ async function loadUserIntoState(profile) {
   var showsPromise = loadShows();
   var top5Promise = loadTop5();
   var lastVisitPromise = getLastVisitTime();
+  var safetyPromise = loadSafetyState(); // finishes before any room data, awaited below
 
   try {
     var shows = await showsPromise;
@@ -7619,7 +7642,7 @@ async function loadUserIntoState(profile) {
     _inviteLandingRoomId = PENDING_ROOM_ID;
     PENDING_ROOM_ID = null;
   }
-  await loadSafetyState(); // before any room data, so blocked/reported content never shows
+  await safetyPromise; // before any room data, so blocked/reported content never shows
   init();
   showScreen('app');
   renderAll();
@@ -7680,13 +7703,15 @@ async function bootstrap() {
 
     // Fetch profile via raw HTTP — bypasses sb.from() which may also await
     // _initializePromise before auth headers are ready.
-    var profileRes = await fetch(
-      SUPABASE_URL + '/rest/v1/users?id=eq.' + stored.user.id + '&select=*&limit=1',
-      { headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + stored.access_token } }
-    );
-    var profileRows = profileRes.ok ? await profileRes.json() : [];
+    var profile = await _shareProfileFetch(stored.user.id, async function() {
+      var profileRes = await fetch(
+        SUPABASE_URL + '/rest/v1/users?id=eq.' + stored.user.id + '&select=*&limit=1',
+        { headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + stored.access_token } }
+      );
+      var profileRows = profileRes.ok ? await profileRes.json() : [];
+      return profileRows.length > 0 ? profileRows[0] : null;
+    });
     window._mark('profile-fetched');
-    var profile = profileRows.length > 0 ? profileRows[0] : null;
 
     _bootstrapComplete = true;
 
