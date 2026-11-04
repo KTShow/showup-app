@@ -252,6 +252,9 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
 .friend-match-list{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px;}
 .match-chip{font-family:var(--sans);font-size:10px;font-weight:700;color:#fff;background:var(--burnt);border:1px solid var(--burnt);border-radius:10px;padding:2px 8px;cursor:pointer;text-align:left;line-height:1.4;}
 .match-chip:hover{opacity:0.82;}
+.who-rated-card{background:var(--cream);border:1px solid var(--border);border-radius:var(--radius);padding:12px 14px 6px;margin-bottom:10px;box-shadow:var(--shadow);}
+.who-rated-title{font-size:17px;font-weight:700;color:var(--charcoal);line-height:1.25;}
+.who-rated-summary{font-size:12px;color:var(--muted);margin:2px 0 6px;}
 .name-pill{display:inline-block;background:var(--burnt);color:#fff;font-weight:700;padding:2px 9px;border-radius:11px;transition:opacity 0.15s;}
 .name-pill:hover{opacity:0.82;}
 .room-ticker{background:linear-gradient(135deg,var(--olive),var(--terra));border-radius:var(--radius);padding:11px 16px;margin-bottom:16px;display:flex;align-items:center;gap:10px;box-shadow:var(--shadow);cursor:pointer;transition:opacity 0.2s;}
@@ -1232,7 +1235,7 @@ html.native-cover .status-shield{display:block;position:fixed;top:0;left:0;right
           </div>
           <div class="tastemakers-banner-arrow">&#8250;</div>
         </div>
-        <div class="lr-search-wrap"><input type="text" id="room-picker-search" class="lr-search-input" placeholder="Search shows or platforms across all your rooms..." oninput="renderRoomPickerSearch();toggleSearchClearBtn(this)" autocomplete="off" /><button class="lr-search-clear" type="button" aria-label="Clear search" onclick="clearSearchInput('room-picker-search')">&#10005;</button></div>
+        <div class="lr-search-wrap"><input type="text" id="room-picker-search" class="lr-search-input" placeholder="Search a show to see who rated it..." oninput="renderRoomPickerSearch();toggleSearchClearBtn(this)" autocomplete="off" /><button class="lr-search-clear" type="button" aria-label="Clear search" onclick="clearSearchInput('room-picker-search')">&#10005;</button></div>
         <div class="room-picker-grid" id="room-picker-grid"></div>
         <div id="room-picker-search-results" style="display:none;"></div>
       </div>
@@ -1279,7 +1282,7 @@ html.native-cover .status-shield{display:block;position:fixed;top:0;left:0;right
           <div id="tastemakers-banner-wrap"></div>
           <div id="room-ticker" class="room-ticker" style="display:none;" onclick="openNewThisWeekModal()" title="See what's new this week"></div>
           <div id="top5-banner-wrap"></div>
-          <div class="lr-search-wrap"><input type="text" id="crew-search" class="lr-search-input" placeholder="Search friends, shows, or platforms..." oninput="renderFriends();toggleSearchClearBtn(this)" autocomplete="off" /><button class="lr-search-clear" type="button" aria-label="Clear search" onclick="clearSearchInput('crew-search')">&#10005;</button></div>
+          <div class="lr-search-wrap"><input type="text" id="crew-search" class="lr-search-input" placeholder="Search a show or friend to see who rated it..." oninput="renderFriends();toggleSearchClearBtn(this)" autocomplete="off" /><button class="lr-search-clear" type="button" aria-label="Clear search" onclick="clearSearchInput('crew-search')">&#10005;</button></div>
           <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap;">
             <button id="crew-platform-toggle" onclick="toggleCrewPlatformView()" style="background:none;border:1px solid var(--terra);color:var(--terra);border-radius:8px;padding:6px 12px;font-family:var(--sans);font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;">&#128256; Sort by Platform</button>
             <button type="button" id="invite-someone-link" class="invite-pill" onclick="openInviteModal()">+ Invite a Friend</button>
@@ -3537,6 +3540,16 @@ function renderFriends() {
   // not people -- that's a fundamentally different, more useful result
   // than "which friends happen to have something on Netflix".
   if (isPlatformQuery(q)) { renderShowsByPlatform(q); updateConversationsBadge(); return; }
+  // A title search answers "who rated this?" across ShowUp (see
+  // buildWhoRatedResults); friend tiles below are name matches only. Admin
+  // browsing someone else's room keeps the plain room-only search.
+  var useWhoRated=!!q && !state.currentRoomIsAdminView;
+  if(useWhoRated && !whoRatedDataReady()){
+    document.getElementById('friends-grid').innerHTML='<div class="empty" style="grid-column:1/-1;"><div class="empty-icon">&#8987;</div>Loading&hellip;</div>';
+    updateConversationsBadge();
+    return;
+  }
+  var whoRatedHTML=useWhoRated?whoRatedResultsHTML(q):'';
   var sorted=state.friends.slice().sort(function(a,b){return a.name.localeCompare(b.name);});
   // Search matches friend name, OR any show title they have -- "search by
   // title, see who has it" without a separate screen.
@@ -3547,6 +3560,7 @@ function renderFriends() {
   var matchedShowsByFriendId={};
   if(q) sorted=sorted.filter(function(f){
     var nameMatch=f.name.toLowerCase().indexOf(q)!==-1;
+    if(useWhoRated) return nameMatch;
     var matches=[];
     var lists=[f.watching,f.watchlist,f.watched];
     for(var i=0;i<lists.length;i++){
@@ -3560,12 +3574,12 @@ function renderFriends() {
     if(matches.length) matchedShowsByFriendId[f.id]=matches;
     return nameMatch || matches.length>0;
   });
-  if(q && !sorted.length){
-    document.getElementById('friends-grid').innerHTML=selfTile+'<div class="empty" style="grid-column:1/-1;"><div class="empty-icon">&#128269;</div>No friends match "'+escAttr(q)+'".</div>';
+  if(q && !sorted.length && !whoRatedHTML){
+    document.getElementById('friends-grid').innerHTML=selfTile+'<div class="empty" style="grid-column:1/-1;"><div class="empty-icon">&#128269;</div>No shows or friends match "'+escAttr(q)+'".</div>';
     updateConversationsBadge();
     return;
   }
-  document.getElementById('friends-grid').innerHTML=selfTile+sorted.map(function(f){
+  document.getElementById('friends-grid').innerHTML=(whoRatedHTML?'<div style="grid-column:1/-1;">'+whoRatedHTML+'</div>':selfTile)+sorted.map(function(f){
     var fRoom=f.room||'tuscany'; var fColor=ROOMS[fRoom]?ROOMS[fRoom].color:f.color;
     var fInitials=f.name.split(' ').map(function(x){return x[0];}).join('');
     var fFirst=f.name.split(' ')[0];
@@ -4099,6 +4113,113 @@ function buildAllRoomsSearchResultsByPerson(q) {
 
 var _allRoomsSearchCache = [];
 
+// "Who rated this?" -- search a title, see everyone on ShowUp who rated it in
+// one screen: real name if they share a room with you, otherwise "Neighbor".
+// Shared by both Living Room searches (room picker + Your Crowd). Ratings
+// come from Prime Time's platform-wide data; people in your rooms who have
+// the show but haven't rated it come from the cross-room search data.
+var WHO_RATED_MAX_SHOWS = 8;
+var _whoRatedLoading = false;
+
+function whoRatedDataReady() {
+  if (_primeTimeData && state.allRoomsSearchLoaded) return true;
+  if (!_whoRatedLoading) {
+    _whoRatedLoading = true;
+    Promise.all([loadPrimeTimeData(), loadAllRoomsSearchData()]).then(function() {
+      _whoRatedLoading = false;
+      renderRoomPickerSearch();
+      if (((document.getElementById('crew-search') || {}).value || '').trim()) renderFriends();
+    });
+  }
+  return false;
+}
+
+function buildWhoRatedResults(q) {
+  var meId = state.user && state.user.id;
+  var data = _primeTimeData || {};
+  var peopleById = {};
+  (data.people || []).forEach(function(p) { peopleById[p.id] = p; });
+  function fullName(p) { return p.first_name + (p.last_initial ? ' ' + p.last_initial + '.' : ''); }
+  var network = {};
+  (data.network_ids || []).forEach(function(id) { if (peopleById[id]) network[id] = fullName(peopleById[id]); });
+  (state.allRoomsSearchData || []).forEach(function(p) { if (p && p.user_id) network[p.user_id] = fullName(p); });
+
+  var shows = {};
+  function add(s, person) {
+    if (!s || !s.title || s.title.toLowerCase().indexOf(q) === -1) return;
+    if (person.id !== meId && state.blockedIds && state.blockedIds.has(person.id)) return;
+    var key = s.title.toLowerCase().trim();
+    var show = shows[key] || (shows[key] = { title: s.title, platform: s.platform || '', byId: {} });
+    if (!show.platform && s.platform) show.platform = s.platform;
+    var existing = show.byId[person.id];
+    if (existing && (existing.rating || !s.rating)) return; // one row per person, rated copy wins
+    show.byId[person.id] = { id: person.id, name: person.name, kind: person.kind, list: person.list, rating: s.rating || 0, showId: s.id };
+  }
+  (data.shows || []).forEach(function(s) {
+    if (s.user_id === meId) return; // your own row comes from your live lists below
+    var inNetwork = !!network[s.user_id];
+    add(s, { id: s.user_id, name: inNetwork ? network[s.user_id] : 'Neighbor', kind: inNetwork ? 'friend' : 'neighbor' });
+  });
+  (state.allRoomsSearchData || []).forEach(function(p) {
+    if (!p || !p.user_id || p.user_id === meId) return;
+    (p.shows || []).forEach(function(s) { add(s, { id: p.user_id, name: network[p.user_id], kind: 'friend' }); });
+  });
+  ['watching', 'watchlist', 'watched'].forEach(function(list) {
+    (state[list] || []).forEach(function(s) { add(s, { id: meId, name: 'You', kind: 'me', list: list }); });
+  });
+
+  var order = { me: 0, friend: 1, neighbor: 2 };
+  var results = Object.values(shows).map(function(show) {
+    var people = Object.values(show.byId).sort(function(a, b) {
+      return order[a.kind] - order[b.kind] || b.rating - a.rating || a.name.localeCompare(b.name);
+    });
+    var rated = people.filter(function(r) { return r.rating > 0; });
+    var avg = rated.length ? rated.reduce(function(sum, r) { return sum + r.rating; }, 0) / rated.length : 0;
+    return { title: show.title, platform: show.platform, people: people, ratedCount: rated.length, avg: avg };
+  });
+  // Closest title first, so "homeland" puts Homeland above longer titles.
+  results.sort(function(a, b) {
+    return tmdbMatchScore(b.title, q) - tmdbMatchScore(a.title, q) || b.ratedCount - a.ratedCount || a.title.localeCompare(b.title);
+  });
+  return results;
+}
+
+function whoRatedRowHTML(r) {
+  var jump = '';
+  if (r.kind === 'friend') jump = 'jumpToFriendShow(\'' + r.id + '\',\'' + r.showId + '\',\'They have hidden this one from their room.\')';
+  if (r.kind === 'me') jump = 'jumpToOwnedShow(event,\'' + r.list + '\',\'' + r.showId + '\')';
+  var initials = r.kind === 'neighbor' ? 'N'
+    : r.kind === 'me' ? ((state.user && state.user.initials) || 'Y')
+    : r.name.split(' ').map(function(x) { return x[0] || ''; }).join('').toUpperCase();
+  var ratingHTML = r.rating > 0 ? remoteStatic(r.rating) : '<span style="font-size:12px;color:var(--muted);">Not rated yet</span>';
+  return '<div class="rank-detail-row' + (jump ? ' rank-detail-row-link' : '') + '"' + (jump ? ' onclick="' + jump + '"' : '') + '>'
+    + '<div class="rank-detail-av" style="background:#888">' + escAttr(initials) + '</div>'
+    + '<div class="rank-detail-name">' + (r.kind === 'friend' ? '<span class="name-pill">' + escAttr(r.name) + '</span>' : escAttr(r.name)) + '</div>'
+    + ratingHTML
+    + '<span class="rank-chev" style="font-size:18px;' + (jump ? '' : 'visibility:hidden;') + '">&rsaquo;</span></div>';
+}
+
+// Empty string when no show title matches, so callers can fall back to
+// person-name results.
+function whoRatedResultsHTML(q) {
+  var results = buildWhoRatedResults(q);
+  if (!results.length) return '';
+  var cards = results.slice(0, WHO_RATED_MAX_SHOWS).map(function(s) {
+    var summary = s.ratedCount
+      ? '<b>' + s.avg.toFixed(1) + '</b> average &middot; ' + s.ratedCount + (s.ratedCount === 1 ? ' rating' : ' ratings')
+      : 'No ratings yet';
+    return '<div class="who-rated-card">'
+      + '<div class="who-rated-title">' + escAttr(s.title) + '</div>'
+      + '<div class="who-rated-summary">' + summary + (s.platform ? ' &middot; ' + escAttr(s.platform) : '') + '</div>'
+      + s.people.map(whoRatedRowHTML).join('')
+      + '</div>';
+  }).join('');
+  var more = results.length > WHO_RATED_MAX_SHOWS
+    ? '<div class="who-rated-summary" style="text-align:center;margin-bottom:12px;">Keep typing to narrow it down</div>'
+    : '';
+  return cards + more;
+}
+
 function renderRoomPickerSearch() {
   var q = ((document.getElementById('room-picker-search') || {}).value || '').trim().toLowerCase();
   var grid = document.getElementById('room-picker-grid');
@@ -4111,17 +4232,27 @@ function renderRoomPickerSearch() {
   }
   grid.style.display = 'none';
   resultsEl.style.display = '';
-  if (!state.allRoomsSearchLoaded) {
+  var platformQuery = isPlatformQuery(q);
+  if (platformQuery ? !state.allRoomsSearchLoaded : !whoRatedDataReady()) {
+    if (platformQuery) loadAllRoomsSearchData();
     resultsEl.innerHTML = '<div class="empty"><div class="empty-icon">&#8987;</div>Loading&hellip;</div>';
     return;
   }
   var list = buildAllRoomsSearchResultsByPerson(q);
+  var whoRatedHTML = '';
+  if (!platformQuery) {
+    // Show titles are answered by the who-rated cards; people below are
+    // name matches only, with no title chips repeating the cards.
+    whoRatedHTML = whoRatedResultsHTML(q);
+    list = list.filter(function(person) { return person.name.toLowerCase().indexOf(q) !== -1; });
+    list.forEach(function(person) { person.matches = []; });
+  }
   _allRoomsSearchCache = list;
-  var matchLabel = isPlatformQuery(q)
+  var matchLabel = platformQuery
     ? '<div style="font-size:12px;color:var(--muted);margin-bottom:8px;">Showing: <b style="color:var(--terra);">' + matchedPlatformNames(q).map(escAttr).join(', ') + '</b></div>'
-    : '';
+    : whoRatedHTML;
   if (!list.length) {
-    resultsEl.innerHTML = matchLabel + '<div class="empty"><div class="empty-icon">&#128269;</div>No one matches "' + escAttr(q) + '" across your rooms.</div>';
+    resultsEl.innerHTML = whoRatedHTML || (matchLabel + '<div class="empty"><div class="empty-icon">&#128269;</div>No shows or people match "' + escAttr(q) + '".</div>');
     return;
   }
   resultsEl.innerHTML = matchLabel + '<div class="friends-grid">' + list.map(function(person, pi) {
