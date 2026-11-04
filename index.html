@@ -53,6 +53,7 @@
 <meta name="apple-mobile-web-app-title" content="ShowUp">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="theme-color" content="#C4622D">
+<link rel="preconnect" href="https://auth.showuproom.com" crossorigin>
 <style>
 :root {
   --sand:#E8DDD0;--sand-dark:#EDE4D6;--terra:#C4622D;--burnt:#A0522D;
@@ -4038,7 +4039,8 @@ async function loadAndRenderRoomPicker() {
     state.myRooms = data || [];
   } catch(e) {
     console.error('Error loading living rooms:', e);
-    state.myRooms = [];
+    // Keep rooms from the device copy on a weak signal instead of blanking them.
+    if (!_paintedFromDevice) state.myRooms = [];
   }
   state.myRoomsLoaded = true;
   renderRoomPicker();
@@ -7569,9 +7571,8 @@ function _logFriendsLoadTime() {
   } catch(e) {}
 }
 
-async function loadUserIntoState(profile) {
-  window._mark('loaduser-start');
-  state.user = {
+function _userFromProfile(profile, top5) {
+  return {
     id: profile.id,
     first: profile.first_name || '',
     last: profile.last_initial || '',
@@ -7582,7 +7583,7 @@ async function loadUserIntoState(profile) {
     gender: profile.gender || '',
     room: profile.room || 'tuscany',
     username: profile.username,
-    top5: [],
+    top5: top5 || [],
     career: profile.career || '',
     hobbies: profile.hobbies || [],
     household: profile.household || [],
@@ -7594,6 +7595,94 @@ async function loadUserIntoState(profile) {
     conversationsLastSeenAt: profile.conversations_last_seen_at || null,
     isAdmin: profile.is_admin || false,
   };
+}
+
+// ---- Instant open ---------------------------------------------------------
+// A returning member sees the app straight away from a copy of their own lists
+// and room names saved on this device, and the normal load then refreshes it in
+// the background. Friends' shows are never in the copy. It's erased on sign-out,
+// account deletion, or a session that no longer exists. Bump the key if the
+// saved fields change.
+var DEVICE_COPY_KEY = 'showup_device_copy_v1';
+var DEVICE_COPY_MAX_CHARS = 2000000;
+var _paintedFromDevice = false;
+var _deviceCopyProfile = null;
+
+function _forgetDeviceCopy() {
+  _paintedFromDevice = false;
+  _deviceCopyProfile = null;
+  try { localStorage.removeItem(DEVICE_COPY_KEY); } catch (e) {}
+}
+
+function _saveDeviceCopy() {
+  if (!state.user || !_deviceCopyProfile || _deviceCopyProfile.id !== state.user.id) return;
+  try {
+    var text = JSON.stringify({
+      userId: state.user.id,
+      profile: _deviceCopyProfile,
+      top5: state.user.top5,
+      lastVisitAt: state.lastVisitAt,
+      watching: state.watching,
+      watchlist: state.watchlist,
+      watched: state.watched,
+      blockedIds: Array.from(state.blockedIds),
+      reportedIds: Array.from(state.reportedIds),
+      myRooms: state.myRoomsLoaded ? state.myRooms : null,
+      roomActivity: state.roomActivity,
+      roomLastSeen: state.roomLastSeen,
+    });
+    if (text.length > DEVICE_COPY_MAX_CHARS) { localStorage.removeItem(DEVICE_COPY_KEY); return; }
+    localStorage.setItem(DEVICE_COPY_KEY, text);
+  } catch (e) {
+    try { localStorage.removeItem(DEVICE_COPY_KEY); } catch (e2) {}
+  }
+}
+
+// Links that have to land somewhere specific (an invite, an alert, a sign-in
+// return) skip this and use the normal load.
+function _paintFromDevice(userId) {
+  if (PENDING_ROOM_ID || PENDING_INVITER || /[?&](notif|code|error|from)=/.test(window.location.search)) return;
+  try {
+    var copy = JSON.parse(localStorage.getItem(DEVICE_COPY_KEY) || 'null');
+    if (!copy || copy.userId !== userId || !copy.profile) return;
+    function lists(arr) { return (arr || []).map(function(s) { s.showReact = false; return s; }); }
+    state.user = _userFromProfile(copy.profile, copy.top5);
+    state.lastVisitAt = copy.lastVisitAt || null;
+    state.watching = lists(copy.watching);
+    state.watchlist = lists(copy.watchlist);
+    state.watched = lists(copy.watched);
+    state.blockedIds = new Set(copy.blockedIds || []);
+    state.reportedIds = new Set(copy.reportedIds || []);
+    state.roomActivity = copy.roomActivity || {};
+    state.roomLastSeen = copy.roomLastSeen || {};
+    if (copy.myRooms) { state.myRooms = copy.myRooms; state.myRoomsLoaded = true; }
+    _deviceCopyProfile = copy.profile;
+    _paintedFromDevice = true;
+    init();
+    setRoom(state.user.room);
+    updateAvatar();
+    showScreen('app');
+    renderAll();
+    var lrTab = document.getElementById('btab-living-room');
+    if (lrTab) showTab('living-room', lrTab);
+    window._mark('painted-from-device');
+  } catch (e) {
+    console.error('[deviceCopy] paint error:', e);
+    _forgetDeviceCopy();
+    state.user = null;
+  }
+}
+
+// Phones often close the app from the background, so keep the copy current.
+document.addEventListener('visibilitychange', function() {
+  if (document.visibilityState === 'hidden') _saveDeviceCopy();
+});
+
+async function loadUserIntoState(profile) {
+  window._mark('loaduser-start');
+  // Keep the saved Top 5 on screen until the fresh one arrives.
+  var keepTop5 = (_paintedFromDevice && state.user && state.user.id === profile.id) ? state.user.top5 : [];
+  state.user = _userFromProfile(profile, keepTop5);
 
   // Fire all three independent loads at once instead of waiting on each in turn —
   // none of these read each other's results, only state.user (already set above).
@@ -7607,6 +7696,7 @@ async function loadUserIntoState(profile) {
     state.watching = shows.filter(function(s) { return s.status === 'watching'; }).map(normalizeShow);
     state.watchlist = shows.filter(function(s) { return s.status === 'watchlist'; }).map(normalizeShow);
     state.watched = shows.filter(function(s) { return s.status === 'watched' || s.status === 'dnf'; }).map(normalizeShow);
+    _deviceCopyProfile = profile; // set only after a good load, so a failure can't save empty lists
     loadNotifications(); // fire-and-forget, fills the bell + new-season badges from server-computed state
     loadNotificationPrefs(); // fire-and-forget, fills the Settings toggles
     syncTextSizeFromAccount(); // fire-and-forget, applies the account's saved text size
@@ -7644,12 +7734,19 @@ async function loadUserIntoState(profile) {
   }
   await safetyPromise; // before any room data, so blocked/reported content never shows
   init();
-  showScreen('app');
-  renderAll();
-  // ShowUp opens on the Living Room (Hot Right Now, Prime Time, your rooms)
-  // rather than your own Watching list -- the fresh, social content first.
-  var lrTab = document.getElementById('btab-living-room');
-  if (lrTab) showTab('living-room', lrTab);
+  if (_paintedFromDevice) {
+    // Already on screen from the device copy: refresh in place, wherever they've
+    // tapped to since, instead of sending them back to the Living Room.
+    renderAll();
+  } else {
+    showScreen('app');
+    renderAll();
+    // ShowUp opens on the Living Room (Hot Right Now, Prime Time, your rooms)
+    // rather than your own Watching list -- the fresh, social content first.
+    var lrTab = document.getElementById('btab-living-room');
+    if (lrTab) showTab('living-room', lrTab);
+  }
+  _saveDeviceCopy();
   openInviteLandingRoom(); // fire-and-forget; no-op unless they came in on a room invite link
   state.friendsPreload = preloadFriendsInBackground(); // fire-and-forget, see function comment
   initPushAlerts(); // fire-and-forget: alerts card, device re-subscribe, ?notif= deep link
@@ -7684,10 +7781,13 @@ async function bootstrap() {
     })();
 
     if (!stored) {
+      _forgetDeviceCopy();
       _bootstrapComplete = true;
       showScreen('login');
       return;
     }
+
+    _paintFromDevice(stored.user.id);
 
     var accessExpired = stored.expires_at && Date.now() / 1000 > stored.expires_at - 60;
     if (accessExpired) {
@@ -7696,6 +7796,7 @@ async function bootstrap() {
         // Show nothing here; onAuthStateChange handles the screen once the token refreshes.
         return;
       }
+      _forgetDeviceCopy();
       _bootstrapComplete = true;
       showScreen('login');
       return;
@@ -7708,6 +7809,8 @@ async function bootstrap() {
         SUPABASE_URL + '/rest/v1/users?id=eq.' + stored.user.id + '&select=*&limit=1',
         { headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + stored.access_token } }
       );
+      // A server hiccup mustn't read as "no profile" once the app is on screen.
+      if (!profileRes.ok && _paintedFromDevice) throw new Error('profile fetch failed: ' + profileRes.status);
       var profileRows = profileRes.ok ? await profileRes.json() : [];
       return profileRows.length > 0 ? profileRows[0] : null;
     });
@@ -7716,6 +7819,7 @@ async function bootstrap() {
     _bootstrapComplete = true;
 
     if (!profile) {
+      _forgetDeviceCopy();
       showScreen('onboard');
       prefillOnboardFromAuth(stored.user);
       return;
@@ -7725,7 +7829,8 @@ async function bootstrap() {
   } catch(e) {
     console.error('[bootstrap] CATCH error:', e);
     _bootstrapComplete = true;
-    showScreen('login');
+    // No signal: stay on the saved copy rather than sending them to sign-in.
+    if (!_paintedFromDevice) showScreen('login');
   }
 }
 
@@ -7743,6 +7848,11 @@ onAuthStateChange(function(session) {
   if (!session) {
     // If bootstrap was waiting for a token refresh that failed, show login now
     if (_oauthReturning) return; // handleOAuthReturn shows login itself if it fails
+    // On the saved copy with the sign-in still on this device, this is a network
+    // problem rather than a sign-out, so stay put.
+    var signInStillSaved = Object.keys(localStorage).some(function(k) { return k.startsWith('sb-') && k.endsWith('-auth-token'); });
+    if (_paintedFromDevice && signInStillSaved) return;
+    _forgetDeviceCopy();
     if (!_bootstrapComplete) { _bootstrapComplete = true; showScreen('login'); }
     return;
   }
@@ -9660,6 +9770,7 @@ window.handleSignOut = async function() {
   try {
     await forgetThisDeviceForAlerts();
     await signOut();
+    _forgetDeviceCopy();
     state.user = null; state.watching = []; state.watchlist = []; state.watched = []; state.friends = []; state.recommendations = []; state.lastVisitAt = null;
     showScreen('login');
   } catch(e) { console.error('Sign out error:', e); }
@@ -9669,6 +9780,7 @@ window.handleDeleteData = async function() {
   if (!confirm('Are you sure? This permanently deletes your ShowUp account and all your data, including your shows, ratings and comments. Any Living Room you created will be handed to another member. This cannot be undone.')) return;
   try {
     await deleteUserData();
+    _forgetDeviceCopy();
     state.user = null;
     showScreen('login');
     showToast('Your account has been deleted.');
@@ -9819,6 +9931,7 @@ async function preloadFriendsInBackground() {
     // Room cards can now show names + "N new comments".
     var picker = document.getElementById('room-picker-view');
     if (picker && picker.style.display !== 'none') renderRoomPicker();
+    _saveDeviceCopy(); // room names and activity for the next instant open
   } catch(e) { console.error('Background friends preload error:', e); }
 }
 
