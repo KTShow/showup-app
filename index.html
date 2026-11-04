@@ -452,6 +452,7 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
 .invite-modal-overlay.daily-sheet-overlay{align-items:center;padding:calc(16px + env(safe-area-inset-top)) 16px calc(16px + env(safe-area-inset-bottom));}
 .daily-sheet{background:var(--cream);border-radius:20px;width:100%;max-width:520px;max-height:85vh;overflow-y:auto;padding:22px 20px 16px;box-shadow:0 8px 40px rgba(0,0,0,0.2);}
 .dp-note{font-size:13px;font-style:italic;color:var(--charcoal);margin:-4px 0 8px;line-height:1.4;}
+.dp-comment{width:100%;margin-top:10px;}
 .fs-skip{display:block;width:100%;min-height:44px;margin-top:8px;background:none;border:none;color:var(--muted);font-family:var(--sans);font-size:13px;cursor:pointer;}
 .onboard-sub{font-family:var(--serif);font-size:15px;color:var(--fig);font-style:italic;margin-bottom:22px;}
 .ob-field{margin-bottom:14px;}
@@ -1946,17 +1947,21 @@ function showTab(tab, btn) {
   // would hide the whole list). A jump to a specific show calls showTab and
   // then scrollToShowCard, which reopens just that show's group.
   var switching = document.getElementById('tab-'+tab).style.display!=='block';
-  if (switching && (tab==='watching'||tab==='watchlist'||tab==='watched')) {
+  var isListTab = tab==='watching'||tab==='watchlist'||tab==='watched';
+  var collapsedNow = false;
+  if (switching && isListTab) {
     var keys = getServiceKeysForList(tab);
     if (keys.length >= 2) {
       keys.forEach(function(k){ _collapsedSections[k] = true; });
       saveCollapsedSections();
-      renderList(tab);
+      collapsedNow = true;
     }
   }
   document.querySelectorAll('.tab-pane').forEach(function(t){ t.style.display='none'; });
   document.querySelectorAll('.nav-tab').forEach(function(t){ t.classList.remove('active'); });
   document.getElementById('tab-'+tab).style.display='block';
+  // After the tab is showing, because renderList skips a hidden tab.
+  if (isListTab && (collapsedNow || _listNeedsRender[tab])) renderList(tab);
   btn.classList.add('active');
   if (leavingLivingRoom && _conversationsViewed) {
     markConversationsSeen();
@@ -2036,17 +2041,31 @@ function showTile(s) {
 
 function remoteIcon(size, lit) {
   var w=size||16; var h=Math.round(w*1.75);
-  var body=lit?'#C49A3C':'#2C2C2C'; var panel=lit?'#D4AE55':'#484848'; var dot=lit?'#FBE9A0':'#888'; var btn=lit?'#E8C96A':'#666';
-  return '<svg width="'+w+'" height="'+h+'" viewBox="0 0 16 28" fill="none" xmlns="http://www.w3.org/2000/svg">'
-    +'<rect x="0.5" y="0.5" width="15" height="27" rx="4" fill="'+body+'" stroke="'+panel+'"/>'
-    +'<rect x="3" y="3" width="10" height="5" rx="1.5" fill="'+panel+'"/>'
-    +'<circle cx="8" cy="13" r="2.2" fill="'+dot+'"/>'
-    +'<circle cx="4.5" cy="19" r="1.3" fill="'+btn+'"/>'
-    +'<circle cx="11.5" cy="19" r="1.3" fill="'+btn+'"/>'
-    +'<circle cx="4.5" cy="24" r="1.3" fill="'+btn+'"/>'
-    +'<circle cx="11.5" cy="24" r="1.3" fill="'+btn+'"/>'
-    +'</svg>';
+  // Thousands of these can be on a page, so each one points at a single shared
+  // drawing (#remote-on / #remote-off, built once below) instead of repeating it.
+  return '<svg width="'+w+'" height="'+h+'" viewBox="0 0 16 28"><use href="#remote-'+(lit?'on':'off')+'"/></svg>';
 }
+(function(){
+  function drawing(id, body, panel, dot, btn) {
+    return '<g id="'+id+'">'
+      +'<rect x="0.5" y="0.5" width="15" height="27" rx="4" fill="'+body+'" stroke="'+panel+'"/>'
+      +'<rect x="3" y="3" width="10" height="5" rx="1.5" fill="'+panel+'"/>'
+      +'<circle cx="8" cy="13" r="2.2" fill="'+dot+'"/>'
+      +'<circle cx="4.5" cy="19" r="1.3" fill="'+btn+'"/>'
+      +'<circle cx="11.5" cy="19" r="1.3" fill="'+btn+'"/>'
+      +'<circle cx="4.5" cy="24" r="1.3" fill="'+btn+'"/>'
+      +'<circle cx="11.5" cy="24" r="1.3" fill="'+btn+'"/>'
+      +'</g>';
+  }
+  var holder = document.createElement('div');
+  holder.setAttribute('aria-hidden', 'true');
+  holder.style.cssText = 'position:absolute;width:0;height:0;overflow:hidden;';
+  holder.innerHTML = '<svg width="0" height="0"><defs>'
+    + drawing('remote-on', '#C49A3C', '#D4AE55', '#FBE9A0', '#E8C96A')
+    + drawing('remote-off', '#2C2C2C', '#484848', '#888', '#666')
+    + '</defs></svg>';
+  document.documentElement.appendChild(holder);
+})();
 
 function remoteRating(list, id, rating) {
   // On tiles the remotes are a compact display; tapping them opens the
@@ -2686,7 +2705,9 @@ function frvSectionToggleControls(fid, sectionKey, arr){
 }
 function renderServiceGroup(key, svc, shows, list){
   var isCollapsed = !!_collapsedSections[key];
-  var cardsHTML = shows.map(function(s){ return buildCard(s,list); }).join('');
+  // A collapsed group's cards aren't built until it's opened (see
+  // _openOwnGroupForShow for jumps to a show inside one).
+  var cardsHTML = isCollapsed ? '' : shows.map(function(s){ return buildCard(s,list); }).join('');
   return '<div class="service-group'+(isCollapsed?' collapsed':'')+'" data-ckey="'+key+'">'
     + '<div class="service-divider" onclick="toggleServiceSection(\''+key+'\')">'
     + '<span class="service-divider-text">'+(isCollapsed?'&#9656;':'&#9662;')+' '+svc+' <span class="service-count">('+shows.length+')</span></span>'
@@ -2701,7 +2722,12 @@ function renderAll(){ renderList('watching'); renderList('watchlist'); renderLis
 // landing a moment after the app opens redraw the lists) -- otherwise the
 // show is scrolled to but the highlight silently vanishes.
 var _flashCardId = null;
+// A list on a hidden tab isn't drawn; showTab draws it when that tab opens.
+var _listNeedsRender = {};
 function renderList(list) {
+  var pane = document.getElementById('tab-'+list);
+  if (pane && pane.style.display !== 'block') { _listNeedsRender[list] = true; return; }
+  _listNeedsRender[list] = false;
   _renderListInner(list);
   if (_flashCardId) document.querySelectorAll('[id="card-'+_flashCardId+'"]').forEach(function(el){ el.classList.add('flash-settled'); });
 }
@@ -2728,7 +2754,7 @@ function _renderListInner(list) {
       dnf.sort(function(a,b){return a.title.localeCompare(b.title);});
       html+='<div class="dnf-section'+(dnfCollapsed?' collapsed':'')+'" data-ckey="watched:dnf">'
         + '<div class="dnf-header" onclick="toggleServiceSection(\'watched:dnf\')">'+(dnfCollapsed?'&#9656;':'&#9662;')+' &#128683; Didn&#39;t Finish <span class="service-count">('+dnf.length+')</span></div>'
-        + '<div class="shows-grid">' + dnf.map(function(s){ return buildDNFCard(s); }).join('') + '</div>'
+        + '<div class="shows-grid">' + (dnfCollapsed ? '' : dnf.map(function(s){ return buildDNFCard(s); }).join('')) + '</div>'
         + '</div>';
     }
     if (!rated.length && !dnf.length) {
@@ -5992,6 +6018,24 @@ window.jumpToFriendShow = async function(friendId, showId, notFoundMsg){
   if (showId) scrollToShowCard(showId, notFoundMsg);
 };
 
+// Opens the group holding one of your own shows and draws its card, since a
+// collapsed group has no cards yet. False if the show isn't on your lists.
+function _openOwnGroupForShow(showId) {
+  var lists = ['watching', 'watchlist', 'watched'];
+  for (var i = 0; i < lists.length; i++) {
+    var list = lists[i];
+    var s = (state[list] || []).find(function(x) { return String(x.id) === String(showId); });
+    if (!s) continue;
+    var key = (list === 'watched' && s.dnf) ? 'watched:dnf'
+      : list + ':' + ((list === 'watchlist' && s.waitingForSeason) ? 'waiting' : 'main') + ':' + s.platform;
+    _collapsedSections[key] = false;
+    saveCollapsedSections();
+    renderList(list);
+    return true;
+  }
+  return false;
+}
+
 window.scrollToShowCard = function(showId, notFoundMsg){
   setTimeout(function(){
     // Your own show can be on the page twice (your hidden list tab AND the
@@ -5999,15 +6043,23 @@ window.scrollToShowCard = function(showId, notFoundMsg){
     // would grab the hidden one and scroll to nothing. Use the copy whose
     // containing views are actually showing (collapsed groups don't count
     // as hidden; they get reopened below).
-    var all = document.querySelectorAll('[id="card-'+showId+'"]');
-    var el = null;
-    for (var i = 0; i < all.length && !el; i++) {
-      var ok = true;
-      for (var a = all[i].parentElement; a && a !== document.body; a = a.parentElement) {
-        if (a.style && a.style.display === 'none') { ok = false; break; }
-        if (a.classList && a.classList.contains('screen') && !a.classList.contains('active')) { ok = false; break; }
+    function visibleCopy(all) {
+      for (var i = 0; i < all.length; i++) {
+        var ok = true;
+        for (var a = all[i].parentElement; a && a !== document.body; a = a.parentElement) {
+          if (a.style && a.style.display === 'none') { ok = false; break; }
+          if (a.classList && a.classList.contains('screen') && !a.classList.contains('active')) { ok = false; break; }
+        }
+        if (ok) return all[i];
       }
-      if (ok) el = all[i];
+      return null;
+    }
+    var selector = '[id="card-'+showId+'"]';
+    var all = document.querySelectorAll(selector);
+    var el = visibleCopy(all);
+    if (!el && _openOwnGroupForShow(showId)) {
+      all = document.querySelectorAll(selector);
+      el = visibleCopy(all);
     }
     if (!el) el = all[0] || null;
     if (!el) { if (notFoundMsg) showToast(notFoundMsg); return; }
@@ -7369,7 +7421,11 @@ async function saveTop5(showsArray) {
 // ============================================================
 
 async function getFriendsWithShows(roomId) {
-  const { data: { user } } = await sb.auth.getUser();
+  // getSession reads the saved sign-in on the device. getUser would ask the
+  // server every time, a round trip per room on every app open; the room data
+  // call below is checked by the server anyway.
+  const { data: { session } } = await sb.auth.getSession();
+  const user = session && session.user;
   if (!user) throw new Error('Not authenticated');
   if (!roomId) return [];
 
@@ -8057,7 +8113,7 @@ function _showPickRowHTML(it, i, ns) {
           + '<span>Your rating helps friends pick their next show.</span></div>';
       body += rateLabel
         + '<div class="fs-remotes">' + remotes + '</div>';
-      if (ns === 'dp' && it.rating && it.id) body += _dpNoteHTML(it, i);
+      if (ns === 'dp') body += '<textarea class="react-input dp-comment" rows="1" placeholder="Add a comment (optional)" oninput="dpCommentInput(' + i + ',this)">' + escAttr(it.comment || '') + '</textarea>';
     }
   }
   return '<div class="fs-row' + (it.isNew ? ' fs-new' : '') + '">' + poster + '<div class="fs-main">'
@@ -8424,54 +8480,46 @@ async function _dpCheckAndOpen() {
   _dpSave(p);
 }
 
-function renderDailyPrompt() {
-  var drafts = {};
-  document.querySelectorAll('#dp-list textarea').forEach(function(t) { drafts[t.id] = t.value; });
-  document.getElementById('dp-list').innerHTML = _dpItems.map(function(it, i) { return _showPickRowHTML(it, i, 'dp'); }).join('')
-    || '<div class="fs-sub" style="margin:12px 0;">All set for today. Thanks!</div>';
-  Object.keys(drafts).forEach(function(id) { var t = document.getElementById(id); if (t) t.value = drafts[id]; });
+function _dpSetCloseButton() {
   var btn = document.getElementById('dp-close-btn');
   btn.textContent = _dpEngaged ? 'Done' : 'Not now';
   btn.className = _dpEngaged ? 'btn-invite-copy' : 'fs-skip';
 }
-
-// After a rating in the daily popup: an optional comment, saved like any
-// comment on your own card. 'open' -> box, 'saved' -> confirmation.
-function _dpNoteHTML(it, i) {
-  if (it.note2 === 'saved') return '<div class="detail-note-saved">&#10003; Comment saved. Your friends will see it.</div>';
-  if (it.note2 !== 'open') return '<button type="button" class="fs-change" style="padding-left:0;" onclick="dpNoteOpen(' + i + ')">Add a comment</button>';
-  return '<div class="detail-note">'
-    + '<textarea class="react-input" rows="2" id="dpnote-' + i + '" placeholder="Add a comment for your friends"></textarea>'
-    + '<div class="detail-note-btns">'
-    + '<button type="button" class="btn-send" onclick="dpNoteSave(' + i + ')">Save</button>'
-    + '<button type="button" class="btn-cancel" onclick="dpNoteDismiss(' + i + ')">No thanks</button>'
-    + '</div></div>';
+function renderDailyPrompt() {
+  document.getElementById('dp-list').innerHTML = _dpItems.map(function(it, i) { return _showPickRowHTML(it, i, 'dp'); }).join('')
+    || '<div class="fs-sub" style="margin:12px 0;">All set for today. Thanks!</div>';
+  document.querySelectorAll('#dp-list .dp-comment').forEach(function(box) { if (box.value) autoGrowReactInput(box); });
+  _dpSetCloseButton();
 }
-window.dpNoteOpen = function(i) {
-  var it = _dpItems[i]; if (!it) return;
-  _dpTouched(); it.note2 = 'open'; renderDailyPrompt();
-  var ta = document.getElementById('dpnote-' + i); if (ta) ta.focus();
-};
-window.dpNoteDismiss = function(i) { var it = _dpItems[i]; if (it) { it.note2 = null; renderDailyPrompt(); } };
-window.dpNoteSave = async function(i) {
+
+// The optional comment box sits right on the show's row and is saved by Done,
+// so there's no extra step. Typing keeps the box in place (no redraw).
+window.dpCommentInput = function(i, box) {
   var it = _dpItems[i];
-  var inp = document.getElementById('dpnote-' + i);
-  var mine = it && findMyShowByTitle(it.title);
-  if (!it || !inp || !mine || !mine.show) return;
-  var txt = inp.value.trim();
-  if (!txt) { inp.focus(); return; }
-  if (_isObjectionable(txt)) return;
-  var show = mine.show, u = state.user;
-  var sentiment = detectSentiment(txt);
-  var newReact = { id: null, reactorId: u ? u.id : null, user: u ? (u.first + (u.last ? ' ' + u.last : '')) : 'You', initials: u ? u.initials : 'Y', color: '#C4622D', text: txt, sentiment: sentiment, reactedAt: new Date().toISOString() };
-  show.reactions = show.reactions || [];
-  show.reactions.push(newReact);
-  it.note2 = 'saved';
-  renderDailyPrompt();
-  renderList(mine.list);
-  try { var data = await dbAddReaction(show.id, txt, sentiment); if (data && data.id) newReact.id = data.id; }
-  catch (e) { console.error('daily note error:', e); showToast("Couldn't save your comment. Try again from your list."); }
+  if (!it) return;
+  it.comment = box.value;
+  if (!_dpEngaged) { _dpTouched(); _dpSetCloseButton(); }
 };
+function _dpCommentsToSave() {
+  return _dpItems.filter(function(it) {
+    return it.choice && it.choice !== 'want' && (it.comment || '').trim();
+  });
+}
+// Runs after the popup closes. Waits out a show that's still being added.
+async function _dpSaveComments(items) {
+  for (var k = 0; k < items.length; k++) {
+    var it = items[k];
+    for (var tries = 0; it.busy && tries < 100; tries++) await new Promise(function(r) { setTimeout(r, 100); });
+    try {
+      if (!it.id) throw new Error('show was not saved');
+      var txt = it.comment.trim();
+      await dbAddReaction(it.id, txt, detectSentiment(txt));
+    } catch (e) {
+      console.error('daily comment error:', e);
+      showToast('Couldn’t save your comment on ' + it.title + '. Try again from your list.');
+    }
+  }
+}
 
 function _dpTouched() {
   _dpEngaged = true;
@@ -8500,6 +8548,9 @@ window.dpNope = function(i) {
 // Only the Not now / Done button closes it -- a stray tap on the dim area
 // right as it slid up used to dismiss it unseen.
 window.closeDailyPrompt = async function() {
+  var comments = _dpCommentsToSave();
+  // A flagged comment keeps the popup open so it can be edited.
+  if (comments.some(function(it) { return _isObjectionable(it.comment.trim()); })) return;
   document.getElementById('daily-prompt').classList.remove('active');
   var p0 = _dpPrefs();
   p0.how = _dpEngaged ? 'you answered it' : 'you tapped Not now';
@@ -8511,6 +8562,7 @@ window.closeDailyPrompt = async function() {
     _dpSave(p);
     return;
   }
+  await _dpSaveComments(comments);
   // Pull what they saved back into their lists.
   try {
     var shows = await loadShows();
@@ -10400,6 +10452,7 @@ function _jumpToMyShow(showId) {
   if (btn) showTab(tab, btn);
   setTimeout(function() {
     var card = document.getElementById('card-' + showId);
+    if (!card && _openOwnGroupForShow(showId)) card = document.getElementById('card-' + showId);
     if (card) card.scrollIntoView({ behavior: 'smooth', block: 'center' });
   }, 60);
 }
