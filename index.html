@@ -847,6 +847,7 @@ body.look-lounge .announcement-banner{box-shadow:none;}
 body.look-lounge .announcement-icon{display:none;}
 /* Feeds on the room tabs: rows, not cards. */
 body.look-lounge #tab-living-room .conversation-row,body.look-lounge #tab-living-room .lounge-post{background:none;border:none;border-bottom:1px solid var(--border);border-radius:0;padding:14px 0;margin:0;}
+body.look-lounge #tab-living-room .conversation-icon{display:none;}
 body.look-lounge #tab-living-room .lounge-post.is-new{background:#FBF3E0;padding:14px 10px;}
 body.look-lounge #tab-living-room .who-rated-card{background:none;border:none;border-bottom:1px solid var(--border);border-radius:0;padding:12px 0 6px;}
 /* Room picker: rows too. */
@@ -5724,6 +5725,26 @@ function timeAgo(iso){
 // what's rendered.
 var CONVERSATIONS_WINDOW_MS = 30 * 24 * 60 * 60 * 1000;
 
+// An add and the same person's comment on that show read as one entry when they
+// happened together: within 10 seconds, or anywhere in the same sitting for a show
+// added from a popup, where the show saves on the status tap but the comment only
+// saves at Done.
+var FEED_TOGETHER_MS = 10 * 1000;
+var FEED_POPUP_TOGETHER_MS = 30 * 60 * 1000;
+var FEED_POPUP_SOURCES = ['daily_prompt', 'first_shows', 'finish_setup', 'welcome_back'];
+function _feedCommentWithAdd(show, addedAt, personId) {
+  var added = new Date(addedAt).getTime();
+  var limit = FEED_POPUP_SOURCES.indexOf(show.source) !== -1 ? FEED_POPUP_TOGETHER_MS : FEED_TOGETHER_MS;
+  var match = null;
+  (show.reactions || []).forEach(function(r) {
+    if (r.reactorId !== personId) return;
+    var gap = new Date(r.reactedAt).getTime() - added;
+    if (gap < 0 || gap > limit) return;
+    if (!match || new Date(r.reactedAt) < new Date(match.reactedAt)) match = r;
+  });
+  return match;
+}
+
 function buildConversationsFeed(){
   var lastSeen = state.currentRoomConversationsLastSeen ? new Date(state.currentRoomConversationsLastSeen) : null;
   var windowCutoff = new Date(Date.now() - CONVERSATIONS_WINDOW_MS);
@@ -5753,15 +5774,20 @@ function buildConversationsFeed(){
     if(!f)return;
     ['watching','watchlist','watched'].forEach(function(lk){
       (f[lk]||[]).forEach(function(s){
+        var togetherF=null, addedPrefix='';
         if(inWindow(s.added_at)){
           var titleKey=(s.title||'').toLowerCase().trim();
           var isNewToRoom = titleKey && earliestByTitle[titleKey]===new Date(s.added_at).getTime();
-          var addedPrefix = isNewToRoom ? '&#127381; <b>New to the room</b> &mdash; ' : '';
-          events.push({type:'added',friendId:f.id,showId:s.id,text:addedPrefix+'<b>'+escAttr(f.name)+'</b> added '+escAttr(s.title),ts:s.added_at,isNew:isNew(s.added_at)});
+          addedPrefix = isNewToRoom ? '<span class="lg-old">&#127381; </span><b>New to the room</b> &mdash; ' : '';
+          togetherF=_feedCommentWithAdd(s,s.added_at,f.id);
+          if(!togetherF) events.push({type:'added',friendId:f.id,showId:s.id,text:addedPrefix+'<b>'+escAttr(f.name)+'</b> added '+escAttr(s.title),ts:s.added_at,isNew:isNew(s.added_at)});
         }
         (s.reactions||[]).forEach(function(r){
           if(r.reactorId && inWindow(r.reactedAt)){
-            events.push({type:'comment',friendId:f.id,list:lk,showId:s.id,reactionId:r.id,reactorId:r.reactorId,isMine:r.reactorId===myId,commentText:r.text,text:'<b>'+escAttr(nameFor(r.reactorId))+'</b> commented on '+escAttr(s.title)+': &#8220;'+escAttr(r.text)+'&#8221;',ts:r.reactedAt,isNew:isNew(r.reactedAt)});
+            var lineF = r===togetherF
+              ? addedPrefix+'<b>'+escAttr(f.name)+'</b> added '+escAttr(s.title)+' and commented: &#8220;'+escAttr(r.text)+'&#8221;'
+              : '<b>'+escAttr(nameFor(r.reactorId))+'</b> commented on '+escAttr(s.title)+': &#8220;'+escAttr(r.text)+'&#8221;';
+            events.push({type:'comment',friendId:f.id,list:lk,showId:s.id,reactionId:r.id,reactorId:r.reactorId,isMine:r.reactorId===myId,commentText:r.text,text:lineF,ts:r.reactedAt,isNew:isNew(r.reactedAt)});
           }
         });
       });
@@ -5776,12 +5802,15 @@ function buildConversationsFeed(){
   // observing, not actually a member of.
   (state.currentRoomIsAdminView ? [] : ['watching','watchlist','watched']).forEach(function(lk){
     (state[lk]||[]).forEach(function(s){
-      if(inWindow(s.addedAt)) events.push({type:'added',list:lk,showId:s.id,text:'<b>You</b> added '+escAttr(s.title),ts:s.addedAt,isNew:false});
+      var togetherM=inWindow(s.addedAt)?_feedCommentWithAdd(s,s.addedAt,myId):null;
+      if(inWindow(s.addedAt) && !togetherM) events.push({type:'added',list:lk,showId:s.id,text:'<b>You</b> added '+escAttr(s.title),ts:s.addedAt,isNew:false});
       (s.reactions||[]).forEach(function(r){
         if(r.reactorId && inWindow(r.reactedAt) && (r.reactorId===myId || friendsById[r.reactorId])){
           var mineC=r.reactorId===myId;
           events.push({type:'comment',list:lk,showId:s.id,reactionId:r.id,reactorId:r.reactorId,isMine:mineC,commentText:r.text,text:mineC
-            ? '<b>You</b> commented on '+escAttr(s.title)+': &#8220;'+escAttr(r.text)+'&#8221;'
+            ? (r===togetherM
+                ? '<b>You</b> added '+escAttr(s.title)+' and commented: &#8220;'+escAttr(r.text)+'&#8221;'
+                : '<b>You</b> commented on '+escAttr(s.title)+': &#8220;'+escAttr(r.text)+'&#8221;')
             : '<b>'+escAttr(nameFor(r.reactorId))+'</b> commented on '+escAttr(s.title)+' (on your list): &#8220;'+escAttr(r.text)+'&#8221;',ts:r.reactedAt,isNew:!mineC&&isNew(r.reactedAt)});
         }
       });
