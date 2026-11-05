@@ -5757,21 +5757,17 @@ function timeAgo(iso){
 // what's rendered.
 var CONVERSATIONS_WINDOW_MS = 30 * 24 * 60 * 60 * 1000;
 
-// An add and the same person's comment on that show read as one entry when they
-// happened together: within 10 seconds, or anywhere in the same sitting for a show
-// added from a popup, where the show saves on the status tap but the comment only
-// saves at Done.
-var FEED_TOGETHER_MS = 10 * 1000;
-var FEED_POPUP_TOGETHER_MS = 30 * 60 * 1000;
-var FEED_POPUP_SOURCES = ['daily_prompt', 'first_shows', 'finish_setup', 'welcome_back'];
+// An add and the same person's comment on that show read as one entry when the
+// comment comes within 30 seconds. Nothing is held back: the add shows at once, and
+// the two lines become one when the comment saves.
+var FEED_TOGETHER_MS = 30 * 1000;
 function _feedCommentWithAdd(show, addedAt, personId) {
   var added = new Date(addedAt).getTime();
-  var limit = FEED_POPUP_SOURCES.indexOf(show.source) !== -1 ? FEED_POPUP_TOGETHER_MS : FEED_TOGETHER_MS;
   var match = null;
   (show.reactions || []).forEach(function(r) {
     if (r.reactorId !== personId) return;
     var gap = new Date(r.reactedAt).getTime() - added;
-    if (gap < 0 || gap > limit) return;
+    if (gap < 0 || gap > FEED_TOGETHER_MS) return;
     if (!match || new Date(r.reactedAt) < new Date(match.reactedAt)) match = r;
   });
   return match;
