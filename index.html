@@ -455,7 +455,15 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
 .dp-note{font-size:13px;font-style:italic;color:var(--charcoal);margin:-4px 0 8px;line-height:1.4;}
 .dp-comment{width:100%;margin-top:4px;}
 .dp-comment:disabled{opacity:0.45;}
-.dp-remotes{margin-top:6px;}
+.dp-row{display:block;}
+.dp-head{display:flex;gap:10px;align-items:flex-start;margin-bottom:6px;}
+.dp-row .fs-poster{width:36px;height:54px;font-size:16px;}
+.dp-row .fs-tag{margin-bottom:0;}
+.dp-row .dp-note{margin:0 0 6px;}
+.dp-nope{flex-shrink:0;max-width:84px;text-align:right;line-height:1.2;padding:0 0 0 4px;}
+.dp-row .fs-chips{gap:6px;}
+.dp-row .fs-chip{padding:0 10px;font-size:12px;min-height:34px;}
+.dp-remotes{margin-top:2px;}
 .dp-remotes.dp-off{opacity:0.45;}
 .fs-chip.dp-on,.fs-chip.dp-on:hover{background:var(--terra);border-color:var(--terra);color:#fff;}
 .fs-skip{display:block;width:100%;min-height:44px;margin-top:8px;background:none;border:none;color:var(--muted);font-family:var(--sans);font-size:13px;cursor:pointer;}
@@ -8657,15 +8665,17 @@ function _dpRowHTML(it, i) {
   }
   // Your own show's status line is only true until it's changed.
   var tag = (it.startChoice && it.choice !== it.startChoice) ? '' : (it.tag || '');
-  return '<div class="fs-row">' + poster + '<div class="fs-main">'
+  return '<div class="fs-row dp-row"><div class="dp-head">' + poster + '<div class="fs-main">'
     + '<div class="fs-show-title"' + tap + '>' + escAttr(it.title) + '</div>'
     + (tag ? '<div class="fs-tag">' + escAttr(tag) + '</div>' : '')
+    + '</div>'
+    + (it.nopeLabel ? '<button type="button" class="fs-change dp-nope" onclick="dpNope(' + i + ')">' + it.nopeLabel + '</button>' : '')
+    + '</div>'
     + (it.note ? '<div class="dp-note">&#8220;' + escAttr(it.note) + '&#8221;</div>' : '')
     + status
     + '<div class="fs-remotes dp-remotes' + (want ? ' dp-off' : '') + '">' + remotes + '</div>'
     + '<textarea class="react-input dp-comment" rows="1"' + (want ? ' disabled' : '') + ' placeholder="Add a comment (optional)" oninput="dpCommentInput(' + i + ',this)">' + (want ? '' : escAttr(it.comment || '')) + '</textarea>'
-    + (it.nopeLabel ? '<button type="button" class="fs-change" onclick="dpNope(' + i + ')">' + it.nopeLabel + '</button>' : '')
-    + '</div></div>';
+    + '</div>';
 }
 
 // The optional comment box sits right on the show's row and is saved by Done,
