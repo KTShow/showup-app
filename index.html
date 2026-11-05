@@ -813,6 +813,51 @@ body.look-lounge .nav-tab.active{background:none;box-shadow:none;border-radius:0
 body.look-lounge .nav-tab.active .lg-ico{stroke-width:2.1;}
 body.look-lounge .nav-tab.active .nav-tab-label{font-weight:700;}
 body.look-lounge .nav-tab.active::after{content:"";position:absolute;top:-1px;left:50%;width:30px;height:2px;margin-left:-15px;background:var(--terra);border-radius:2px;}
+html.native-cover body.look-lounge .status-shield{background:#FBF7F2;}
+/* Headings + spacing: content sits higher, thin dividers instead of boxes. */
+body.look-lounge #screen-app .content{padding-top:16px;}
+body.look-lounge #tab-living-room .page-title{font-size:27px;font-weight:600;letter-spacing:-0.01em;line-height:1.2;color:var(--charcoal);}
+body.look-lounge #tab-living-room .page-title .nav-back{width:36px;height:36px;background:none;border:1px solid var(--border);box-shadow:none;font-size:16px;}
+body.look-lounge #tab-living-room .back-btn{background:none;border:1px solid var(--border);box-shadow:none;}
+body.look-lounge #tab-living-room .lr-search-input{background:#F3ECE2;border:1px solid transparent;border-radius:10px;}
+body.look-lounge #tab-living-room .lr-search-input:focus{border-color:var(--fig);}
+body.look-lounge #crew-platform-toggle,body.look-lounge #tab-living-room .invite-pill{border:1px solid var(--border)!important;border-radius:999px!important;padding:7px 13px!important;}
+/* Slim tabs: all five always visible, a line marks the selected one. */
+body.look-lounge .lr-toggle{grid-template-columns:repeat(5,minmax(0,1fr));gap:0;margin:0 -8px 10px;border-bottom:1px solid var(--border);}
+body.look-lounge .lr-toggle-btn,body.look-lounge .lr-toggle-btn:last-child:nth-child(odd){grid-column:auto;position:relative;background:none;border:none;border-radius:0;box-shadow:none;padding:6px 2px 9px;gap:5px;font-size:11px;font-weight:600;line-height:1.2;color:var(--muted);justify-content:flex-start;}
+body.look-lounge .lr-toggle-btn .lg-ico{color:var(--fig);}
+body.look-lounge .lr-toggle-btn.active{background:none;color:var(--fig);font-weight:700;}
+body.look-lounge .lr-toggle-btn.active .lg-ico{stroke-width:2.1;}
+body.look-lounge .lr-toggle-btn.active::after{content:"";position:absolute;left:14%;right:14%;bottom:-1px;height:2px;background:var(--terra);border-radius:2px;}
+body.look-lounge .lr-toggle-btn .toggle-sub{display:none;}
+body.look-lounge .lr-toggle-btn .conv-badge{position:absolute;top:0;left:calc(50% + 7px);margin:0;padding:0 5px;}
+body.look-lounge .lr-tab-desc{display:block;font-family:var(--serif);font-style:italic;font-size:14px;color:var(--muted);margin-bottom:14px;}
+/* Everything that was a colored banner is now a plain row. */
+body.look-lounge #tab-living-room .tastemakers-banner,body.look-lounge #tab-living-room .top5-banner{background:none!important;border-radius:0;box-shadow:none;padding:14px 0;margin:0!important;border-bottom:1px solid var(--border);gap:14px;}
+body.look-lounge #tab-living-room .tastemakers-banner .lg-ico,body.look-lounge #tab-living-room .top5-banner .lg-ico{color:var(--fig);}
+body.look-lounge #tab-living-room .tastemakers-banner-title,body.look-lounge #tab-living-room .top5-banner-title{font-family:var(--serif);font-size:17px;font-weight:600;color:var(--fig);}
+body.look-lounge #tab-living-room .tastemakers-banner-sub,body.look-lounge #tab-living-room .top5-banner-sub{color:var(--muted);}
+body.look-lounge #tab-living-room .tastemakers-banner-arrow,body.look-lounge #tab-living-room .top5-banner-arrow{color:var(--muted);}
+body.look-lounge .room-ticker{background:none;border-radius:0;box-shadow:none;padding:10px 0;margin:0 0 10px;border-top:1px solid var(--border);border-bottom:1px solid var(--border);}
+body.look-lounge .room-ticker-icon{display:none;}
+body.look-lounge .room-ticker-text{color:var(--fig);font-weight:500;}
+body.look-lounge .room-ticker-arrow{color:var(--muted);}
+body.look-lounge .rec-banner{background:var(--fig);box-shadow:none;}
+body.look-lounge .announcement-banner{box-shadow:none;}
+/* Feeds on the room tabs: rows, not cards. */
+body.look-lounge #tab-living-room .conversation-row,body.look-lounge #tab-living-room .lounge-post{background:none;border:none;border-bottom:1px solid var(--border);border-radius:0;padding:14px 0;margin:0;}
+body.look-lounge #tab-living-room .lounge-post.is-new{background:#FBF3E0;padding:14px 10px;}
+body.look-lounge #tab-living-room .who-rated-card{background:none;border:none;border-bottom:1px solid var(--border);border-radius:0;padding:12px 0 6px;}
+/* Room picker: rows too. */
+body.look-lounge .room-picker-grid{grid-template-columns:1fr;gap:0;}
+body.look-lounge .room-tile{position:relative;background:none;border:none!important;border-bottom:1px solid var(--border)!important;border-radius:0;padding:14px 22px 14px 0;box-shadow:none;}
+body.look-lounge .room-tile:hover{transform:none;}
+body.look-lounge .room-tile::after{content:"\203A";position:absolute;right:2px;top:50%;transform:translateY(-50%);font-size:20px;color:var(--muted);}
+body.look-lounge .room-tile-name{font-size:18px;font-weight:600;}
+body.look-lounge .room-tile-create{justify-content:flex-start;border:none;border-radius:0;padding:12px 0;min-height:48px;color:var(--terra);}
+body.look-lounge .room-card-big{background:none;border:none!important;padding:2px 0 14px;}
+body.look-lounge .rcb-name{font-size:26px;font-weight:600;}
+body.look-lounge .rcb-cta{background:var(--fig)!important;border-radius:8px;}
 </style>
 </head>
 <body>
