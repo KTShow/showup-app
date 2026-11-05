@@ -453,7 +453,11 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
 .invite-modal-overlay.daily-sheet-overlay{align-items:center;padding:calc(16px + env(safe-area-inset-top)) 16px calc(16px + env(safe-area-inset-bottom));}
 .daily-sheet{background:var(--cream);border-radius:20px;width:100%;max-width:520px;max-height:85vh;overflow-y:auto;padding:22px 20px 16px;box-shadow:0 8px 40px rgba(0,0,0,0.2);}
 .dp-note{font-size:13px;font-style:italic;color:var(--charcoal);margin:-4px 0 8px;line-height:1.4;}
-.dp-comment{width:100%;margin-top:10px;}
+.dp-comment{width:100%;margin-top:4px;}
+.dp-comment:disabled{opacity:0.45;}
+.dp-remotes{margin-top:6px;}
+.dp-remotes.dp-off{opacity:0.45;}
+.fs-chip.dp-on,.fs-chip.dp-on:hover{background:var(--terra);border-color:var(--terra);color:#fff;}
 .fs-skip{display:block;width:100%;min-height:44px;margin-top:8px;background:none;border:none;color:var(--muted);font-family:var(--sans);font-size:13px;cursor:pointer;}
 .onboard-sub{font-family:var(--serif);font-size:15px;color:var(--fig);font-style:italic;margin-bottom:22px;}
 .ob-field{margin-bottom:14px;}
@@ -8223,7 +8227,8 @@ function renderFirstShows() {
 // picked. Shared by First Shows (ns 'fs') and the daily popup (ns 'dp');
 // ns picks which onclick handlers the buttons call.
 function _showPickRowHTML(it, i, ns) {
-  var tap = it.tmdb_id ? ' onclick="' + ns + 'Details(' + i + ')" style="cursor:pointer;"' : '';
+  if (ns === 'dp') return _dpRowHTML(it, i);
+  var tap =it.tmdb_id ? ' onclick="' + ns + 'Details(' + i + ')" style="cursor:pointer;"' : '';
   var poster = it.poster_path
     ? '<img class="fs-poster" src="' + TMDB_IMG + it.poster_path + '" alt=""' + tap + ' />'
     : '<div class="fs-poster"' + tap + '>&#128250;</div>';
@@ -8248,7 +8253,6 @@ function _showPickRowHTML(it, i, ns) {
           + '<span>Your rating helps friends pick their next show.</span></div>';
       body += rateLabel
         + '<div class="fs-remotes">' + remotes + '</div>';
-      if (ns === 'dp') body += '<textarea class="react-input dp-comment" rows="1" placeholder="Add a comment (optional)" oninput="dpCommentInput(' + i + ',this)">' + escAttr(it.comment || '') + '</textarea>';
     }
   }
   return '<div class="fs-row' + (it.isNew ? ' fs-new' : '') + '">' + poster + '<div class="fs-main">'
@@ -8526,7 +8530,7 @@ function _dpPickOwn(nope, later) {
     if (!c.length) continue;
     var s = c[Math.floor(Math.random() * c.length)];
     return { title: s.title, tmdb_id: s.tmdb_id, poster_path: s.poster_path, platform: s.platform || null,
-      media_type: s.media_type || 'tv', tag: pools[k].tag, choice: pools[k].choice, rating: 0, id: s.id,
+      media_type: s.media_type || 'tv', tag: pools[k].tag, choice: pools[k].choice, startChoice: pools[k].choice, rating: 0, id: s.id,
       nopeLabel: pools[k].choice === 'watching' ? 'Haven’t started yet' : 'Ask me later', later: true };
   }
   return null;
@@ -8627,6 +8631,43 @@ function renderDailyPrompt() {
   _dpSetCloseButton();
 }
 
+// One fixed screen: status, remotes and comment box are all there from the
+// start, and answering fills them in without changing the row's shape. Your
+// own shows (startChoice) already know their status, so only "change" shows.
+function _dpRowHTML(it, i) {
+  var tap = it.tmdb_id ? ' onclick="dpDetails(' + i + ')" style="cursor:pointer;"' : '';
+  var poster = it.poster_path
+    ? '<img class="fs-poster" src="' + TMDB_IMG + it.poster_path + '" alt=""' + tap + ' />'
+    : '<div class="fs-poster"' + tap + '>&#128250;</div>';
+  var status;
+  if (it.startChoice && it.choice) {
+    var label = FS_CHOICES.filter(function(c) { return c.key === it.choice; })[0].label;
+    status = '<div><span class="fs-chosen">&#10003; ' + label + '</span>'
+      + '<button type="button" class="fs-change" onclick="dpChange(' + i + ')">change</button></div>';
+  } else {
+    status = '<div class="fs-chips">' + FS_CHOICES.map(function(c) {
+      return '<button type="button" class="fs-chip' + (c.key === it.choice ? ' dp-on' : '') + '" onclick="dpChoose(' + i + ',\'' + c.key + '\')">' + c.label + '</button>';
+    }).join('') + '</div>';
+  }
+  var want = it.choice === 'want'; // nothing to rate or comment on yet
+  var remotes = '';
+  for (var n = 1; n <= 5; n++) {
+    remotes += '<button type="button" class="fs-remote" aria-label="' + n + ' of 5" onclick="dpRate(' + i + ',' + n + ')">'
+      + '<span style="opacity:' + (n <= it.rating ? '1' : '0.3') + ';display:inline-flex;">' + remoteIcon(30, n <= it.rating) + '</span></button>';
+  }
+  // Your own show's status line is only true until it's changed.
+  var tag = (it.startChoice && it.choice !== it.startChoice) ? '' : (it.tag || '');
+  return '<div class="fs-row">' + poster + '<div class="fs-main">'
+    + '<div class="fs-show-title"' + tap + '>' + escAttr(it.title) + '</div>'
+    + (tag ? '<div class="fs-tag">' + escAttr(tag) + '</div>' : '')
+    + (it.note ? '<div class="dp-note">&#8220;' + escAttr(it.note) + '&#8221;</div>' : '')
+    + status
+    + '<div class="fs-remotes dp-remotes' + (want ? ' dp-off' : '') + '">' + remotes + '</div>'
+    + '<textarea class="react-input dp-comment" rows="1"' + (want ? ' disabled' : '') + ' placeholder="Add a comment (optional)" oninput="dpCommentInput(' + i + ',this)">' + (want ? '' : escAttr(it.comment || '')) + '</textarea>'
+    + (it.nopeLabel ? '<button type="button" class="fs-change" onclick="dpNope(' + i + ')">' + it.nopeLabel + '</button>' : '')
+    + '</div></div>';
+}
+
 // The optional comment box sits right on the show's row and is saved by Done,
 // so there's no extra step. Typing keeps the box in place (no redraw).
 window.dpCommentInput = function(i, box) {
@@ -8666,7 +8707,14 @@ function _dpTouched() {
 window.dpDetails = function(i) { var it = _dpItems[i]; if (it) openShowDetails(it.tmdb_id, it.friendRatings, { noAdd: true }); };
 window.dpChoose = function(i, choice) { _dpTouched(); return _showPickChoose(_dpItems, i, choice, renderDailyPrompt); };
 window.dpChange = function(i) { _showPickChange(_dpItems, i, renderDailyPrompt); };
-window.dpRate = function(i, n) { _dpTouched(); return _showPickRate(_dpItems, i, n, renderDailyPrompt); };
+window.dpRate = function(i, n) {
+  var it = _dpItems[i];
+  if (!it) return;
+  if (!it.choice) { showToast('First tap where you are with ' + it.title + '.'); return; }
+  if (it.choice === 'want') return;
+  _dpTouched();
+  return _showPickRate(_dpItems, i, n, renderDailyPrompt);
+};
 window.dpNope = function(i) {
   var it = _dpItems[i];
   if (!it) return;
@@ -8683,6 +8731,9 @@ window.dpNope = function(i) {
 // Only the Not now / Done button closes it -- a stray tap on the dim area
 // right as it slid up used to dismiss it unseen.
 window.closeDailyPrompt = async function() {
+  // A comment needs a saved show to attach to, so don't lose one typed before a status.
+  var noStatus = _dpItems.filter(function(it) { return !it.choice && (it.comment || '').trim(); })[0];
+  if (noStatus) { showToast('Tap where you are with ' + noStatus.title + ' so your comment can save.'); return; }
   var comments = _dpCommentsToSave();
   // A flagged comment keeps the popup open so it can be edited.
   if (comments.some(function(it) { return _isObjectionable(it.comment.trim()); })) return;
