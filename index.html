@@ -783,6 +783,36 @@ html.native-cover .status-shield{display:block;position:fixed;top:0;left:0;right
 .login-sent-sub{font-size:13px;color:var(--muted);line-height:1.7;}
 .login-error{background:#fdecea;border:1px solid rgba(192,57,43,0.2);border-radius:8px;padding:10px 14px;font-size:13px;color:#c0392b;margin-bottom:12px;display:none;}
 .auth-loading{text-align:center;padding:40px 20px;color:var(--muted);font-size:14px;}
+
+/* ---- BOUTIQUE LOUNGE LOOK ---------------------------------------------
+   Admin-only preview, flipped in Settings > Admin (see lookOn()). Everything
+   here hangs off body.look-lounge, so members keep today's look untouched.
+   Colors are fixed (not the room theme) in the Living Room and both bars. */
+.lg-new,.lr-tab-desc{display:none;}
+.lg-ico{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0;}
+body.look-lounge .lg-old{display:none!important;}
+body.look-lounge svg.lg-new{display:block;}
+body.look-lounge #tab-living-room,body.look-lounge .bottom-nav,body.look-lounge #screen-app>.nav{
+  --sand:#FBF7F2;--sand-dark:#EDE4D6;--terra:#C4622D;--burnt:#A0522D;--olive:#5C6B3A;--olive-light:#7A8F4E;
+  --charcoal:#3A3A3A;--muted:#6A6A6A;--cream:#FFFDFA;--border:rgba(107,45,78,0.14);--fig:#6B2D4E;--gold:#C49A3C;
+  --shadow:none;--radius:10px;--radius-btn:8px;--serif:'Iowan Old Style','Palatino Linotype',Georgia,'Times New Roman',serif;
+}
+body.look-lounge.lr-on #screen-app{background:#FBF7F2;}
+/* Top bar */
+body.look-lounge #screen-app>.nav{background:#FBF7F2;}
+body.look-lounge #screen-app .nav-logo{font-size:24px;font-weight:600;letter-spacing:-0.01em;}
+body.look-lounge #screen-app .nav-bell,body.look-lounge #screen-app .nav-settings{color:var(--fig);}
+body.look-lounge #screen-app .nav-right{gap:14px;}
+body.look-lounge #screen-app .nav-avatar{background:var(--fig)!important;}
+body.look-lounge .nav-bell-dot{border-color:#FBF7F2;}
+/* Bottom bar: no boxes, a short terracotta line marks where you are. */
+body.look-lounge .bottom-nav{background:#FBF7F2;align-items:stretch;}
+body.look-lounge .nav-tab{position:relative;justify-content:center;gap:4px;padding:6px 4px;color:var(--muted);}
+body.look-lounge .nav-tab .lg-ico{color:var(--fig);}
+body.look-lounge .nav-tab.active{background:none;box-shadow:none;border-radius:0;color:var(--fig);}
+body.look-lounge .nav-tab.active .lg-ico{stroke-width:2.1;}
+body.look-lounge .nav-tab.active .nav-tab-label{font-weight:700;}
+body.look-lounge .nav-tab.active::after{content:"";position:absolute;top:-1px;left:50%;width:30px;height:2px;margin-left:-15px;background:var(--terra);border-radius:2px;}
 </style>
 </head>
 <body>
@@ -1126,11 +1156,27 @@ html.native-cover .status-shield{display:block;position:fixed;top:0;left:0;right
 
 <!-- MAIN APP -->
 <div id="screen-app" class="screen">
+  <!-- Line icons for the boutique lounge look: same stroke, rounded like the remote, small round "buttons". -->
+  <svg width="0" height="0" style="position:absolute;" aria-hidden="true">
+    <symbol id="lg-home" viewBox="0 0 24 24"><path d="M4 11.2 12 4.5l8 6.7V19a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 19z"/><circle cx="12" cy="14.5" r="1.5"/></symbol>
+    <symbol id="lg-tv" viewBox="0 0 24 24"><rect x="3" y="7" width="18" height="13" rx="2.5"/><path d="M8.5 3 12 7l3.5-4"/><circle cx="17.5" cy="16.5" r=".9" fill="currentColor" stroke="none"/></symbol>
+    <symbol id="lg-list" viewBox="0 0 24 24"><path d="M7 3.5h10A1.5 1.5 0 0 1 18.5 5v15.5L12 16.5l-6.5 4V5A1.5 1.5 0 0 1 7 3.5z"/></symbol>
+    <symbol id="lg-remote" viewBox="0 0 24 24"><rect x="7.5" y="2.5" width="9" height="19" rx="3.2"/><circle cx="12" cy="7" r="1.6"/><g fill="currentColor" stroke="none"><circle cx="10.3" cy="12" r=".95"/><circle cx="13.7" cy="12" r=".95"/><circle cx="10.3" cy="15.5" r=".95"/><circle cx="13.7" cy="15.5" r=".95"/></g></symbol>
+    <symbol id="lg-crowd" viewBox="0 0 24 24"><circle cx="9" cy="8.5" r="3.2"/><path d="M3 19.5c.5-3.5 2.9-5.5 6-5.5s5.5 2 6 5.5"/><path d="M15.5 5.8a2.8 2.8 0 0 1 0 5.4"/><path d="M17.2 14.3c2 .6 3.4 2.4 3.8 5.2"/></symbol>
+    <symbol id="lg-star" viewBox="0 0 24 24"><path d="m12 3.8 2.5 5.2 5.7.8-4.1 4 1 5.7-5.1-2.7-5.1 2.7 1-5.7-4.1-4 5.7-.8z"/></symbol>
+    <symbol id="lg-talk" viewBox="0 0 24 24"><path d="M5.5 4h13a2 2 0 0 1 2 2v8.5a2 2 0 0 1-2 2H11L6.5 20.5v-4h-1a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z"/><g fill="currentColor" stroke="none"><circle cx="8.5" cy="10.3" r="1"/><circle cx="12" cy="10.3" r="1"/><circle cx="15.5" cy="10.3" r="1"/></g></symbol>
+    <symbol id="lg-feed" viewBox="0 0 24 24"><g fill="currentColor" stroke="none"><circle cx="5" cy="6.5" r="1.3"/><circle cx="5" cy="12" r="1.3"/><circle cx="5" cy="17.5" r="1.3"/></g><path d="M9.5 6.5H20M9.5 12H20M9.5 17.5H20"/></symbol>
+    <symbol id="lg-cup" viewBox="0 0 24 24"><path d="M4.5 9.5h12V15a5 5 0 0 1-5 5h-2a5 5 0 0 1-5-5z"/><path d="M16.5 11h1.3a2.7 2.7 0 0 1 0 5.4h-1.5"/><path d="M8.5 3.5v2.5M12.5 3.5v2.5"/></symbol>
+    <symbol id="lg-bell" viewBox="0 0 24 24"><path d="M6 16.5V11a6 6 0 1 1 12 0v5.5l1.5 2h-15z"/><path d="M10 21a2.2 2.2 0 0 0 4 0"/></symbol>
+    <symbol id="lg-dials" viewBox="0 0 24 24"><path d="M3.5 7H12M17.5 7h3M3.5 17h3M12 17h8.5"/><circle cx="14.7" cy="7" r="2.5"/><circle cx="9.3" cy="17" r="2.5"/></symbol>
+    <symbol id="lg-flame" viewBox="0 0 24 24"><path d="M12.5 3c.5 3.2-4.5 5.5-4.5 10.5a4.5 4.5 0 0 0 9 0c0-1.8-.8-3.2-1.6-4.2-.2 1.4-1 2.2-1.9 2.6.5-3.3-.2-6.7-1-8.9z"/></symbol>
+    <symbol id="lg-eye" viewBox="0 0 24 24"><path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z"/><circle cx="12" cy="12" r="2.8"/></symbol>
+  </svg>
   <div class="nav">
     <div class="nav-logo">ShowUp</div>
     <div class="nav-right">
-      <button class="nav-bell" id="nav-bell" onclick="toggleNotifPanel(event)" title="Notifications" aria-label="Notifications">&#128276;<span class="nav-bell-dot" id="nav-bell-dot" style="display:none">0</span></button>
-      <button class="nav-settings" onclick="goToSettings()" title="Settings">&#9881;&#65039;</button>
+      <button class="nav-bell" id="nav-bell" onclick="toggleNotifPanel(event)" title="Notifications" aria-label="Notifications"><span class="lg-old">&#128276;</span><svg class="lg-ico lg-new" aria-hidden="true"><use href="#lg-bell"/></svg><span class="nav-bell-dot" id="nav-bell-dot" style="display:none">0</span></button>
+      <button class="nav-settings" onclick="goToSettings()" title="Settings" aria-label="Settings"><span class="lg-old">&#9881;&#65039;</span><svg class="lg-ico lg-new" aria-hidden="true"><use href="#lg-dials"/></svg></button>
       <button class="nav-avatar" id="user-avatar" onclick="goToProfile()">?</button>
     </div>
     <div class="notif-panel" id="notif-panel" hidden>
@@ -1324,10 +1370,10 @@ html.native-cover .status-shield{display:block;position:fixed;top:0;left:0;right
     </div>
   </div>
   <div class="bottom-nav">
-    <button class="nav-tab active" id="btab-living-room" onclick="showTab('living-room',this)"><span class="nav-tab-icon">&#127968;</span><span class="nav-tab-label">Living Room</span></button>
-    <button class="nav-tab" id="btab-watching" onclick="showTab('watching',this)"><span class="nav-tab-icon">&#128250;</span><span class="nav-tab-label">Watching</span></button>
-    <button class="nav-tab" id="btab-watchlist" onclick="showTab('watchlist',this)"><span class="nav-tab-icon">🛋️</span><span class="nav-tab-label">My List</span></button>
-    <button class="nav-tab" id="btab-watched" onclick="showTab('watched',this)"><span class="nav-tab-icon">&#128252;</span><span class="nav-tab-label">Binged</span></button>
+    <button class="nav-tab active" id="btab-living-room" onclick="showTab('living-room',this)"><span class="nav-tab-icon lg-old">&#127968;</span><svg class="lg-ico lg-new" aria-hidden="true"><use href="#lg-home"/></svg><span class="nav-tab-label">Living Room</span></button>
+    <button class="nav-tab" id="btab-watching" onclick="showTab('watching',this)"><span class="nav-tab-icon lg-old">&#128250;</span><svg class="lg-ico lg-new" aria-hidden="true"><use href="#lg-tv"/></svg><span class="nav-tab-label">Watching</span></button>
+    <button class="nav-tab" id="btab-watchlist" onclick="showTab('watchlist',this)"><span class="nav-tab-icon lg-old">🛋️</span><svg class="lg-ico lg-new" aria-hidden="true"><use href="#lg-list"/></svg><span class="nav-tab-label">My List</span></button>
+    <button class="nav-tab" id="btab-watched" onclick="showTab('watched',this)"><span class="nav-tab-icon lg-old">&#128252;</span><svg class="lg-ico lg-new" aria-hidden="true"><use href="#lg-remote"/></svg><span class="nav-tab-label">Binged</span></button>
   </div>
 </div>
 
@@ -1535,7 +1581,13 @@ html.native-cover .status-shield{display:block;position:fixed;top:0;left:0;right
         </button>
         <button class="settings-row" onclick="openReportsAdmin()">
           <span class="settings-row-icon">&#128681;</span><span class="settings-row-label">Flagged content<span class="settings-row-sub">Comments and people someone reported</span></span><span class="settings-row-arrow">&#8250;</span>
-        </button>      </div>
+        </button>
+        <div class="settings-row" style="cursor:default;">
+          <span class="settings-row-icon">&#127912;</span>
+          <span class="settings-row-label">New look preview<span class="settings-row-sub">Only admins can turn this on, on this device. Members keep today's look.</span></span>
+          <button type="button" class="switch" id="look-switch" role="switch" aria-checked="false" aria-label="New look preview" onclick="toggleLookPreview()"></button>
+        </div>
+      </div>
     </div>
 
     <div class="settings-section">
@@ -1986,6 +2038,7 @@ function showTab(tab, btn) {
   if (tab==='watched') { renderBingedTop5(); }
   if (tab!=='living-room') { state.lastViewedFriend = null; _friendDetailReturn = null; }
   if (state.user) state.user.lastActive = new Date().toISOString();
+  _syncLookTab();
   _updateBackToTop();
 }
 
@@ -7533,7 +7586,36 @@ async function getFriendsWithShows(roomId) {
 // SCREEN NAVIGATION
 // ============================================================
 
+// ---- Boutique lounge look (admin-only preview) -----------------------------
+// Admins flip it per device in Settings > Admin. For everyone else lookOn() is
+// always false, whatever this device has saved. Remove with the switch once the
+// new look is on for all members.
+var LOOK_KEY = 'showup_look';
+function lookOn() {
+  if (!state.user || !state.user.isAdmin) return false;
+  try { return localStorage.getItem(LOOK_KEY) === 'lounge'; } catch (e) { return false; }
+}
+function _syncLookTab() {
+  var pane = document.getElementById('tab-living-room');
+  document.body.classList.toggle('lr-on', !!pane && pane.style.display === 'block');
+}
+function applyLook() {
+  document.body.classList.toggle('look-lounge', lookOn());
+  _syncLookTab();
+}
+window.toggleLookPreview = function() {
+  if (!state.user || !state.user.isAdmin) return;
+  try {
+    if (lookOn()) localStorage.removeItem(LOOK_KEY);
+    else localStorage.setItem(LOOK_KEY, 'lounge');
+  } catch (e) { return; }
+  applyLook();
+  var sw = document.getElementById('look-switch');
+  if (sw) sw.setAttribute('aria-checked', lookOn() ? 'true' : 'false');
+};
+
 function showScreen(name) {
+  applyLook();
   document.querySelectorAll('.screen').forEach(function(s) { s.classList.remove('active'); });
   var el = document.getElementById('screen-' + name);
   if (el) el.classList.add('active');
@@ -9012,6 +9094,8 @@ window.goToSettings = function() {
   renderAlertsUI();
   var adminSection = document.getElementById('settings-admin-section');
   if (adminSection) adminSection.style.display = (state.user && state.user.isAdmin) ? 'block' : 'none';
+  var lookSwitch = document.getElementById('look-switch');
+  if (lookSwitch) lookSwitch.setAttribute('aria-checked', lookOn() ? 'true' : 'false');
 };
 window.backFromSettings = function() { showScreen('app'); };
 
