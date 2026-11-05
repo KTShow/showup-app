@@ -855,14 +855,13 @@ body.look-lounge #tab-living-room .conversation-icon{display:none;}
 body.look-lounge #tab-living-room .lounge-post.is-new{background:#FBF3E0;padding:14px 10px;}
 body.look-lounge #tab-living-room .who-rated-card{background:none;border:none;border-bottom:1px solid var(--border);border-radius:0;padding:12px 0 6px;}
 /* Room picker: rows too. */
-body.look-lounge .room-picker-grid{grid-template-columns:1fr;gap:0;}
-body.look-lounge .room-tile{position:relative;background:none;border:none!important;border-bottom:1px solid var(--border)!important;border-radius:0;padding:14px 22px 14px 0;box-shadow:none;}
+body.look-lounge .room-picker-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;}
+body.look-lounge .room-tile{background:var(--cream);border:1px solid var(--border)!important;border-radius:12px;padding:14px;min-height:100px;box-shadow:none;}
 body.look-lounge .room-tile:hover{transform:none;}
-body.look-lounge .room-tile::after{content:"\203A";position:absolute;right:2px;top:50%;transform:translateY(-50%);font-size:20px;color:var(--muted);}
-body.look-lounge .room-tile-name{font-size:18px;font-weight:600;}
-body.look-lounge .room-tile-create{justify-content:flex-start;border:none;border-radius:0;padding:12px 0;min-height:48px;color:var(--terra);}
-body.look-lounge .room-card-big{background:none;border:none!important;padding:2px 0 14px;}
-body.look-lounge .rcb-name{font-size:26px;font-weight:600;}
+body.look-lounge .room-tile-name{font-size:17px;font-weight:700;letter-spacing:-0.01em;line-height:1.2;margin-bottom:6px;}
+body.look-lounge .room-tile-create{border:1px dashed var(--border);border-radius:12px;min-height:100px;color:var(--terra);}
+body.look-lounge .room-card-big{background:var(--cream);border:1px solid var(--border)!important;border-radius:12px;padding:16px;}
+body.look-lounge .rcb-name{font-size:24px;font-weight:800;letter-spacing:-0.02em;}
 body.look-lounge .rcb-cta{background:var(--fig)!important;border-radius:8px;}
 /* Posters first. Reordered with flex so the page's HTML (and today's look) stays as is. */
 .lg-rail-wrap{display:none;}
@@ -871,9 +870,9 @@ body.look-lounge .lg-rail-wrap:not(:empty){display:block;}
 .lg-rail-label{font-size:18px;font-weight:800;letter-spacing:-0.02em;color:var(--charcoal);}
 /* Room picker: three poster tiles, one tap into each view, all visible without scrolling. */
 .lg-tiles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:0 0 18px;}
-.lg-tile{display:block;min-width:0;background:none;border:none;padding:0;text-align:left;cursor:pointer;font-family:var(--sans);color:var(--charcoal);}
-.lg-tile-art{display:flex;align-items:center;justify-content:center;width:100%;aspect-ratio:2/3;border-radius:8px;overflow:hidden;background:var(--fig);color:#FBF7F2;margin-bottom:6px;}
-.lg-tile-art img{display:block;width:100%;height:100%;object-fit:cover;}
+.lg-tile{display:flex;flex-direction:column;align-items:stretch;justify-content:flex-start;align-self:start;min-width:0;background:none;border:none;padding:0;text-align:left;cursor:pointer;font-family:var(--sans);color:var(--charcoal);}
+.lg-tile-art{position:relative;flex:none;display:flex;align-items:center;justify-content:center;width:100%;aspect-ratio:2/3;border-radius:8px;overflow:hidden;background:var(--fig);color:#FBF7F2;margin-bottom:6px;}
+.lg-tile-art img{position:absolute;top:0;left:0;display:block;width:100%;height:100%;object-fit:cover;}
 .lg-tile-name{display:block;font-size:13px;font-weight:800;line-height:1.2;}
 .lg-tile-name.is-hot{color:#3b6e8f;}
 .lg-tile-sub{display:block;font-size:11px;color:var(--muted);line-height:1.25;margin-top:2px;}
@@ -3375,10 +3374,12 @@ function renderRoomRail() {
     : '';
 }
 
-// Room picker: three poster tiles. The art is decoration, chosen from data already
-// on hand so the page loads nothing heavy: this week's top trending show, your own
-// best-rated show, and something from your lists. Each view loads when it's tapped.
-var _lgTrending = null;
+// Room picker: three poster tiles. Prime Time shows its real #1, The Full Lineup the
+// next show on that list, Hot Right Now this week's top trending show. An icon stands
+// in until the posters arrive. A good Prime Time load is kept, so tapping the tile is
+// instant; a failed one isn't, so the view can still try for itself.
+var _lgTrending = null, _lgTrendingBusy = false;
+var _lgPrimeTop = null, _lgPrimeBusy = false;
 function _paintHubTiles() {
   var el = document.getElementById('lg-hub-rail');
   if (!el) return;
@@ -3390,12 +3391,9 @@ function _paintHubTiles() {
     }
     return null;
   }
-  var trending = _lgTrending || [];
-  var rated = (state.watched || []).filter(function(s) { return s.rating > 0; })
-    .sort(function(a, b) { return b.rating - a.rating; });
-  var hot = take(trending);
-  var prime = take(rated) || take(trending);
-  var lineup = take((state.watching || []).concat(state.watchlist || [])) || take(trending);
+  var prime = take(_lgPrimeTop);
+  var lineup = _lgPrimeTop ? (take(_lgPrimeTop) || take(_lgTrending)) : null;
+  var hot = take(_lgTrending);
   function tile(open, name, sub, poster, icon, nameCls) {
     return '<button type="button" class="lg-tile" onclick="' + open + '()"><span class="lg-tile-art">'
       + (poster ? '<img src="https://image.tmdb.org/t/p/w342' + poster + '" alt="" />'
@@ -3408,18 +3406,32 @@ function _paintHubTiles() {
     + tile('openLineupView', 'The Full Lineup', 'Every show, A to Z', lineup, 'lg-feed')
     + '</div>';
 }
+async function _loadHubTrending() {
+  if (_lgTrending || _lgTrendingBusy) return;
+  _lgTrendingBusy = true;
+  try { _lgTrending = await _loadTrendingUS(); }
+  catch (e) { console.error('hub tiles trending error:', e); }
+  _lgTrendingBusy = false;
+}
+async function _loadHubPrimeTop() {
+  if (_lgPrimeTop || _lgPrimeBusy || !state.myRoomsLoaded) return;
+  _lgPrimeBusy = true;
+  try {
+    if (!_primeTimeData) {
+      var r = await sb.rpc('get_prime_time_rankings');
+      if (r.error) throw r.error;
+      if (r.data && !_primeTimeData) _primeTimeData = r.data;
+    }
+    if (_primeTimeData) _lgPrimeTop = buildPrimeTimeLeaderboard(_primeTimeData);
+  } catch (e) { console.error('hub tiles prime time error:', e); }
+  _lgPrimeBusy = false;
+}
 async function renderHubRail() {
   var el = document.getElementById('lg-hub-rail');
   if (!el) return;
   if (!lookOn()) { el.innerHTML = ''; return; }
   _paintHubTiles();
-  if (_lgTrending) return;
-  try {
-    _lgTrending = await _loadTrendingUS();
-  } catch (e) {
-    console.error('hub tiles error:', e); // tiles still work, with your own posters or an icon
-    return;
-  }
+  await Promise.all([_loadHubTrending(), _loadHubPrimeTop()]);
   if (lookOn()) _paintHubTiles();
 }
 
