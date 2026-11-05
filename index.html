@@ -867,12 +867,9 @@ html.native-cover .status-shield{display:block;position:fixed;top:0;left:0;right
 <div class="invite-modal-overlay" id="install-guide-modal">
   <div class="invite-modal">
     <div class="invite-modal-title">📲 Save ShowUp to Your Home Screen</div>
-    <div class="invite-modal-sub">Add ShowUp as an app icon so it's always one tap away — no browser, no hunting for the link.</div>
-    <div style="display:flex;gap:8px;margin-bottom:14px;">
-      <button class="install-guide-tab" id="install-tab-ios" onclick="switchInstallGuidePlatform('ios')" style="flex:1;background:var(--sand);border:2px solid var(--border);border-radius:10px;padding:10px;font-family:var(--sans);font-size:13px;font-weight:700;color:var(--muted);cursor:pointer;">📱 iPhone</button>
-      <button class="install-guide-tab" id="install-tab-android" onclick="switchInstallGuidePlatform('android')" style="flex:1;background:var(--sand);border:2px solid var(--border);border-radius:10px;padding:10px;font-family:var(--sans);font-size:13px;font-weight:700;color:var(--muted);cursor:pointer;">🤖 Android</button>
-    </div>
+    <div class="invite-modal-sub">Keep ShowUp one tap away.</div>
     <div id="install-guide-steps"></div>
+    <button type="button" class="fs-change" id="install-other-platform" onclick="switchInstallGuidePlatform(_installGuidePlatform === 'ios' ? 'android' : 'ios')" style="display:block;margin:0 auto;"></button>
     <button class="btn-invite-close" onclick="closeInstallGuide()" style="width:100%;margin-top:6px;">Got it</button>
   </div>
 </div>
@@ -7712,7 +7709,7 @@ async function loadUserIntoState(profile) {
     loadNotifications(); // fire-and-forget, fills the bell + new-season badges from server-computed state
     loadNotificationPrefs(); // fire-and-forget, fills the Settings toggles
     syncTextSizeFromAccount(); // fire-and-forget, applies the account's saved text size
-    if (IS_NATIVE_APP) { var ir = document.getElementById('settings-install-row'); if (ir) ir.style.display = 'none'; }
+    if (IS_NATIVE_APP && !state.user.isAdmin) { var ir = document.getElementById('settings-install-row'); if (ir) ir.style.display = 'none'; }
     loadInfluencerNames(); // fire-and-forget, fills in "Recommended by" badges once resolved
   } catch(e) { console.error('Error loading shows:', e); }
 
@@ -10987,22 +10984,18 @@ function installStepRow(num, html) {
 function renderInstallGuideSteps() {
   var stepsEl = document.getElementById('install-guide-steps');
   if (!stepsEl) return;
-  var iosTab = document.getElementById('install-tab-ios');
-  var androidTab = document.getElementById('install-tab-android');
-  [iosTab, androidTab].forEach(function(t) { if (t) { t.style.background = 'var(--sand)'; t.style.borderColor = 'var(--border)'; t.style.color = 'var(--muted)'; } });
-  var activeTab = _installGuidePlatform === 'ios' ? iosTab : androidTab;
-  if (activeTab) { activeTab.style.background = 'var(--terra)'; activeTab.style.borderColor = 'var(--terra)'; activeTab.style.color = 'white'; }
+  var other = document.getElementById('install-other-platform');
+  if (other) other.textContent = _installGuidePlatform === 'ios' ? 'On Android?' : 'On iPhone?';
 
+  // iOS 26 Safari often tucks Share behind the three dots, hence step 1's second sentence.
   if (_installGuidePlatform === 'ios') {
-    stepsEl.innerHTML = installStepRow(1, 'Open this page in <b>Safari</b> (not Chrome or another app browser).')
-      + installStepRow(2, 'Tap the <b>Share</b> button &#128228; &mdash; the square with an arrow pointing up, usually at the bottom of the screen.')
-      + installStepRow(3, 'Scroll down and tap <b>&#8220;Add to Home Screen.&#8221;</b>')
-      + installStepRow(4, 'Tap <b>&#8220;Add&#8221;</b> in the top right corner. That&#39;s it &mdash; ShowUp is now an icon on your Home Screen.');
+    stepsEl.innerHTML = installStepRow(1, 'In Safari, tap the <b>Share</b> button. If you don&#39;t see it, tap the <b>three dots</b> first.')
+      + installStepRow(2, 'Scroll down and tap <b>Add to Home Screen</b>.')
+      + installStepRow(3, 'Tap <b>Add</b>.');
   } else {
-    stepsEl.innerHTML = installStepRow(1, 'Open this page in <b>Chrome</b>.')
-      + installStepRow(2, 'Tap the <b>&#8942;</b> menu in the top right corner.')
-      + installStepRow(3, 'Tap <b>&#8220;Add to Home screen&#8221;</b> (or <b>&#8220;Install app&#8221;</b>).')
-      + installStepRow(4, 'Tap <b>&#8220;Add&#8221;</b> or <b>&#8220;Install&#8221;</b> to confirm. That&#39;s it &mdash; ShowUp is now an icon on your Home Screen.');
+    stepsEl.innerHTML = installStepRow(1, 'In Chrome, tap the <b>&#8942;</b> menu at the top right.')
+      + installStepRow(2, 'Tap <b>Add to Home screen</b> (or <b>Install app</b>).')
+      + installStepRow(3, 'Tap <b>Add</b> or <b>Install</b>.');
   }
 }
 
@@ -11013,10 +11006,11 @@ window.switchInstallGuidePlatform = function(platform) {
 
 // Inside the TestFlight/App Store app (Capacitor injects window.Capacitor into the
 // live site) "Add to Home Screen" makes no sense -- they already have the app.
+// Admins still get it there, so they can walk other people through it.
 var IS_NATIVE_APP = !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());
 
 window.openInstallGuide = function() {
-  if (IS_NATIVE_APP) return;
+  if (IS_NATIVE_APP && !(state.user && state.user.isAdmin)) return;
   renderInstallGuideSteps();
   var el = document.getElementById('install-guide-modal');
   if (el) el.classList.add('active');
@@ -11539,15 +11533,20 @@ window.closeInviteModal = function() { document.getElementById('invite-modal').c
 function inviteMessageText() {
   var u = state.user;
   var name = u && u.first ? u.first + (u.last ? ' ' + u.last.charAt(0).toUpperCase() : '') : '';
-  var hi = name ? 'Hi, it\'s ' + name + '! ' : 'Hi! ';
+  var hi = name ? 'Hi, it\'s ' + name + '!' : 'Hi!';
   var roomName = _inviteRoom.name || state.currentRoomName || 'Living Room';
   var room = inviteRoomPhrase(roomName).replace(/^your /, 'my ');
   if (_inviteMode === 'existing') {
-    return hi + 'I\'m adding you to ' + room + ' on ShowUp. Tap the link and you\'ll find it in your app alongside your other rooms. See you in there!';
+    return [hi,
+      'I\'m adding you to ' + room + ' on ShowUp.',
+      'Tap the link and you\'ll find it in your app alongside your other rooms. See you in there!'
+    ].join('\n\n');
   }
-  return hi + 'A friend of mine is building a new app called ShowUp, and it\'s in beta testing right now. I love it, and I\'d like you to join ' + room + '. '
-    + 'ShowUp takes the dinner-table conversation of "what are you watching?" and turns it into a place to share what we\'re all watching and get recommendations from people whose taste you actually trust. '
-    + 'Tap the link and follow the steps. You\'ll add ShowUp to your home screen and turn on notifications so you don\'t miss anything. We can\'t wait to hear what you think!';
+  return [hi,
+    'A friend of mine is building a new app called ShowUp, and I\'d love you to join ' + room + ' while it\'s in beta.',
+    'It turns the dinner-table question "what are you watching?" into a place to share shows and get recommendations from people whose taste you actually trust.',
+    'Tap the link, then add ShowUp to your home screen so it\'s one tap away.'
+  ].join('\n\n');
 }
 
 // "your Family living room", but not "your The Living Room living room".
@@ -11580,7 +11579,7 @@ window.shareInviteMessage = function() {
 
 function copyInviteContent(link, btn, resetLabel) {
   var text = inviteMessageText();
-  var html = '<p>' + text + '</p><p><a href="' + link + '">' + link + '</a></p>';
+  var html = text.split('\n\n').map(function(para) { return '<p>' + para + '</p>'; }).join('') + '<p><a href="' + link + '">' + link + '</a></p>';
   var plain = text + '\n\n' + link;
   function onCopied() { btn.textContent = 'Copied! \u2713'; setTimeout(function() { btn.textContent = resetLabel; }, 1800); }
   if (window.ClipboardItem && navigator.clipboard && navigator.clipboard.write) {
