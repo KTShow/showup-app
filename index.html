@@ -858,6 +858,47 @@ body.look-lounge .room-tile-create{justify-content:flex-start;border:none;border
 body.look-lounge .room-card-big{background:none;border:none!important;padding:2px 0 14px;}
 body.look-lounge .rcb-name{font-size:26px;font-weight:600;}
 body.look-lounge .rcb-cta{background:var(--fig)!important;border-radius:8px;}
+/* Posters first. Reordered with flex so the page's HTML (and today's look) stays as is. */
+.lg-rail-wrap{display:none;}
+body.look-lounge .lg-rail-wrap:not(:empty){display:block;}
+.lg-rail-head{display:flex;justify-content:space-between;align-items:center;min-height:44px;}
+.lg-rail-label{font-family:var(--serif);font-size:18px;font-weight:600;color:var(--charcoal);}
+.lg-rail-label.is-hot{color:#3b6e8f;}
+.lg-rail-more{background:none;border:none;padding:0;min-height:44px;color:var(--fig);font-family:var(--sans);font-size:13px;font-weight:600;cursor:pointer;}
+.lg-rail{display:flex;gap:10px;overflow-x:auto;margin:0 -20px 14px;padding:0 20px 4px;scrollbar-width:none;-webkit-overflow-scrolling:touch;}
+.lg-rail::-webkit-scrollbar{display:none;}
+.lg-poster{flex:0 0 108px;width:108px;background:none;border:none;padding:0;text-align:left;cursor:pointer;font-family:var(--sans);}
+.lg-poster img{display:block;width:108px;height:162px;border-radius:6px;object-fit:cover;background:#EDE4D6;}
+.lg-poster-cap{font-size:11px;color:var(--muted);margin-top:5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+body.look-lounge #room-picker-view:not([style*="none"]),body.look-lounge #lr-crew-view:not([style*="none"]){display:flex!important;flex-direction:column;}
+body.look-lounge #room-picker-view>.announcement-banner{order:1;}
+body.look-lounge #room-picker-view>.page-title{order:2;}
+body.look-lounge #room-picker-view>.page-sub{order:3;margin-bottom:6px;}
+body.look-lounge #lg-hub-rail{order:4;}
+body.look-lounge #room-picker-view>.lr-search-wrap{order:5;}
+body.look-lounge #room-picker-grid,body.look-lounge #room-picker-search-results{order:6;margin-bottom:10px;}
+body.look-lounge #room-picker-view>.tastemakers-banner{order:8;}
+body.look-lounge #hub-hot-row.lg-covered{display:none;}
+body.look-lounge #lg-room-rail{order:0;}
+body.look-lounge #top5-banner-wrap{order:1;}
+body.look-lounge #room-ticker{order:2;}
+body.look-lounge #lr-crew-view>.lr-search-wrap{order:3;}
+body.look-lounge .lg-crew-tools{order:4;}
+body.look-lounge #friends-grid{order:5;margin-bottom:6px;}
+body.look-lounge #tastemakers-banner-wrap{order:6;}
+/* Your Crowd: a person per row, with the posters of what they're watching. */
+body.look-lounge .friends-grid:has(> .lg-row){grid-template-columns:1fr;gap:0;}
+body.look-lounge .friend-card.lg-row{background:none;border:none;border-bottom:1px solid var(--border);border-radius:0;box-shadow:none;padding:12px 88px 12px 52px;min-height:75px;}
+body.look-lounge .friend-card.lg-row:hover{transform:none;}
+body.look-lounge .lg-row .friend-top-row{margin:0;}
+body.look-lounge .lg-row .friend-av{position:absolute;left:0;top:50%;margin-top:-20px;width:40px;height:40px;font-size:13px;background:var(--fig)!important;}
+body.look-lounge .lg-row.is-self .friend-av{background:var(--terra)!important;}
+body.look-lounge .lg-row .friend-name{font-family:var(--serif);font-size:17px;font-weight:600;color:var(--charcoal);}
+body.look-lounge .lg-row .friend-city{display:none;}
+body.look-lounge .lg-row .friend-count{margin-top:2px;font-size:12px;font-weight:400;color:var(--muted);}
+.lg-mini{position:absolute;right:0;top:50%;transform:translateY(-50%);display:flex;}
+.lg-mini img{display:block;width:34px;height:51px;border-radius:4px;object-fit:cover;margin-left:-14px;box-shadow:0 0 0 2px #FBF7F2;background:#EDE4D6;}
+.lg-mini img:first-child{margin-left:0;}
 </style>
 </head>
 <body>
@@ -1307,7 +1348,8 @@ body.look-lounge .rcb-cta{background:var(--fig)!important;border-radius:8px;}
         </div>
         <div class="page-title"><span class="lg-old">&#127968;&nbsp; </span>Your Living Rooms</div>
         <div class="page-sub">Pick a room to enter, or start a new one.</div>
-        <div class="tastemakers-banner" onclick="openFullLineupView()" style="margin-bottom:16px;background:linear-gradient(135deg,#3b6e8f,#2c4f66);">
+        <div id="lg-hub-rail" class="lg-rail-wrap"></div>
+        <div class="tastemakers-banner" id="hub-hot-row" onclick="openFullLineupView()" style="margin-bottom:16px;background:linear-gradient(135deg,#3b6e8f,#2c4f66);">
           <div class="tastemakers-banner-icon lg-old">&#128293;</div><svg class="lg-ico lg-new" aria-hidden="true"><use href="#lg-flame"/></svg>
           <div class="tastemakers-banner-text">
             <div class="tastemakers-banner-title">Hot Right Now</div>
@@ -1383,11 +1425,12 @@ body.look-lounge .rcb-cta{background:var(--fig)!important;border-radius:8px;}
         </div>
         <div class="lr-tab-desc" id="lr-tab-desc"></div>
         <div id="lr-crew-view">
+          <div id="lg-room-rail" class="lg-rail-wrap"></div>
           <div id="tastemakers-banner-wrap"></div>
           <div id="room-ticker" class="room-ticker" style="display:none;" onclick="openNewThisWeekModal()" title="See what's new this week"></div>
           <div id="top5-banner-wrap"></div>
           <div class="lr-search-wrap"><input type="text" id="crew-search" class="lr-search-input" placeholder="Search a show or friend to see who rated it..." oninput="renderFriends();toggleSearchClearBtn(this)" autocomplete="off" /><button class="lr-search-clear" type="button" aria-label="Clear search" onclick="clearSearchInput('crew-search')">&#10005;</button></div>
-          <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap;">
+          <div class="lg-crew-tools" style="display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap;">
             <button id="crew-platform-toggle" onclick="toggleCrewPlatformView()" style="background:none;border:1px solid var(--terra);color:var(--terra);border-radius:8px;padding:6px 12px;font-family:var(--sans);font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;"><span class="lg-old">&#128256; </span>Sort by Platform</button>
             <button type="button" id="invite-someone-link" class="invite-pill" onclick="openInviteModal()">+ Invite a Friend</button>
             <select id="crew-person-filter" onchange="renderFriends()" style="display:none;background:white;border:1px solid var(--border);border-radius:8px;padding:6px 10px;font-family:var(--sans);font-size:12px;color:var(--charcoal);"><option value="">Everyone</option></select>
@@ -3285,6 +3328,79 @@ function renderRoomTicker() {
   }
 }
 
+// ---- Poster rails (new look only) -----------------------------------------
+function _lgPosterHTML(item) {
+  var id = parseInt(item.tmdbId, 10);
+  return '<button type="button" class="lg-poster" onclick="openShowDetails(' + id + ')" aria-label="' + escAttr(item.title) + '">'
+    + '<img src="https://image.tmdb.org/t/p/w185' + item.poster + '" alt="" loading="lazy" />'
+    + '<div class="lg-poster-cap">' + escAttr(item.caption) + '</div></button>';
+}
+
+// Your Crowd: the room's most recent adds, newest first, one poster per title.
+function renderRoomRail() {
+  var el = document.getElementById('lg-room-rail');
+  if (!el) return;
+  var q = ((document.getElementById('crew-search') || {}).value || '').trim();
+  if (!lookOn() || !state.friendsLoaded || q || state.crewShowsByPlatform) { el.innerHTML = ''; return; }
+  var byTitle = {};
+  (state.friends || []).forEach(function(f) {
+    if (f.muted) return;
+    [f.watching, f.watchlist, f.watched].forEach(function(list) {
+      (list || []).forEach(function(s) {
+        if (s.hidden || !s.poster_path || !s.tmdb_id) return;
+        var key = (s.title || '').toLowerCase().trim();
+        var when = Date.parse(s.added_at) || 0;
+        if (!byTitle[key] || when > byTitle[key].when) {
+          byTitle[key] = { when: when, tmdbId: s.tmdb_id, title: s.title, poster: s.poster_path, caption: f.name.split(' ')[0] };
+        }
+      });
+    });
+  });
+  var items = Object.keys(byTitle).map(function(k) { return byTitle[k]; })
+    .sort(function(a, b) { return b.when - a.when; }).slice(0, 12);
+  el.innerHTML = items.length
+    ? '<div class="lg-rail-head"><span class="lg-rail-label">Lately in this room</span></div><div class="lg-rail">' + items.map(_lgPosterHTML).join('') + '</div>'
+    : '';
+}
+
+// Room picker: what's trending, in place of the Hot Right Now row. If it can't
+// load, the row stays. Trending only needs TMDB, so this never touches the
+// data Hot Right Now itself loads when opened.
+var _lgTrending = null;
+async function renderHubRail() {
+  var el = document.getElementById('lg-hub-rail');
+  var row = document.getElementById('hub-hot-row');
+  if (!el) return;
+  if (!lookOn()) { el.innerHTML = ''; if (row) row.classList.remove('lg-covered'); return; }
+  try {
+    if (!_lgTrending) _lgTrending = await _loadTrendingUS();
+  } catch (e) {
+    console.error('hub rail error:', e);
+    return;
+  }
+  if (!lookOn()) return;
+  var items = _lgTrending.slice(0, 12).map(function(s) {
+    return { tmdbId: s.tmdb_id, title: s.title, poster: s.poster_path, caption: s.title };
+  });
+  if (!items.length) return;
+  el.innerHTML = '<div class="lg-rail-head"><span class="lg-rail-label is-hot">Hot Right Now</span>'
+    + '<button type="button" class="lg-rail-more" onclick="openFullLineupView()">See all &rsaquo;</button></div>'
+    + '<div class="lg-rail">' + items.map(_lgPosterHTML).join('') + '</div>';
+  if (row) row.classList.add('lg-covered');
+}
+
+// Friend-row posters: up to 3 from Watching, else what they've binged.
+function _lgMiniPosters(primary, fallback) {
+  function pick(list) {
+    return (list || []).filter(function(s) { return !s.hidden && s.poster_path; }).slice(0, 3);
+  }
+  var shows = pick(primary);
+  if (!shows.length) shows = pick(fallback);
+  return shows.length
+    ? '<div class="lg-mini">' + shows.map(function(s) { return '<img src="https://image.tmdb.org/t/p/w92' + s.poster_path + '" alt="" loading="lazy" />'; }).join('') + '</div>'
+    : '';
+}
+
 // ============================================================
 // NEW THIS WEEK — tapping the room ticker opens a real list of what was
 // added in the last 7 days (own + friends' shows in this room), with the
@@ -3652,13 +3768,14 @@ function renderFriends() {
   renderTop5Banner();
   renderTastemakersBanner();
   renderRoomTicker();
+  renderRoomRail();
   if (!state.currentRoomIsAdminView) renderRecommendationBanners();
   var selfTile='';
   if(state.user && !state.currentRoomIsAdminView){
     var myColor=ROOMS[state.user.room||'tuscany']?ROOMS[state.user.room||'tuscany'].color:'#C4622D';
     var myCounts=crewTileCounts(state.watching, state.watchlist, state.watched);
-    selfTile='<div class="friend-card" onclick="showFriend(\''+state.user.id+'\')">'
-      +'<div class="friend-top-row"><div class="friend-av" style="background:'+myColor+';font-weight:700;font-family:var(--sans);">'+(state.user.initials||'Y')+'</div><div class="friend-name">YOU</div></div>'
+    selfTile='<div class="friend-card'+(lookOn()?' lg-row is-self':'')+'" onclick="showFriend(\''+state.user.id+'\')">'+(lookOn()?_lgMiniPosters(state.watching,state.watched):'')
+      +'<div class="friend-top-row"><div class="friend-av" style="background:'+myColor+';font-weight:700;font-family:var(--sans);">'+(state.user.initials||'Y')+'</div><div class="friend-name">'+(lookOn()?'You':'YOU')+'</div></div>'
       +'<div class="friend-count">'+myCounts.watching+' watching &middot; '+myCounts.list+' list &middot; '+myCounts.binged+' binged</div>'
       +'</div>';
   }
@@ -3725,7 +3842,7 @@ function renderFriends() {
       }).join('')+'</div>':'';
     var fCounts=crewTileCounts(f.watching, f.watchlist, f.watched);
     var jump=matches.length===1?'jumpToFriendShow(\''+f.id+'\',\''+matches[0].id+'\')':'showFriend(\''+f.id+'\')';
-    return '<div class="friend-card'+(f.muted?' is-muted':'')+'" onclick="'+jump+'">'
+    return '<div class="friend-card'+(f.muted?' is-muted':'')+(lookOn()?' lg-row':'')+'" onclick="'+jump+'">'+(lookOn()?_lgMiniPosters(f.watching,f.watched):'')
       +'<div class="friend-top-row"><div class="friend-av" style="background:'+fColor+';font-weight:700;font-family:var(--sans);">'+fInitials+'</div><div class="friend-name">'+fFirst+(f.muted?'<span class="muted-badge">Muted</span>':'')+'</div></div>'
       +'<div class="friend-city">'+f.city+'</div>'
       +'<div class="friend-count">'+fCounts.watching+' watching &middot; '+fCounts.list+' list &middot; '+fCounts.binged+' binged</div>'
@@ -4136,6 +4253,7 @@ async function showRoomPicker() {
   var adminBanner = document.getElementById('admin-browse-banner');
   if (adminBanner) adminBanner.style.display = (state.user && state.user.isAdmin) ? 'flex' : 'none';
   loadAndRenderAnnouncement();
+  renderHubRail();
   await loadAndRenderRoomPicker();
 }
 
@@ -7660,6 +7778,9 @@ window.toggleLookPreview = function() {
   applyLook();
   var sw = document.getElementById('look-switch');
   if (sw) sw.setAttribute('aria-checked', lookOn() ? 'true' : 'false');
+  if (state.myRoomsLoaded) renderRoomPicker();
+  renderHubRail();
+  if (state.currentRoomId) renderFriends();
 };
 
 function showScreen(name) {
