@@ -168,9 +168,9 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
 .show-card{background:var(--cream);border:1px solid var(--border);border-radius:var(--radius);padding:9px 12px;box-shadow:var(--shadow);transition:box-shadow 0.2s;}
 .show-card:hover{box-shadow:0 4px 20px rgba(100,50,20,0.14);}
 .show-card-top{display:flex;align-items:center;gap:16px;flex-wrap:wrap;}
-.tv-tile{width:52px;height:78px;border-radius:9px;background:var(--olive);display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.tv-tile{width:72px;height:108px;border-radius:9px;background:var(--olive);display:flex;align-items:center;justify-content:center;flex-shrink:0;}
 .tv-tile svg{width:28px;height:28px;}
-.show-poster{width:52px;height:78px;border-radius:9px;object-fit:cover;flex-shrink:0;}
+.show-poster{width:72px;height:108px;border-radius:9px;object-fit:cover;flex-shrink:0;}
 .poster-clickable{cursor:pointer;}
 .detail-poster{position:relative;width:130px;height:195px;flex-shrink:0;border-radius:10px;overflow:hidden;background:var(--olive);}
 .detail-poster img{width:100%;height:100%;object-fit:cover;display:block;}
@@ -329,7 +329,7 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
 /* Show lookup: one card per show, from either Living Room search bar. */
 .lookup-card{background:var(--cream);border:1px solid var(--border);border-radius:var(--radius);padding:12px;margin-bottom:10px;box-shadow:var(--shadow);text-align:left;}
 .lookup-top{display:flex;gap:12px;align-items:flex-start;}
-.lookup-thumb{display:flex;align-items:center;justify-content:center;width:56px;height:84px;border-radius:6px;object-fit:cover;flex-shrink:0;background:var(--sand-dark);color:var(--brand);}
+.lookup-thumb{display:flex;align-items:center;justify-content:center;width:72px;height:108px;border-radius:6px;object-fit:cover;flex-shrink:0;background:var(--sand-dark);color:var(--brand);}
 .lookup-open{cursor:pointer;}
 .lookup-info{flex:1;min-width:0;}
 .lookup-title{font-size:16px;font-weight:700;line-height:1.25;color:var(--charcoal);}
@@ -449,7 +449,7 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
 .fs-sub{font-size:14px;color:var(--charcoal);line-height:1.5;margin-bottom:16px;}
 .fs-row{display:flex;gap:12px;padding:12px 0;border-bottom:1px solid var(--border);}
 .fs-row.fs-new{background:rgba(196,98,45,0.06);}
-.fs-poster{width:46px;height:69px;border-radius:6px;object-fit:cover;flex-shrink:0;background:var(--sand);display:flex;align-items:center;justify-content:center;font-size:20px;}
+.fs-poster{width:60px;height:90px;border-radius:6px;object-fit:cover;flex-shrink:0;background:var(--sand);display:flex;align-items:center;justify-content:center;font-size:20px;}
 .fs-main{flex:1;min-width:0;}
 .fs-show-title{font-family:var(--serif);font-size:16px;font-weight:700;color:var(--fig);line-height:1.25;}
 .fs-tag{font-size:13px;color:var(--muted);margin:2px 0 8px;}
@@ -676,7 +676,7 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
 .btn-remove-friend{background:none;border:1px solid rgba(192,57,43,0.3);color:#c0392b;border-radius:6px;padding:5px 12px;font-family:var(--sans);font-size:13px;font-weight:600;cursor:pointer;}
 .btn-remove-friend:hover{background:#fdecea;border-color:#c0392b;}
 @media(max-width:479px){
-  .show-card-top{align-items:flex-start;}
+  .show-card-top{align-items:flex-start;gap:12px;}
   .show-actions{margin-top:2px;}
   .done-watching-btn{font-size:13px;padding:4px 9px;}
   .didnt-finish-btn{font-size:13px;padding:4px 9px;}
@@ -1920,8 +1920,8 @@ function renderTop5() {
     var tmdbId = typeof s === 'object' && s.tmdb_id ? s.tmdb_id : null;
     var clickAttr = tmdbId ? ' onclick="openShowDetails(' + tmdbId + ')" class="poster-clickable"' : '';
     var thumb = poster
-      ? '<img src="https://image.tmdb.org/t/p/w154' + poster + '"' + clickAttr + ' style="width:32px;height:48px;border-radius:6px;object-fit:cover;flex-shrink:0;" />'
-      : '<div' + clickAttr + ' style="width:32px;height:48px;border-radius:6px;background:var(--olive);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:14px;"><svg class="lg-ph" aria-hidden="true"><use href="#lg-tv"/></svg></div>';
+      ? '<img src="https://image.tmdb.org/t/p/w185' + poster + '"' + clickAttr + ' style="width:48px;height:72px;border-radius:6px;object-fit:cover;flex-shrink:0;" />'
+      : '<div' + clickAttr + ' style="width:48px;height:72px;border-radius:6px;background:var(--olive);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:14px;"><svg class="lg-ph" aria-hidden="true"><use href="#lg-tv"/></svg></div>';
     var upVis = i === 0 ? 'visibility:hidden;' : '';
     var downVis = i === shows.length - 1 ? 'visibility:hidden;' : '';
     return '<div style="display:flex;align-items:center;gap:8px;background:var(--sand);border-radius:8px;padding:8px 12px;">'
@@ -1959,8 +1959,8 @@ function renderBingedTop5() {
     var tmdbId = typeof s === 'object' && s.tmdb_id ? s.tmdb_id : null;
     var clickAttr = tmdbId ? ' onclick="openShowDetails(' + tmdbId + ')" class="poster-clickable"' : '';
     var thumb = poster
-      ? '<img src="https://image.tmdb.org/t/p/w154' + poster + '"' + clickAttr + ' style="width:32px;height:48px;border-radius:6px;object-fit:cover;flex-shrink:0;" />'
-      : '<div' + clickAttr + ' style="width:32px;height:48px;border-radius:6px;background:var(--olive);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:14px;"><svg class="lg-ph" aria-hidden="true"><use href="#lg-tv"/></svg></div>';
+      ? '<img src="https://image.tmdb.org/t/p/w185' + poster + '"' + clickAttr + ' style="width:48px;height:72px;border-radius:6px;object-fit:cover;flex-shrink:0;" />'
+      : '<div' + clickAttr + ' style="width:48px;height:72px;border-radius:6px;background:var(--olive);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:14px;"><svg class="lg-ph" aria-hidden="true"><use href="#lg-tv"/></svg></div>';
     var upVis = i === 0 ? 'visibility:hidden;' : '';
     var downVis = i === shows.length - 1 ? 'visibility:hidden;' : '';
     return '<div style="display:flex;align-items:center;gap:8px;background:var(--sand);border-radius:8px;padding:8px 12px;">'
@@ -2235,7 +2235,7 @@ function tvIcon() {
 function showTile(s) {
   if (s && s.poster_path) {
     var click = s.tmdb_id ? ' poster-clickable" onclick="openShowDetails(' + s.tmdb_id + ')' : '';
-    return '<img class="show-poster' + click + '" src="https://image.tmdb.org/t/p/w154' + s.poster_path + '" />';
+    return '<img class="show-poster' + click + '" src="https://image.tmdb.org/t/p/w185' + s.poster_path + '" />';
   }
   return tvIcon();
 }
@@ -3548,8 +3548,8 @@ function renderNewThisWeekList(){
   el.innerHTML = items.map(function(item, i){
     var thumbClick = item.tmdb_id ? ' onclick="openShowDetails('+item.tmdb_id+')" title="Show details" style="cursor:pointer;' : ' style="';
     var thumb = item.poster_path
-      ? '<img src="'+TMDB_IMG+item.poster_path+'"'+thumbClick+'width:48px;height:72px;border-radius:8px;object-fit:cover;flex-shrink:0;margin-right:16px;" />'
-      : '<div'+thumbClick+'width:48px;height:72px;border-radius:8px;background:var(--olive);flex-shrink:0;margin-right:16px;display:flex;align-items:center;justify-content:center;font-size:18px;"><svg class="lg-ph" aria-hidden="true"><use href="#lg-tv"/></svg></div>';
+      ? '<img src="'+TMDB_IMG+item.poster_path+'"'+thumbClick+'width:72px;height:108px;border-radius:8px;object-fit:cover;flex-shrink:0;margin-right:16px;" />'
+      : '<div'+thumbClick+'width:72px;height:108px;border-radius:8px;background:var(--olive);flex-shrink:0;margin-right:16px;display:flex;align-items:center;justify-content:center;font-size:18px;"><svg class="lg-ph" aria-hidden="true"><use href="#lg-tv"/></svg></div>';
     var destKey = item.list==='watched' ? (item.dnf?'dnf':'watched') : item.list==='watchlist' ? (item.waitingForSeason?'waiting':'watchlist') : 'watching';
     var destLabel = destKey === 'dnf' ? 'Did Not Finish' : ADD_DEST_DISPLAY_LABELS[destKey];
     var subLine = (item.mine ? 'You' : escAttr(item.friendName)) + ' added this to ' + destLabel;
@@ -3661,8 +3661,8 @@ function renderSharedTasteList(friendId){
   el.innerHTML = list.map(function(s){
     var thumbClick = s.tmdb_id ? ' onclick="openShowDetails('+s.tmdb_id+')" title="Show details" style="cursor:pointer;' : ' style="';
     var thumb = s.poster_path
-      ? '<img src="'+TMDB_IMG+s.poster_path+'"'+thumbClick+'width:48px;height:72px;border-radius:8px;object-fit:cover;flex-shrink:0;margin-right:16px;" />'
-      : '<div'+thumbClick+'width:48px;height:72px;border-radius:8px;background:var(--olive);flex-shrink:0;margin-right:16px;display:flex;align-items:center;justify-content:center;font-size:18px;"><svg class="lg-ph" aria-hidden="true"><use href="#lg-tv"/></svg></div>';
+      ? '<img src="'+TMDB_IMG+s.poster_path+'"'+thumbClick+'width:72px;height:108px;border-radius:8px;object-fit:cover;flex-shrink:0;margin-right:16px;" />'
+      : '<div'+thumbClick+'width:72px;height:108px;border-radius:8px;background:var(--olive);flex-shrink:0;margin-right:16px;display:flex;align-items:center;justify-content:center;font-size:18px;"><svg class="lg-ph" aria-hidden="true"><use href="#lg-tv"/></svg></div>';
     // Your side opens the same tap-to-rate sheet as your tiles.
     var myR = rateTriggerHTML(s.myRating || 0, "openRateSheet('"+s.myList+"','"+s.myId+"','"+friendId+"')");
     var theirR = s.theirRating ? remoteStatic(s.theirRating) : '<span style="font-size:13px;color:var(--muted);">Not rated</span>';
@@ -5201,8 +5201,8 @@ window.backFromFullLineupView = function() {
 // recognize, so it gets the room the old number circle used to take.
 function rankThumbHTML(s) {
   return s.poster_path
-    ? '<img src="https://image.tmdb.org/t/p/w185'+s.poster_path+'" alt="" style="width:56px;height:84px;border-radius:8px;object-fit:cover;flex-shrink:0;margin-right:16px;" />'
-    : '<div style="width:56px;height:84px;border-radius:8px;background:var(--olive);flex-shrink:0;margin-right:16px;display:flex;align-items:center;justify-content:center;font-size:20px;"><svg class="lg-ph" aria-hidden="true"><use href="#lg-tv"/></svg></div>';
+    ? '<img src="https://image.tmdb.org/t/p/w185'+s.poster_path+'" alt="" style="width:72px;height:108px;border-radius:8px;object-fit:cover;flex-shrink:0;margin-right:16px;" />'
+    : '<div style="width:72px;height:108px;border-radius:8px;background:var(--olive);flex-shrink:0;margin-right:16px;display:flex;align-items:center;justify-content:center;font-size:20px;"><svg class="lg-ph" aria-hidden="true"><use href="#lg-tv"/></svg></div>';
 }
 // Small rank pill at the start of the title (gold for a top 3).
 function rankNumHTML(n, gold) {
@@ -7237,7 +7237,7 @@ function renderRecommendationBanners(){
     var senderName = r.fromName || 'Someone';
     var posterClick = r.tmdb_id ? ' onclick="openShowDetails('+r.tmdb_id+')" title="Show details" style="cursor:pointer;' : ' style="';
     var poster = r.poster_path
-      ? '<img src="https://image.tmdb.org/t/p/w154'+r.poster_path+'"'+posterClick+'width:52px;height:78px;border-radius:8px;object-fit:cover;flex-shrink:0;" />'
+      ? '<img src="https://image.tmdb.org/t/p/w185'+r.poster_path+'"'+posterClick+'width:52px;height:78px;border-radius:8px;object-fit:cover;flex-shrink:0;" />'
       : '<div'+posterClick+'width:52px;height:78px;border-radius:8px;background:rgba(255,255,255,0.2);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:22px;"><svg class="lg-ph" aria-hidden="true"><use href="#lg-tv"/></svg></div>';
     return '<div class="rec-banner">'
       + '<div class="rec-banner-top">' + poster
@@ -10724,7 +10724,7 @@ window.moveTop5Down = async function(idx) {
 
 var TMDB_KEY = 'b1fd269e9a38591e0e4ded8a1b269d12';
 // w154: sharp at list-poster sizes on retina phones (w92 was blurry).
-var TMDB_IMG = 'https://image.tmdb.org/t/p/w154';
+var TMDB_IMG = 'https://image.tmdb.org/t/p/w185';
 
 // TMDB's number_of_seasons counts every season it has a record for, including
 // ones that are announced/in production but haven't aired yet -- using it
