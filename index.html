@@ -784,14 +784,22 @@ html.native-cover .status-shield{display:block;position:fixed;top:0;left:0;right
 .login-error{background:#fdecea;border:1px solid rgba(192,57,43,0.2);border-radius:8px;padding:10px 14px;font-size:13px;color:#c0392b;margin-bottom:12px;display:none;}
 .auth-loading{text-align:center;padding:40px 20px;color:var(--muted);font-size:14px;}
 
-/* ---- BOUTIQUE LOUNGE LOOK ---------------------------------------------
-   Admin-only preview, flipped in Settings > Admin (see lookOn()). Everything
-   here hangs off body.look-lounge, so members keep today's look untouched.
-   Colors are fixed (not the room theme) in the Living Room and both bars. */
-.lg-new,.lr-tab-desc{display:none;}
+/* ---- Line icons, for everyone: .lg-new replaces the emoji marked .lg-old. Plum
+   (--brand, which room themes don't change); cream on anything selected or colored. */
+.lr-tab-desc{display:none;}
 .lg-ico{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0;}
-body.look-lounge .lg-old{display:none!important;}
-body.look-lounge svg.lg-new{display:block;}
+.lg-old{display:none!important;}
+svg.lg-new{display:block;}
+.nav-bell,.nav-settings{color:var(--brand);}
+.nav-tab .lg-ico,.lr-toggle-btn .lg-ico{color:var(--brand);}
+.nav-tab.active .lg-ico,.lr-toggle-btn.active .lg-ico{color:#fff;}
+.tastemakers-banner .lg-ico,.top5-banner .lg-ico{color:#fff;width:30px;height:30px;}
+.room-ticker-icon .lg-ico{display:block;color:#fff;width:20px;height:20px;}
+.alerts-card>.lg-ico{color:var(--brand);width:26px;height:26px;}
+.announcement-icon{display:none;}
+/* ---- BOUTIQUE LOUNGE LOOK: admin-only preview, flipped in Settings > Admin (see
+   lookOn()). Everything below hangs off body.look-lounge, so members don't get it.
+   Colors are fixed (not the room theme) in the Living Room and both bars. */
 body.look-lounge #tab-living-room,body.look-lounge .bottom-nav,body.look-lounge #screen-app>.nav{
   --sand:#FBF7F2;--sand-dark:#EDE4D6;--terra:#C4622D;--burnt:#A0522D;--olive:#5C6B3A;--olive-light:#7A8F4E;
   --charcoal:#3A3A3A;--muted:#6A6A6A;--cream:#FFFDFA;--border:rgba(107,45,78,0.14);--fig:#6B2D4E;--gold:#C49A3C;
@@ -847,7 +855,6 @@ body.look-lounge .room-ticker-text{color:var(--fig);font-weight:500;}
 body.look-lounge .room-ticker-arrow{color:var(--muted);}
 body.look-lounge .rec-banner{background:var(--fig);box-shadow:none;}
 body.look-lounge .announcement-banner{box-shadow:none;}
-body.look-lounge .announcement-icon{display:none;}
 /* Feeds on the room tabs: rows, not cards. */
 body.look-lounge #tab-living-room .conversation-row,body.look-lounge #tab-living-room .lounge-post{background:none;border:none;border-bottom:1px solid var(--border);border-radius:0;padding:14px 0;margin:0;}
 body.look-lounge #tab-living-room .conversation-icon{display:none;}
@@ -1264,7 +1271,7 @@ body.look-lounge .lg-row .friend-count{margin-top:2px;font-size:12px;font-weight
   </div>
   <div class="content">
     <div class="alerts-card" id="alerts-card" style="display:none;">
-      <div class="alerts-card-icon">&#128276;</div>
+      <div class="alerts-card-icon lg-old">&#128276;</div><svg class="lg-ico lg-new" aria-hidden="true"><use href="#lg-bell"/></svg>
       <div class="alerts-card-body">
         <div class="alerts-card-title" id="alerts-card-title"></div>
         <div class="alerts-card-sub" id="alerts-card-sub"></div>
@@ -3308,7 +3315,7 @@ function renderRoomTicker() {
   el.style.display = 'flex';
   var idx = 0;
   function paint(m) {
-    el.innerHTML = '<span class="room-ticker-icon">'+m.icon+'</span><span class="room-ticker-text">'+m.text+'</span><span class="room-ticker-arrow">&#8250;</span>';
+    el.innerHTML = '<span class="room-ticker-icon"><svg class="lg-ico" aria-hidden="true"><use href="#lg-feed"/></svg></span><span class="room-ticker-text">'+m.text+'</span><span class="room-ticker-arrow">&#8250;</span>';
   }
   paint(msgs[0]);
   if (msgs.length > 1) {
@@ -4349,9 +4356,9 @@ function renderRoomPicker() {
     var n = _roomNewComments(r.id);
     var people = _roomPeopleLine(r.id);
     grid.innerHTML = '<div class="room-card-big" role="button" tabindex="0" onclick="enterLivingRoom(\'' + r.id + '\')" style="border-color:' + theme.color + ';">'
-      + '<div class="rcb-name">' + (lookOn() ? '' : (theme.emoji ? theme.emoji + ' ' : '&#127968; ')) + escAttr(r.name) + '</div>'
+      + '<div class="rcb-name">' + escAttr(r.name) + '</div>'
       + '<div class="rcb-people">' + (people ? 'With ' + people : (r.member_count + ' member' + (r.member_count === 1 ? '' : 's'))) + '</div>'
-      + '<div class="rcb-new' + (n ? ' has-new' : '') + '">' + (n ? (lookOn() ? '' : '&#128172; ') + n + ' new comment' + (n === 1 ? '' : 's') : 'See what your crowd is watching') + '</div>'
+      + '<div class="rcb-new' + (n ? ' has-new' : '') + '">' + (n ? n + ' new comment' + (n === 1 ? '' : 's') : 'See what your crowd is watching') + '</div>'
       + '<div class="rcb-cta" style="background:' + theme.color + ';">Enter your Living Room &rsaquo;</div>'
       + '</div>' + createTile;
     return;
@@ -4360,7 +4367,7 @@ function renderRoomPicker() {
   var tiles = rooms.map(function(r) {
     var theme = LIVING_ROOM_THEMES[r.theme] || LIVING_ROOM_THEMES.tuscany;
     var n = _roomNewComments(r.id);
-    var pill = n ? '<span class="room-new-pill" title="New comments in the last 7 days">' + (lookOn() ? '' : '&#128172; ') + n + (lookOn() ? ' new' : '') + '</span>' : '';
+    var pill = n ? '<span class="room-new-pill" title="New comments in the last 7 days">' + n + ' new</span>' : '';
     // Names ("You, George +2") rather than a member count; falls back to the
     // count until the background room load has landed.
     var people = _roomPeopleLine(r.id, 2) || (r.member_count+' member'+(r.member_count===1?'':'s'));
