@@ -353,7 +353,8 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
 @keyframes flashPulse{0%,100%{box-shadow:0 0 0 6px #F2B705,0 0 18px 6px rgba(242,183,5,0.55);background:#FFF4C2;}50%{box-shadow:0 0 0 2px #F2B705;background:var(--cream);}}
 .flash-pulse{animation:flashPulse 0.5s ease-in-out 5;}
 .show-card.flash-settled,.dnf-card.flash-settled{box-shadow:0 0 0 5px #F2B705,0 0 16px 4px rgba(242,183,5,0.45);background:#FFF4C2;}
-.btn-recommend .lg-ico{display:block;width:18px;height:18px;color:var(--brand);}
+.btn-recommend .lg-ico{display:block;width:20px;height:20px;color:var(--brand);}
+.rec-mark{display:inline-block;width:15px;height:15px;vertical-align:-3px;margin-right:4px;fill:none;stroke:currentColor;stroke-width:1.8;}
 .on-list-badge .lg-ico{display:inline-block;width:14px;height:14px;vertical-align:-2px;}
 .notif-ico .lg-ico{display:block;width:20px;height:20px;color:var(--brand);}
 .conversation-icon .lg-ico{display:block;width:20px;height:20px;color:var(--brand);}
@@ -968,7 +969,7 @@ body.look-lounge .lg-row .friend-count{margin-top:2px;font-size:13px;font-weight
     <symbol id="lg-bell" viewBox="0 0 24 24"><path d="M6 16.5V11a6 6 0 1 1 12 0v5.5l1.5 2h-15z"/><path d="M10 21a2.2 2.2 0 0 0 4 0"/></symbol>
     <symbol id="lg-dials" viewBox="0 0 24 24"><path d="M3.5 7H12M17.5 7h3M3.5 17h3M12 17h8.5"/><circle cx="14.7" cy="7" r="2.5"/><circle cx="9.3" cy="17" r="2.5"/></symbol>
     <symbol id="lg-flame" viewBox="0 0 24 24"><path fill-rule="evenodd" stroke="none" fill="currentColor" d="M12 2c.4 3.3 2.2 5 3.9 7 1.5 1.8 2.9 3.8 2.9 6.3 0 3.9-3 6.7-6.8 6.7s-6.8-2.8-6.8-6.7c0-2.2.9-4 2.2-5.3.2 1.5.9 2.6 2 3.1C9.1 9.4 9.8 5.2 12 2zm.2 10.5c-.5 1.7-2.7 2.7-2.7 5a2.6 2.6 0 0 0 5.2 0c0-2.1-1.9-3.1-2.5-5z"/></symbol>
-    <symbol id="lg-send" viewBox="0 0 24 24"><path d="M21 3 10.5 13.5M21 3l-6.5 18-4-7.5L3 9.5z"/></symbol>
+    <symbol id="lg-target" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.6" fill="currentColor" stroke="none"/></symbol>
     <symbol id="lg-hourglass" viewBox="0 0 24 24"><path d="M6.5 3h11M6.5 21h11M7.5 3v3.5c0 2.5 4.5 3.5 4.5 5.5s-4.5 3-4.5 5.5V21M16.5 3v3.5c0 2.5-4.5 3.5-4.5 5.5s4.5 3 4.5 5.5V21"/></symbol>
     <symbol id="lg-ban" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="m6 6 12 12"/></symbol>
     <symbol id="lg-cal" viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="15.5" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/></symbol>
@@ -2996,7 +2997,7 @@ function _renderListInner(list) {
 
 
 function recommendBtn(showId){
-  return '<button class="btn-recommend" onclick="openRecommendPicker(\''+showId+'\')" title="Recommend to a friend" aria-label="Recommend to a friend"><svg class="lg-ico" aria-hidden="true"><use href="#lg-send"/></svg></button>';
+  return '<button class="btn-recommend" onclick="openRecommendPicker(\''+showId+'\')" title="Recommend to a friend" aria-label="Recommend to a friend"><svg class="lg-ico" aria-hidden="true"><use href="#lg-target"/></svg></button>';
 }
 
 // Session-only memory of which cards' ratings disclosures are expanded,
@@ -3150,7 +3151,7 @@ function buildWatchlistCard(s) {
   var recommendedBadge='';
   if(s.source==='recommendation'&&s.influencedBy){
     var recName=state.influencerNames[s.influencedBy];
-    if(recName) recommendedBadge='<div style="font-size:13px;color:var(--fig);font-weight:600;margin-top:2px;">Recommended by '+recName+'</div>';
+    if(recName) recommendedBadge='<div style="font-size:13px;color:var(--fig);font-weight:600;margin-top:2px;"><svg class="rec-mark" aria-hidden="true"><use href="#lg-target"/></svg>Recommended by '+recName+'</div>';
   }
   var otherRatingsList=ownCardRatingsHTML(s.title, 'watchlist', sid, s.rating);
 
@@ -4029,7 +4030,7 @@ async function showFriend(id) {
               + (mineExisting ? '<div class="lr-rate-line">'+lrRatingPair('You', remoteRatingLR(mineExisting.list, mineExisting.show.id, mineExisting.show.rating, f.id))+'</div>' : '');
           }
         }
-        var corner='<button class="btn-recommend" onclick="openRecommendPicker(\''+s.id+'\')" title="Recommend to a friend" aria-label="Recommend to a friend"><svg class="lg-ico" aria-hidden="true"><use href="#lg-send"/></svg></button>';
+        var corner='<button class="btn-recommend" onclick="openRecommendPicker(\''+s.id+'\')" title="Recommend to a friend" aria-label="Recommend to a friend"><svg class="lg-ico" aria-hidden="true"><use href="#lg-target"/></svg></button>';
         if(!isSelf) corner+= mineExisting
           ? '<span class="on-list-badge">'+onListBadgeContent(mineExisting)+'</span>'
           : '<button class="btn-add-prominent" onclick="addFromFriendCard(\''+s.id+'\')" title="Add to my list">+ Add</button>';
@@ -7241,7 +7242,7 @@ function renderRecommendationBanners(){
       : '<div'+posterClick+'width:52px;height:78px;border-radius:8px;background:rgba(255,255,255,0.2);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:22px;"><svg class="lg-ph" aria-hidden="true"><use href="#lg-tv"/></svg></div>';
     return '<div class="rec-banner">'
       + '<div class="rec-banner-top">' + poster
-      + '<div class="rec-banner-body"><div class="rec-banner-from">'+escAttr(senderName)+' recommended this to you</div>'
+      + '<div class="rec-banner-body"><div class="rec-banner-from"><svg class="rec-mark" aria-hidden="true"><use href="#lg-target"/></svg>'+escAttr(senderName)+' recommended this to you</div>'
       + '<div class="rec-banner-title">'+escAttr(r.title)+'</div>'
       + (r.note ? '<div class="rec-banner-note">&#8220;'+escAttr(r.note)+'&#8221;</div>' : '')
       + '</div></div>'
@@ -10866,7 +10867,7 @@ function mapProviderToPlatform(name) {
 // date, ~2-3 weeks out). The table and this code are shaped so comment /
 // invite types can be added without a rework.
 
-var NOTIF_ICON = { new_season: '<svg class="lg-ico" aria-hidden="true"><use href="#lg-tv"/></svg>', season_upcoming: '<svg class="lg-ico" aria-hidden="true"><use href="#lg-cal"/></svg>', new_episode: '<svg class="lg-ico" aria-hidden="true"><use href="#lg-play"/></svg>', lounge_reply: '<svg class="lg-ico" aria-hidden="true"><use href="#lg-cup"/></svg>', lounge_post: '<svg class="lg-ico" aria-hidden="true"><use href="#lg-cup"/></svg>', comment: '<svg class="lg-ico" aria-hidden="true"><use href="#lg-talk"/></svg>', recommendation: '<svg class="lg-ico" aria-hidden="true"><use href="#lg-send"/></svg>', room_join: '<svg class="lg-ico" aria-hidden="true"><use href="#lg-crowd"/></svg>', shared_add: '<svg class="lg-ico" aria-hidden="true"><use href="#lg-share"/></svg>' };
+var NOTIF_ICON = { new_season: '<svg class="lg-ico" aria-hidden="true"><use href="#lg-tv"/></svg>', season_upcoming: '<svg class="lg-ico" aria-hidden="true"><use href="#lg-cal"/></svg>', new_episode: '<svg class="lg-ico" aria-hidden="true"><use href="#lg-play"/></svg>', lounge_reply: '<svg class="lg-ico" aria-hidden="true"><use href="#lg-cup"/></svg>', lounge_post: '<svg class="lg-ico" aria-hidden="true"><use href="#lg-cup"/></svg>', comment: '<svg class="lg-ico" aria-hidden="true"><use href="#lg-talk"/></svg>', recommendation: '<svg class="lg-ico" aria-hidden="true"><use href="#lg-target"/></svg>', room_join: '<svg class="lg-ico" aria-hidden="true"><use href="#lg-crowd"/></svg>', shared_add: '<svg class="lg-ico" aria-hidden="true"><use href="#lg-share"/></svg>' };
 
 // The bell is for things meant for you personally: new seasons/episodes,
 // recommendations, joins, shared adds, and Lounge replies (one row per
