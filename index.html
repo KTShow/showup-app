@@ -1077,7 +1077,6 @@ body.look-lounge .lg-row .friend-count{margin-top:2px;font-size:12px;font-weight
         <div class="ob-field"><label class="ob-label">Last initial</label><input class="ob-input" id="ob-last" maxlength="1" /></div>
       </div>
       <div class="ob-row">
-        <div class="ob-field"><label class="ob-label">City</label><input class="ob-input" id="ob-city" /></div>
         <div class="ob-field">
           <label class="ob-label">State</label>
           <select class="ob-select" id="ob-state">
@@ -1211,23 +1210,6 @@ body.look-lounge .lg-row .friend-count{margin-top:2px;font-size:12px;font-weight
         <button class="pill-btn" onclick="togglePill(this,'household')">Friends</button>
         <button class="pill-btn" onclick="togglePill(this,'household')">Myself</button>
         <button class="pill-btn" onclick="togglePill(this,'household')">Roommates</button>
-      </div>
-    </div>
-
-    <div style="background:var(--cream);border:1px solid var(--border);border-radius:14px;padding:20px;margin-bottom:16px;box-shadow:var(--shadow);">
-      <div class="ob-label" style="margin-bottom:4px;">How do you watch? <span style="font-weight:400;text-transform:none;font-size:11px;color:var(--muted);">Pick 1</span></div>
-      <div style="font-size:11px;color:var(--muted);margin-bottom:10px;font-style:italic;">When do you mostly watch?</div>
-      <div class="pill-grid" style="margin-bottom:14px;" id="when-pills">
-        <button class="pill-btn" onclick="togglePill(this,'when')">Weeknights</button>
-        <button class="pill-btn" onclick="togglePill(this,'when')">Weekends</button>
-        <button class="pill-btn" onclick="togglePill(this,'when')">Both equally</button>
-      </div>
-      <div style="font-size:11px;color:var(--muted);margin-bottom:10px;font-style:italic;">How often do you watch? <span style="font-weight:400;">Pick 1</span></div>
-      <div class="pill-grid" id="frequency-pills">
-        <button class="pill-btn" onclick="togglePill(this,'frequency')">Daily</button>
-        <button class="pill-btn" onclick="togglePill(this,'frequency')">A few times a week</button>
-        <button class="pill-btn" onclick="togglePill(this,'frequency')">Weekends only</button>
-        <button class="pill-btn" onclick="togglePill(this,'frequency')">A few times a month</button>
       </div>
     </div>
 
@@ -1496,7 +1478,6 @@ body.look-lounge .lg-row .friend-count{margin-top:2px;font-size:12px;font-weight
         <div class="ob-field" style="margin-bottom:0"><label class="ob-label">Last initial</label><input class="ob-input" id="pr-last" maxlength="1" /></div>
       </div>
       <div class="ob-row" style="margin-bottom:14px">
-        <div class="ob-field" style="margin-bottom:0"><label class="ob-label">City</label><input class="ob-input" id="pr-city" /></div>
         <div class="ob-field" style="margin-bottom:0">
           <label class="ob-label">State</label>
           <select class="ob-select" id="pr-state">
@@ -7293,15 +7274,15 @@ function goToTellMore_OLD(){document.querySelectorAll('.screen').forEach(functio
 function skipTellMore_OLD(){document.getElementById('screen-tellmore').classList.remove('active');document.getElementById('screen-app').classList.add('active');renderAll();}
 
 function togglePill(btn,type){
-  var singles=['career','when','frequency'];
-  var gridMap={career:'career-pills',when:'when-pills',frequency:'frequency-pills'};
+  var singles=['career'];
+  var gridMap={career:'career-pills'};
   if(singles.indexOf(type)!==-1){
     document.querySelectorAll('#'+gridMap[type]+' .pill-btn').forEach(function(b){b.classList.remove('selected');});
     btn.classList.add('selected');
   } else if(type==='hobby'){
     var hobbySelected=document.querySelectorAll('#screen-tellmore .pill-btn.selected');
     var hobbyCount=0;
-    hobbySelected.forEach(function(b){if(!b.closest('#career-pills')&&!b.closest('#household-pills')&&!b.closest('#when-pills')&&!b.closest('#frequency-pills')&&!b.closest('#discovery-pills'))hobbyCount++;});
+    hobbySelected.forEach(function(b){if(!b.closest('#career-pills')&&!b.closest('#household-pills')&&!b.closest('#discovery-pills'))hobbyCount++;});
     if(!btn.classList.contains('selected')&&hobbyCount>=7){
       btn.style.borderColor='#C4622D';setTimeout(function(){btn.style.borderColor='';},800);
       var msg=document.getElementById('hobby-limit-msg');
@@ -7560,8 +7541,6 @@ async function saveTellMoreData(psychData) {
     career: psychData.career,
     hobbies: psychData.hobbies,
     household: psychData.household,
-    watch_when: psychData.watchWhen,
-    watch_freq: psychData.watchFreq,
     discovery: psychData.discovery,
   }).eq('id', user.id);
   if (error) throw error;
@@ -7807,7 +7786,7 @@ async function getFriendsWithShows(roomId) {
     return {
       id: u.id,
       name: u.first_name + ' ' + u.last_initial + '.',
-      city: [u.city, u.state].filter(Boolean).join(', '),
+      city: u.state || '', // state only; city is no longer shown (older accounts may still have one on file)
       room: u.room || 'tuscany',
       muted: mutedSet.has(u.id),
       top5: friendTop5.map(function(t) { return { title: t.title, platform: t.platform }; }),
@@ -7934,8 +7913,6 @@ function _userFromProfile(profile, top5) {
     career: profile.career || '',
     hobbies: profile.hobbies || [],
     household: profile.household || [],
-    watchWhen: profile.watch_when || '',
-    watchFreq: profile.watch_freq || '',
     discovery: profile.discovery || [],
     sessionCount: profile.session_count || 0,
     createdAt: profile.created_at || null,
@@ -9133,7 +9110,6 @@ window.completeOnboard = async function() {
   var last  = document.getElementById('ob-last').value.trim().slice(0, 1).toUpperCase();
   var age   = document.getElementById('ob-age').value;
   var gender = document.getElementById('ob-gender').value;
-  var city  = capFirst(document.getElementById('ob-city').value.trim());
   var st    = document.getElementById('ob-state').value;
   if (!first) {
     document.getElementById('ob-first').style.borderColor = '#C4622D';
@@ -9143,12 +9119,12 @@ window.completeOnboard = async function() {
   var btn = document.querySelector('#screen-onboard .btn-join');
   if (btn) { btn.disabled = true; btn.textContent = 'Setting up your room\u2026'; }
   try {
-    var profile = await createUserProfile({ firstName: first, lastInitial: last, city: city, state: st, ageRange: age, gender: gender });
+    var profile = await createUserProfile({ firstName: first, lastInitial: last, city: '', state: st, ageRange: age, gender: gender });
     flushPushAlerts(); // admins' "New member" alert
     state.user = {
       id: profile.id, first: first, last: last,
       initials: [(first||'')[0], (last||'')[0]].filter(Boolean).join('').toUpperCase(),
-      city: city, state: st, age: age, gender: gender,
+      city: '', state: st, age: age, gender: gender,
       room: 'tuscany', username: profile.username, top5: [],
     };
     updateAvatar();
@@ -9186,11 +9162,9 @@ function prefillTellMore() {
   };
   mark('career-pills', u.career);
   mark('household-pills', u.household);
-  mark('when-pills', u.watchWhen);
-  mark('frequency-pills', u.watchFreq);
   mark('discovery-pills', u.discovery);
   // Hobbies span multiple pill grids not covered by the named containers
-  var skipIds = ['career-pills','household-pills','when-pills','frequency-pills','discovery-pills'];
+  var skipIds = ['career-pills','household-pills','discovery-pills'];
   if (u.hobbies && u.hobbies.length) {
     document.querySelectorAll('#screen-tellmore .pill-btn').forEach(function(b) {
       var skip = skipIds.some(function(id) { return b.closest('#'+id); });
@@ -9202,14 +9176,13 @@ function prefillTellMore() {
 window.saveTellMore = async function() {
   var get = function(id) { var b = document.querySelector('#'+id+' .pill-btn.selected'); return b ? b.textContent.trim() : ''; };
   var getMulti = function(id) { var btns = document.querySelectorAll('#'+id+' .pill-btn.selected'); var vals = []; btns.forEach(function(b) { vals.push(b.textContent.trim()); }); return vals; };
-  var skipIds = ['career-pills','household-pills','when-pills','frequency-pills','discovery-pills'];
+  var skipIds = ['career-pills','household-pills','discovery-pills'];
   var hobbies = [];
   document.querySelectorAll('#screen-tellmore .pill-btn.selected').forEach(function(b) {
     var skip = false; skipIds.forEach(function(id) { if (b.closest('#'+id)) skip = true; }); if (!skip) hobbies.push(b.textContent.trim());
   });
   var psychData = {
     career: get('career-pills'), household: getMulti('household-pills'),
-    watchWhen: get('when-pills'), watchFreq: get('frequency-pills'),
     discovery: getMulti('discovery-pills'), hobbies: hobbies,
   };
   if (state.user) {
@@ -9257,7 +9230,6 @@ window.goToProfile = function() {
   state.profileFrom = active ? active.id.replace('screen-', '') : 'app';
   document.getElementById('pr-first').value = state.user.first || '';
   document.getElementById('pr-last').value = state.user.last || '';
-  document.getElementById('pr-city').value = state.user.city || '';
   document.getElementById('pr-age').value = state.user.age || '';
   document.getElementById('pr-gender').value = state.user.gender || '';
   var stSel = document.getElementById('pr-state');
@@ -9278,7 +9250,6 @@ window.goToProfile = function() {
 window.saveProfile = async function() {
   var first = capFirst(document.getElementById('pr-first').value.trim());
   var last  = document.getElementById('pr-last').value.trim().slice(0, 1).toUpperCase();
-  var city  = capFirst(document.getElementById('pr-city').value.trim());
   var st    = document.getElementById('pr-state').value;
   var age   = document.getElementById('pr-age').value;
   var gender = document.getElementById('pr-gender').value;
@@ -9288,7 +9259,7 @@ window.saveProfile = async function() {
   try {
     var uid = state.user.id;
     var { error: pe } = await sb.from('users').update({
-      first_name: first, last_initial: last, city: city, state: st,
+      first_name: first, last_initial: last, state: st,
       age_range: age, gender: gender, room: state.user.room || 'tuscany',
       last_active: new Date().toISOString(),
     }).eq('id', uid);
@@ -9301,7 +9272,7 @@ window.saveProfile = async function() {
       var { error: te } = await sb.from('top5_shows').insert(rows);
       if (te) throw te;
     }
-    state.user.first = first; state.user.last = last; state.user.city = city;
+    state.user.first = first; state.user.last = last;
     state.user.state = st; state.user.age = age; state.user.gender = gender;
     state.user.initials = [(first||'')[0],(last||'')[0]].filter(Boolean).join('').toUpperCase();
     updateAvatar();
@@ -9370,7 +9341,6 @@ function setupNameFieldFormatting() {
   }
   ['ob-first', 'pr-first'].forEach(function(id) { watch(id, 'capitalize'); });
   ['ob-last', 'pr-last'].forEach(function(id) { watch(id, 'initial'); });
-  ['ob-city', 'pr-city'].forEach(function(id) { watch(id, 'capitalize'); });
 }
 
 function capFirst(str) {
@@ -10388,8 +10358,6 @@ function renderAboutYou() {
   if (u.career) rows.push({ label: 'Work', value: u.career });
   if (u.hobbies && u.hobbies.length) rows.push({ label: 'Into', value: u.hobbies.join(', ') });
   if (u.household && u.household.length) rows.push({ label: 'Watching with', value: [].concat(u.household).join(', ') });
-  if (u.watchWhen) rows.push({ label: 'When', value: u.watchWhen });
-  if (u.watchFreq) rows.push({ label: 'How often', value: u.watchFreq });
   if (u.discovery && u.discovery.length) rows.push({ label: 'Discovers via', value: [].concat(u.discovery).join(', ') });
   if (!rows.length) {
     el.innerHTML = '<div style="font-size:13px;color:var(--muted);font-style:italic;">Nothing here yet. <button onclick="goToTellMore()" style="background:none;border:none;color:var(--terra);font-family:var(--sans);font-size:13px;font-weight:700;cursor:pointer;">Add your preferences &#8594;</button></div>';
