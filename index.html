@@ -389,7 +389,7 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
    box (not left) so short content (a bare "+ Add", "WFNS") sits flush with
    the tile's right edge instead of leaving a strip of unused tile between
    it and the edge. Widths sized to the actual widest content (measured:
-   ~32px for a rating, ~66px for "Currently Watching", the longest badge
+   ~32px for a rating, ~66px for "Watching", the longest badge
    label) plus a small buffer -- the previous 50px/92px reserved far more
    than any row actually used, which on a narrow mobile card both showed
    up as visible dead space AND starved the title column next to it. */
@@ -1001,11 +1001,11 @@ body.look-lounge .lg-row .friend-count{margin-top:2px;font-size:12px;font-weight
     <div class="invite-modal-title" id="add-picker-title">Add Show</div>
     <div class="invite-modal-sub">Where does it go?</div>
     <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px;">
-      <button class="picker-option-btn" onclick="chooseAddDestination('watching')">&#128250; Currently Watching</button>
-      <button class="picker-option-btn" onclick="chooseAddDestination('waiting')">&#9203; Waiting for New Season</button>
+      <button class="picker-option-btn" onclick="chooseAddDestination('watching')">&#128250; Watching</button>
       <button class="picker-option-btn" onclick="chooseAddDestination('watchlist')">&#127871; My List</button>
+      <button class="picker-option-btn" onclick="chooseAddDestination('watched')">&#128252; Binged</button>
+      <button class="picker-option-btn" onclick="chooseAddDestination('waiting')">&#9203; Waiting for New Season</button>
       <button class="picker-option-btn" onclick="chooseAddDestination('dnf')">&#128683; Didn&#39;t Finish</button>
-      <button class="picker-option-btn" onclick="chooseAddDestination('watched')">&#128252; Already Binged</button>
     </div>
     <button class="btn-invite-close" onclick="closeAddPicker()" style="width:100%;">Cancel</button>
   </div>
@@ -1295,7 +1295,7 @@ body.look-lounge .lg-row .friend-count{margin-top:2px;font-size:12px;font-weight
       </div>
     </div>
     <div id="tab-watching" class="tab-pane" style="display:none">
-      <div class="page-title">&#128250;&nbsp; Currently Watching on My TV</div>
+      <div class="page-title">&#128250;&nbsp; Watching</div>
       <div class="page-sub" id="watching-sub"></div>
       <div class="add-form">
         <div class="form-row">
@@ -1307,8 +1307,8 @@ body.look-lounge .lg-row .friend-count{margin-top:2px;font-size:12px;font-weight
       <div id="watching-list"></div>
     </div>
     <div id="tab-watchlist" class="tab-pane" style="display:none">
-      <div class="page-title">🛋️&nbsp; My List &mdash; Saving a Seat</div>
-      <div class="page-sub">Save your next binge.</div>
+      <div class="page-title">🛋️&nbsp; My List</div>
+      <div class="page-sub">Saving a seat for these.</div>
       <div class="add-form">
         <div class="form-row">
           <div class="form-group" style="position:relative;"><label>Show title</label><div class="lr-search-wrap" style="margin-bottom:0;"><input id="wl-title" placeholder="Search for a show..." oninput="tmdbSearch('wl');toggleSearchClearBtn(this)" autocomplete="off" style="padding-right:34px;" /><button class="lr-search-clear" type="button" aria-label="Clear search" onclick="clearSearchInput('wl-title')">&#10005;</button></div><div class="tmdb-dropdown" id="wl-tmdb-dd"></div><div class="dup-hint" id="wl-dup-hint" style="display:none" onclick="tapDupHint('wl')"></div></div>
@@ -1319,7 +1319,7 @@ body.look-lounge .lg-row .friend-count{margin-top:2px;font-size:12px;font-weight
       <div id="watchlist-list"></div>
     </div>
     <div id="tab-watched" class="tab-pane" style="display:none">
-      <div class="page-title">&#128252;&nbsp; Already Binged</div>
+      <div class="page-title">&#128252;&nbsp; Binged</div>
       <div class="page-sub">Build your taste profile &mdash; add everything you've loved and hated. Rate each one 1 to 5 remotes.</div>
       <div style="background:var(--cream);border:1px solid var(--border);border-radius:14px;padding:16px;margin-bottom:16px;box-shadow:var(--shadow);">
         <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--muted);margin-bottom:10px;">&#127942; Top 5 Shows of All Time <span style="font-weight:400;text-transform:none;">— Visible to friends in your Living Room</span></div>
@@ -2088,7 +2088,7 @@ function completeOnboard_OLD() {
     room:'tuscany',top5:[],income:'',relationshipStatus:'',education:'',howHeard:'',
     createdAt:new Date().toISOString(),lastActive:new Date().toISOString(),sessionCount:1
   };
-  document.getElementById('watching-sub').textContent = first.length>0 ? 'Welcome, '+first+'! The couch is warm \u2014 dive back in.' : 'The couch is warm \u2014 dive back in.';
+  document.getElementById('watching-sub').textContent = 'On my TV right now.';
   document.getElementById('screen-onboard').classList.remove('active');
   document.getElementById('screen-tellmore').classList.add('active');
   updateAvatar();
@@ -2850,7 +2850,7 @@ window.setAllFriendSections = function(fid, sectionKey, collapse){
   showFriend(fid);
 };
 // Every category of one person's room at once: each platform group in On
-// Right Now / Saving a Seat / Waiting / Already Binged, plus Didn't Finish.
+// Right Now / My List / Waiting / Binged, plus Didn't Finish.
 window.setAllFriendCategories = function(fid, collapse){
   var f = resolveFriendById(fid);
   if (!f) return;
@@ -3119,7 +3119,7 @@ function buildWatchlistCard(s) {
 
   return '<div class="show-card'+(s.hidden?' is-hidden':'')+'" id="card-'+sid+'"><div class="show-card-top">'+showTile(s)+'<div class="show-info"><div class="show-title">'+s.title+(s.hidden?'<span class="hidden-badge">Hidden from friends</span>':'')+'</div>'+platformRow+recommendedBadge+'</div>'+recommendBtn(sid)+menuHTML+'</div>'
     + otherRatingsList
-    + '<div class="show-move"><button class="btn-start" onclick="moveToWatching(\''+sid+'\')">Watch Now</button>' + (isDocFilm(s) ? '' : '<button class="waiting-season-btn" onclick="markWaitingFromList(\''+sid+'\')">Waiting for New Season &#8987;</button>') + '</div>'
+    + '<div class="show-move"><button class="btn-start" onclick="moveToWatching(\''+sid+'\')">Start Watching</button>' + (isDocFilm(s) ? '' : '<button class="waiting-season-btn" onclick="markWaitingFromList(\''+sid+'\')">Waiting for New Season &#8987;</button>') + '</div>'
     + '<div class="react-area">'+talkPreviewHTML(s.title)+reactToggle+'</div>'
     + '</div>';
 }
@@ -4051,13 +4051,13 @@ async function showFriend(id) {
     +'<div><div style="font-family:var(--serif);font-size:20px;font-weight:700">'+roomTitle+'</div>'
     +cityLine+'</div></div>'
     +frvAllControls
-    +'<div style="margin:24px 0 12px;background:var(--fig);color:white;padding:10px 18px;border-radius:8px;font-family:var(--serif);font-size:15px;font-weight:700;letter-spacing:0.2px;display:flex;align-items:center;gap:8px;">&#128250; On Right Now</div>'+frvSectionToggleControls(f.id,'on',onItems)+fGrouped(onItems,'w','on')
-    +'<div style="margin:24px 0 12px;background:var(--fig);color:white;padding:10px 18px;border-radius:8px;font-family:var(--serif);font-size:15px;font-weight:700;letter-spacing:0.2px;display:flex;align-items:center;gap:8px;">🛋️ Saving a Seat</div>'+frvSectionToggleControls(f.id,'seat',seatItems)+fGrouped(seatItems,'wl','seat')
+    +'<div style="margin:24px 0 12px;background:var(--fig);color:white;padding:10px 18px;border-radius:8px;font-family:var(--serif);font-size:15px;font-weight:700;letter-spacing:0.2px;display:flex;align-items:center;gap:8px;">&#128250; Watching</div>'+frvSectionToggleControls(f.id,'on',onItems)+fGrouped(onItems,'w','on')
+    +'<div style="margin:24px 0 12px;background:var(--fig);color:white;padding:10px 18px;border-radius:8px;font-family:var(--serif);font-size:15px;font-weight:700;letter-spacing:0.2px;display:flex;align-items:center;gap:8px;">🛋️ My List</div>'+frvSectionToggleControls(f.id,'seat',seatItems)+fGrouped(seatItems,'wl','seat')
   +(waitingItems.length
     ? '<div style="margin:24px 0 12px;background:var(--fig);color:white;padding:10px 18px;border-radius:8px;font-family:var(--serif);font-size:15px;font-weight:700;letter-spacing:0.2px;display:flex;align-items:center;gap:8px;">&#8987; Waiting for New Season</div>'+frvSectionToggleControls(f.id,'waiting',waitingItems)+fGrouped(waitingItems,'wl','waiting')
     : '')
   +(f.watched&&f.watched.length
-    ? '<div style="margin:24px 0 12px;background:var(--fig);color:white;padding:10px 18px;border-radius:8px;font-family:var(--serif);font-size:15px;font-weight:700;letter-spacing:0.2px;display:flex;align-items:center;gap:8px;">&#128252; Already Binged</div>'+frvSectionToggleControls(f.id,'binged',bingedItems)+fGrouped(bingedItems,'wd','binged')
+    ? '<div style="margin:24px 0 12px;background:var(--fig);color:white;padding:10px 18px;border-radius:8px;font-family:var(--serif);font-size:15px;font-weight:700;letter-spacing:0.2px;display:flex;align-items:center;gap:8px;">&#128252; Binged</div>'+frvSectionToggleControls(f.id,'binged',bingedItems)+fGrouped(bingedItems,'wd','binged')
       +(dnfItems.length
         ? '<div class="dnf-section'+(dnfCollapsed?' collapsed':'')+'" data-ckey="'+dnfKey+'" data-cfid="'+f.id+'"><div class="dnf-header" onclick="toggleFriendSection(\''+dnfKey+'\',\''+f.id+'\')">'+(dnfCollapsed?'&#9656;':'&#9662;')+' &#128683; Didn&#39;t Finish <span class="service-count">('+dnfItems.length+')</span></div>'
           + '<div class="shows-grid">' + dnfItems.sort(function(a,b){return a.title.localeCompare(b.title);}).map(function(s){
@@ -8608,7 +8608,7 @@ window.resetLoginForm = function() {
 var FS_CHOICES = [
   // Same order as the app's tabs: Watching, My List, Binged.
   { key: 'watching', label: 'Watching' },
-  { key: 'want',     label: 'Want to watch' },
+  { key: 'want',     label: 'My List' },
   { key: 'binged',   label: 'Binged' },
   { key: 'waiting',  label: 'Waiting for new season' },
   { key: 'dnf',      label: 'Didn’t finish' },
@@ -9530,14 +9530,14 @@ window.setRoomAndSave = async function(roomKey) {
 // ============================================================
 
 var _addConfirmPending = null;
-var ADD_LIST_LABELS = { watching: 'Currently Watching', watchlist: 'My List', watched: 'Already Binged' };
+var ADD_LIST_LABELS = { watching: 'Watching', watchlist: 'My List', watched: 'Binged' };
 
 // Same icon vocabulary as the nav tabs (watching/watchlist/watched), plus
 // waiting/dnf which aren't tabs -- they're flags layered on watchlist/watched.
 var ON_LIST_BADGE_ICONS = { watching: '&#128250;', watchlist: '&#128715;&#65039;', watched: '&#128252;', waiting: '&#9203;', dnf: '&#128683;' };
 // <br> between the two words so a long label wraps under its own icon
 // instead of shoving the rest of the tile's content sideways.
-var ON_LIST_BADGE_LABELS = { watching: 'Currently<br>Watching', watchlist: 'My<br>List', watched: 'Already<br>Binged', waiting: 'WFNS', dnf: 'DNF' };
+var ON_LIST_BADGE_LABELS = { watching: 'Watching', watchlist: 'My<br>List', watched: 'Binged', waiting: 'WFNS', dnf: 'DNF' };
 // The labels carry a hard <br> so they stack into the narrow fixed-width
 // rank-action-col on list rows. Pass oneLine on roomy placements (detail
 // panels, New This Week, platform search) to flatten that back to a
@@ -9957,7 +9957,7 @@ window.tapNewSeasonBadge = async function(id) {
   var idx = state.watchlist.findIndex(function(x) { return x.id === id; });
   if (idx === -1) return;
   var s = state.watchlist[idx];
-  if (!confirm('New season of ' + s.title + ' is out! Move to Currently Watching?')) return;
+  if (!confirm('New season of ' + s.title + ' is out! Move to Watching?')) return;
   state.watchlist.splice(idx, 1);
   s.waitingForSeason = false;
   s.waitingSince = null;
@@ -9968,7 +9968,7 @@ window.tapNewSeasonBadge = async function(id) {
   try { await updateShowStatus(id, 'watching', { waiting_for_season: false, waiting_since: null, new_season_available: false }); } catch(e) { console.error('tapNewSeasonBadge error:', e); }
 };
 
-// Same badge, but for a show that never left Currently Watching -- there's
+// Same badge, but for a show that never left Watching -- there's
 // no list to move it back to, so tapping just acknowledges it.
 window.tapNewSeasonOnWatching = async function(id) {
   var s = state.watching.find(function(x) { return x.id === id; });
@@ -10012,7 +10012,7 @@ async function _doMoveToWaiting(list, id) {
 // Kebab-menu recovery path on a Didn't Finish card ("I finished it after
 // all") — for a DNF marked by mistake, or a show the user came back and
 // finished. Un-marks dnf so it moves from the DNF section into the regular
-// Already Binged section, without leaving the Binged tab. Confirms first,
+// Binged section, without leaving the Binged tab. Confirms first,
 // same reasoning as moveToWaiting: menu action, silently changes section.
 window.moveDNFToBinged = function(id) {
   var s = state.watched.find(function(x) { return x.id === id; });
@@ -11019,7 +11019,7 @@ window.openNotification = async function(id) {
     return;
   }
   // Everything else (season_upcoming, or a new_season on a plain My List /
-  // Currently Watching show): just jump to the card.
+  // Watching show): just jump to the card.
   _jumpToMyShow(n.show_id);
 };
 
@@ -11832,7 +11832,7 @@ function findMyShowByTitle(title) {
 var ADD_DEST_STATUS = { watching: 'watching', waiting: 'watchlist', watchlist: 'watchlist', dnf: 'watched', watched: 'watched' };
 var ADD_DEST_LIST = { watching: 'watching', waiting: 'watchlist', watchlist: 'watchlist', dnf: 'watched', watched: 'watched' };
 var ADD_DEST_RATES = { waiting: true, dnf: true, watched: true };
-var ADD_DEST_DISPLAY_LABELS = { watching: 'Currently Watching', waiting: 'Waiting for New Season', watchlist: 'My List', dnf: "Didn't Finish", watched: 'Already Binged' };
+var ADD_DEST_DISPLAY_LABELS = { watching: 'Watching', waiting: 'Waiting for New Season', watchlist: 'My List', dnf: "Didn't Finish", watched: 'Binged' };
 
 var _toastTimer = null;
 function showToast(msg) {
