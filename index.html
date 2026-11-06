@@ -2507,7 +2507,7 @@ window.openCommentMenu = function(btn){
     { label: 'Delete', call: btn.getAttribute('data-del'), danger: true, confirm: 'Delete this comment?' }
   ];
   m.innerHTML = items.map(function(it){
-    var call = it.confirm ? 'if(confirm(\''+it.confirm.replace(/'/g,'')+'\')){'+it.call+'}' : it.call;
+    var call = it.confirm ? 'appConfirm(\''+it.confirm.replace(/'/g,'')+'\').then(function(ok){if(ok){'+it.call+'}})' : it.call;
     return '<button type="button"'+(it.danger?' class="danger"':'')+' onclick="event.stopPropagation();closeCommentMenu();'+escAttr(call)+'">'+escAttr(it.label)+'</button>';
   }).join('');
   document.body.appendChild(m);
@@ -3057,7 +3057,7 @@ function buildDNFCard(s) {
   var menuHTML = '<div class="card-menu-wrap">'
     + '<button class="btn-more" onclick="toggleCardMenu(this)" title="More">&#8942;</button>'
     + '<div class="card-menu">'
-    + '<button class="card-menu-item" onclick="moveDNFToBinged(\''+sid+'\');closeCardMenus();">I finished it after all</button>'
+    + '<button class="card-menu-item" onclick="moveShowTo(\'watched\',\''+sid+'\');closeCardMenus();">Move to another list</button>'
     + '<button class="card-menu-item" onclick="toggleHide(\'watched\',\''+sid+'\');closeCardMenus();">'+hideLabel+'</button>'
     + '<button class="card-menu-item" onclick="togglePlatEdit(\'watched\',\''+sid+'\');closeCardMenus();">Edit streaming service</button>'
     + '<button class="card-menu-item danger" onclick="removeShow(\'watched\',\''+sid+'\');closeCardMenus();">Remove</button>'
@@ -3093,7 +3093,7 @@ function buildWatchingCard(s) {
   var menuHTML = '<div class="card-menu-wrap">'
     + '<button class="btn-more" onclick="toggleCardMenu(this)" title="More">&#8942;</button>'
     + '<div class="card-menu">'
-    + '<button class="card-menu-item" onclick="moveToWatchlist(\''+sid+'\');closeCardMenus();">&#8592; My List</button>'
+    + '<button class="card-menu-item" onclick="moveShowTo(\'watching\',\''+sid+'\');closeCardMenus();">Move to another list</button>'
     + '<button class="card-menu-item" onclick="toggleHide(\'watching\',\''+sid+'\');closeCardMenus();">'+hideLabel+'</button>'
     + '<button class="card-menu-item" onclick="togglePlatEdit(\'watching\',\''+sid+'\');closeCardMenus();">Edit streaming service</button>'
     + '<button class="card-menu-item danger" onclick="removeShow(\'watching\',\''+sid+'\');closeCardMenus();">Remove</button>'
@@ -3119,6 +3119,7 @@ function buildWaitingCard(s) {
   var menuHTML = '<div class="card-menu-wrap">'
     + '<button class="btn-more" onclick="toggleCardMenu(this)" title="More">&#8942;</button>'
     + '<div class="card-menu">'
+    + '<button class="card-menu-item" onclick="moveShowTo(\'watchlist\',\''+sid+'\');closeCardMenus();">Move to another list</button>'
     + '<button class="card-menu-item" onclick="toggleHide(\'watchlist\',\''+sid+'\');closeCardMenus();">'+hideLabel+'</button>'
     + '<button class="card-menu-item" onclick="togglePlatEdit(\'watchlist\',\''+sid+'\');closeCardMenus();">Edit streaming service</button>'
     + '<button class="card-menu-item danger" onclick="removeShow(\'watchlist\',\''+sid+'\');closeCardMenus();">Remove</button>'
@@ -3143,6 +3144,7 @@ function buildWatchlistCard(s) {
   var menuHTML = '<div class="card-menu-wrap">'
     + '<button class="btn-more" onclick="toggleCardMenu(this)" title="More">&#8942;</button>'
     + '<div class="card-menu">'
+    + '<button class="card-menu-item" onclick="moveShowTo(\'watchlist\',\''+sid+'\');closeCardMenus();">Move to another list</button>'
     + '<button class="card-menu-item" onclick="toggleHide(\'watchlist\',\''+sid+'\');closeCardMenus();">'+hideLabel+'</button>'
     + '<button class="card-menu-item" onclick="togglePlatEdit(\'watchlist\',\''+sid+'\');closeCardMenus();">Edit streaming service</button>'
     + '<button class="card-menu-item danger" onclick="removeShow(\'watchlist\',\''+sid+'\');closeCardMenus();">Remove</button>'
@@ -3192,9 +3194,7 @@ function buildBingedCard(s) {
   var menuHTML = '<div class="card-menu-wrap">'
     + '<button class="btn-more" onclick="toggleCardMenu(this)" title="More">&#8942;</button>'
     + '<div class="card-menu">'
-    + '<button class="card-menu-item" onclick="moveToWatchingAgain(\'watched\',\''+sid+'\');closeCardMenus();">Start Watching Again</button>'
-    + (isDocFilm(s) ? '' : '<button class="card-menu-item" onclick="moveToWaiting(\'watched\',\''+sid+'\');closeCardMenus();">Caught Up</button>')
-    + '<button class="card-menu-item" onclick="moveBingedToDNF(\''+sid+'\');closeCardMenus();">Move to Didn&#39;t Finish</button>'
+    + '<button class="card-menu-item" onclick="moveShowTo(\'watched\',\''+sid+'\');closeCardMenus();">Move to another list</button>'
     + '<button class="card-menu-item" onclick="toggleHide(\'watched\',\''+sid+'\');closeCardMenus();">'+hideLabel+'</button>'
     + '<button class="card-menu-item" onclick="togglePlatEdit(\'watched\',\''+sid+'\');closeCardMenus();">Edit streaming service</button>'
     + '<button class="card-menu-item danger" onclick="removeShow(\'watched\',\''+sid+'\');closeCardMenus();">Remove</button>'
@@ -4047,7 +4047,7 @@ async function showFriend(id) {
 
     var top5HTML = '';
   if (f.top5 && f.top5.length) {
-    top5HTML = '<div class="section-label">Top 5 of All Time</div><div style="display:flex;flex-direction:column;gap:6px;margin-bottom:20px;">'
+    top5HTML = '<div class="section-label">Top 5 Shows of All Time</div><div style="display:flex;flex-direction:column;gap:6px;margin-bottom:20px;">'
       + f.top5.map(function(s,i){
           var t=typeof s==='object'?s.title:s;
           var p=typeof s==='object'&&s.platform?s.platform:'';
@@ -4308,7 +4308,7 @@ window.closeEditAnnouncementModal = function(){
 window.saveAnnouncementEdit = async function(){
   var msg = document.getElementById('announcement-edit-message').value.trim();
   var emoji = document.getElementById('announcement-edit-emoji').value.trim();
-  if (!msg) { alert('Please enter a message.'); return; }
+  if (!msg) { showToast('Please enter a message.'); return; }
   try {
     const { data, error } = await sb.from('app_announcements')
       .update({ message: msg, emoji: emoji || null, updated_at: new Date().toISOString() })
@@ -4322,11 +4322,11 @@ window.saveAnnouncementEdit = async function(){
     showToast('Announcement updated for everyone.');
   } catch(e) {
     console.error('saveAnnouncementEdit error:', e);
-    alert('Could not save the announcement. Please try again.');
+    showToast('Could not save the announcement. Please try again.');
   }
 };
 window.clearAnnouncementBanner = async function(){
-  if (!confirm('Hide the announcement banner for everyone?')) return;
+  if (!await appConfirm('Hide the announcement banner for everyone?')) return;
   try {
     const { data, error } = await sb.from('app_announcements')
       .update({ message: '', updated_at: new Date().toISOString() })
@@ -4340,7 +4340,7 @@ window.clearAnnouncementBanner = async function(){
     showToast('Announcement cleared.');
   } catch(e) {
     console.error('clearAnnouncementBanner error:', e);
-    alert('Could not clear the announcement. Please try again.');
+    showToast('Could not clear the announcement. Please try again.');
   }
 };
 
@@ -4883,7 +4883,7 @@ window.closeCreateRoomModal = function(){
 window.submitCreateRoom = async function(){
   var nameEl = document.getElementById('create-room-name');
   var name = nameEl ? nameEl.value.trim() : '';
-  if (!name) { alert('Please enter a room name.'); return; }
+  if (!name) { showToast('Please enter a room name.'); return; }
   try {
     const { data: roomId, error } = await sb.rpc('create_living_room', { p_name: name, p_theme: _createRoomThemeKey });
     if (error) throw error;
@@ -4894,7 +4894,7 @@ window.submitCreateRoom = async function(){
     await enterLivingRoom(roomId, name, true, false, _createRoomThemeKey);
   } catch(e) {
     console.error('create_living_room error:', e);
-    alert('Could not create the room, please try again.');
+    showToast('Could not create the room, please try again.');
   }
 };
 
@@ -5914,7 +5914,7 @@ window.enterRoomAsAdmin = function(roomId) {
 
 window.renameCurrentRoom = async function() {
   if (!state.currentRoomId || !state.currentRoomIsOwner) return;
-  var name = prompt('Rename this Living Room:', state.currentRoomName);
+  var name = await appPrompt('Rename this Living Room', state.currentRoomName);
   if (!name || !name.trim() || name.trim() === state.currentRoomName) return;
   var newName = name.trim();
   try {
@@ -5927,13 +5927,13 @@ window.renameCurrentRoom = async function() {
     state.allRoomsSearchLoaded = false;
   } catch(e) {
     console.error('renameCurrentRoom error:', e);
-    alert('Could not rename the room, please try again.');
+    showToast('Could not rename the room, please try again.');
   }
 };
 
 window.deleteCurrentRoom = async function() {
   if (!state.currentRoomId || !state.currentRoomIsOwner) return;
-  if (!confirm('Delete "' + state.currentRoomName + '"? Everyone in it will lose this grouping — their own shows and ratings are untouched, they just won\'t see this room anymore. This can\'t be undone.')) return;
+  if (!await appConfirm('Delete "' + state.currentRoomName + '"? Everyone in it will lose this grouping — their own shows and ratings are untouched, they just won\'t see this room anymore. This can\'t be undone.')) return;
   try {
     const { error } = await sb.rpc('delete_living_room', { p_room_id: state.currentRoomId });
     if (error) throw error;
@@ -5942,13 +5942,13 @@ window.deleteCurrentRoom = async function() {
     showRoomPicker();
   } catch(e) {
     console.error('deleteCurrentRoom error:', e);
-    alert('Could not delete the room, please try again.');
+    showToast('Could not delete the room, please try again.');
   }
 };
 
 window.leaveCurrentRoom = async function() {
   if (!state.currentRoomId || state.currentRoomIsOwner || !state.user) return;
-  if (!confirm('Leave "' + state.currentRoomName + '"? You can rejoin later if invited again.')) return;
+  if (!await appConfirm('Leave "' + state.currentRoomName + '"? You can rejoin later if invited again.')) return;
   try {
     const { error } = await sb.from('living_room_members').delete()
       .eq('living_room_id', state.currentRoomId).eq('user_id', state.user.id);
@@ -5958,7 +5958,7 @@ window.leaveCurrentRoom = async function() {
     showRoomPicker();
   } catch(e) {
     console.error('leaveCurrentRoom error:', e);
-    alert('Could not leave the room, please try again.');
+    showToast('Could not leave the room, please try again.');
   }
 };
 
@@ -6162,7 +6162,7 @@ window.submitEditConversationComment = async function(list, showId, friendId, re
 };
 
 window.deleteConversationComment = async function(list, showId, friendId, reactionId){
-  if (!confirm('Delete this comment?')) return;
+  if (!await appConfirm('Delete this comment?')) return;
   var show = findShowForConversationEvent(list, showId, friendId);
   if (show) show.reactions = (show.reactions||[]).filter(function(x){ return x.id !== reactionId; });
   renderConversations();
@@ -6441,7 +6441,7 @@ window.deleteShowTalkComment = async function(idx, ci){
   var s = _showTalkListCache[idx];
   var c = s && s.comments[ci];
   if (!c) return;
-  if (!confirm('Delete this comment?')) return;
+  if (!await appConfirm('Delete this comment?')) return;
   var show = findShowForShowTalkComment(c);
   if (show) show.reactions = (show.reactions||[]).filter(function(x){ return x.id !== c.id; });
   s.comments.splice(ci, 1);
@@ -7085,7 +7085,7 @@ window.deleteLoungePost = async function(id){
   // Your own multi-room post goes from every room; a room owner removing
   // someone else's post only removes this room's copy.
   var everywhere = post && post.group_id && post.group_count > 1 && state.user && post.user_id === state.user.id;
-  if (!confirm(everywhere ? 'Delete this post and its replies from all ' + post.group_count + ' rooms?' : 'Delete this post and all its replies?')) return;
+  if (!await appConfirm(everywhere ? 'Delete this post and its replies from all ' + post.group_count + ' rooms?' : 'Delete this post and all its replies?')) return;
   state.lounge.posts = state.lounge.posts.filter(function(x){ return x.id !== id; });
   state.lounge.replies = state.lounge.replies.filter(function(x){ return x.post_id !== id; });
   renderLounge();
@@ -8748,8 +8748,8 @@ var FS_CHOICES = [
   { key: 'watching', label: 'Watching' },
   { key: 'want',     label: 'My List' },
   { key: 'binged',   label: 'Binged' },
-  { key: 'waiting',  label: 'Caught up' },
-  { key: 'dnf',      label: 'Didn’t finish' },
+  { key: 'waiting',  label: 'Caught Up' },
+  { key: 'dnf',      label: 'Didn’t Finish' },
 ];
 // Same status/flags the rest of the app writes for each list.
 function _fsDbFields(choice) {
@@ -9456,7 +9456,7 @@ window.completeOnboard = async function() {
   } catch(e) {
     console.error('Onboard error:', e);
     if (btn) { btn.disabled = false; btn.textContent = 'Pull up a chair \u2192'; }
-    alert('Something went wrong. Please try again.');
+    showToast('Something went wrong. Please try again.');
   }
 };
 
@@ -9596,7 +9596,7 @@ window.saveProfile = async function() {
     if (from === 'settings') renderRoomGrid();
   } catch(e) {
     console.error('Save profile error:', e);
-    alert('Error saving profile. Please try again.');
+    showToast('Error saving profile. Please try again.');
     if (btn) { btn.disabled = false; btn.textContent = 'Save Changes'; }
   }
 };
@@ -9861,6 +9861,7 @@ window.confirmAddShow = async function() {
   if (existing) {
     var srcList = existing.list;
     var s = existing.show;
+    var srcKey = s.dnf ? 'dnf' : (s.waitingForSeason ? 'waiting' : srcList);
     state[srcList] = state[srcList].filter(function(x) { return x.id !== s.id; });
     s.dnf = isDnf;
     s.waitingForSeason = false;
@@ -9872,9 +9873,7 @@ window.confirmAddShow = async function() {
     _tmdbPending = {};
     _addConfirmPending = null;
     var destLabel = ADD_DEST_DISPLAY_LABELS[list];
-    showToast(srcList === destList
-      ? 'Already in ' + destLabel + ' — updated.'
-      : 'Was in ' + ADD_LIST_LABELS[srcList] + ' — moved to ' + destLabel + '.');
+    showToast(srcKey === list ? 'Already in ' + destLabel + '.' : 'Moved to ' + destLabel + '.');
     try { await updateShowStatus(s.id, status, { dnf: isDnf, waiting_for_season: false, platform: platform }); } catch(e) { console.error('confirmAddShow move error:', e); }
     if (isDnf) openDWM(s, "Didn't finish? Rate it anyway", '🎬');
     else if (list === 'watched') openDWM(s);
@@ -9900,7 +9899,7 @@ window.confirmAddShow = async function() {
     else if (list === 'watched') openDWM(newShow);
   } catch(e) {
     console.error('Error adding show:', e);
-    alert('Error adding show. Please try again.');
+    showToast('Error adding show. Please try again.');
   }
 };
 
@@ -10104,7 +10103,7 @@ window.tapNewSeasonBadge = async function(id) {
   var idx = state.watchlist.findIndex(function(x) { return x.id === id; });
   if (idx === -1) return;
   var s = state.watchlist[idx];
-  if (!confirm('New season of ' + s.title + ' is out! Move to Watching?')) return;
+  if (!await appConfirm('New season of ' + s.title + ' is out! Move to Watching?')) return;
   state.watchlist.splice(idx, 1);
   s.waitingForSeason = false;
   s.waitingSince = null;
@@ -10273,6 +10272,8 @@ window.toggleHide = async function(list, id) {
 };
 
 window.removeShow = async function(list, id) {
+  var removing = state[list].find(function(x) { return x.id === id; });
+  if (removing && !await appConfirm('Remove ' + removing.title + ' from your lists? This can’t be undone.')) return;
   state[list] = state[list].filter(function(x) { return x.id !== id; });
   renderList(list);
   try { await dbRemoveShow(id); } catch(e) { console.error('removeShow error:', e); }
@@ -10441,7 +10442,7 @@ async function dbRemoveFriend(friendId) {
 }
 
 window.removeFriend = async function(friendId) {
-  if (!confirm('Remove this person from "' + (state.currentRoomName || 'this room') + '"? You can re-invite them later. They’ll be unaffected in any other room you share with them.')) return;
+  if (!await appConfirm('Remove this person from "' + (state.currentRoomName || 'this room') + '"? You can re-invite them later. They’ll be unaffected in any other room you share with them.')) return;
   backToFriends();
   state.friends = state.friends.filter(function(f) { return f.id !== friendId; });
   renderFriends();
@@ -10464,7 +10465,7 @@ window.handleSignOut = async function() {
 };
 
 window.handleDeleteData = async function() {
-  if (!confirm('Are you sure? This permanently deletes your ShowUp account and all your data, including your shows, ratings and comments. Any Living Room you created will be handed to another member. This cannot be undone.')) return;
+  if (!await appConfirm('Are you sure? This permanently deletes your ShowUp account and all your data, including your shows, ratings and comments. Any Living Room you created will be handed to another member. This cannot be undone.')) return;
   try {
     await deleteUserData();
     _forgetDeviceCopy();
@@ -10473,7 +10474,7 @@ window.handleDeleteData = async function() {
     showToast('Your account has been deleted.');
   } catch(e) {
     console.error('Delete error:', e);
-    alert('Sorry, we couldn’t delete your account. Please email us at admin@showuproom.com and we’ll take care of it.');
+    showToast('Sorry, we couldn’t delete your account. Please email us at admin@showuproom.com and we’ll take care of it.');
   }
 };
 
@@ -10558,7 +10559,7 @@ async function loadAndRenderFriends() {
     state.friendsLoaded = true;
     var grid = document.getElementById('friends-grid');
     if (grid && !state.friends.length) {
-      grid.innerHTML = '<div class="empty"><div class="empty-icon"></div>Couldn\'t load your crew right now.</div>';
+      grid.innerHTML = '<div class="empty"><div class="empty-icon"></div>Couldn\'t load your crowd right now.</div>';
     }
   }
 }
@@ -11561,13 +11562,27 @@ window.openShowDetails = async function(tmdbId, friendRatings, opts) {
       number_of_seasons: isDocFilm ? null : releasedSeasonCount(d), show_status: d.status || null,
       overview: d.overview || null, vote_average: d.vote_average || null,
     };
-    if (addBtn && _currentShowDetails.title && !(opts && opts.noAdd)) addBtn.style.display = 'block';
+    if (addBtn && _currentShowDetails.title && !(opts && opts.noAdd)) {
+      var onList = findMyShowByTitle(_currentShowDetails.title);
+      var onKey = onList && (onList.show.dnf ? 'dnf' : (onList.show.waitingForSeason ? 'waiting' : onList.list));
+      addBtn.textContent = onList ? 'On ' + ADD_DEST_DISPLAY_LABELS[onKey] + ' · Move' : '+ Add to My Lists';
+      addBtn.style.display = 'block';
+    }
     if (recBtn && _currentShowDetails.title && !(opts && opts.noAdd)) recBtn.style.display = 'flex';
   } catch(e) {
     console.error('TMDB details error:', e);
     body.innerHTML = '<div style="padding:30px 0;color:var(--muted);font-size:14px;">Couldn\'t load show details.</div>';
   }
 };
+
+document.addEventListener('click', function(e) {
+  var t = e.target;
+  if (t.id === 'sd-overlay') { closeShowDetails(); return; }
+  var closable = ['add-picker-modal', 'add-confirm-modal', 'tastemakers-modal', 'new-this-week-modal', 'shared-taste-modal', 'blocked-modal', 'admin-rooms-modal', 'members-modal', 'reports-modal', 'feedback-inbox-modal'];
+  if (closable.indexOf(t.id) === -1) return;
+  var close = t.querySelector('.btn-invite-close');
+  if (close) close.click();
+});
 
 window.closeShowDetails = function() {
   var overlay = document.getElementById('sd-overlay');
@@ -11582,8 +11597,18 @@ window.closeShowDetails = function() {
 // somewhere," reused across Living Room, Friends' Favorites, etc.
 // ============================================================
 
+window.moveShowTo = function(list, id) {
+  var s = (state[list] || []).find(function(x) { return x.id === id; });
+  if (!s) return;
+  _currentShowDetails = { title: s.title, tmdb_id: s.tmdb_id || null, poster_path: s.poster_path || null, platform: s.platform || null, media_type: s.media_type || 'tv' };
+  openAddPicker();
+};
+
 window.openAddPicker = function() {
   if (!_currentShowDetails) return;
+  // A documentary film never gets another season.
+  var caughtUp = document.querySelector('#add-picker-modal [onclick*="chooseAddDestination(\'waiting\')"]');
+  if (caughtUp) caughtUp.style.display = _currentShowDetails.media_type === 'documentary' ? 'none' : '';
   document.getElementById('add-picker-title').textContent = _currentShowDetails.title;
   document.getElementById('add-picker-modal').classList.add('active');
 };
@@ -11985,6 +12010,49 @@ var ADD_DEST_LIST = { watching: 'watching', waiting: 'watchlist', watchlist: 'wa
 var ADD_DEST_RATES = { waiting: true, dnf: true, watched: true };
 var ADD_DEST_DISPLAY_LABELS = { watching: 'Watching', waiting: 'Caught Up', watchlist: 'My List', dnf: "Didn't Finish", watched: 'Binged' };
 
+// In-app replacements for confirm() and prompt(). The button takes the message's
+// first word where that's the action ("Delete this comment?" gives "Delete").
+function _appDialog(html, wire) {
+  return new Promise(function(resolve) {
+    var ov = document.createElement('div');
+    ov.className = 'invite-modal-overlay active';
+    ov.id = 'app-dialog';
+    ov.style.zIndex = '900';
+    ov.innerHTML = '<div class="invite-modal" role="dialog" aria-modal="true">' + html + '</div>';
+    document.body.appendChild(ov);
+    wire(ov, function(value) { ov.remove(); resolve(value); });
+  });
+}
+window.appConfirm = function(msg) {
+  var word = String(msg).split(/[ ?]/)[0];
+  var named = { Delete: 'Delete', Remove: 'Remove', Leave: 'Leave', Block: 'Block', Hide: 'Hide', New: 'Move it' };
+  var danger = { Delete: 1, Remove: 1, Leave: 1, Block: 1 };
+  var label = word === 'Are' ? 'Yes, delete' : (named[word] || 'OK');
+  var isDanger = danger[word] || word === 'Are';
+  return _appDialog('<div class="invite-modal-sub" style="white-space:pre-line;font-size:15px;color:var(--charcoal);margin-bottom:18px;"></div>'
+    + '<div style="display:flex;gap:10px;"><button type="button" class="btn-invite-close" data-no style="flex:1;">Cancel</button>'
+    + '<button type="button" class="btn-invite-copy" data-yes style="flex:1;' + (isDanger ? 'background:#c0392b;' : '') + '"></button></div>',
+    function(ov, done) {
+      ov.querySelector('.invite-modal-sub').textContent = msg;
+      ov.querySelector('[data-yes]').textContent = label;
+      ov.querySelector('[data-yes]').onclick = function() { done(true); };
+      ov.querySelector('[data-no]').onclick = function() { done(false); };
+    });
+};
+window.appPrompt = function(title, value) {
+  return _appDialog('<div class="invite-modal-title"></div><input class="ob-input" data-input style="width:100%;box-sizing:border-box;margin-bottom:14px;" />'
+    + '<div style="display:flex;gap:10px;"><button type="button" class="btn-invite-close" data-no style="flex:1;">Cancel</button>'
+    + '<button type="button" class="btn-invite-copy" data-yes style="flex:1;">Save</button></div>',
+    function(ov, done) {
+      var input = ov.querySelector('[data-input]');
+      ov.querySelector('.invite-modal-title').textContent = title;
+      input.value = value || '';
+      ov.querySelector('[data-yes]').onclick = function() { done(input.value); };
+      ov.querySelector('[data-no]').onclick = function() { done(null); };
+      input.focus();
+    });
+};
+
 var _toastTimer = null;
 function showToast(msg) {
   var el = document.getElementById('toast');
@@ -12019,6 +12087,7 @@ async function _chooseAddDestination(destKey) {
   if (existing) {
     var srcList = existing.list;
     var s = existing.show;
+    var srcKey = s.dnf ? 'dnf' : (s.waitingForSeason ? 'waiting' : srcList);
     addUndo = {
       currentList: destList, originalList: srcList,
       restoreFields: { dnf: !!s.dnf, waitingForSeason: !!s.waitingForSeason, waitingSince: s.waitingSince || null },
@@ -12034,9 +12103,7 @@ async function _chooseAddDestination(destKey) {
     renderList(destList);
     resultShow = s;
     var destLabel = ADD_DEST_DISPLAY_LABELS[destKey];
-    showToast(srcList === destList
-      ? 'Already in ' + destLabel + ' — updated.'
-      : 'Was in ' + ADD_LIST_LABELS[srcList] + ' — moved to ' + destLabel + '.');
+    showToast(srcKey === destKey ? 'Already in ' + destLabel + '.' : 'Moved to ' + destLabel + '.');
     try { await updateShowStatus(s.id, status, { dnf: isDnf, waiting_for_season: isWaiting, waiting_since: waitingSince }); } catch(e) { console.error('chooseAddDestination move error:', e); }
   } else {
     // Credit only an explicit share (a friend's card, a Lounge post, a
@@ -12069,7 +12136,7 @@ async function _chooseAddDestination(destKey) {
       showToast('Added "' + info.title + '" to ' + ADD_DEST_DISPLAY_LABELS[destKey] + '.');
     } catch(e) {
       console.error('chooseAddDestination add error:', e);
-      alert('Error adding show. Please try again.');
+      showToast('Error adding show. Please try again.');
       return;
     }
   }
@@ -12315,7 +12382,7 @@ function _purgeAndRefresh() {
 window.blockUser = async function(userId, name) {
   if (!userId) return;
   var first = (name || 'this person').split(' ')[0];
-  if (!confirm('Block ' + first + '?\n\nYou won’t see their comments, posts or shows anywhere in ShowUp, and you won’t get alerts from them. They won’t be told. You can unblock them in Settings.')) return;
+  if (!await appConfirm('Block ' + first + '?\n\nYou won’t see their comments, posts or shows anywhere in ShowUp, and you won’t get alerts from them. They won’t be told. You can unblock them in Settings.')) return;
   try {
     var res = await sb.from('blocked_users').insert({ user_id: state.user.id, blocked_user_id: userId });
     if (res.error && res.error.code !== '23505') throw res.error;
@@ -12438,7 +12505,7 @@ window.openReportsAdmin = async function() {
 };
 window.closeReportsAdmin = function() { document.getElementById('reports-modal').classList.remove('active'); };
 window.resolveReport = async function(id, action) {
-  if (action === 'remove' && !confirm('Remove this for everyone? This deletes the comment or post.')) return;
+  if (action === 'remove' && !await appConfirm('Remove this for everyone? This deletes the comment or post.')) return;
   try {
     var res = await sb.rpc('resolve_report', { p_report_id: id, p_action: action });
     if (res.error) throw res.error;
