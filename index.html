@@ -827,6 +827,8 @@ body.look-lounge #room-picker-view>.textsize-tip{order:1;}
 #recommend-picker-modal{z-index:700;} /* opens from the show details popup (600) too */
 .btn-rate-it{display:inline-flex;align-items:center;gap:5px;min-height:36px;padding:4px 12px 4px 8px;border:1px solid var(--brand);border-radius:8px;background:none;color:var(--brand);font-family:var(--sans);font-size:13px;font-weight:700;cursor:pointer;}
 .btn-rate-it .lg-ico{display:block;width:18px;height:18px;color:var(--brand);}
+.btn-rate-change{padding:4px 10px;gap:8px;}
+.btn-rate-change span{text-decoration:underline;text-underline-offset:2px;}
 .fr-with-rate{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;}
 .lg-old{display:none!important;}
 svg.lg-new{display:block;}
@@ -1036,7 +1038,7 @@ body.look-lounge .lg-row .friend-count{margin-top:2px;font-size:13px;font-weight
     <div id="dwm-emoji" style="font-size:36px;margin-bottom:6px;">🍿</div>
     <div id="dwm-heading" style="font-family:var(--serif);font-size:21px;font-weight:700;color:var(--burnt);margin-bottom:4px;">You binged it!</div>
     <div id="dwm-title" style="font-size:14px;color:var(--muted);margin-bottom:22px;"></div>
-    <div style="font-size:13px;font-weight:700;color:var(--charcoal);margin-bottom:12px;">How many remotes?</div>
+    <div style="font-size:13px;font-weight:700;color:var(--charcoal);margin-bottom:12px;" id="dwm-rate-label">How many remotes?</div>
     <div id="dwm-remotes" style="display:flex;justify-content:center;gap:10px;margin-bottom:22px;"></div>
     <input id="dwm-comment" placeholder="Leave a comment for friends... (optional)" style="width:100%;box-sizing:border-box;border:1px solid var(--border);border-radius:10px;padding:11px 14px;font-family:var(--sans);font-size:13px;color:var(--charcoal);outline:none;margin-bottom:16px;" />
     <button onclick="submitDoneWatching()" style="background:var(--terra);color:white;border:none;border-radius:10px;padding:13px;font-family:var(--sans);font-size:14px;font-weight:700;cursor:pointer;width:100%;margin-bottom:8px;">Save</button>
@@ -3031,9 +3033,10 @@ function ownCardRatingsHTML(title, list, id, myRating, notWatchedYet) {
     : myRating
       ? remoteStatic(myRating) + '<span style="font-size:13px;color:var(--muted);">Your rating</span>'
       : '<span style="font-size:13px;color:var(--muted);">Not yet rated</span>';
-  var rateItBtn = (!myRating && !notWatchedYet)
-    ? '<button type="button" class="btn-rate-it" onclick="openRateSheet(\''+list+'\',\''+id+'\')"><svg class="lg-ico" aria-hidden="true"><use href="#lg-remote"/></svg>Rate it</button>'
-    : '';
+  var openSheet = 'onclick="openRateSheet(\''+list+'\',\''+id+'\')"';
+  var rateItBtn = myRating
+    ? '<button type="button" class="btn-rate-it btn-rate-change" '+openSheet+' aria-label="Your rating is '+myRating+' of 5. Change it.">'+remoteStatic(myRating)+'<span>Change</span></button>'
+    : (notWatchedYet ? '' : '<button type="button" class="btn-rate-it" '+openSheet+'><svg class="lg-ico" aria-hidden="true"><use href="#lg-remote"/></svg>Rate it</button>');
   var isOpen = !!_openRatingDisclosures[id];
   var summaryBtn = '<button type="button" onclick="toggleFriendRatingsDisclosure(this,\''+id+'\')" class="fr-toggle-btn">'
     + '<span class="fr-chevron">'+(isOpen?'&#9662;':'&#9656;')+'</span>'
@@ -4616,6 +4619,11 @@ function _lookupRerender() {
   renderRoomPickerSearch();
   var crew = document.getElementById('crew-search');
   if (state.currentRoomId && crew && crew.value.trim()) renderFriends();
+  [['prime-time-search', renderPrimeTimeList], ['full-lineup-search', renderFullLineup], ['lineup-search', renderLineup],
+   ['rankings-search', renderRankings], ['showtalk-search', renderShowTalk], ['showtalk-hub-search', renderShowTalk]].forEach(function(p) {
+    var el = document.getElementById(p[0]);
+    if (el && el.value.trim() && el.offsetParent) p[1]();
+  });
 }
 
 // The results for q, or null while they're on the way (redraws when they land).
@@ -4722,6 +4730,17 @@ function _lookupFillPlatforms(shows) {
       });
     });
   });
+}
+
+// For the search bars on Prime Time, Hot Right Now and the like: the show isn't in
+// that list, so say so and show it anyway.
+function _notInListHTML(q, where) {
+  var plain = '<div class="empty"><div class="empty-icon"></div>No shows match "' + escAttr(q) + '".</div>';
+  if (isPlatformQuery(q) || q.length < 2) return plain;
+  whoRatedDataReady();
+  var found = whoRatedResultsHTML(q);
+  if (!found) return plain;
+  return '<div class="who-rated-summary" style="margin:0 0 10px;">"' + escAttr(q) + '" isn&rsquo;t in ' + where + '. Here&rsquo;s what we found:</div>' + found;
 }
 
 // Empty string when nothing matches, so callers can show their "no match" message.
@@ -5443,7 +5462,7 @@ function renderFullLineup(){
   };
   if (!_fullLineupListCache.length && _hotTab !== 'service' && _hotTab !== 'new') {
     el.innerHTML = q
-      ? '<div class="empty"><div class="empty-icon"></div>No shows match "'+escAttr(q)+'".</div>'
+      ? _notInListHTML(q, 'Hot Right Now')
       : '<div class="empty"><div class="empty-icon"></div>Nothing to show right now &mdash; check back soon.</div>';
     return;
   }
@@ -5479,7 +5498,7 @@ function renderFullLineup(){
       _fullLineupListCache = _fullLineupListCache.concat(svcList);
       html += svcList.length
         ? svcList.map(function(s, j) { return _hotRow(s, base + j, j + 1); }).join('')
-        : '<div class="empty"><div class="empty-icon"><svg class="lg-ph" aria-hidden="true"><use href="#lg-tv"/></svg></div>' + (q ? 'No shows match "' + escAttr(q) + '".' : 'Nothing found for ' + escAttr(_hotSvc) + ' right now.') + '</div>';
+        : (q ? _notInListHTML(q, 'this Hot Right Now list') : '<div class="empty"><div class="empty-icon"><svg class="lg-ph" aria-hidden="true"><use href="#lg-tv"/></svg></div>' + 'Nothing found for ' + escAttr(_hotSvc) + ' right now.' + '</div>');
     }
   } else if (_hotTab === 'new') {
     _loadHotNew();
@@ -5492,18 +5511,18 @@ function renderFullLineup(){
       _fullLineupListCache = _fullLineupListCache.concat(newList);
       html += newList.length
         ? newList.map(function(s, j) { return _hotRow(s, nbase + j, j + 1); }).join('')
-        : '<div class="empty"><div class="empty-icon"></div>' + (q ? 'No shows match "' + escAttr(q) + '".' : 'No new series in the last 2 weeks.') + '</div>';
+        : (q ? _notInListHTML(q, 'this Hot Right Now list') : '<div class="empty"><div class="empty-icon"></div>' + 'No new series in the last 2 weeks.' + '</div>');
     }
   } else if (_hotTab === 'trending') {
     html += sub('Trending in the US this week');
     html += trending.length
       ? trending.map(function(s, j) { return _hotRow(s, crowd.length + j, j + 1); }).join('')
-      : '<div class="empty"><div class="empty-icon"></div>' + (q ? 'No trending shows match "' + escAttr(q) + '".' : 'Trending list unavailable right now.') + '</div>';
+      : (q ? _notInListHTML(q, 'this Hot Right Now list') : '<div class="empty"><div class="empty-icon"></div>' + 'Trending list unavailable right now.' + '</div>');
   } else {
     html += sub('What people on ShowUp added, finished or talked about in the last 30 days');
     html += crowd.length
       ? crowd.map(function(s, i) { return _hotRow(s, i, i + 1); }).join('')
-      : '<div class="empty"><div class="empty-icon"></div>' + (q ? 'No ShowUp shows match "' + escAttr(q) + '".' : 'Nothing yet.') + '</div>';
+      : (q ? _notInListHTML(q, 'this Hot Right Now list') : '<div class="empty"><div class="empty-icon"></div>' + 'Nothing yet.' + '</div>');
   }
   el.innerHTML = html;
 }
@@ -5657,7 +5676,7 @@ function renderLineup() {
     : '';
   if (!list.length) {
     el.innerHTML = matchLabel + (q
-      ? '<div class="empty"><div class="empty-icon"></div>No shows match "'+escAttr(q)+'".</div>'
+      ? _notInListHTML(q, 'The Full Lineup yet')
       : '<div class="empty"><div class="empty-icon"></div>No shows yet.</div>');
     return;
   }
@@ -5793,7 +5812,7 @@ function renderPrimeTimeList() {
     : '';
   if (!list.length) {
     listEl.innerHTML = matchLabel + (q
-      ? '<div class="empty"><div class="empty-icon"></div>No shows match "'+escAttr(q)+'".</div>'
+      ? _notInListHTML(q, 'Prime Time&rsquo;s top 25')
       : '<div class="empty"><div class="empty-icon"></div>No ratings yet across ShowUp.</div>');
     return;
   }
@@ -6344,7 +6363,7 @@ function renderShowTalk(){
   _showTalkListCache=list;
   if(!list.length){
     el.innerHTML = q
-      ? '<div class="empty"><div class="empty-icon"></div>No shows match "'+escAttr(q)+'".</div>'
+      ? _notInListHTML(q, 'Show Talk yet')
       : '<div class="empty"><div class="empty-icon"></div>No comments yet &mdash; be the first to say something about a show.</div>';
     return;
   }
@@ -7484,7 +7503,7 @@ function renderRankings(){
   _rankingsListCache=list;
   if(!list.length){
     el.innerHTML = q
-      ? '<div class="empty"><div class="empty-icon"></div>No shows match "'+escAttr(q)+'".</div>'
+      ? _notInListHTML(q, 'this room&rsquo;s favorites')
       : '<div class="empty"><div class="empty-icon"><svg class="lg-ph" aria-hidden="true"><use href="#lg-tv"/></svg></div>No ratings yet from the room.</div>';
     return;
   }
@@ -9952,8 +9971,9 @@ var _dwmUndo = null; // how to put the show back if this was opened by mistake -
 
 function openDWM(show, heading, emoji, undo) {
   _dwmPending = show;
-  _dwmRating = 0;
+  _dwmRating = show.rating || 0; // already rated: show it, ready to keep or change
   _dwmUndo = undo || null;
+  document.getElementById('dwm-rate-label').textContent = _dwmRating ? 'Your rating. Tap to change it.' : 'How many remotes?';
   var _dwmE = document.getElementById('dwm-emoji');
   _dwmE.textContent = '🍿';
   _dwmE.style.display = (!emoji || emoji === '🍿') ? '' : 'none'; // popcorn only when you finish a show
@@ -10046,7 +10066,7 @@ window.submitDoneWatching = async function() {
   var comment = document.getElementById('dwm-comment').value.trim();
   if (comment && _isObjectionable(comment)) return;
   document.getElementById('dwm-overlay').style.display = 'none';
-  if (_dwmRating > 0) {
+  if (_dwmRating !== (show.rating || 0)) { // includes clearing it
     show.rating = _dwmRating;
     try { await updateShowRating(show.id, _dwmRating); } catch(e) { console.error('dwm rating error:', e); }
     renderList(list);
@@ -12108,9 +12128,7 @@ function showToast(msg) {
 
 window.chooseAddDestination = async function(destKey) {
   await _chooseAddDestination(destKey);
-  var hub = document.getElementById('room-picker-search');
-  var crew = document.getElementById('crew-search');
-  if ((hub && hub.value.trim()) || (crew && crew.value.trim())) _lookupRerender();
+  _lookupRerender();
 };
 async function _chooseAddDestination(destKey) {
   var info = _currentShowDetails;
