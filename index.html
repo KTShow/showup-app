@@ -353,6 +353,10 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
 @keyframes flashPulse{0%,100%{box-shadow:0 0 0 6px #F2B705,0 0 18px 6px rgba(242,183,5,0.55);background:#FFF4C2;}50%{box-shadow:0 0 0 2px #F2B705;background:var(--cream);}}
 .flash-pulse{animation:flashPulse 0.5s ease-in-out 5;}
 .show-card.flash-settled,.dnf-card.flash-settled{box-shadow:0 0 0 5px #F2B705,0 0 16px 4px rgba(242,183,5,0.45);background:#FFF4C2;}
+.btn-recommend .lg-ico{display:block;width:18px;height:18px;color:var(--brand);}
+.on-list-badge .lg-ico{display:inline-block;width:14px;height:14px;vertical-align:-2px;}
+.notif-ico .lg-ico{display:block;width:20px;height:20px;color:var(--brand);}
+.conversation-icon .lg-ico{display:block;width:20px;height:20px;color:var(--brand);}
 .btn-recommend{background:var(--sand);border:none;cursor:pointer;padding:6px 9px;font-size:15px;color:var(--charcoal);border-radius:7px;line-height:1;transition:all 0.2s;flex-shrink:0;}
 .fr-disclosure{flex-shrink:0;margin-top:8px;}
 .fr-toggle-btn{display:inline-flex;align-items:center;gap:6px;background:none;border:none;padding:0;cursor:pointer;font-family:var(--sans);}
@@ -504,7 +508,9 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
 .settings-row{display:flex;align-items:center;gap:12px;padding:14px 16px;border-bottom:1px solid var(--border);background:none;border-left:none;border-right:none;border-top:none;width:100%;font-family:var(--sans);cursor:pointer;text-align:left;transition:background 0.15s;text-decoration:none;color:var(--charcoal);}
 .settings-row:last-child{border-bottom:none;}
 .settings-row:hover{background:var(--sand);}
-.settings-row-icon{font-size:18px;flex-shrink:0;width:24px;text-align:center;}
+.settings-row-icon{font-size:18px;flex-shrink:0;width:24px;text-align:center;color:var(--brand);}
+.settings-row-icon .lg-ico{display:block;}
+.settings-row[style*="c0392b"] .settings-row-icon{color:#c0392b;}
 .settings-row-label{font-size:14px;color:var(--charcoal);font-weight:500;flex:1;}
 .settings-row-arrow{font-size:18px;color:var(--muted);}
 .settings-row-sub{display:block;font-size:11px;color:var(--muted);font-weight:400;margin-top:2px;line-height:1.35;}
@@ -523,7 +529,10 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
 .room-btn-desc{font-size:10px;color:var(--muted);margin-top:2px;}
 
 .empty{text-align:center;padding:32px 16px;color:var(--muted);}
-.empty-icon{font-size:36px;margin-bottom:12px;}
+.empty-icon{display:none;}
+.empty-spin{width:26px;height:26px;margin:0 auto 12px;border:3px solid rgba(107,45,78,0.2);border-top-color:var(--brand);border-radius:50%;animation:boot-spin 0.8s linear infinite;}
+.lg-ph{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round;color:#fff;}
+.fs-poster .lg-ph,.tmdb-poster-empty .lg-ph,.detail-poster-empty .lg-ph,.cast-photo-empty .lg-ph{color:var(--brand);}
 
 .confetti-wrap{position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:999;overflow:hidden;}
 
@@ -1033,11 +1042,11 @@ body.look-lounge .lg-row .friend-count{margin-top:2px;font-size:12px;font-weight
     <div class="invite-modal-title" id="add-picker-title">Add Show</div>
     <div class="invite-modal-sub">Where does it go?</div>
     <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px;">
-      <button class="picker-option-btn" onclick="chooseAddDestination('watching')">&#128250; Watching</button>
-      <button class="picker-option-btn" onclick="chooseAddDestination('watchlist')">&#127871; My List</button>
-      <button class="picker-option-btn" onclick="chooseAddDestination('watched')">&#128252; Binged</button>
-      <button class="picker-option-btn" onclick="chooseAddDestination('waiting')">&#9203; Waiting for New Season</button>
-      <button class="picker-option-btn" onclick="chooseAddDestination('dnf')">&#128683; Didn&#39;t Finish</button>
+      <button class="picker-option-btn" onclick="chooseAddDestination('watching')">Watching</button>
+      <button class="picker-option-btn" onclick="chooseAddDestination('watchlist')">My List</button>
+      <button class="picker-option-btn" onclick="chooseAddDestination('watched')">Binged</button>
+      <button class="picker-option-btn" onclick="chooseAddDestination('waiting')">Waiting for New Season</button>
+      <button class="picker-option-btn" onclick="chooseAddDestination('dnf')">Didn&#39;t Finish</button>
     </div>
     <button class="btn-invite-close" onclick="closeAddPicker()" style="width:100%;">Cancel</button>
   </div>
@@ -1046,7 +1055,7 @@ body.look-lounge .lg-row .friend-count{margin-top:2px;font-size:12px;font-weight
 <!-- INSTALL / ADD-TO-HOME-SCREEN GUIDE -->
 <div class="invite-modal-overlay" id="install-guide-modal">
   <div class="invite-modal">
-    <div class="invite-modal-title">📲 Save ShowUp to Your Home Screen</div>
+    <div class="invite-modal-title">Save ShowUp to Your Home Screen</div>
     <div class="invite-modal-sub">Keep ShowUp one tap away.</div>
     <div id="install-guide-steps"></div>
     <button type="button" class="fs-change" id="install-other-platform" onclick="switchInstallGuidePlatform(_installGuidePlatform === 'ios' ? 'android' : 'ios')" style="display:block;margin:0 auto;"></button>
@@ -1060,7 +1069,6 @@ body.look-lounge .lg-row .friend-count{margin-top:2px;font-size:12px;font-weight
     <div class="login-card">
       <div id="login-form-view">
         <div id="invite-banner" style="display:none;background:var(--fig);color:white;border-radius:12px;padding:14px 18px;margin-bottom:18px;text-align:center;">
-          <div style="font-size:22px;margin-bottom:4px;">🛋️</div>
           <div id="invite-banner-name" style="font-family:var(--serif);font-size:16px;font-weight:700;margin-bottom:3px;">You've been invited to ShowUp!</div>
           <div style="font-size:13px;opacity:0.85;line-height:1.5;">Sign in below to pull up a chair.</div>
         </div>
@@ -1091,7 +1099,7 @@ body.look-lounge .lg-row .friend-count{margin-top:2px;font-size:12px;font-weight
       </div>
       <div id="login-sent-view" style="display:none;">
         <div class="login-sent">
-          <div class="login-sent-icon">🛋️</div>
+          <div class="login-sent-icon"></div>
           <div class="login-sent-title">Check your inbox</div>
           <div class="login-sent-sub">We sent a 6-digit code to <strong id="login-sent-email"></strong>.<br>Enter it below to sign in.</div>
         </div>
@@ -1143,7 +1151,7 @@ body.look-lounge .lg-row .friend-count{margin-top:2px;font-size:12px;font-weight
           <option value="" disabled selected>Select your age range...</option>
           <option>18-21</option><option>22-29</option><option>30-39</option><option>40-49</option><option>50-59</option><option>60-69</option><option>70+</option>
         </select>
-        <div class="ob-private">&#128274; Private &mdash; never visible to others</div>
+        <div class="ob-private">Private &mdash; never visible to others</div>
       </div>
       <div class="ob-field">
         <label class="ob-label">Gender</label>
@@ -1151,7 +1159,7 @@ body.look-lounge .lg-row .friend-count{margin-top:2px;font-size:12px;font-weight
           <option value="" disabled selected>Select...</option>
           <option>Male</option><option>Female</option><option>Non-binary</option><option>Prefer not to say</option>
         </select>
-        <div class="ob-private">&#128274; Private &mdash; never visible to others</div>
+        <div class="ob-private">Private &mdash; never visible to others</div>
       </div>
       <button class="btn-join" onclick="completeOnboard()">Pull up a chair &rarr;</button>
       <div style="text-align:center;margin-top:12px;font-size:11px;color:var(--muted);line-height:1.5;">By joining ShowUp, you agree to our <a href="/terms.html" target="_blank" style="color:var(--terra);">Terms of Use</a> and <a href="/privacy.html" target="_blank" style="color:var(--terra);">Privacy Policy</a>.<br>All private data is never visible to other users.</div>
@@ -1165,7 +1173,7 @@ body.look-lounge .lg-row .friend-count{margin-top:2px;font-size:12px;font-weight
     <div class="onboard-card fs-card">
       <div class="fs-title" id="fs-title">Show your friends what you watch</div>
       <div class="fs-sub" id="fs-sub">Tap where you are with any show you know. Rate it, even after an episode or two.</div>
-      <div id="fs-list"><div class="empty"><div class="empty-icon">&#8987;</div>Loading shows&hellip;</div></div>
+      <div id="fs-list"><div class="empty"><div class="empty-spin"></div>Loading shows&hellip;</div></div>
       <div class="fs-search-label">You can add more shows anytime from your lists.</div>
       <button type="button" class="fs-change" id="fs-search-open" style="padding:0;margin:-4px 0 14px;" onclick="fsOpenSearch()">Or search for one now</button>
       <div class="fs-search-wrap" id="fs-search-area" style="display:none;">
@@ -1289,7 +1297,7 @@ body.look-lounge .lg-row .friend-count{margin-top:2px;font-size:12px;font-weight
   <div class="nav">
     <div class="nav-logo">ShowUp</div>
     <div class="nav-right">
-      <button class="nav-bell" id="nav-bell" onclick="toggleNotifPanel(event)" title="Notifications" aria-label="Notifications"><span class="lg-old">&#128276;</span><svg class="lg-ico lg-new" aria-hidden="true"><use href="#lg-bell"/></svg><span class="nav-bell-dot" id="nav-bell-dot" style="display:none">0</span></button>
+      <button class="nav-bell" id="nav-bell" onclick="toggleNotifPanel(event)" title="Notifications" aria-label="Notifications"><span class="lg-old"></span><svg class="lg-ico lg-new" aria-hidden="true"><use href="#lg-bell"/></svg><span class="nav-bell-dot" id="nav-bell-dot" style="display:none">0</span></button>
       <button class="nav-settings" onclick="goToSettings()" title="Settings" aria-label="Settings"><span class="lg-old">&#9881;&#65039;</span><svg class="lg-ico lg-new" aria-hidden="true"><use href="#lg-dials"/></svg></button>
       <button class="nav-avatar" id="user-avatar" onclick="goToProfile()">?</button>
     </div>
@@ -1300,7 +1308,7 @@ body.look-lounge .lg-row .friend-count{margin-top:2px;font-size:12px;font-weight
   </div>
   <div class="content">
     <div class="alerts-card" id="alerts-card" style="display:none;">
-      <div class="alerts-card-icon lg-old">&#128276;</div><svg class="lg-ico lg-new" aria-hidden="true"><use href="#lg-bell"/></svg>
+      <div class="alerts-card-icon lg-old"></div><svg class="lg-ico lg-new" aria-hidden="true"><use href="#lg-bell"/></svg>
       <div class="alerts-card-body">
         <div class="alerts-card-title" id="alerts-card-title"></div>
         <div class="alerts-card-sub" id="alerts-card-sub"></div>
@@ -1311,8 +1319,8 @@ body.look-lounge .lg-row .friend-count{margin-top:2px;font-size:12px;font-weight
       </div>
     </div>
     <div id="tab-watching" class="tab-pane" style="display:none">
-      <div class="page-title">&#128250;&nbsp; Watching</div>
-      <div class="page-sub" id="watching-sub"></div>
+      <div class="page-title">Watching</div>
+      <div class="page-sub" id="watching-sub">On my TV right now.</div>
       <div class="add-form">
         <div class="form-row">
           <div class="form-group" style="position:relative;"><label>Show title</label><div class="lr-search-wrap" style="margin-bottom:0;"><input id="w-title" placeholder="Search for a show..." oninput="tmdbSearch('w');toggleSearchClearBtn(this)" autocomplete="off" style="padding-right:34px;" /><button class="lr-search-clear" type="button" aria-label="Clear search" onclick="clearSearchInput('w-title')">&#10005;</button></div><div class="tmdb-dropdown" id="w-tmdb-dd"></div><div class="dup-hint" id="w-dup-hint" style="display:none" onclick="tapDupHint('w')"></div></div>
@@ -1323,7 +1331,7 @@ body.look-lounge .lg-row .friend-count{margin-top:2px;font-size:12px;font-weight
       <div id="watching-list"></div>
     </div>
     <div id="tab-watchlist" class="tab-pane" style="display:none">
-      <div class="page-title">🛋️&nbsp; My List</div>
+      <div class="page-title">My List</div>
       <div class="page-sub">Saving a seat for these.</div>
       <div class="add-form">
         <div class="form-row">
@@ -1335,10 +1343,10 @@ body.look-lounge .lg-row .friend-count{margin-top:2px;font-size:12px;font-weight
       <div id="watchlist-list"></div>
     </div>
     <div id="tab-watched" class="tab-pane" style="display:none">
-      <div class="page-title">&#128252;&nbsp; Binged</div>
+      <div class="page-title">Binged</div>
       <div class="page-sub">Build your taste profile &mdash; add everything you've loved and hated. Rate each one 1 to 5 remotes.</div>
       <div style="background:var(--cream);border:1px solid var(--border);border-radius:14px;padding:16px;margin-bottom:16px;box-shadow:var(--shadow);">
-        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--muted);margin-bottom:10px;">&#127942; Top 5 Shows of All Time <span style="font-weight:400;text-transform:none;">— Visible to friends in your Living Room</span></div>
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--muted);margin-bottom:10px;">Top 5 Shows of All Time <span style="font-weight:400;text-transform:none;">— Visible to friends in your Living Room</span></div>
         <div id="binged-top5-list" style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px;"></div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;">
           <div class="form-group" style="position:relative;flex:2;min-width:140px;margin:0;">
@@ -1358,7 +1366,7 @@ body.look-lounge .lg-row .friend-count{margin-top:2px;font-size:12px;font-weight
         </div>
       </div>
       <div class="add-form" style="border-left:3px solid #c0392b;">
-        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:#c0392b;margin-bottom:8px;">&#128683; Didn't finish something?</div>
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:#c0392b;margin-bottom:8px;">Didn't finish something?</div>
         <div class="form-row">
           <div class="form-group" style="position:relative;"><label>Show title</label><div class="lr-search-wrap" style="margin-bottom:0;"><input id="dnf-title" placeholder="Search for a show..." oninput="tmdbSearch('dnf');toggleSearchClearBtn(this)" autocomplete="off" style="padding-right:34px;" /><button class="lr-search-clear" type="button" aria-label="Clear search" onclick="clearSearchInput('dnf-title')">&#10005;</button></div><div class="tmdb-dropdown" id="dnf-tmdb-dd"></div></div>
           <div class="form-group" style="max-width:210px"><label>Streaming on</label><select id="dnf-platform" onchange="togglePlatformOther('dnf-platform')"><option value="">Platform...</option></select><input type="text" id="dnf-platform-other" placeholder="Which platform?" style="display:none;margin-top:6px;width:100%;box-sizing:border-box;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-family:var(--sans);font-size:13px;" /></div>
@@ -1374,13 +1382,13 @@ body.look-lounge .lg-row .friend-count{margin-top:2px;font-size:12px;font-weight
           <span class="announcement-text" id="announcement-text"></span>
           <button class="announcement-dismiss" onclick="dismissAnnouncement()" title="Dismiss" aria-label="Dismiss">&#10005;</button>
         </div>
-        <div class="page-title"><span class="lg-old">&#127968;&nbsp; </span>Your Living Rooms</div>
+        <div class="page-title"><span class="lg-old"></span>Your Living Rooms</div>
         <div class="page-sub">Pick a room to enter, or start a new one.</div>
         <div class="lr-search-wrap"><input type="text" id="room-picker-search" class="lr-search-input" placeholder="Look up any show or person" oninput="renderRoomPickerSearch();toggleSearchClearBtn(this)" autocomplete="off" /><button class="lr-search-clear" type="button" aria-label="Clear search" onclick="clearSearchInput('room-picker-search')">&#10005;</button></div>
         <div id="room-picker-search-results" style="display:none;"></div>
         <div id="lg-hub-rail" class="lg-rail-wrap"></div>
         <div class="tastemakers-banner lg-hub-row" onclick="openFullLineupView()" style="margin-bottom:16px;background:linear-gradient(135deg,#3b6e8f,#2c4f66);">
-          <div class="tastemakers-banner-icon lg-old">&#128293;</div><svg class="lg-ico lg-new" aria-hidden="true"><use href="#lg-flame"/></svg>
+          <div class="tastemakers-banner-icon lg-old"></div><svg class="lg-ico lg-new" aria-hidden="true"><use href="#lg-flame"/></svg>
           <div class="tastemakers-banner-text">
             <div class="tastemakers-banner-title">Hot Right Now</div>
             <div class="tastemakers-banner-sub">Today's big shows &mdash; not the classics</div>
@@ -1388,7 +1396,7 @@ body.look-lounge .lg-row .friend-count{margin-top:2px;font-size:12px;font-weight
           <div class="tastemakers-banner-arrow">&#8250;</div>
         </div>
         <div class="tastemakers-banner lg-hub-row" onclick="openLineupView()" style="margin-bottom:16px;background:linear-gradient(135deg,#5C6B3A,#3F4A26);">
-          <div class="tastemakers-banner-icon lg-old">&#128220;</div><svg class="lg-ico lg-new" aria-hidden="true"><use href="#lg-feed"/></svg>
+          <div class="tastemakers-banner-icon lg-old"></div><svg class="lg-ico lg-new" aria-hidden="true"><use href="#lg-feed"/></svg>
           <div class="tastemakers-banner-text">
             <div class="tastemakers-banner-title">The Full Lineup</div>
             <div class="tastemakers-banner-sub">Every show on ShowUp, and how it's rated</div>
@@ -1396,7 +1404,7 @@ body.look-lounge .lg-row .friend-count{margin-top:2px;font-size:12px;font-weight
           <div class="tastemakers-banner-arrow">&#8250;</div>
         </div>
         <div class="tastemakers-banner lg-hub-row" onclick="openPrimeTimeView()" style="margin-bottom:16px;">
-          <div class="tastemakers-banner-icon lg-old">&#128225;</div><svg class="lg-ico lg-new" aria-hidden="true"><use href="#lg-tv"/></svg>
+          <div class="tastemakers-banner-icon lg-old"></div><svg class="lg-ico lg-new" aria-hidden="true"><use href="#lg-tv"/></svg>
           <div class="tastemakers-banner-text">
             <div class="tastemakers-banner-title">Prime Time</div>
             <div class="tastemakers-banner-sub">Top-rated shows across all of ShowUp</div>
@@ -1404,7 +1412,7 @@ body.look-lounge .lg-row .friend-count{margin-top:2px;font-size:12px;font-weight
           <div class="tastemakers-banner-arrow">&#8250;</div>
         </div>
         <div class="tastemakers-banner" id="admin-browse-banner" onclick="openAdminRoomsModal()" style="display:none;margin-bottom:16px;background:linear-gradient(135deg,#555,#222);">
-          <div class="tastemakers-banner-icon lg-old">&#128065;</div><svg class="lg-ico lg-new" aria-hidden="true"><use href="#lg-eye"/></svg>
+          <div class="tastemakers-banner-icon lg-old"></div><svg class="lg-ico lg-new" aria-hidden="true"><use href="#lg-eye"/></svg>
           <div class="tastemakers-banner-text">
             <div class="tastemakers-banner-title">Browse All Rooms</div>
             <div class="tastemakers-banner-sub">Admin view &mdash; read-only, every room in ShowUp</div>
@@ -1414,42 +1422,42 @@ body.look-lounge .lg-row .friend-count{margin-top:2px;font-size:12px;font-weight
         <div class="room-picker-grid" id="room-picker-grid"></div>
       </div>
       <div id="prime-time-view" style="display:none">
-        <div class="page-title"><button class="nav-back" onclick="backFromPrimeTimeView()" style="margin-right:6px;">&#8592;</button><span class="lg-old">&#128225;&nbsp; </span>Prime Time</div>
+        <div class="page-title"><button class="nav-back" onclick="backFromPrimeTimeView()" style="margin-right:6px;">&#8592;</button><span class="lg-old"></span>Prime Time</div>
         <div class="page-sub">Top-rated shows across all of ShowUp.</div>
         <div class="lr-search-wrap" id="prime-time-search-wrap"><input type="text" id="prime-time-search" class="lr-search-input" placeholder="Search shows or platforms..." oninput="renderPrimeTimeList();toggleSearchClearBtn(this)" autocomplete="off" /><button class="lr-search-clear" type="button" aria-label="Clear search" onclick="clearSearchInput('prime-time-search')">&#10005;</button></div>
         <div id="prime-time-list-view"></div>
         <div id="prime-time-detail-view" style="display:none"></div>
       </div>
       <div id="showtalk-hub-view" style="display:none">
-        <div class="page-title"><button class="nav-back" onclick="backFromShowTalkHub()" style="margin-right:6px;">&#8592;</button><span class="lg-old">&#128483;&#65039;&nbsp; </span>Show Talk</div>
+        <div class="page-title"><button class="nav-back" onclick="backFromShowTalkHub()" style="margin-right:6px;">&#8592;</button><span class="lg-old"></span>Show Talk</div>
         <div class="page-sub">What your crowd's saying, across every room.</div>
         <div class="lr-search-wrap" id="showtalk-hub-search-wrap"><input type="text" id="showtalk-hub-search" class="lr-search-input" placeholder="Search shows or platforms..." oninput="renderShowTalk();toggleSearchClearBtn(this)" autocomplete="off" /><button class="lr-search-clear" type="button" aria-label="Clear search" onclick="clearSearchInput('showtalk-hub-search')">&#10005;</button></div>
         <div id="showtalk-hub-list"></div>
         <div id="showtalk-hub-detail-panel" style="display:none"></div>
       </div>
       <div id="full-lineup-view" style="display:none">
-        <div class="page-title"><button class="nav-back" onclick="backFromFullLineupView()" style="margin-right:6px;">&#8592;</button><span class="lg-old">&#128293;&nbsp; </span>Hot Right Now</div>
+        <div class="page-title"><button class="nav-back" onclick="backFromFullLineupView()" style="margin-right:6px;">&#8592;</button><span class="lg-old"></span>Hot Right Now</div>
         <div class="page-sub">Current shows with a season out in the last year &mdash; what people are watching now.</div>
         <div class="lr-search-wrap" id="full-lineup-search-wrap"><input type="text" id="full-lineup-search" class="lr-search-input" placeholder="Search shows or platforms..." oninput="renderFullLineup();toggleSearchClearBtn(this)" autocomplete="off" /><button class="lr-search-clear" type="button" aria-label="Clear search" onclick="clearSearchInput('full-lineup-search')">&#10005;</button></div>
         <div id="full-lineup-list"></div>
         <div id="full-lineup-detail-view" style="display:none"></div>
       </div>
       <div id="lineup-view" style="display:none">
-        <div class="page-title"><button class="nav-back" onclick="backFromLineupView()" style="margin-right:6px;">&#8592;</button><span class="lg-old">&#128220;&nbsp; </span>The Full Lineup</div>
+        <div class="page-title"><button class="nav-back" onclick="backFromLineupView()" style="margin-right:6px;">&#8592;</button><span class="lg-old"></span>The Full Lineup</div>
         <div class="page-sub">Every show on ShowUp, A to Z, and how it's rated.</div>
         <div class="lr-search-wrap" id="lineup-search-wrap"><input type="text" id="lineup-search" class="lr-search-input" placeholder="Search shows or platforms..." oninput="renderLineup();toggleSearchClearBtn(this)" autocomplete="off" /><button class="lr-search-clear" type="button" aria-label="Clear search" onclick="clearSearchInput('lineup-search')">&#10005;</button></div>
         <div id="lineup-list"></div>
         <div id="lineup-detail-view" style="display:none"></div>
       </div>
       <div id="friends-view" style="display:none">
-        <div class="page-title"><button class="nav-back" onclick="backToRoomPicker()" style="margin-right:6px;">&#8592;</button><span class="lg-old">&#127968;&nbsp; </span><span id="current-room-name">The Living Room</span><button id="rename-room-btn" onclick="renameCurrentRoom()" style="display:none;background:none;border:none;cursor:pointer;font-size:14px;margin-left:6px;color:var(--muted);vertical-align:middle;" title="Rename this room">&#9998;&#65049;</button><button id="delete-room-btn" onclick="deleteCurrentRoom()" style="display:none;background:none;border:none;cursor:pointer;font-size:14px;margin-left:6px;color:var(--muted);vertical-align:middle;" title="Delete this room">&#128465;&#65049;</button><button id="leave-room-btn" onclick="leaveCurrentRoom()" style="display:none;background:none;border:none;cursor:pointer;font-size:14px;margin-left:6px;color:var(--muted);vertical-align:middle;" title="Leave this room"><span class="lg-old">&#128075; </span>Leave Room</button></div>
+        <div class="page-title"><button class="nav-back" onclick="backToRoomPicker()" style="margin-right:6px;">&#8592;</button><span class="lg-old"></span><span id="current-room-name">The Living Room</span><button id="rename-room-btn" onclick="renameCurrentRoom()" style="display:none;background:none;border:none;cursor:pointer;font-size:14px;margin-left:6px;color:var(--muted);vertical-align:middle;" title="Rename this room">&#9998;&#65049;</button><button id="delete-room-btn" onclick="deleteCurrentRoom()" style="display:none;background:none;border:none;cursor:pointer;font-size:14px;margin-left:6px;color:var(--muted);vertical-align:middle;" title="Delete this room" aria-label="Delete this room"><svg class="lg-ico" style="display:inline-block;width:18px;height:18px;vertical-align:-3px;" aria-hidden="true"><use href="#lg-trash"/></svg></button><button id="leave-room-btn" onclick="leaveCurrentRoom()" style="display:none;background:none;border:none;cursor:pointer;font-size:14px;margin-left:6px;color:var(--muted);vertical-align:middle;" title="Leave this room"><span class="lg-old"></span>Leave Room</button></div>
         <div id="recommendations-banner"></div>
         <div class="lr-toggle">
-          <button class="lr-toggle-btn active" id="toggle-crew" onclick="switchLRView('crew')"><span class="toggle-icon lg-old">🛋️</span><svg class="lg-ico lg-new" aria-hidden="true"><use href="#lg-crowd"/></svg>Your Crowd<span class="toggle-sub">Who's watching what</span></button>
-          <button class="lr-toggle-btn" id="toggle-picks" onclick="switchLRView('picks')"><span class="toggle-icon lg-old">&#127942;</span><svg class="lg-ico lg-new" aria-hidden="true"><use href="#lg-star"/></svg>Friends' Favorites<span class="toggle-sub">Top rated in this room</span></button>
-          <button class="lr-toggle-btn" id="toggle-showtalk" onclick="_showTalkScope='room';switchLRView('showtalk')"><span class="toggle-icon lg-old">&#128483;&#65039;</span><svg class="lg-ico lg-new" aria-hidden="true"><use href="#lg-talk"/></svg>Show Talk<span class="toggle-sub">Comments, show by show</span></button>
-          <button class="lr-toggle-btn" id="toggle-conversations" onclick="switchLRView('conversations')"><span class="toggle-icon lg-old">&#128172;</span><svg class="lg-ico lg-new" aria-hidden="true"><use href="#lg-feed"/></svg>Around the Room<span class="toggle-sub">Adds and comments</span><span class="conv-badge" id="conv-badge" style="display:none;"></span></button>
-          <button class="lr-toggle-btn" id="toggle-lounge" onclick="switchLRView('lounge')"><span class="toggle-icon lg-old">&#9749;</span><svg class="lg-ico lg-new" aria-hidden="true"><use href="#lg-cup"/></svg>The Lounge<span class="toggle-sub">Ask the room anything</span><span class="conv-badge" id="lounge-badge" style="display:none;"></span></button>
+          <button class="lr-toggle-btn active" id="toggle-crew" onclick="switchLRView('crew')"><span class="toggle-icon lg-old"></span><svg class="lg-ico lg-new" aria-hidden="true"><use href="#lg-crowd"/></svg>Your Crowd<span class="toggle-sub">Who's watching what</span></button>
+          <button class="lr-toggle-btn" id="toggle-picks" onclick="switchLRView('picks')"><span class="toggle-icon lg-old"></span><svg class="lg-ico lg-new" aria-hidden="true"><use href="#lg-star"/></svg>Friends' Favorites<span class="toggle-sub">Top rated in this room</span></button>
+          <button class="lr-toggle-btn" id="toggle-showtalk" onclick="_showTalkScope='room';switchLRView('showtalk')"><span class="toggle-icon lg-old"></span><svg class="lg-ico lg-new" aria-hidden="true"><use href="#lg-talk"/></svg>Show Talk<span class="toggle-sub">Comments, show by show</span></button>
+          <button class="lr-toggle-btn" id="toggle-conversations" onclick="switchLRView('conversations')"><span class="toggle-icon lg-old"></span><svg class="lg-ico lg-new" aria-hidden="true"><use href="#lg-feed"/></svg>Around the Room<span class="toggle-sub">Adds and comments</span><span class="conv-badge" id="conv-badge" style="display:none;"></span></button>
+          <button class="lr-toggle-btn" id="toggle-lounge" onclick="switchLRView('lounge')"><span class="toggle-icon lg-old"></span><svg class="lg-ico lg-new" aria-hidden="true"><use href="#lg-cup"/></svg>The Lounge<span class="toggle-sub">Ask the room anything</span><span class="conv-badge" id="lounge-badge" style="display:none;"></span></button>
         </div>
         <div class="lr-tab-desc" id="lr-tab-desc"></div>
         <div id="lr-crew-view">
@@ -1487,10 +1495,10 @@ body.look-lounge .lg-row .friend-count{margin-top:2px;font-size:12px;font-weight
     </div>
   </div>
   <div class="bottom-nav">
-    <button class="nav-tab active" id="btab-living-room" onclick="showTab('living-room',this)"><span class="nav-tab-icon lg-old">&#127968;</span><svg class="lg-ico lg-new" aria-hidden="true"><use href="#lg-home"/></svg><span class="nav-tab-label">Living Room</span></button>
-    <button class="nav-tab" id="btab-watching" onclick="showTab('watching',this)"><span class="nav-tab-icon lg-old">&#128250;</span><svg class="lg-ico lg-new" aria-hidden="true"><use href="#lg-tv"/></svg><span class="nav-tab-label">Watching</span></button>
-    <button class="nav-tab" id="btab-watchlist" onclick="showTab('watchlist',this)"><span class="nav-tab-icon lg-old">🛋️</span><svg class="lg-ico lg-new" aria-hidden="true"><use href="#lg-list"/></svg><span class="nav-tab-label">My List</span></button>
-    <button class="nav-tab" id="btab-watched" onclick="showTab('watched',this)"><span class="nav-tab-icon lg-old">&#128252;</span><svg class="lg-ico lg-new" aria-hidden="true"><use href="#lg-remote"/></svg><span class="nav-tab-label">Binged</span></button>
+    <button class="nav-tab active" id="btab-living-room" onclick="showTab('living-room',this)"><span class="nav-tab-icon lg-old"></span><svg class="lg-ico lg-new" aria-hidden="true"><use href="#lg-home"/></svg><span class="nav-tab-label">Living Room</span></button>
+    <button class="nav-tab" id="btab-watching" onclick="showTab('watching',this)"><span class="nav-tab-icon lg-old"></span><svg class="lg-ico lg-new" aria-hidden="true"><use href="#lg-tv"/></svg><span class="nav-tab-label">Watching</span></button>
+    <button class="nav-tab" id="btab-watchlist" onclick="showTab('watchlist',this)"><span class="nav-tab-icon lg-old"></span><svg class="lg-ico lg-new" aria-hidden="true"><use href="#lg-list"/></svg><span class="nav-tab-label">My List</span></button>
+    <button class="nav-tab" id="btab-watched" onclick="showTab('watched',this)"><span class="nav-tab-icon lg-old"></span><svg class="lg-ico lg-new" aria-hidden="true"><use href="#lg-remote"/></svg><span class="nav-tab-label">Binged</span></button>
   </div>
 </div>
 
@@ -1525,7 +1533,7 @@ body.look-lounge .lg-row .friend-count{margin-top:2px;font-size:12px;font-weight
     </div>
 
     <div style="background:var(--cream);border:1px solid var(--border);border-radius:14px;padding:20px;margin-bottom:16px;box-shadow:var(--shadow);">
-      <div class="ob-label" style="margin-bottom:4px;">&#127942; Top 5 Shows of All Time <span style="font-weight:400;text-transform:none;font-size:11px;color:var(--muted);">Visible to friends in your Living Room</span></div>
+      <div class="ob-label" style="margin-bottom:4px;">Top 5 Shows of All Time <span style="font-weight:400;text-transform:none;font-size:11px;color:var(--muted);">Visible to friends in your Living Room</span></div>
       <div id="top5-list" style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px;"></div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;">
         <div class="form-group" style="position:relative;flex:2;min-width:140px;margin:0;">
@@ -1545,7 +1553,7 @@ body.look-lounge .lg-row .friend-count{margin-top:2px;font-size:12px;font-weight
           <option value="" disabled selected>Select...</option>
           <option>18-21</option><option>22-29</option><option>30-39</option><option>40-49</option><option>50-59</option><option>60-69</option><option>70+</option>
         </select>
-        <div class="ob-private">&#128274; Private &mdash; never visible to others</div>
+        <div class="ob-private">Private &mdash; never visible to others</div>
       </div>
       <div class="ob-field" style="margin-bottom:0">
         <label class="ob-label">Gender</label>
@@ -1553,7 +1561,7 @@ body.look-lounge .lg-row .friend-count{margin-top:2px;font-size:12px;font-weight
           <option value="" disabled selected>Select...</option>
           <option>Male</option><option>Female</option><option>Non-binary</option><option>Prefer not to say</option>
         </select>
-        <div class="ob-private">&#128274; Private &mdash; never visible to others</div>
+        <div class="ob-private">Private &mdash; never visible to others</div>
       </div>
     </div>
     <div style="background:var(--cream);border:1px solid var(--border);border-radius:14px;padding:20px;margin-top:16px;box-shadow:var(--shadow);">
@@ -1576,14 +1584,14 @@ body.look-lounge .lg-row .friend-count{margin-top:2px;font-size:12px;font-weight
     </div>
   </div>
   <div class="content" style="padding-top:20px;padding-bottom:100px;">
-    <div class="page-title" style="font-family:var(--serif);font-weight:700;">&#9881;&#65039; Settings</div>
+    <div class="page-title" style="font-family:var(--serif);font-weight:700;">Settings</div>
     <div class="page-sub">Manage your ShowUp experience</div>
 
     <div class="settings-section">
       <div class="settings-section-label">Notifications</div>
       <div class="settings-card">
         <div class="settings-row" id="settings-device-alerts-row" style="cursor:default;display:none;">
-          <span class="settings-row-icon">&#128241;</span>
+          <span class="settings-row-icon"><svg class="lg-ico" aria-hidden="true"><use href="#lg-phone"/></svg></span>
           <span class="settings-row-label"><span id="settings-device-alerts-label">Phone alerts</span><span class="settings-row-sub" id="settings-device-alerts-sub"></span></span>
           <button type="button" class="alerts-card-btn" id="settings-device-alerts-btn" onclick="enablePushAlerts()" style="display:none;">Turn on</button>
         </div>
@@ -1591,54 +1599,54 @@ body.look-lounge .lg-row .friend-count{margin-top:2px;font-size:12px;font-weight
       <div class="settings-section-label" style="margin-top:14px;">What to tell me about</div>
       <div class="settings-card">
         <div class="settings-row" style="cursor:default;">
-          <span class="settings-row-icon">&#128172;</span>
+          <span class="settings-row-icon"><svg class="lg-ico" aria-hidden="true"><use href="#lg-talk"/></svg></span>
           <span class="settings-row-label">Comments &amp; recommendations<span class="settings-row-sub">When someone in your Living Room comments on a show, or a friend recommends you one</span></span>
           <button type="button" class="switch" id="pref-comments" role="switch" aria-checked="true" aria-label="Comments and recommendations" onclick="toggleNotifPref('comments')"></button>
         </div>
         <div class="settings-row" style="cursor:default;">
-          <span class="settings-row-icon">&#9749;</span>
+          <span class="settings-row-icon"><svg class="lg-ico" aria-hidden="true"><use href="#lg-cup"/></svg></span>
           <span class="settings-row-label">Lounge posts &amp; replies<span class="settings-row-sub">When someone posts in your Lounge, or replies to a thread you're in</span></span>
           <button type="button" class="switch" id="pref-lounge" role="switch" aria-checked="true" aria-label="Lounge posts and replies" onclick="toggleNotifPref('lounge')"></button>
         </div>
         <div class="settings-row" style="cursor:default;">
-          <span class="settings-row-icon">&#128250;</span>
+          <span class="settings-row-icon"><svg class="lg-ico" aria-hidden="true"><use href="#lg-tv"/></svg></span>
           <span class="settings-row-label">New seasons<span class="settings-row-sub">When a show you follow has a new season coming or out</span></span>
           <button type="button" class="switch" id="pref-new-season" role="switch" aria-checked="true" aria-label="New seasons" onclick="toggleNotifPref('new_season')"></button>
         </div>
         <div class="settings-row" style="cursor:default;">
-          <span class="settings-row-icon">&#9654;&#65039;</span>
+          <span class="settings-row-icon"><svg class="lg-ico" aria-hidden="true"><use href="#lg-play"/></svg></span>
           <span class="settings-row-label">New episodes<span class="settings-row-sub">The morning after a new episode of a show you're watching comes out</span></span>
           <button type="button" class="switch" id="pref-new-episode" role="switch" aria-checked="true" aria-label="New episodes" onclick="toggleNotifPref('new_episode')"></button>
         </div>
         <div class="settings-row" style="cursor:default;">
-          <span class="settings-row-icon">&#128075;</span>
+          <span class="settings-row-icon"><svg class="lg-ico" aria-hidden="true"><use href="#lg-crowd"/></svg></span>
           <span class="settings-row-label">Someone joins your room<span class="settings-row-sub">When someone joins a Living Room you created or invited them to</span></span>
           <button type="button" class="switch" id="pref-room-join" role="switch" aria-checked="true" aria-label="Someone joins your room" onclick="toggleNotifPref('room_join')"></button>
         </div>
         <div class="settings-row" style="cursor:default;">
-          <span class="settings-row-icon">&#128588;</span>
+          <span class="settings-row-icon"><svg class="lg-ico" aria-hidden="true"><use href="#lg-share"/></svg></span>
           <span class="settings-row-label">Shows you shared<span class="settings-row-sub">Once a day, in the bell (not a phone alert), when friends add shows they found through you</span></span>
           <button type="button" class="switch" id="pref-shared-add" role="switch" aria-checked="true" aria-label="Shows you shared" onclick="toggleNotifPref('shared_add')"></button>
         </div>
         <div class="settings-row" id="settings-email-digest-row" style="cursor:default;">
-          <span class="settings-row-icon">&#9993;&#65039;</span>
+          <span class="settings-row-icon"><svg class="lg-ico" aria-hidden="true"><use href="#lg-mail"/></svg></span>
           <span class="settings-row-label">Weekly email recap<span class="settings-row-sub">A Sunday email of comments you missed &mdash; sent only if phone alerts are off</span></span>
           <button type="button" class="switch" id="pref-email-digest" role="switch" aria-checked="true" aria-label="Weekly email recap" onclick="toggleNotifPref('email_digest')"></button>
         </div>
         <div class="settings-row" style="cursor:default;">
-          <span class="settings-row-icon">&#127916;</span>
+          <span class="settings-row-icon"><svg class="lg-ico" aria-hidden="true"><use href="#lg-film"/></svg></span>
           <span class="settings-row-label" onclick="dpSettingsTap()" style="cursor:pointer;">Daily show question<span class="settings-row-sub">Once a day, a quick rate-or-add for 1&ndash;2 shows (this device)</span></span>
           <button type="button" class="switch" id="pref-daily-prompt" role="switch" aria-checked="true" aria-label="Daily show question" onclick="toggleDailyPrompt()"></button>
         </div>
       </div>
-      <div style="font-size:11px;color:var(--muted);margin-top:6px;padding-left:4px;">New seasons and Lounge replies also show in the &#128276; inside ShowUp; comments and new Lounge posts show in your Living Room.</div>
+      <div style="font-size:11px;color:var(--muted);margin-top:6px;padding-left:4px;">New seasons and Lounge replies also show in the inside ShowUp; comments and new Lounge posts show in your Living Room.</div>
     </div>
 
     <div class="settings-section">
       <div class="settings-section-label">App</div>
       <div class="settings-card">
         <div class="settings-row" style="cursor:default;align-items:flex-start;">
-          <span class="settings-row-icon">&#128269;</span>
+          <span class="settings-row-icon"><svg class="lg-ico" aria-hidden="true"><use href="#lg-aa"/></svg></span>
           <span class="settings-row-label">Text size<span class="settings-row-sub">Make everything in ShowUp bigger and easier to read</span>
             <span class="textsize-seg" id="textsize-seg" role="group" aria-label="Text size">
               <button type="button" data-size="standard" onclick="setTextSize('standard')" style="font-size:13px;">Standard</button>
@@ -1648,7 +1656,7 @@ body.look-lounge .lg-row .friend-count{margin-top:2px;font-size:12px;font-weight
           </span>
         </div>
         <button class="settings-row" id="settings-install-row" onclick="openInstallGuide()">
-          <span class="settings-row-icon">&#128241;</span><span class="settings-row-label">Add ShowUp to Home Screen</span><span class="settings-row-arrow">&#8250;</span>
+          <span class="settings-row-icon"><svg class="lg-ico" aria-hidden="true"><use href="#lg-phone"/></svg></span><span class="settings-row-label">Add ShowUp to Home Screen</span><span class="settings-row-arrow">&#8250;</span>
         </button>
       </div>
     </div>
@@ -1663,13 +1671,13 @@ body.look-lounge .lg-row .friend-count{margin-top:2px;font-size:12px;font-weight
       <div class="settings-section-label">Account</div>
       <div class="settings-card">
         <button class="settings-row" onclick="goToProfile()">
-          <span class="settings-row-icon">&#128100;</span><span class="settings-row-label">Edit Profile</span><span class="settings-row-arrow">&#8250;</span>
+          <span class="settings-row-icon"><svg class="lg-ico" aria-hidden="true"><use href="#lg-person"/></svg></span><span class="settings-row-label">Edit Profile</span><span class="settings-row-arrow">&#8250;</span>
         </button>
         <button class="settings-row" onclick="goToTellMore()">
-          <span class="settings-row-icon">🛋️</span><span class="settings-row-label">Update My Preferences</span><span class="settings-row-arrow">&#8250;</span>
+          <span class="settings-row-icon"><svg class="lg-ico" aria-hidden="true"><use href="#lg-dials"/></svg></span><span class="settings-row-label">Update My Preferences</span><span class="settings-row-arrow">&#8250;</span>
         </button>
         <button class="settings-row" onclick="openBlockedList()">
-          <span class="settings-row-icon">&#128683;</span><span class="settings-row-label">Blocked people</span><span class="settings-row-arrow">&#8250;</span>
+          <span class="settings-row-icon"><svg class="lg-ico" aria-hidden="true"><use href="#lg-ban"/></svg></span><span class="settings-row-label">Blocked people</span><span class="settings-row-arrow">&#8250;</span>
         </button>
       </div>
     </div>
@@ -1678,7 +1686,7 @@ body.look-lounge .lg-row .friend-count{margin-top:2px;font-size:12px;font-weight
       <div class="settings-section-label">Help</div>
       <div class="settings-card">
         <button class="settings-row" onclick="openFeedback()">
-          <span class="settings-row-icon">&#128030;</span><span class="settings-row-label">Report a bug or share an idea<span class="settings-row-sub">Goes straight to the ShowUp team</span></span><span class="settings-row-arrow">&#8250;</span>
+          <span class="settings-row-icon"><svg class="lg-ico" aria-hidden="true"><use href="#lg-talk"/></svg></span><span class="settings-row-label">Report a bug or share an idea<span class="settings-row-sub">Goes straight to the ShowUp team</span></span><span class="settings-row-arrow">&#8250;</span>
         </button>
       </div>
     </div>
@@ -1687,19 +1695,19 @@ body.look-lounge .lg-row .friend-count{margin-top:2px;font-size:12px;font-weight
       <div class="settings-section-label">Admin</div>
       <div class="settings-card">
         <button class="settings-row" onclick="openMembersAdmin()">
-          <span class="settings-row-icon">&#128101;</span><span class="settings-row-label">Member report<span class="settings-row-sub">Who's active, alerts on, Home Screen, invites</span></span><span class="settings-row-arrow">&#8250;</span>
+          <span class="settings-row-icon"><svg class="lg-ico" aria-hidden="true"><use href="#lg-crowd"/></svg></span><span class="settings-row-label">Member report<span class="settings-row-sub">Who's active, alerts on, Home Screen, invites</span></span><span class="settings-row-arrow">&#8250;</span>
         </button>
         <button class="settings-row" onclick="openEditAnnouncementModal()">
-          <span class="settings-row-icon">&#128226;</span><span class="settings-row-label">Edit Announcement Banner</span><span class="settings-row-arrow">&#8250;</span>
+          <span class="settings-row-icon"><svg class="lg-ico" aria-hidden="true"><use href="#lg-mega"/></svg></span><span class="settings-row-label">Edit Announcement Banner</span><span class="settings-row-arrow">&#8250;</span>
         </button>
         <button class="settings-row" onclick="openFeedbackInbox()">
-          <span class="settings-row-icon">&#128236;</span><span class="settings-row-label">Feedback inbox</span><span class="settings-row-arrow">&#8250;</span>
+          <span class="settings-row-icon"><svg class="lg-ico" aria-hidden="true"><use href="#lg-mail"/></svg></span><span class="settings-row-label">Feedback inbox</span><span class="settings-row-arrow">&#8250;</span>
         </button>
         <button class="settings-row" onclick="openReportsAdmin()">
-          <span class="settings-row-icon">&#128681;</span><span class="settings-row-label">Flagged content<span class="settings-row-sub">Comments and people someone reported</span></span><span class="settings-row-arrow">&#8250;</span>
+          <span class="settings-row-icon"><svg class="lg-ico" aria-hidden="true"><use href="#lg-flag"/></svg></span><span class="settings-row-label">Flagged content<span class="settings-row-sub">Comments and people someone reported</span></span><span class="settings-row-arrow">&#8250;</span>
         </button>
         <div class="settings-row" style="cursor:default;">
-          <span class="settings-row-icon">&#127912;</span>
+          <span class="settings-row-icon"><svg class="lg-ico" aria-hidden="true"><use href="#lg-eye"/></svg></span>
           <span class="settings-row-label">New look preview<span class="settings-row-sub">Only admins can turn this on, on this device. Members keep today's look.</span></span>
           <button type="button" class="switch" id="look-switch" role="switch" aria-checked="false" aria-label="New look preview" onclick="toggleLookPreview()"></button>
         </div>
@@ -1709,17 +1717,17 @@ body.look-lounge .lg-row .friend-count{margin-top:2px;font-size:12px;font-weight
     <div class="settings-section">
       <div class="settings-section-label">Session</div>
       <div class="settings-card">
-        <button class="settings-row" onclick="handleSignOut()"><span class="settings-row-icon">&#128682;</span><span class="settings-row-label">Log Out</span><span class="settings-row-arrow">&#8250;</span></button>
-        <button class="settings-row" onclick="handleDeleteData()" style="color:#c0392b;"><span class="settings-row-icon">&#128465;&#65039;</span><span class="settings-row-label" style="color:#c0392b;">Delete My Data</span><span class="settings-row-arrow" style="color:#c0392b;">&#8250;</span></button>
+        <button class="settings-row" onclick="handleSignOut()"><span class="settings-row-icon"><svg class="lg-ico" aria-hidden="true"><use href="#lg-door"/></svg></span><span class="settings-row-label">Log Out</span><span class="settings-row-arrow">&#8250;</span></button>
+        <button class="settings-row" onclick="handleDeleteData()" style="color:#c0392b;"><span class="settings-row-icon"><svg class="lg-ico" aria-hidden="true"><use href="#lg-trash"/></svg></span><span class="settings-row-label" style="color:#c0392b;">Delete My Data</span><span class="settings-row-arrow" style="color:#c0392b;">&#8250;</span></button>
       </div>
     </div>
 
     <div class="settings-section">
       <div class="settings-section-label">Legal</div>
       <div class="settings-card">
-        <a class="settings-row" href="/privacy.html" target="_blank"><span class="settings-row-icon">&#128196;</span><span class="settings-row-label">Privacy Policy</span><span class="settings-row-arrow">&#8250;</span></a>
-        <a class="settings-row" href="/terms.html" target="_blank"><span class="settings-row-icon">&#128203;</span><span class="settings-row-label">Terms of Use</span><span class="settings-row-arrow">&#8250;</span></a>
-        <a class="settings-row" href="/support.html" target="_blank"><span class="settings-row-icon">&#10067;</span><span class="settings-row-label">Help &amp; Support</span><span class="settings-row-arrow">&#8250;</span></a>
+        <a class="settings-row" href="/privacy.html" target="_blank"><span class="settings-row-icon"><svg class="lg-ico" aria-hidden="true"><use href="#lg-doc"/></svg></span><span class="settings-row-label">Privacy Policy</span><span class="settings-row-arrow">&#8250;</span></a>
+        <a class="settings-row" href="/terms.html" target="_blank"><span class="settings-row-icon"><svg class="lg-ico" aria-hidden="true"><use href="#lg-doc"/></svg></span><span class="settings-row-label">Terms of Use</span><span class="settings-row-arrow">&#8250;</span></a>
+        <a class="settings-row" href="/support.html" target="_blank"><span class="settings-row-icon"><svg class="lg-ico" aria-hidden="true"><use href="#lg-talk"/></svg></span><span class="settings-row-label">Help &amp; Support</span><span class="settings-row-arrow">&#8250;</span></a>
       </div>
     </div>
 
@@ -1900,7 +1908,7 @@ function renderTop5() {
     var clickAttr = tmdbId ? ' onclick="openShowDetails(' + tmdbId + ')" class="poster-clickable"' : '';
     var thumb = poster
       ? '<img src="https://image.tmdb.org/t/p/w154' + poster + '"' + clickAttr + ' style="width:32px;height:48px;border-radius:6px;object-fit:cover;flex-shrink:0;" />'
-      : '<div' + clickAttr + ' style="width:32px;height:48px;border-radius:6px;background:var(--olive);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:14px;">📺</div>';
+      : '<div' + clickAttr + ' style="width:32px;height:48px;border-radius:6px;background:var(--olive);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:14px;"><svg class="lg-ph" aria-hidden="true"><use href="#lg-tv"/></svg></div>';
     var upVis = i === 0 ? 'visibility:hidden;' : '';
     var downVis = i === shows.length - 1 ? 'visibility:hidden;' : '';
     return '<div style="display:flex;align-items:center;gap:8px;background:var(--sand);border-radius:8px;padding:8px 12px;">'
@@ -1939,7 +1947,7 @@ function renderBingedTop5() {
     var clickAttr = tmdbId ? ' onclick="openShowDetails(' + tmdbId + ')" class="poster-clickable"' : '';
     var thumb = poster
       ? '<img src="https://image.tmdb.org/t/p/w154' + poster + '"' + clickAttr + ' style="width:32px;height:48px;border-radius:6px;object-fit:cover;flex-shrink:0;" />'
-      : '<div' + clickAttr + ' style="width:32px;height:48px;border-radius:6px;background:var(--olive);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:14px;">📺</div>';
+      : '<div' + clickAttr + ' style="width:32px;height:48px;border-radius:6px;background:var(--olive);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:14px;"><svg class="lg-ph" aria-hidden="true"><use href="#lg-tv"/></svg></div>';
     var upVis = i === 0 ? 'visibility:hidden;' : '';
     var downVis = i === shows.length - 1 ? 'visibility:hidden;' : '';
     return '<div style="display:flex;align-items:center;gap:8px;background:var(--sand);border-radius:8px;padding:8px 12px;">'
@@ -1974,7 +1982,7 @@ function renderTop5Banner() {
   var top5 = state.user && state.user.top5 ? state.user.top5 : [];
   if (top5.length >= 1) { wrap.innerHTML = ''; return; }
   wrap.innerHTML = '<div class="top5-banner" onclick="goToProfileTop5()">'
-    + '<div class="top5-banner-icon lg-old">&#127942;</div><svg class="lg-ico lg-new" aria-hidden="true"><use href="#lg-star"/></svg>'
+    + '<div class="top5-banner-icon lg-old"></div><svg class="lg-ico lg-new" aria-hidden="true"><use href="#lg-star"/></svg>'
     + '<div class="top5-banner-text">'
     + '<div class="top5-banner-title">Add your Top 5 shows of all time</div>'
     + '<div class="top5-banner-sub">Your crowd wants to know what you love most.</div>'
@@ -2044,7 +2052,7 @@ function renderTastemakersBanner() {
       : leader.name + ' leads with ' + leader.count + ' recommendation' + (leader.count===1?'':'s') + ' accepted';
   }
   wrap.innerHTML = '<div class="tastemakers-banner" onclick="openTastemakersModal()">'
-    + '<div class="tastemakers-banner-icon lg-old">&#127942;</div><svg class="lg-ico lg-new" aria-hidden="true"><use href="#lg-star"/></svg>'
+    + '<div class="tastemakers-banner-icon lg-old"></div><svg class="lg-ico lg-new" aria-hidden="true"><use href="#lg-star"/></svg>'
     + '<div class="tastemakers-banner-text">'
     + '<div class="tastemakers-banner-title">Tastemakers</div>'
     + '<div class="tastemakers-banner-sub">'+escAttr(subtext)+'</div>'
@@ -2057,7 +2065,7 @@ window.openTastemakersModal = function() {
   var rows = buildTastemakersLeaderboard();
   var body = document.getElementById('tastemakers-list');
   if (!rows.length) {
-    body.innerHTML = '<div class="empty"><div class="empty-icon">&#127942;</div>No accepted recommendations yet &mdash; be the first Tastemaker!</div>';
+    body.innerHTML = '<div class="empty"><div class="empty-icon"></div>No accepted recommendations yet &mdash; be the first Tastemaker!</div>';
   } else {
     body.innerHTML = rows.map(function(r, i){
       var rank = i===0 ? '&#129351;' : i===1 ? '&#129352;' : i===2 ? '&#129353;' : (i+1)+'.';
@@ -2085,7 +2093,7 @@ function renderRoomGrid() {
     var r = ROOMS[k];
     var isSelected = k === currentRoom;
     return '<button class="room-btn' + (isSelected ? ' selected' : '') + '" onclick="setRoomAndSave(\'' + k + '\')" style="border-color:' + (isSelected ? r.color : '') + ';">'
-      + '<div style="width:40px;height:40px;border-radius:50%;background:' + r.color + ';margin:0 auto;display:flex;align-items:center;justify-content:center;font-size:22px;">🛋️</div>'
+      + '<div style="width:40px;height:40px;border-radius:50%;background:' + r.color + ';margin:0 auto;display:flex;align-items:center;justify-content:center;font-size:22px;"><svg class="lg-ph" aria-hidden="true"><use href="#lg-home"/></svg></div>'
       + '<div class="room-btn-name">' + r.name + '</div>'
       + '</button>';
   }).join('');
@@ -2730,7 +2738,7 @@ var _cboxDraft = {};
 function commentBoxHTML(inpId, sendCall) {
   var open = Object.prototype.hasOwnProperty.call(_cboxDraft, inpId);
   return '<div class="cbox">'
-    + '<button type="button" class="btn-add-comment" style="display:'+(open?'none':'inline-flex')+'" onclick="openCommentBox(this,\''+inpId+'\')">&#128172; Add a comment</button>'
+    + '<button type="button" class="btn-add-comment" style="display:'+(open?'none':'inline-flex')+'" onclick="openCommentBox(this,\''+inpId+'\')">Add a comment</button>'
     + '<div class="inline-react" style="display:'+(open?'flex':'none')+';">'
     + '<textarea class="react-input" rows="1" id="'+inpId+'" placeholder="What did you think?" oninput="_cboxDraft[this.id]=this.value">'+(open?escAttr(_cboxDraft[inpId]):'')+'</textarea>'
     + '<button class="btn-send" onclick="'+escAttr('delete _cboxDraft[\''+inpId+'\'];'+sendCall)+'">Send</button>'
@@ -2916,7 +2924,7 @@ function _renderListInner(list) {
   var el=document.getElementById(list+'-list');
   var items=state[list];
   var emptyMsgs={watching:"Nothing on yet — add a show to get started.",watchlist:"Save your next binge.",watched:'No credits have rolled yet. Get watching.'};
-  if(!items.length){el.innerHTML='<div class="empty"><div class="empty-icon">&#127871;</div>'+emptyMsgs[list]+'</div>';return;}
+  if(!items.length){el.innerHTML='<div class="empty"><div class="empty-icon"></div>'+emptyMsgs[list]+'</div>';return;}
 
   if (list === 'watched') {
     var rated = items.filter(function(s){ return !s.dnf; });
@@ -2933,12 +2941,12 @@ function _renderListInner(list) {
       var dnfCollapsed=!!_collapsedSections['watched:dnf'];
       dnf.sort(function(a,b){return a.title.localeCompare(b.title);});
       html+='<div class="dnf-section'+(dnfCollapsed?' collapsed':'')+'" data-ckey="watched:dnf">'
-        + '<div class="dnf-header" onclick="toggleServiceSection(\'watched:dnf\')">'+(dnfCollapsed?'&#9656;':'&#9662;')+' &#128683; Didn&#39;t Finish <span class="service-count">('+dnf.length+')</span></div>'
+        + '<div class="dnf-header" onclick="toggleServiceSection(\'watched:dnf\')">'+(dnfCollapsed?'&#9656;':'&#9662;')+' Didn&#39;t Finish <span class="service-count">('+dnf.length+')</span></div>'
         + '<div class="shows-grid">' + (dnfCollapsed ? '' : dnf.map(function(s){ return buildDNFCard(s); }).join('')) + '</div>'
         + '</div>';
     }
     if (!rated.length && !dnf.length) {
-      html='<div class="empty"><div class="empty-icon">&#127871;</div>No credits have rolled yet. Get watching.</div>';
+      html='<div class="empty"><div class="empty-icon"></div>No credits have rolled yet. Get watching.</div>';
     }
     el.innerHTML=html;
     return;
@@ -2955,7 +2963,7 @@ function _renderListInner(list) {
       });
     }
     if (waiting.length) {
-      html+='<div class="waiting-section"><div class="waiting-header">&#8987; Waiting for New Season</div>';
+      html+='<div class="waiting-section"><div class="waiting-header">Waiting for New Season</div>';
       var wGroups=groupByService(waiting); var wServices=Object.keys(wGroups).sort();
       wServices.forEach(function(svc){
         html += renderServiceGroup('watchlist:waiting:'+svc, svc, wGroups[svc], 'watchlist');
@@ -2975,7 +2983,7 @@ function _renderListInner(list) {
 
 
 function recommendBtn(showId){
-  return '<button class="btn-recommend" onclick="openRecommendPicker(\''+showId+'\')" title="Recommend to a friend">&#127919;</button>';
+  return '<button class="btn-recommend" onclick="openRecommendPicker(\''+showId+'\')" title="Recommend to a friend" aria-label="Recommend to a friend"><svg class="lg-ico" aria-hidden="true"><use href="#lg-send"/></svg></button>';
 }
 
 // Session-only memory of which cards' ratings disclosures are expanded,
@@ -3032,7 +3040,7 @@ function buildDNFCard(s) {
   var menuHTML = '<div class="card-menu-wrap">'
     + '<button class="btn-more" onclick="toggleCardMenu(this)" title="More">&#8942;</button>'
     + '<div class="card-menu">'
-    + '<button class="card-menu-item" onclick="moveDNFToBinged(\''+sid+'\');closeCardMenus();">&#127871; I finished it after all</button>'
+    + '<button class="card-menu-item" onclick="moveDNFToBinged(\''+sid+'\');closeCardMenus();">I finished it after all</button>'
     + '<button class="card-menu-item" onclick="toggleHide(\'watched\',\''+sid+'\');closeCardMenus();">'+hideLabel+'</button>'
     + '<button class="card-menu-item" onclick="togglePlatEdit(\'watched\',\''+sid+'\');closeCardMenus();">Edit streaming service</button>'
     + '<button class="card-menu-item danger" onclick="removeShow(\'watched\',\''+sid+'\');closeCardMenus();">Remove</button>'
@@ -3049,7 +3057,7 @@ function buildDNFCard(s) {
     + '</div>'
     + otherRatingsDNF
     + '<div class="show-move"><button class="btn-start" onclick="startWatchingFromDNF(\''+sid+'\')">Start Watching</button>'
-    + (isDocFilm(s) ? '' : '<button class="waiting-season-btn" onclick="moveToWaiting(\'watched\',\''+sid+'\')">Waiting for New Season &#8987;</button>')
+    + (isDocFilm(s) ? '' : '<button class="waiting-season-btn" onclick="moveToWaiting(\'watched\',\''+sid+'\')">Waiting for New Season</button>')
     + '</div>'
     + '<div class="react-area">' + talkPreviewHTML(s.title) + reactToggle + '</div>'
     + '</div>';
@@ -3060,8 +3068,8 @@ function buildWatchingCard(s) {
   // All three status choices are always visible, in this fixed order, as
   // equal-weight peer buttons — a status is a choice people expect to see
   // directly, not something they'd think to look for in the overflow menu.
-  var primaryHTML = (isDocFilm(s) ? '' : '<button class="waiting-season-btn" onclick="markWaiting(\''+sid+'\')">Waiting for New Season &#8987;</button>')
-    + '<button class="done-watching-btn" onclick="markWatched(\''+sid+'\')">Finished &#127871;</button>';
+  var primaryHTML = (isDocFilm(s) ? '' : '<button class="waiting-season-btn" onclick="markWaiting(\''+sid+'\')">Waiting for New Season</button>')
+    + '<button class="done-watching-btn" onclick="markWatched(\''+sid+'\')">Finished</button>';
   var dnfHTML = '<button class="didnt-finish-btn" onclick="markDNF(\''+sid+'\')">Didn&#39;t Finish</button>';
 
   var hideLabel = s.hidden ? 'Show to friends' : 'Hide from friends';
@@ -3079,7 +3087,7 @@ function buildWatchingCard(s) {
   var platformRow=s.editingPlatform?platformSelect('watching',sid,s.platform):'';
   var otherRatingsW=ownCardRatingsHTML(s.title, 'watching', sid, s.rating);
 
-  var newSeasonBadge = s.newSeasonAvailable ? '<span class="new-season-badge" onclick="tapNewSeasonOnWatching(\''+sid+'\')">&#127881; New season!</span>' : '';
+  var newSeasonBadge = s.newSeasonAvailable ? '<span class="new-season-badge" onclick="tapNewSeasonOnWatching(\''+sid+'\')">New season!</span>' : '';
   return '<div class="show-card'+(s.hidden?' is-hidden':'')+'" id="card-'+sid+'">'
     + '<div class="show-card-top">'+showTile(s)+'<div class="show-info"><div class="show-title">'+s.title+(s.hidden?'<span class="hidden-badge">Hidden from friends</span>':'')+newSeasonBadge+'</div>'+platformRow+'</div>'+recommendBtn(sid)+menuHTML+'</div>'
     + otherRatingsW
@@ -3104,10 +3112,10 @@ function buildWaitingCard(s) {
   var platformRow=s.editingPlatform?platformSelect('watchlist',sid,s.platform):'';
   var otherRatingsWait=ownCardRatingsHTML(s.title, 'watchlist', sid, s.rating);
 
-  var newSeasonBadge = s.newSeasonAvailable ? '<span class="new-season-badge" onclick="tapNewSeasonBadge(\''+sid+'\')">&#127881; New season!</span>' : '';
+  var newSeasonBadge = s.newSeasonAvailable ? '<span class="new-season-badge" onclick="tapNewSeasonBadge(\''+sid+'\')">New season!</span>' : '';
   return '<div class="show-card'+(s.hidden?' is-hidden':'')+'" id="card-'+sid+'"><div class="show-card-top">'+showTile(s)+'<div class="show-info"><div class="show-title">'+s.title+(s.hidden?'<span class="hidden-badge">Hidden from friends</span>':'')+newSeasonBadge+'</div>'+platformRow+'</div>'+recommendBtn(sid)+menuHTML+'</div>'
     + otherRatingsWait
-    + '<div class="show-move"><button class="resume-watching-btn" onclick="resumeWatching(\''+sid+'\')">Resume Watching &#9654;</button><button class="didnt-finish-btn" onclick="markDNFFromWaiting(\''+sid+'\')">Didn&#39;t Finish</button></div>'
+    + '<div class="show-move"><button class="resume-watching-btn" onclick="resumeWatching(\''+sid+'\')">Resume Watching</button><button class="didnt-finish-btn" onclick="markDNFFromWaiting(\''+sid+'\')">Didn&#39;t Finish</button></div>'
     + '<div class="react-area">'+talkPreviewHTML(s.title)+reactToggle+'</div>'
     + '</div>';
 }
@@ -3129,13 +3137,13 @@ function buildWatchlistCard(s) {
   var recommendedBadge='';
   if(s.source==='recommendation'&&s.influencedBy){
     var recName=state.influencerNames[s.influencedBy];
-    if(recName) recommendedBadge='<div style="font-size:11px;color:var(--fig);font-weight:600;margin-top:2px;">&#127919; Recommended by '+recName+'</div>';
+    if(recName) recommendedBadge='<div style="font-size:11px;color:var(--fig);font-weight:600;margin-top:2px;">Recommended by '+recName+'</div>';
   }
   var otherRatingsList=ownCardRatingsHTML(s.title, 'watchlist', sid, s.rating);
 
   return '<div class="show-card'+(s.hidden?' is-hidden':'')+'" id="card-'+sid+'"><div class="show-card-top">'+showTile(s)+'<div class="show-info"><div class="show-title">'+s.title+(s.hidden?'<span class="hidden-badge">Hidden from friends</span>':'')+'</div>'+platformRow+recommendedBadge+'</div>'+recommendBtn(sid)+menuHTML+'</div>'
     + otherRatingsList
-    + '<div class="show-move"><button class="btn-start" onclick="moveToWatching(\''+sid+'\')">Start Watching</button>' + (isDocFilm(s) ? '' : '<button class="waiting-season-btn" onclick="markWaitingFromList(\''+sid+'\')">Waiting for New Season &#8987;</button>') + '</div>'
+    + '<div class="show-move"><button class="btn-start" onclick="moveToWatching(\''+sid+'\')">Start Watching</button>' + (isDocFilm(s) ? '' : '<button class="waiting-season-btn" onclick="markWaitingFromList(\''+sid+'\')">Waiting for New Season</button>') + '</div>'
     + '<div class="react-area">'+talkPreviewHTML(s.title)+reactToggle+'</div>'
     + '</div>';
 }
@@ -3330,8 +3338,8 @@ function buildRoomTickerMessages() {
   var newShows = Object.keys(earliestByTitle).filter(function(k) { return earliestByTitle[k] > cutoff; }).length;
   var activeCount = Object.keys(activeFriends).length;
   var msgs = [];
-  if (newShows > 0) msgs.push({icon:'&#127871;', text:newShows + ' new show' + (newShows===1?'':'s') + ' added to the room this week'});
-  if (activeCount > 0) msgs.push({icon:'&#128075;', text:activeCount + ' friend' + (activeCount===1?'':'s') + ' active in the room this week'});
+  if (newShows > 0) msgs.push({icon:'', text:newShows + ' new show' + (newShows===1?'':'s') + ' added to the room this week'});
+  if (activeCount > 0) msgs.push({icon:'', text:activeCount + ' friend' + (activeCount===1?'':'s') + ' active in the room this week'});
   return msgs;
 }
 
@@ -3521,14 +3529,14 @@ function renderNewThisWeekList(){
   var items = buildNewThisWeekList();
   _newThisWeekCache = items;
   if (!items.length){
-    el.innerHTML = '<div class="empty"><div class="empty-icon">&#127881;</div>Nothing new in the last 7 days.</div>';
+    el.innerHTML = '<div class="empty"><div class="empty-icon"></div>Nothing new in the last 7 days.</div>';
     return;
   }
   el.innerHTML = items.map(function(item, i){
     var thumbClick = item.tmdb_id ? ' onclick="openShowDetails('+item.tmdb_id+')" title="Show details" style="cursor:pointer;' : ' style="';
     var thumb = item.poster_path
       ? '<img src="'+TMDB_IMG+item.poster_path+'"'+thumbClick+'width:48px;height:72px;border-radius:8px;object-fit:cover;flex-shrink:0;margin-right:16px;" />'
-      : '<div'+thumbClick+'width:48px;height:72px;border-radius:8px;background:var(--olive);flex-shrink:0;margin-right:16px;display:flex;align-items:center;justify-content:center;font-size:18px;">&#128252;</div>';
+      : '<div'+thumbClick+'width:48px;height:72px;border-radius:8px;background:var(--olive);flex-shrink:0;margin-right:16px;display:flex;align-items:center;justify-content:center;font-size:18px;"><svg class="lg-ph" aria-hidden="true"><use href="#lg-tv"/></svg></div>';
     var destKey = item.list==='watched' ? (item.dnf?'dnf':'watched') : item.list==='watchlist' ? (item.waitingForSeason?'waiting':'watchlist') : 'watching';
     var destLabel = destKey === 'dnf' ? 'Did Not Finish' : ADD_DEST_DISPLAY_LABELS[destKey];
     var subLine = (item.mine ? 'You' : escAttr(item.friendName)) + ' added this to ' + destLabel;
@@ -3634,14 +3642,14 @@ function renderSharedTasteList(friendId){
   var friendFirstName = f ? f.name.split(' ')[0] : 'Them';
   var list = buildSharedTasteList(friendId);
   if (!list.length){
-    el.innerHTML = '<div class="empty"><div class="empty-icon">&#128156;</div>No overlap yet &mdash; nothing you both have.</div>';
+    el.innerHTML = '<div class="empty"><div class="empty-icon"></div>No overlap yet &mdash; nothing you both have.</div>';
     return;
   }
   el.innerHTML = list.map(function(s){
     var thumbClick = s.tmdb_id ? ' onclick="openShowDetails('+s.tmdb_id+')" title="Show details" style="cursor:pointer;' : ' style="';
     var thumb = s.poster_path
       ? '<img src="'+TMDB_IMG+s.poster_path+'"'+thumbClick+'width:48px;height:72px;border-radius:8px;object-fit:cover;flex-shrink:0;margin-right:16px;" />'
-      : '<div'+thumbClick+'width:48px;height:72px;border-radius:8px;background:var(--olive);flex-shrink:0;margin-right:16px;display:flex;align-items:center;justify-content:center;font-size:18px;">&#128252;</div>';
+      : '<div'+thumbClick+'width:48px;height:72px;border-radius:8px;background:var(--olive);flex-shrink:0;margin-right:16px;display:flex;align-items:center;justify-content:center;font-size:18px;"><svg class="lg-ph" aria-hidden="true"><use href="#lg-tv"/></svg></div>';
     // Your side opens the same tap-to-rate sheet as your tiles.
     var myR = rateTriggerHTML(s.myRating || 0, "openRateSheet('"+s.myList+"','"+s.myId+"','"+friendId+"')");
     var theirR = s.theirRating ? remoteStatic(s.theirRating) : '<span style="font-size:11px;color:var(--muted);">Not rated</span>';
@@ -3701,14 +3709,14 @@ function renderShowsByPlatform(q){
   var el=document.getElementById('friends-grid');
   var matchLabel='<div style="grid-column:1/-1;font-size:12px;color:var(--muted);margin-bottom:2px;">Showing: <b style="color:var(--terra);">'+matchedPlatformNames(q).map(escAttr).join(', ')+'</b></div>';
   if(!list.length){
-    el.innerHTML=matchLabel+'<div class="empty" style="grid-column:1/-1;"><div class="empty-icon">&#128269;</div>No shows on a platform matching "'+escAttr(q)+'".</div>';
+    el.innerHTML=matchLabel+'<div class="empty" style="grid-column:1/-1;"><div class="empty-icon"></div>No shows on a platform matching "'+escAttr(q)+'".</div>';
     return;
   }
   el.innerHTML=matchLabel+list.map(function(s,i){
     var thumbClick = s.tmdb_id ? ' onclick="openShowDetails('+s.tmdb_id+')" title="Show details" style="cursor:pointer;' : ' style="';
     var thumb=s.poster_path
       ? '<img src="'+TMDB_IMG+s.poster_path+'"'+thumbClick+'width:100%;aspect-ratio:2/3;border-radius:8px;object-fit:cover;" />'
-      : '<div'+thumbClick+'width:100%;aspect-ratio:2/3;border-radius:8px;background:var(--olive);display:flex;align-items:center;justify-content:center;font-size:22px;">&#128252;</div>';
+      : '<div'+thumbClick+'width:100%;aspect-ratio:2/3;border-radius:8px;background:var(--olive);display:flex;align-items:center;justify-content:center;font-size:22px;"><svg class="lg-ph" aria-hidden="true"><use href="#lg-tv"/></svg></div>';
     var ratings=s.people.filter(function(p){return p.rating>0;});
     var avg=ratings.length ? (ratings.reduce(function(a,b){return a+b.rating;},0)/ratings.length) : null;
     var ratingLine = avg ? (remoteAvgLabel(avg.toFixed(1))+' &middot; '+ratings.length+' rated') : 'Not yet rated';
@@ -3784,7 +3792,7 @@ function renderCrewGroupedByPlatform(q){
   if (q) list = list.filter(function(s){ return s.title.toLowerCase().indexOf(q)!==-1 || s.platform.toLowerCase().indexOf(q)!==-1; });
   var el = document.getElementById('friends-grid');
   if (!list.length) {
-    el.innerHTML = '<div class="empty" style="grid-column:1/-1;"><div class="empty-icon">&#128252;</div>Nothing to show here yet.</div>';
+    el.innerHTML = '<div class="empty" style="grid-column:1/-1;"><div class="empty-icon"><svg class="lg-ph" aria-hidden="true"><use href="#lg-tv"/></svg></div>Nothing to show here yet.</div>';
     return;
   }
   var groups={};
@@ -3842,7 +3850,7 @@ function renderFriends() {
       +'</div>';
   }
   if (!state.friendsLoaded) {
-    document.getElementById('friends-grid').innerHTML=selfTile+'<div class="empty" style="grid-column:1/-1;"><div class="empty-icon">&#8987;</div>Loading your Living Room&hellip;</div>';
+    document.getElementById('friends-grid').innerHTML=selfTile+'<div class="empty" style="grid-column:1/-1;"><div class="empty-spin"></div>Loading your Living Room&hellip;</div>';
     return;
   }
   populateCrewPersonFilter();
@@ -3860,7 +3868,7 @@ function renderFriends() {
   // browsing someone else's room keeps the plain room-only search.
   var useWhoRated=!!q && !state.currentRoomIsAdminView;
   if(useWhoRated && !whoRatedDataReady()){
-    document.getElementById('friends-grid').innerHTML='<div class="empty" style="grid-column:1/-1;"><div class="empty-icon">&#8987;</div>Loading&hellip;</div>';
+    document.getElementById('friends-grid').innerHTML='<div class="empty" style="grid-column:1/-1;"><div class="empty-spin"></div>Loading&hellip;</div>';
     updateConversationsBadge();
     return;
   }
@@ -3890,7 +3898,7 @@ function renderFriends() {
     return nameMatch || matches.length>0;
   });
   if(q && !sorted.length && !whoRatedHTML){
-    document.getElementById('friends-grid').innerHTML=selfTile+'<div class="empty" style="grid-column:1/-1;"><div class="empty-icon">&#128269;</div>No shows or friends match "'+escAttr(q)+'".</div>';
+    document.getElementById('friends-grid').innerHTML=selfTile+'<div class="empty" style="grid-column:1/-1;"><div class="empty-icon"></div>No shows or friends match "'+escAttr(q)+'".</div>';
     updateConversationsBadge();
     return;
   }
@@ -4008,7 +4016,7 @@ async function showFriend(id) {
               + (mineExisting ? '<div class="lr-rate-line">'+lrRatingPair('You', remoteRatingLR(mineExisting.list, mineExisting.show.id, mineExisting.show.rating, f.id))+'</div>' : '');
           }
         }
-        var corner='<button class="btn-recommend" onclick="openRecommendPicker(\''+s.id+'\')" title="Recommend to a friend">&#127919;</button>';
+        var corner='<button class="btn-recommend" onclick="openRecommendPicker(\''+s.id+'\')" title="Recommend to a friend" aria-label="Recommend to a friend"><svg class="lg-ico" aria-hidden="true"><use href="#lg-send"/></svg></button>';
         if(!isSelf) corner+= mineExisting
           ? '<span class="on-list-badge">'+onListBadgeContent(mineExisting)+'</span>'
           : '<button class="btn-add-prominent" onclick="addFromFriendCard(\''+s.id+'\')" title="Add to my list">+ Add</button>';
@@ -4022,7 +4030,7 @@ async function showFriend(id) {
 
     var top5HTML = '';
   if (f.top5 && f.top5.length) {
-    top5HTML = '<div class="section-label">&#127942; Top 5 of All Time</div><div style="display:flex;flex-direction:column;gap:6px;margin-bottom:20px;">'
+    top5HTML = '<div class="section-label">Top 5 of All Time</div><div style="display:flex;flex-direction:column;gap:6px;margin-bottom:20px;">'
       + f.top5.map(function(s,i){
           var t=typeof s==='object'?s.title:s;
           var p=typeof s==='object'&&s.platform?s.platform:'';
@@ -4046,7 +4054,7 @@ async function showFriend(id) {
   // -- hiding this for non-owners instead of showing a button that would
   // silently fail.
   var removeBtn='';
-  var sharedTasteBtn=isSelf?'':'<button class="btn-shared-taste" onclick="openSharedTasteModal(\''+f.id+'\')">&#128156; Shared Taste</button>';
+  var sharedTasteBtn=isSelf?'':'<button class="btn-shared-taste" onclick="openSharedTasteModal(\''+f.id+'\')">Shared Taste</button>';
   var roomTitle=isSelf?'Your Living Room':f.name+"'s Living Room";
   var cityLine=isSelf?'':'<div style="font-size:13px;color:var(--muted)">'+f.city+'</div>';
   var onItems=friendSectionItems(f,'on');
@@ -4067,15 +4075,15 @@ async function showFriend(id) {
     +'<div><div style="font-family:var(--serif);font-size:20px;font-weight:700">'+roomTitle+'</div>'
     +cityLine+'</div></div>'
     +frvAllControls
-    +'<div style="margin:24px 0 12px;background:var(--fig);color:white;padding:10px 18px;border-radius:8px;font-family:var(--serif);font-size:15px;font-weight:700;letter-spacing:0.2px;display:flex;align-items:center;gap:8px;">&#128250; Watching</div>'+frvSectionToggleControls(f.id,'on',onItems)+fGrouped(onItems,'w','on')
-    +'<div style="margin:24px 0 12px;background:var(--fig);color:white;padding:10px 18px;border-radius:8px;font-family:var(--serif);font-size:15px;font-weight:700;letter-spacing:0.2px;display:flex;align-items:center;gap:8px;">🛋️ My List</div>'+frvSectionToggleControls(f.id,'seat',seatItems)+fGrouped(seatItems,'wl','seat')
+    +'<div style="margin:24px 0 12px;background:var(--fig);color:white;padding:10px 18px;border-radius:8px;font-family:var(--serif);font-size:15px;font-weight:700;letter-spacing:0.2px;display:flex;align-items:center;gap:8px;">Watching</div>'+frvSectionToggleControls(f.id,'on',onItems)+fGrouped(onItems,'w','on')
+    +'<div style="margin:24px 0 12px;background:var(--fig);color:white;padding:10px 18px;border-radius:8px;font-family:var(--serif);font-size:15px;font-weight:700;letter-spacing:0.2px;display:flex;align-items:center;gap:8px;">My List</div>'+frvSectionToggleControls(f.id,'seat',seatItems)+fGrouped(seatItems,'wl','seat')
   +(waitingItems.length
-    ? '<div style="margin:24px 0 12px;background:var(--fig);color:white;padding:10px 18px;border-radius:8px;font-family:var(--serif);font-size:15px;font-weight:700;letter-spacing:0.2px;display:flex;align-items:center;gap:8px;">&#8987; Waiting for New Season</div>'+frvSectionToggleControls(f.id,'waiting',waitingItems)+fGrouped(waitingItems,'wl','waiting')
+    ? '<div style="margin:24px 0 12px;background:var(--fig);color:white;padding:10px 18px;border-radius:8px;font-family:var(--serif);font-size:15px;font-weight:700;letter-spacing:0.2px;display:flex;align-items:center;gap:8px;">Waiting for New Season</div>'+frvSectionToggleControls(f.id,'waiting',waitingItems)+fGrouped(waitingItems,'wl','waiting')
     : '')
   +(f.watched&&f.watched.length
-    ? '<div style="margin:24px 0 12px;background:var(--fig);color:white;padding:10px 18px;border-radius:8px;font-family:var(--serif);font-size:15px;font-weight:700;letter-spacing:0.2px;display:flex;align-items:center;gap:8px;">&#128252; Binged</div>'+frvSectionToggleControls(f.id,'binged',bingedItems)+fGrouped(bingedItems,'wd','binged')
+    ? '<div style="margin:24px 0 12px;background:var(--fig);color:white;padding:10px 18px;border-radius:8px;font-family:var(--serif);font-size:15px;font-weight:700;letter-spacing:0.2px;display:flex;align-items:center;gap:8px;">Binged</div>'+frvSectionToggleControls(f.id,'binged',bingedItems)+fGrouped(bingedItems,'wd','binged')
       +(dnfItems.length
-        ? '<div class="dnf-section'+(dnfCollapsed?' collapsed':'')+'" data-ckey="'+dnfKey+'" data-cfid="'+f.id+'"><div class="dnf-header" onclick="toggleFriendSection(\''+dnfKey+'\',\''+f.id+'\')">'+(dnfCollapsed?'&#9656;':'&#9662;')+' &#128683; Didn&#39;t Finish <span class="service-count">('+dnfItems.length+')</span></div>'
+        ? '<div class="dnf-section'+(dnfCollapsed?' collapsed':'')+'" data-ckey="'+dnfKey+'" data-cfid="'+f.id+'"><div class="dnf-header" onclick="toggleFriendSection(\''+dnfKey+'\',\''+f.id+'\')">'+(dnfCollapsed?'&#9656;':'&#9662;')+' Didn&#39;t Finish <span class="service-count">('+dnfItems.length+')</span></div>'
           + '<div class="shows-grid">' + dnfItems.sort(function(a,b){return a.title.localeCompare(b.title);}).map(function(s){
               var inpId='finp-wd-'+f.id+'-'+s.id;
               var reactToggle=commentBoxHTML(inpId, "submitFR('"+f.id+"','wd','"+s.id+"')");
@@ -4322,7 +4330,7 @@ async function showRoomPicker() {
 async function loadAndRenderRoomPicker() {
   var grid = document.getElementById('room-picker-grid');
   if (!state.myRoomsLoaded && grid) {
-    grid.innerHTML = '<div class="empty" style="grid-column:1/-1;"><div class="empty-icon">&#8987;</div>Loading your rooms&hellip;</div>';
+    grid.innerHTML = '<div class="empty" style="grid-column:1/-1;"><div class="empty-spin"></div>Loading your rooms&hellip;</div>';
   }
   try {
     const { data, error } = await sb.rpc('get_my_living_rooms');
@@ -4706,7 +4714,7 @@ function renderRoomPickerSearch() {
   var platformQuery = isPlatformQuery(q);
   if (platformQuery ? !state.allRoomsSearchLoaded : !whoRatedDataReady()) {
     if (platformQuery) loadAllRoomsSearchData();
-    resultsEl.innerHTML = '<div class="empty"><div class="empty-icon">&#8987;</div>Loading&hellip;</div>';
+    resultsEl.innerHTML = '<div class="empty"><div class="empty-spin"></div>Loading&hellip;</div>';
     return;
   }
   var list = buildAllRoomsSearchResultsByPerson(q);
@@ -4723,7 +4731,7 @@ function renderRoomPickerSearch() {
     ? '<div style="font-size:12px;color:var(--muted);margin-bottom:8px;">Showing: <b style="color:var(--terra);">' + matchedPlatformNames(q).map(escAttr).join(', ') + '</b></div>'
     : '';
   if (!list.length) {
-    resultsEl.innerHTML = whoRatedHTML || (matchLabel + '<div class="empty"><div class="empty-icon">&#128269;</div>No shows or people match "' + escAttr(q) + '".</div>');
+    resultsEl.innerHTML = whoRatedHTML || (matchLabel + '<div class="empty"><div class="empty-icon"></div>No shows or people match "' + escAttr(q) + '".</div>');
     return;
   }
   resultsEl.innerHTML = matchLabel + '<div class="friends-grid">' + list.map(function(person, pi) {
@@ -4784,7 +4792,7 @@ window.enterLivingRoom = async function(roomId, roomName, isOwner, isAdminView, 
   // was scrolled to. Jumps to a specific show scroll again after this.
   window.scrollTo(0, 0);
   var nameEl = document.getElementById('current-room-name');
-  if (nameEl) nameEl.textContent = roomName + (isAdminView ? ' 👁️ Admin View' : '');
+  if (nameEl) nameEl.textContent = roomName + (isAdminView ? ' Admin View' : '');
   var renameBtn = document.getElementById('rename-room-btn');
   if (renameBtn) renameBtn.style.display = isOwner ? 'inline' : 'none';
   var deleteBtn = document.getElementById('delete-room-btn');
@@ -4922,7 +4930,7 @@ window.openPrimeTimeView = async function() {
   if (searchWrap) searchWrap.style.display = 'block';
   var listEl = document.getElementById('prime-time-list-view');
   listEl.style.display = 'block';
-  listEl.innerHTML = '<div class="empty"><div class="empty-icon">&#8987;</div>Loading&hellip;</div>';
+  listEl.innerHTML = '<div class="empty"><div class="empty-spin"></div>Loading&hellip;</div>';
   await loadPrimeTimeData();
   renderPrimeTimeList();
 };
@@ -5111,7 +5119,7 @@ window.openFullLineupView = async function() {
   if (searchWrap) searchWrap.style.display = 'block';
   var listEl = document.getElementById('full-lineup-list');
   listEl.style.display = 'block';
-  listEl.innerHTML = '<div class="empty"><div class="empty-icon">&#8987;</div>Loading&hellip;</div>';
+  listEl.innerHTML = '<div class="empty"><div class="empty-spin"></div>Loading&hellip;</div>';
   await loadFullLineupData();
   renderFullLineup();
   _fillTrendingPlatforms();
@@ -5157,7 +5165,7 @@ window.backFromFullLineupView = function() {
 function rankThumbHTML(s) {
   return s.poster_path
     ? '<img src="https://image.tmdb.org/t/p/w185'+s.poster_path+'" alt="" style="width:56px;height:84px;border-radius:8px;object-fit:cover;flex-shrink:0;margin-right:16px;" />'
-    : '<div style="width:56px;height:84px;border-radius:8px;background:var(--olive);flex-shrink:0;margin-right:16px;display:flex;align-items:center;justify-content:center;font-size:20px;">&#128252;</div>';
+    : '<div style="width:56px;height:84px;border-radius:8px;background:var(--olive);flex-shrink:0;margin-right:16px;display:flex;align-items:center;justify-content:center;font-size:20px;"><svg class="lg-ph" aria-hidden="true"><use href="#lg-tv"/></svg></div>';
 }
 // Small rank pill at the start of the title (gold for a top 3).
 function rankNumHTML(n, gold) {
@@ -5300,7 +5308,7 @@ function detailPosterHTML(s) {
   var click = s.tmdb_id ? ' poster-clickable" onclick="openShowDetails('+s.tmdb_id+')' : '';
   var inner = s.poster_path
     ? '<img src="https://image.tmdb.org/t/p/w342'+s.poster_path+'" alt="" />'
-    : '<div class="detail-poster-empty">&#128252;</div>';
+    : '<div class="detail-poster-empty"><svg class="lg-ph" aria-hidden="true"><use href="#lg-tv"/></svg></div>';
   return '<div class="detail-poster'+click+'">'+inner+(s.tmdb_id ? '<span class="detail-poster-i">i</span>' : '')+'</div>';
 }
 
@@ -5355,8 +5363,8 @@ function renderFullLineup(){
   };
   if (!_fullLineupListCache.length && _hotTab !== 'service' && _hotTab !== 'new') {
     el.innerHTML = q
-      ? '<div class="empty"><div class="empty-icon">&#128269;</div>No shows match "'+escAttr(q)+'".</div>'
-      : '<div class="empty"><div class="empty-icon">&#128293;</div>Nothing to show right now &mdash; check back soon.</div>';
+      ? '<div class="empty"><div class="empty-icon"></div>No shows match "'+escAttr(q)+'".</div>'
+      : '<div class="empty"><div class="empty-icon"></div>Nothing to show right now &mdash; check back soon.</div>';
     return;
   }
   // Two tabs instead of one long scroll (people rarely got past 25 rows to
@@ -5367,8 +5375,8 @@ function renderFullLineup(){
     return '<button type="button" role="tab" class="' + (_hotTab === key ? 'active' : '') + '" onclick="setHotTab(\'' + key + '\')">' + label + '</button>';
   };
   var seg = '<div class="hot-seg hot-seg-4" role="tablist">'
-    + tabBtn('trending', '&#128200; Trending') + tabBtn('service', '&#128250; By service')
-    + tabBtn('new', '&#10024; Just premiered') + tabBtn('showup', '&#128293; On ShowUp')
+    + tabBtn('trending', 'Trending') + tabBtn('service', 'By service')
+    + tabBtn('new', 'Just premiered') + tabBtn('showup', 'On ShowUp')
     + '</div>';
   var sub = function(t) { return '<div style="font-size:12px;color:var(--muted);margin:-6px 0 10px;">' + t + '</div>'; };
   var html = seg;
@@ -5391,7 +5399,7 @@ function renderFullLineup(){
       _fullLineupListCache = _fullLineupListCache.concat(svcList);
       html += svcList.length
         ? svcList.map(function(s, j) { return _hotRow(s, base + j, j + 1); }).join('')
-        : '<div class="empty"><div class="empty-icon">&#128250;</div>' + (q ? 'No shows match "' + escAttr(q) + '".' : 'Nothing found for ' + escAttr(_hotSvc) + ' right now.') + '</div>';
+        : '<div class="empty"><div class="empty-icon"><svg class="lg-ph" aria-hidden="true"><use href="#lg-tv"/></svg></div>' + (q ? 'No shows match "' + escAttr(q) + '".' : 'Nothing found for ' + escAttr(_hotSvc) + ' right now.') + '</div>';
     }
   } else if (_hotTab === 'new') {
     _loadHotNew();
@@ -5404,18 +5412,18 @@ function renderFullLineup(){
       _fullLineupListCache = _fullLineupListCache.concat(newList);
       html += newList.length
         ? newList.map(function(s, j) { return _hotRow(s, nbase + j, j + 1); }).join('')
-        : '<div class="empty"><div class="empty-icon">&#10024;</div>' + (q ? 'No shows match "' + escAttr(q) + '".' : 'No new series in the last 2 weeks.') + '</div>';
+        : '<div class="empty"><div class="empty-icon"></div>' + (q ? 'No shows match "' + escAttr(q) + '".' : 'No new series in the last 2 weeks.') + '</div>';
     }
   } else if (_hotTab === 'trending') {
     html += sub('Trending in the US this week');
     html += trending.length
       ? trending.map(function(s, j) { return _hotRow(s, crowd.length + j, j + 1); }).join('')
-      : '<div class="empty"><div class="empty-icon">&#128200;</div>' + (q ? 'No trending shows match "' + escAttr(q) + '".' : 'Trending list unavailable right now.') + '</div>';
+      : '<div class="empty"><div class="empty-icon"></div>' + (q ? 'No trending shows match "' + escAttr(q) + '".' : 'Trending list unavailable right now.') + '</div>';
   } else {
     html += sub('What people on ShowUp added, finished or talked about in the last 30 days');
     html += crowd.length
       ? crowd.map(function(s, i) { return _hotRow(s, i, i + 1); }).join('')
-      : '<div class="empty"><div class="empty-icon">&#128293;</div>' + (q ? 'No ShowUp shows match "' + escAttr(q) + '".' : 'Nothing yet.') + '</div>';
+      : '<div class="empty"><div class="empty-icon"></div>' + (q ? 'No ShowUp shows match "' + escAttr(q) + '".' : 'Nothing yet.') + '</div>';
   }
   el.innerHTML = html;
 }
@@ -5541,7 +5549,7 @@ window.openLineupView = async function() {
   if (searchWrap) searchWrap.style.display = 'block';
   var listEl = document.getElementById('lineup-list');
   listEl.style.display = 'block';
-  if (!_lineupData) listEl.innerHTML = '<div class="empty"><div class="empty-icon">&#8987;</div>Loading&hellip;</div>';
+  if (!_lineupData) listEl.innerHTML = '<div class="empty"><div class="empty-spin"></div>Loading&hellip;</div>';
   window.scrollTo(0, 0);
   await loadLineupData();
   renderLineup();
@@ -5569,8 +5577,8 @@ function renderLineup() {
     : '';
   if (!list.length) {
     el.innerHTML = matchLabel + (q
-      ? '<div class="empty"><div class="empty-icon">&#128269;</div>No shows match "'+escAttr(q)+'".</div>'
-      : '<div class="empty"><div class="empty-icon">&#128220;</div>No shows yet.</div>');
+      ? '<div class="empty"><div class="empty-icon"></div>No shows match "'+escAttr(q)+'".</div>'
+      : '<div class="empty"><div class="empty-icon"></div>No shows yet.</div>');
     return;
   }
   // A-Z headings + index strip -- only for the full list, not search results.
@@ -5701,8 +5709,8 @@ function renderPrimeTimeList() {
     : '';
   if (!list.length) {
     listEl.innerHTML = matchLabel + (q
-      ? '<div class="empty"><div class="empty-icon">&#128269;</div>No shows match "'+escAttr(q)+'".</div>'
-      : '<div class="empty"><div class="empty-icon">&#128225;</div>No ratings yet across ShowUp.</div>');
+      ? '<div class="empty"><div class="empty-icon"></div>No shows match "'+escAttr(q)+'".</div>'
+      : '<div class="empty"><div class="empty-icon"></div>No ratings yet across ShowUp.</div>');
     return;
   }
   listEl.innerHTML = matchLabel + list.map(function(s, i){
@@ -5813,14 +5821,14 @@ var _adminRoomsCache = [];
 window.openAdminRoomsModal = async function() {
   if (!state.user || !state.user.isAdmin) return;
   var body = document.getElementById('admin-rooms-list');
-  body.innerHTML = '<div class="empty"><div class="empty-icon">&#8987;</div>Loading&hellip;</div>';
+  body.innerHTML = '<div class="empty"><div class="empty-spin"></div>Loading&hellip;</div>';
   document.getElementById('admin-rooms-modal').classList.add('active');
   try {
     const { data, error } = await sb.rpc('get_all_living_rooms_admin');
     if (error) throw error;
     _adminRoomsCache = data || [];
     if (!_adminRoomsCache.length) {
-      body.innerHTML = '<div class="empty"><div class="empty-icon">&#128065;</div>No rooms exist yet.</div>';
+      body.innerHTML = '<div class="empty"><div class="empty-icon"></div>No rooms exist yet.</div>';
       return;
     }
     // Rooms only the owner is in yet go in their own section, newest first,
@@ -5849,7 +5857,7 @@ window.openAdminRoomsModal = async function() {
     body.innerHTML = html;
   } catch(e) {
     console.error('get_all_living_rooms_admin error:', e);
-    body.innerHTML = '<div class="empty"><div class="empty-icon">&#9888;&#65039;</div>Could not load rooms.</div>';
+    body.innerHTML = '<div class="empty"><div class="empty-icon"></div>Could not load rooms.</div>';
   }
 };
 
@@ -6042,11 +6050,11 @@ function renderConversations(){
   if(!el)return;
   var events=buildConversationsFeed();
   if(!events.length){
-    el.innerHTML='<div class="empty"><div class="empty-icon">&#128172;</div>No activity in this room in the last 30 days.</div>';
+    el.innerHTML='<div class="empty"><div class="empty-icon"></div>No activity in this room in the last 30 days.</div>';
     return;
   }
   el.innerHTML=events.map(function(e){
-    var icon=e.type==='added'?'&#127881;':'&#128172;';
+    var icon=e.type==='added'?'<svg class="lg-ico" aria-hidden="true"><use href="#lg-list"/></svg>':'<svg class="lg-ico" aria-hidden="true"><use href="#lg-talk"/></svg>';
     var newTag=e.isNew?'<span class="conv-new-tag">NEW</span>':'';
     // Own-show events reuse showFriend's self-view (same as the self tile
     // in Your Crowd) instead of jumping to a different bottom tab -- every
@@ -6252,8 +6260,8 @@ function renderShowTalk(){
   _showTalkListCache=list;
   if(!list.length){
     el.innerHTML = q
-      ? '<div class="empty"><div class="empty-icon">&#128269;</div>No shows match "'+escAttr(q)+'".</div>'
-      : '<div class="empty"><div class="empty-icon">&#128483;&#65039;</div>No comments yet &mdash; be the first to say something about a show.</div>';
+      ? '<div class="empty"><div class="empty-icon"></div>No shows match "'+escAttr(q)+'".</div>'
+      : '<div class="empty"><div class="empty-icon"></div>No comments yet &mdash; be the first to say something about a show.</div>';
     return;
   }
   // Same row as Hot Right Now: the whole row opens the detail (Add lives
@@ -6316,7 +6324,7 @@ function showShowTalkDetail(idx){
     ratingHTML='<div style="display:flex;align-items:center;gap:6px;margin:2px 0 6px;">'+remotes+'<span style="font-size:13px;color:var(--muted);">'+s.avgRating.toFixed(1)+' ('+s.ratingCount+' rating'+(s.ratingCount===1?'':'s')+')</span></div>';
   }
   var reactBoxId='showtalk-react-'+idx;
-  var reactHTML='<div class="inline-react" style="margin:4px 0 12px;"><textarea class="react-input" rows="1" id="'+reactBoxId+'" placeholder="What did you think? 😊"></textarea><button class="btn-send" onclick="submitShowTalkReact('+idx+')">Send</button><button class="btn-cancel" onclick="document.getElementById(&quot;'+reactBoxId+'&quot;).value=\'\'">Cancel</button></div>';
+  var reactHTML='<div class="inline-react" style="margin:4px 0 12px;"><textarea class="react-input" rows="1" id="'+reactBoxId+'" placeholder="What did you think?"></textarea><button class="btn-send" onclick="submitShowTalkReact('+idx+')">Send</button><button class="btn-cancel" onclick="document.getElementById(&quot;'+reactBoxId+'&quot;).value=\'\'">Cancel</button></div>';
   panel.style.display='block';
   panel.innerHTML=(_showTalkHubMode ? '' : '<button class="rank-close" onclick="backToShowTalk()">← Back to Show Talk</button>')
     +'<div class="rank-detail">'
@@ -6768,7 +6776,7 @@ function renderLounge(){
   var posts = state.lounge.posts || [];
   if (posts.length) _loungeEnsureCatalog();
   if (!posts.length){
-    list.innerHTML = '<div class="empty"><div class="empty-icon">☕</div>'
+    list.innerHTML = '<div class="empty"><div class="empty-icon"></div>'
       + (state.currentRoomIsAdminView ? 'Nothing in the Lounge yet.' : 'The Lounge is quiet — be the first to say something.')
       + '</div>';
     return;
@@ -6787,7 +6795,7 @@ function renderLounge(){
       : '<div class="lounge-body">' + loungeBodyHTML(p.body, p.user_id) + '</div>';
 
     var actions = state.currentRoomIsAdminView ? '' : '<div class="lounge-actions">'
-      + '<button class="lounge-reply-btn" onclick="toggleLoungeReply(\'' + p.id + '\')">💬 Reply</button>'
+      + '<button class="lounge-reply-btn" onclick="toggleLoungeReply(\'' + p.id + '\')">Reply</button>'
       + _loungeMenuBtn('post', p)
       + '</div>';
 
@@ -7193,10 +7201,10 @@ function renderRecommendationBanners(){
     var posterClick = r.tmdb_id ? ' onclick="openShowDetails('+r.tmdb_id+')" title="Show details" style="cursor:pointer;' : ' style="';
     var poster = r.poster_path
       ? '<img src="https://image.tmdb.org/t/p/w154'+r.poster_path+'"'+posterClick+'width:52px;height:78px;border-radius:8px;object-fit:cover;flex-shrink:0;" />'
-      : '<div'+posterClick+'width:52px;height:78px;border-radius:8px;background:rgba(255,255,255,0.2);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:22px;">&#128252;</div>';
+      : '<div'+posterClick+'width:52px;height:78px;border-radius:8px;background:rgba(255,255,255,0.2);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:22px;"><svg class="lg-ph" aria-hidden="true"><use href="#lg-tv"/></svg></div>';
     return '<div class="rec-banner">'
       + '<div class="rec-banner-top">' + poster
-      + '<div class="rec-banner-body"><div class="rec-banner-from">&#127919; '+escAttr(senderName)+' recommended this to you</div>'
+      + '<div class="rec-banner-body"><div class="rec-banner-from">'+escAttr(senderName)+' recommended this to you</div>'
       + '<div class="rec-banner-title">'+escAttr(r.title)+'</div>'
       + (r.note ? '<div class="rec-banner-note">&#8220;'+escAttr(r.note)+'&#8221;</div>' : '')
       + '</div></div>'
@@ -7312,15 +7320,15 @@ function renderRankings(){
   document.getElementById('rank-detail-panel').style.display='none';
   var searchWrap=document.getElementById('rankings-search-wrap');
   if(searchWrap)searchWrap.style.display='block';
-  if (!state.friendsLoaded) { el.innerHTML='<div class="empty"><div class="empty-icon">&#8987;</div>Loading rankings&hellip;</div>'; return; }
+  if (!state.friendsLoaded) { el.innerHTML='<div class="empty"><div class="empty-spin"></div>Loading rankings&hellip;</div>'; return; }
   var list=buildRankings();
   var q=((document.getElementById('rankings-search')||{}).value||'').trim().toLowerCase();
   if(q) list=list.filter(function(s){return s.title.toLowerCase().indexOf(q)!==-1;});
   _rankingsListCache=list;
   if(!list.length){
     el.innerHTML = q
-      ? '<div class="empty"><div class="empty-icon">&#128269;</div>No shows match "'+escAttr(q)+'".</div>'
-      : '<div class="empty"><div class="empty-icon">&#128252;</div>No ratings yet from the room.</div>';
+      ? '<div class="empty"><div class="empty-icon"></div>No shows match "'+escAttr(q)+'".</div>'
+      : '<div class="empty"><div class="empty-icon"><svg class="lg-ph" aria-hidden="true"><use href="#lg-tv"/></svg></div>No ratings yet from the room.</div>';
     return;
   }
   el.innerHTML=list.map(function(s,i){
@@ -8738,7 +8746,7 @@ function _showPickRowHTML(it, i, ns) {
   var tap =it.tmdb_id ? ' onclick="' + ns + 'Details(' + i + ')" style="cursor:pointer;"' : '';
   var poster = it.poster_path
     ? '<img class="fs-poster" src="' + TMDB_IMG + it.poster_path + '" alt=""' + tap + ' />'
-    : '<div class="fs-poster"' + tap + '>&#128250;</div>';
+    : '<div class="fs-poster"' + tap + '><svg class="lg-ph" aria-hidden="true"><use href="#lg-tv"/></svg></div>';
   var body;
   if (!it.choice) {
     body = '<div class="fs-chips">' + FS_CHOICES.map(function(c) {
@@ -8876,7 +8884,7 @@ window.fsSearch = function() {
       _fsSearchResults = (data.results || []).filter(function(r) { return r.name; })
         .sort(function(a, b) { return tmdbMatchScore(b.name, q) - tmdbMatchScore(a.name, q); }).slice(0, 6);
       box.innerHTML = _fsSearchResults.length ? _fsSearchResults.map(function(r, k) {
-        var img = r.poster_path ? '<img class="tmdb-poster" src="' + TMDB_IMG + r.poster_path + '" alt="" />' : '<div class="tmdb-poster-empty">&#128250;</div>';
+        var img = r.poster_path ? '<img class="tmdb-poster" src="' + TMDB_IMG + r.poster_path + '" alt="" />' : '<div class="tmdb-poster-empty"><svg class="lg-ph" aria-hidden="true"><use href="#lg-tv"/></svg></div>';
         return '<div class="fs-result" onclick="fsPickSearch(' + k + ')">' + img + '<div><div class="tmdb-result-title">' + escAttr(r.name) + '</div>'
           + (r.first_air_date ? '<div class="tmdb-result-year">' + r.first_air_date.slice(0, 4) + '</div>' : '') + '</div></div>';
       }).join('') : '<div style="padding:10px 4px;font-size:13px;color:var(--muted);">No results found</div>';
@@ -9145,7 +9153,7 @@ function _dpRowHTML(it, i) {
   var tap = it.tmdb_id ? ' onclick="dpDetails(' + i + ')" style="cursor:pointer;"' : '';
   var poster = it.poster_path
     ? '<img class="fs-poster" src="' + TMDB_IMG + it.poster_path + '" alt=""' + tap + ' />'
-    : '<div class="fs-poster"' + tap + '>&#128250;</div>';
+    : '<div class="fs-poster"' + tap + '><svg class="lg-ph" aria-hidden="true"><use href="#lg-tv"/></svg></div>';
   var status;
   if (it.startChoice && it.choice) {
     var label = FS_CHOICES.filter(function(c) { return c.key === it.choice; })[0].label;
@@ -9550,7 +9558,7 @@ var ADD_LIST_LABELS = { watching: 'Watching', watchlist: 'My List', watched: 'Bi
 
 // Same icon vocabulary as the nav tabs (watching/watchlist/watched), plus
 // waiting/dnf which aren't tabs -- they're flags layered on watchlist/watched.
-var ON_LIST_BADGE_ICONS = { watching: '&#128250;', watchlist: '&#128715;&#65039;', watched: '&#128252;', waiting: '&#9203;', dnf: '&#128683;' };
+var ON_LIST_BADGE_ICONS = { watching: '<svg class="lg-ico" aria-hidden="true"><use href="#lg-tv"/></svg>', watchlist: '<svg class="lg-ico" aria-hidden="true"><use href="#lg-list"/></svg>', watched: '<svg class="lg-ico" aria-hidden="true"><use href="#lg-remote"/></svg>', waiting: '<svg class="lg-ico" aria-hidden="true"><use href="#lg-hourglass"/></svg>', dnf: '<svg class="lg-ico" aria-hidden="true"><use href="#lg-ban"/></svg>' };
 // <br> between the two words so a long label wraps under its own icon
 // instead of shoving the rest of the tile's content sideways.
 var ON_LIST_BADGE_LABELS = { watching: 'Watching', watchlist: 'My<br>List', watched: 'Binged', waiting: 'WFNS', dnf: 'DNF' };
@@ -9785,7 +9793,9 @@ function openDWM(show, heading, emoji, undo) {
   _dwmPending = show;
   _dwmRating = 0;
   _dwmUndo = undo || null;
-  document.getElementById('dwm-emoji').textContent = emoji || '🍿';
+  var _dwmE = document.getElementById('dwm-emoji');
+  _dwmE.textContent = '🍿';
+  _dwmE.style.display = (!emoji || emoji === '🍿') ? '' : 'none'; // popcorn only when you finish a show
   document.getElementById('dwm-heading').textContent = heading || 'You binged it!';
   document.getElementById('dwm-title').textContent = show.title;
   document.getElementById('dwm-comment').value = '';
@@ -10426,7 +10436,7 @@ async function loadAndRenderFriends() {
     state.friendsLoaded = true;
     var grid = document.getElementById('friends-grid');
     if (grid && !state.friends.length) {
-      grid.innerHTML = '<div class="empty"><div class="empty-icon">&#128531;</div>Couldn\'t load your crew right now.</div>';
+      grid.innerHTML = '<div class="empty"><div class="empty-icon"></div>Couldn\'t load your crew right now.</div>';
     }
   }
 }
@@ -10819,7 +10829,7 @@ function mapProviderToPlatform(name) {
 // date, ~2-3 weeks out). The table and this code are shaped so comment /
 // invite types can be added without a rework.
 
-var NOTIF_ICON = { new_season: '🎉', season_upcoming: '🗓️', new_episode: '📺', lounge_reply: '☕', lounge_post: '☕', comment: '💬', recommendation: '🎯', room_join: '👋', shared_add: '🙌' };
+var NOTIF_ICON = { new_season: '<svg class="lg-ico" aria-hidden="true"><use href="#lg-tv"/></svg>', season_upcoming: '<svg class="lg-ico" aria-hidden="true"><use href="#lg-cal"/></svg>', new_episode: '<svg class="lg-ico" aria-hidden="true"><use href="#lg-play"/></svg>', lounge_reply: '<svg class="lg-ico" aria-hidden="true"><use href="#lg-cup"/></svg>', lounge_post: '<svg class="lg-ico" aria-hidden="true"><use href="#lg-cup"/></svg>', comment: '<svg class="lg-ico" aria-hidden="true"><use href="#lg-talk"/></svg>', recommendation: '<svg class="lg-ico" aria-hidden="true"><use href="#lg-send"/></svg>', room_join: '<svg class="lg-ico" aria-hidden="true"><use href="#lg-crowd"/></svg>', shared_add: '<svg class="lg-ico" aria-hidden="true"><use href="#lg-share"/></svg>' };
 
 // The bell is for things meant for you personally: new seasons/episodes,
 // recommendations, joins, shared adds, and Lounge replies (one row per
@@ -10889,7 +10899,7 @@ function renderNotifPanel() {
   }
   list.innerHTML = items.map(function(n) {
     return '<div class="notif-item' + (n.read_at ? '' : ' is-unread') + '" onclick="openNotification(\'' + n.id + '\')">'
-      + '<span class="notif-ico">' + (NOTIF_ICON[n.type] || '🔔') + '</span>'
+      + '<span class="notif-ico">' + (NOTIF_ICON[n.type] || '<svg class="lg-ico" aria-hidden="true"><use href="#lg-bell"/></svg>') + '</span>'
       + '<div class="notif-body">'
       + '<div class="notif-title">' + _notifEsc(n.title) + '</div>'
       + (n.body ? '<div class="notif-sub">' + _notifEsc(n.body) + '</div>' : '')
@@ -11262,7 +11272,7 @@ window.tmdbSearch = function(prefix) {
       dd.innerHTML = results.map(function(r, i) {
         var img = r.poster_path
           ? '<img class="tmdb-poster" src="' + TMDB_IMG + r.poster_path + '" />'
-          : '<div class="tmdb-poster-empty">' + (r.media_type === 'documentary' ? '🎬' : '📺') + '</div>';
+          : '<div class="tmdb-poster-empty">' + '<svg class="lg-ph" aria-hidden="true"><use href="#lg-tv"/></svg>' + '</div>';
         return '<div class="tmdb-result" onclick="tmdbSelect(\'' + prefix + '\',' + i + ')">'
           + img + '<div><div class="tmdb-result-title">' + escAttr(r.name)
           + (r.media_type === 'documentary' ? ' <span class="tmdb-doc-tag">Documentary</span>' : '') + '</div>'
@@ -11372,7 +11382,7 @@ window.openShowDetails = async function(tmdbId, friendRatings, opts) {
     }
     var d = await res.json();
     d.name = d.name || d.title || '';
-    var docPlaceholder = isDocFilm ? '🎬' : '📺';
+    var docPlaceholder = '<svg class="lg-ph" aria-hidden="true"><use href="#lg-tv"/></svg>';
     var poster = d.poster_path
       ? '<img src="' + TMDB_POSTER_LG + d.poster_path + '" style="width:120px;height:180px;border-radius:10px;object-fit:cover;flex-shrink:0;" />'
       : '<div style="width:120px;height:180px;border-radius:10px;background:var(--olive);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:36px;">' + docPlaceholder + '</div>';
@@ -11390,7 +11400,7 @@ window.openShowDetails = async function(tmdbId, friendRatings, opts) {
         + cast.map(function(c) {
             var photo = c.profile_path
               ? '<img class="cast-photo" src="' + TMDB_CAST_IMG + c.profile_path + '" />'
-              : '<div class="cast-photo-empty">🎭</div>';
+              : '<div class="cast-photo-empty"><svg class="lg-ph" aria-hidden="true"><use href="#lg-person"/></svg></div>';
             return '<div class="cast-card">' + photo
               + '<div class="cast-name">' + c.name + '</div>'
               + (c.character ? '<div class="cast-role">' + c.character + '</div>' : '')
@@ -12295,7 +12305,7 @@ window.openReportsAdmin = async function() {
         + (r.target_type !== 'user' ? '<button type="button" class="rank-act-btn primary" onclick="resolveReport(\'' + r.id + '\',\'remove\')">Remove it</button>' : '')
         + '<button type="button" class="rank-act-btn" onclick="resolveReport(\'' + r.id + '\',\'dismiss\')">Dismiss</button>'
         + '</div></div>';
-    }).join('') : '<div class="empty">Nothing flagged right now. 🎉</div>';
+    }).join('') : '<div class="empty">Nothing flagged right now.</div>';
   } catch (e) {
     console.error('openReportsAdmin error:', e);
     body.innerHTML = '<div class="empty">Couldn’t load reports — try again in a moment.</div>';
@@ -12344,7 +12354,7 @@ function _renderFeedbackShot() {
   var row = document.getElementById('fb-shot-row');
   row.innerHTML = _fbShot
     ? '<div class="fb-shot-thumb"><img src="' + _fbShot + '" alt="Screenshot"><button type="button" aria-label="Remove screenshot" onclick="removeFeedbackShot()">&#10005;</button></div><span style="font-size:13px;color:var(--muted);">Screenshot attached</span>'
-    : '<button type="button" class="fb-shot-btn" onclick="document.getElementById(\'fb-shot-input\').click()">&#128206; Attach a screenshot (optional)</button>';
+    : '<button type="button" class="fb-shot-btn" onclick="document.getElementById(\'fb-shot-input\').click()">Attach a screenshot (optional)</button>';
 }
 window.removeFeedbackShot = function() { _fbShot = null; _renderFeedbackShot(); };
 
@@ -12476,7 +12486,7 @@ function renderMembersAdmin() {
     ? function(a, b) { return (a.name || '').localeCompare(b.name || '', undefined, { sensitivity: 'base' }); }
     : function(a, b) { return new Date(b.last_visit || 0) - new Date(a.last_visit || 0); });
   var el = document.getElementById('members-list');
-  if (!list.length) { el.innerHTML = '<div class="empty">' + (q ? 'No one matches “' + escAttr(q) + '”.' : 'Nobody here. 🎉') + '</div>'; return; }
+  if (!list.length) { el.innerHTML = '<div class="empty">' + (q ? 'No one matches “' + escAttr(q) + '”.' : 'Nobody here.') + '</div>'; return; }
   el.innerHTML = '<div class="mem-row mem-head"><span>Name</span><span>Uses</span><span>Alerts</span><span>Last in</span></div>'
     + list.map(function(m) {
       var how = _memHow(m);
@@ -12512,7 +12522,7 @@ window.openFeedbackInbox = async function(status) {
       var where = [c.where, [c.device, c.browser].filter(Boolean).join(' '), c.screen, c.text_size && c.text_size !== 'standard' ? 'text ' + c.text_size : '', c.last_tab ? 'tab: ' + c.last_tab : '', c.room ? 'room: ' + c.room : '']
         .filter(Boolean).join(' · ');
       return '<div class="report-card" id="fb-card-' + f.id + '">'
-        + '<div class="report-head">' + (f.kind === 'bug' ? '&#128030; <b>Bug</b>' : '&#128161; <b>Idea</b>') + ' from <b>' + escAttr(f.sender) + '</b> &middot; ' + timeAgo(f.created_at) + '</div>'
+        + '<div class="report-head">' + (f.kind === 'bug' ? '<b>Bug</b>' : '<b>Idea</b>') + ' from <b>' + escAttr(f.sender) + '</b> &middot; ' + timeAgo(f.created_at) + '</div>'
         + '<div class="report-content" style="white-space:pre-wrap;">' + escAttr(f.body) + '</div>'
         + (where ? '<div class="report-meta" style="font-size:12px;">' + escAttr(where) + '</div>' : '')
         + '<div id="fb-shot-' + f.id + '"></div>'
@@ -12522,7 +12532,7 @@ window.openFeedbackInbox = async function(status) {
             ? '<button type="button" class="rank-act-btn primary" onclick="setFeedbackStatus(\'' + f.id + '\',\'done\')">Mark done</button>'
             : '<button type="button" class="rank-act-btn" onclick="setFeedbackStatus(\'' + f.id + '\',\'open\')">Reopen</button>')
         + '</div></div>';
-    }).join('') : '<div class="empty">' + (_fbInboxStatus === 'open' ? 'Nothing open. 🎉' : 'Nothing marked done yet.') + '</div>';
+    }).join('') : '<div class="empty">' + (_fbInboxStatus === 'open' ? 'Nothing open.' : 'Nothing marked done yet.') + '</div>';
   } catch (e) {
     console.error('openFeedbackInbox error:', e);
     body.innerHTML = '<div class="empty">Couldn’t load feedback — try again in a moment.</div>';
@@ -12552,7 +12562,7 @@ window.setFeedbackStatus = async function(id, status) {
     if (card) card.remove();
     showToast(status === 'done' ? 'Marked done.' : 'Reopened.');
     var list = document.getElementById('feedback-inbox-list');
-    if (list && !list.querySelector('.report-card')) list.innerHTML = '<div class="empty">' + (_fbInboxStatus === 'open' ? 'Nothing open. 🎉' : 'Nothing marked done yet.') + '</div>';
+    if (list && !list.querySelector('.report-card')) list.innerHTML = '<div class="empty">' + (_fbInboxStatus === 'open' ? 'Nothing open.' : 'Nothing marked done yet.') + '</div>';
   } catch (e) {
     console.error('setFeedbackStatus error:', e);
     showToast('Couldn’t update that — try again in a moment.');
@@ -12621,8 +12631,8 @@ bootstrap();
     <div class="invite-modal-title">Report a bug or share an idea</div>
     <div class="invite-modal-sub">Tell us what happened or what you'd love to see. It goes straight to the ShowUp team.</div>
     <div class="textsize-seg" id="fb-kind-seg" style="margin:0 0 10px;">
-      <button type="button" data-kind="bug" onclick="setFeedbackKind('bug')">&#128030; Bug</button>
-      <button type="button" data-kind="idea" onclick="setFeedbackKind('idea')">&#128161; Idea</button>
+      <button type="button" data-kind="bug" onclick="setFeedbackKind('bug')">Bug</button>
+      <button type="button" data-kind="idea" onclick="setFeedbackKind('idea')">Idea</button>
     </div>
     <textarea class="lounge-textarea" id="fb-body" maxlength="4000" style="min-height:110px;"></textarea>
     <div class="fb-shot-row" id="fb-shot-row"></div>
@@ -12683,7 +12693,7 @@ bootstrap();
     <div class="invite-modal-link" id="invite-modal-link" style="display:none;">https://showuproom.com/join/tracey-m-x7k2</div>
     <button class="btn-invite-copy" id="invite-text-btn" onclick="textInviteMessage()" style="display:none;width:100%;margin-bottom:10px;">Text Invite</button>
     <button class="btn-invite-close" id="invite-share-btn" onclick="shareInviteMessage()" style="display:none;width:100%;margin-bottom:10px;">Other</button>
-    <button class="btn-invite-copy" id="invite-msg-btn" onclick="copyInviteMessage()" style="width:100%;margin-bottom:10px;">&#128203; Copy Invite Message</button>
+    <button class="btn-invite-copy" id="invite-msg-btn" onclick="copyInviteMessage()" style="width:100%;margin-bottom:10px;">Copy Invite Message</button>
     <button class="btn-invite-close" onclick="closeInviteModal()" style="width:100%;">Close</button>
   </div>
 </div>
@@ -12746,7 +12756,7 @@ bootstrap();
 <!-- TASTEMAKERS LEADERBOARD -->
 <div class="invite-modal-overlay" id="tastemakers-modal">
   <div class="invite-modal">
-    <div class="invite-modal-title">&#127942; Tastemakers</div>
+    <div class="invite-modal-title">Tastemakers</div>
     <div class="invite-modal-sub">All-time leaderboard &mdash; recommendations your crowd accepted into Watching or My List.</div>
     <div id="tastemakers-list" style="max-height:320px;overflow-y:auto;margin-bottom:14px;"></div>
     <button class="btn-invite-close" onclick="closeTastemakersModal()" style="width:100%;">Close</button>
@@ -12756,7 +12766,7 @@ bootstrap();
 <!-- NEW THIS WEEK -->
 <div class="invite-modal-overlay" id="new-this-week-modal">
   <div class="invite-modal">
-    <div class="invite-modal-title">&#127881; New This Week</div>
+    <div class="invite-modal-title">New This Week</div>
     <div class="invite-modal-sub">Added in the last 7 days, in this room.</div>
     <div id="new-this-week-list" style="max-height:400px;overflow-y:auto;margin-bottom:14px;"></div>
     <button class="btn-invite-close" onclick="closeNewThisWeekModal()" style="width:100%;">Close</button>
@@ -12766,7 +12776,7 @@ bootstrap();
 <!-- SHARED TASTE -->
 <div class="invite-modal-overlay" id="shared-taste-modal">
   <div class="invite-modal">
-    <div class="invite-modal-title" id="shared-taste-title">&#128156; Shared Taste</div>
+    <div class="invite-modal-title" id="shared-taste-title">Shared Taste</div>
     <div class="invite-modal-sub" id="shared-taste-sub">Shows you both have.</div>
     <div id="shared-taste-list" style="max-height:400px;overflow-y:auto;margin-bottom:14px;"></div>
     <button class="btn-invite-close" onclick="closeSharedTasteModal()" style="width:100%;">Close</button>
@@ -12777,7 +12787,7 @@ bootstrap();
 <!-- CREATE ROOM -->
 <div class="invite-modal-overlay" id="create-room-modal">
   <div class="invite-modal">
-    <div class="invite-modal-title">&#127968; Create a Living Room</div>
+    <div class="invite-modal-title">Create a Living Room</div>
     <div class="invite-modal-sub">Give it a name.</div>
     <div class="form-group" style="margin-bottom:14px;"><label>Room name</label><input type="text" id="create-room-name" placeholder="e.g. The Prosecco Room" autocomplete="off" /></div>
     <div style="display:flex;gap:8px;">
@@ -12790,7 +12800,7 @@ bootstrap();
 <!-- ADMIN: BROWSE ALL ROOMS -->
 <div class="invite-modal-overlay" id="admin-rooms-modal">
   <div class="invite-modal">
-    <div class="invite-modal-title">&#128065; Browse All Rooms</div>
+    <div class="invite-modal-title">Browse All Rooms</div>
     <div class="invite-modal-sub">Read-only. Tap a room to view its activity.</div>
     <div id="admin-rooms-list" style="max-height:400px;overflow-y:auto;margin-bottom:14px;"></div>
     <button class="btn-invite-close" onclick="closeAdminRoomsModal()" style="width:100%;">Close</button>
