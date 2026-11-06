@@ -1460,7 +1460,6 @@ body.look-lounge .lg-row .friend-count{margin-top:2px;font-size:13px;font-weight
       <div id="full-lineup-view" style="display:none">
         <div class="page-title"><button class="nav-back" onclick="backFromFullLineupView()" style="margin-right:6px;">&#8592;</button><span class="lg-old"></span>Hot Right Now</div>
         <div class="page-sub">Current shows with a season out in the last year &mdash; what people are watching now.</div>
-        <div class="lr-search-wrap" id="full-lineup-search-wrap"><input type="text" id="full-lineup-search" class="lr-search-input" placeholder="Search shows or platforms..." oninput="renderFullLineup();toggleSearchClearBtn(this)" autocomplete="off" /><button class="lr-search-clear" type="button" aria-label="Clear search" onclick="clearSearchInput('full-lineup-search')">&#10005;</button></div>
         <div id="full-lineup-list"></div>
         <div id="full-lineup-detail-view" style="display:none"></div>
       </div>
@@ -4619,7 +4618,7 @@ function _lookupRerender() {
   renderRoomPickerSearch();
   var crew = document.getElementById('crew-search');
   if (state.currentRoomId && crew && crew.value.trim()) renderFriends();
-  [['prime-time-search', renderPrimeTimeList], ['full-lineup-search', renderFullLineup], ['lineup-search', renderLineup],
+  [['prime-time-search', renderPrimeTimeList], ['lineup-search', renderLineup],
    ['rankings-search', renderRankings], ['showtalk-search', renderShowTalk], ['showtalk-hub-search', renderShowTalk]].forEach(function(p) {
     var el = document.getElementById(p[0]);
     if (el && el.value.trim() && el.offsetParent) p[1]();
@@ -5450,7 +5449,7 @@ function renderFullLineup(){
     var c = byTmdb[t.tmdb_id];
     if (c) { t.avg_rating = c.avg_rating; t.rating_count = c.rating_count; t.people = c.people; if (!t.platform) t.platform = c.platform; }
   });
-  var q = ((document.getElementById('full-lineup-search')||{}).value||'').trim().toLowerCase();
+  var q = ''; // no search bar here; the Living Room search finds any show
   var match = function(s){ return !q || (s.title||'').toLowerCase().indexOf(q)!==-1 || (s.platform||'').toLowerCase().indexOf(q)!==-1; };
   crowd = crowd.filter(match);
   trending = trending.filter(match);
