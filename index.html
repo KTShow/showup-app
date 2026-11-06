@@ -825,6 +825,9 @@ input::placeholder,textarea::placeholder{color:var(--muted);opacity:1;}
 body.look-lounge #room-picker-view>.textsize-tip{order:1;}
 .btn-recommend{display:inline-flex;align-items:center;gap:5px;min-height:36px;margin-top:6px;padding:4px 10px 4px 8px;border-radius:8px;background:rgba(107,45,78,0.08);color:var(--brand);font-family:var(--sans);font-size:13px;font-weight:600;}
 #recommend-picker-modal{z-index:700;} /* opens from the show details popup (600) too */
+.btn-rate-it{display:inline-flex;align-items:center;gap:5px;min-height:36px;padding:4px 12px 4px 8px;border:1px solid var(--brand);border-radius:8px;background:none;color:var(--brand);font-family:var(--sans);font-size:13px;font-weight:700;cursor:pointer;}
+.btn-rate-it .lg-ico{display:block;width:18px;height:18px;color:var(--brand);}
+.fr-with-rate{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;}
 .lg-old{display:none!important;}
 svg.lg-new{display:block;}
 .nav-bell,.nav-settings{color:var(--brand);}
@@ -3019,7 +3022,7 @@ var _openRatingDisclosures = {};
 // rated". Expanded: your own rating first (interactive, blank remotes if
 // you haven't rated it -- same rate/un-rate toggle as everywhere else),
 // then each friend's individual rating below.
-function ownCardRatingsHTML(title, list, id, myRating) {
+function ownCardRatingsHTML(title, list, id, myRating, notWatchedYet) {
   var raters = friendRatingsFor(title, state.user ? state.user.id : null);
   var hasFriends = raters.length > 0;
   var avg = hasFriends ? Math.round((raters.reduce(function(a,r){return a+r.rating;},0)/raters.length)*10)/10 : null;
@@ -3028,6 +3031,9 @@ function ownCardRatingsHTML(title, list, id, myRating) {
     : myRating
       ? remoteStatic(myRating) + '<span style="font-size:13px;color:var(--muted);">Your rating</span>'
       : '<span style="font-size:13px;color:var(--muted);">Not yet rated</span>';
+  var rateItBtn = (!myRating && !notWatchedYet)
+    ? '<button type="button" class="btn-rate-it" onclick="openRateSheet(\''+list+'\',\''+id+'\')"><svg class="lg-ico" aria-hidden="true"><use href="#lg-remote"/></svg>Rate it</button>'
+    : '';
   var isOpen = !!_openRatingDisclosures[id];
   var summaryBtn = '<button type="button" onclick="toggleFriendRatingsDisclosure(this,\''+id+'\')" class="fr-toggle-btn">'
     + '<span class="fr-chevron">'+(isOpen?'&#9662;':'&#9656;')+'</span>'
@@ -3040,7 +3046,9 @@ function ownCardRatingsHTML(title, list, id, myRating) {
       return '<div style="display:flex;align-items:center;gap:6px;"><span class="fr-name" style="font-size:13px;font-weight:600;color:var(--charcoal);">'+escAttr(r.name)+'</span>'+remoteStatic(r.rating)+'</div>';
     }).join('');
   var individual = '<div class="fr-individual" style="display:'+(isOpen?'flex':'none')+';flex-direction:column;gap:3px;margin:6px 0 0 2px;">'+myRow+friendRows+'</div>';
-  return '<div class="fr-disclosure">'+summaryBtn+individual+'</div>';
+  // Nothing to expand when you haven't rated and no friend has: the button says it all.
+  if (rateItBtn && !hasFriends) return '<div class="fr-disclosure">'+rateItBtn+'</div>';
+  return '<div class="fr-disclosure">'+(rateItBtn ? '<div class="fr-with-rate">'+summaryBtn+rateItBtn+'</div>' : summaryBtn)+individual+'</div>';
 }
 
 // A documentary film never gets another season, so the "Waiting for New
@@ -3158,7 +3166,7 @@ function buildWatchlistCard(s) {
     var recName=state.influencerNames[s.influencedBy];
     if(recName) recommendedBadge='<div style="font-size:13px;color:var(--fig);font-weight:600;margin-top:2px;"><svg class="rec-mark" aria-hidden="true"><use href="#lg-target"/></svg>Recommended by '+recName+'</div>';
   }
-  var otherRatingsList=ownCardRatingsHTML(s.title, 'watchlist', sid, s.rating);
+  var otherRatingsList=ownCardRatingsHTML(s.title, 'watchlist', sid, s.rating, true);
 
   return '<div class="show-card'+(s.hidden?' is-hidden':'')+'" id="card-'+sid+'"><div class="show-card-top">'+showTile(s)+'<div class="show-info"><div class="show-title">'+s.title+(s.hidden?'<span class="hidden-badge">Hidden from friends</span>':'')+'</div>'+platformRow+recommendedBadge+recommendBtn(sid)+'</div>'+menuHTML+'</div>'
     + otherRatingsList
