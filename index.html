@@ -1401,7 +1401,7 @@ body.look-lounge .lg-row .friend-count{margin-top:2px;font-size:13px;font-weight
         <div class="textsize-tip" id="textsize-tip" style="display:none;"><b>Want bigger text?</b><button type="button" class="tip-go" onclick="textSizeTip(true)">Show me</button><button type="button" class="tip-no" onclick="textSizeTip(false)">No thanks</button></div>
         <div class="page-title"><span class="lg-old"></span>Your Living Rooms</div>
         <div class="page-sub">Pick a room to enter, or start a new one.</div>
-        <div class="lr-search-wrap"><input type="text" id="room-picker-search" class="lr-search-input" placeholder="Look up any show or person" oninput="renderRoomPickerSearch();toggleSearchClearBtn(this)" autocomplete="off" /><button class="lr-search-clear" type="button" aria-label="Clear search" onclick="clearSearchInput('room-picker-search')">&#10005;</button></div>
+        <div class="lr-search-wrap"><input type="text" id="room-picker-search" class="lr-search-input" placeholder="Look up any show or person" onfocus="loadAllRoomsSearchData()" oninput="renderRoomPickerSearch();toggleSearchClearBtn(this)" autocomplete="off" /><button class="lr-search-clear" type="button" aria-label="Clear search" onclick="clearSearchInput('room-picker-search')">&#10005;</button></div>
         <div id="room-picker-search-results" style="display:none;"></div>
         <div id="lg-hub-rail" class="lg-rail-wrap"></div>
         <div class="tastemakers-banner lg-hub-row" onclick="openFullLineupView()" style="margin-bottom:16px;background:linear-gradient(135deg,#3b6e8f,#2c4f66);">
@@ -1482,7 +1482,7 @@ body.look-lounge .lg-row .friend-count{margin-top:2px;font-size:13px;font-weight
           <div id="tastemakers-banner-wrap"></div>
           <div id="room-ticker" class="room-ticker" style="display:none;" onclick="openNewThisWeekModal()" title="See what's new this week"></div>
           <div id="top5-banner-wrap"></div>
-          <div class="lr-search-wrap"><input type="text" id="crew-search" class="lr-search-input" placeholder="Look up any show or person" oninput="renderFriends();toggleSearchClearBtn(this)" autocomplete="off" /><button class="lr-search-clear" type="button" aria-label="Clear search" onclick="clearSearchInput('crew-search')">&#10005;</button></div>
+          <div class="lr-search-wrap"><input type="text" id="crew-search" class="lr-search-input" placeholder="Look up any show or person" onfocus="loadAllRoomsSearchData()" oninput="renderFriends();toggleSearchClearBtn(this)" autocomplete="off" /><button class="lr-search-clear" type="button" aria-label="Clear search" onclick="clearSearchInput('crew-search')">&#10005;</button></div>
           <div class="lg-crew-tools" style="display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap;">
             <button id="crew-platform-toggle" onclick="toggleCrewPlatformView()" style="background:none;border:1px solid var(--terra);color:var(--burnt);border-radius:8px;padding:6px 12px;font-family:var(--sans);font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;"><span class="lg-old">&#128256; </span>Sort by Platform</button>
             <button type="button" id="invite-someone-link" class="invite-pill" onclick="openInviteModal()">+ Invite a Friend</button>
@@ -3457,14 +3457,8 @@ async function _loadHubTrending() {
 async function _loadHubPrimeTop() {
   if (_lgPrimeTop || _lgPrimeBusy || !state.myRoomsLoaded) return;
   _lgPrimeBusy = true;
-  try {
-    if (!_primeTimeData) {
-      var r = await sb.rpc('get_prime_time_rankings');
-      if (r.error) throw r.error;
-      if (r.data && !_primeTimeData) _primeTimeData = r.data;
-    }
-    if (_primeTimeData) _lgPrimeTop = buildPrimeTimeLeaderboard(_primeTimeData);
-  } catch (e) { console.error('hub tiles prime time error:', e); }
+  var data = await loadPrimeTimeData();
+  if ((data.shows || []).length) _lgPrimeTop = buildPrimeTimeLeaderboard(data);
   _lgPrimeBusy = false;
 }
 async function renderHubRail() {
@@ -4385,7 +4379,6 @@ async function loadAndRenderRoomPicker() {
   state.myRoomsLoaded = true;
   renderRoomPicker();
   renderHubRail();
-  loadAllRoomsSearchData();
 }
 
 // Powers the room-picker search bar -- searching across every room the
@@ -4490,22 +4483,56 @@ var _allRoomsSearchCache = [];
 var WHO_RATED_MAX_SHOWS = 8;
 var _whoRatedLoading = false;
 
+// Friends' lists arrive once (when a search bar is tapped). Ratings from everyone else
+// are asked for per search, and fill in when they land.
 function whoRatedDataReady() {
-  if (_primeTimeData && state.allRoomsSearchLoaded) return true;
+  if (state.allRoomsSearchLoaded) return true;
   if (!_whoRatedLoading) {
     _whoRatedLoading = true;
-    Promise.all([loadPrimeTimeData(), loadAllRoomsSearchData()]).then(function() {
+    loadAllRoomsSearchData().then(function() {
       _whoRatedLoading = false;
-      renderRoomPickerSearch();
-      if (((document.getElementById('crew-search') || {}).value || '').trim()) renderFriends();
+      _lookupRerender();
     });
   }
   return false;
 }
 
+var _whoRatedByQuery = {}, _whoRatedAsking = null, _whoRatedTimer = null, _whoRatedAllRows = null;
+async function _fetchWhoRated(q) {
+  var res = await sb.rpc('search_show_ratings', { p_query: q });
+  if (!_rpcMissing(res.error)) {
+    if (res.error) throw res.error;
+    return res.data || {};
+  }
+  // Database doesn't have the new function yet: the older download, once.
+  if (!_whoRatedAllRows) {
+    var all = await sb.rpc('get_prime_time_rankings');
+    if (all.error) throw all.error;
+    _whoRatedAllRows = all.data || {};
+  }
+  return _whoRatedAllRows;
+}
+function _whoRatedRows(q) {
+  if (_whoRatedByQuery[q]) return _whoRatedByQuery[q];
+  if (q.length < 2 || _whoRatedAsking === q) return {};
+  _whoRatedAsking = q;
+  if (_whoRatedTimer) clearTimeout(_whoRatedTimer);
+  _whoRatedTimer = setTimeout(async function() {
+    try {
+      _whoRatedByQuery[q] = await _fetchWhoRated(q);
+      if (_whoRatedAsking === q) _whoRatedAsking = null;
+      _lookupRerender();
+    } catch (e) {
+      console.error('who-rated search error:', e); // friends' ratings still show
+      if (_whoRatedAsking === q) _whoRatedAsking = null;
+    }
+  }, 300);
+  return {};
+}
+
 function buildWhoRatedResults(q) {
   var meId = state.user && state.user.id;
-  var data = _primeTimeData || {};
+  var data = _whoRatedRows(q);
   var peopleById = {};
   (data.people || []).forEach(function(p) { peopleById[p.id] = p; });
   function fullName(p) { return p.first_name + (p.last_initial ? ' ' + p.last_initial + '.' : ''); }
@@ -4905,17 +4932,21 @@ window.submitCreateRoom = async function(){
 // ============================================================
 
 var _primeTimeData = null;
+// True when the database doesn't have this function yet.
+function _rpcMissing(error) {
+  return !!error && (error.code === 'PGRST202' || /could not find the function/i.test(error.message || ''));
+}
 async function loadPrimeTimeData() {
   if (_primeTimeData) return _primeTimeData;
   try {
-    const { data, error } = await sb.rpc('get_prime_time_rankings');
-    if (error) throw error;
-    _primeTimeData = data || { shows: [], people: [] };
+    var res = await sb.rpc('get_prime_time_top');
+    if (_rpcMissing(res.error)) res = await sb.rpc('get_prime_time_rankings');
+    if (res.error) throw res.error;
+    if (res.data) _primeTimeData = res.data;
   } catch(e) {
-    console.error('get_prime_time_rankings error:', e);
-    _primeTimeData = { shows: [], people: [] };
+    console.error('Prime Time load error:', e);
   }
-  return _primeTimeData;
+  return _primeTimeData || { shows: [], people: [] }; // a failed load isn't kept, so the next try can work
 }
 
 function buildPrimeTimeLeaderboard(data) {
@@ -5740,7 +5771,11 @@ window.backToLineupList = function(){
 
 function renderPrimeTimeList() {
   var listEl = document.getElementById('prime-time-list-view');
-  if (!listEl || !_primeTimeData) return;
+  if (!listEl) return;
+  if (!_primeTimeData) {
+    listEl.innerHTML = '<div class="empty">Prime Time didn&rsquo;t load. Check your connection and try again.</div>';
+    return;
+  }
   var list = buildPrimeTimeLeaderboard(_primeTimeData);
   var q = ((document.getElementById('prime-time-search')||{}).value||'').trim().toLowerCase();
   if (q) list = list.filter(function(s){ return s.title.toLowerCase().indexOf(q) !== -1 || (s.platform||'').toLowerCase().indexOf(q) !== -1; });
