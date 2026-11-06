@@ -353,7 +353,7 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
 @keyframes flashPulse{0%,100%{box-shadow:0 0 0 6px #F2B705,0 0 18px 6px rgba(242,183,5,0.55);background:#FFF4C2;}50%{box-shadow:0 0 0 2px #F2B705;background:var(--cream);}}
 .flash-pulse{animation:flashPulse 0.5s ease-in-out 5;}
 .show-card.flash-settled,.dnf-card.flash-settled{box-shadow:0 0 0 5px #F2B705,0 0 16px 4px rgba(242,183,5,0.45);background:#FFF4C2;}
-.btn-recommend .lg-ico{display:block;width:20px;height:20px;color:var(--brand);}
+.btn-recommend .lg-ico{display:block;width:18px;height:18px;color:var(--brand);}
 .rec-mark{display:inline-block;width:15px;height:15px;vertical-align:-3px;margin-right:4px;fill:none;stroke:currentColor;stroke-width:1.8;}
 .on-list-badge .lg-ico{display:inline-block;width:14px;height:14px;vertical-align:-2px;}
 .notif-ico .lg-ico{display:block;width:20px;height:20px;color:var(--brand);}
@@ -823,6 +823,8 @@ input::placeholder,textarea::placeholder{color:var(--muted);opacity:1;}
 .textsize-tip .tip-no{background:none;border:none;color:var(--muted);}
 #room-picker-view.is-searching .textsize-tip{display:none;}
 body.look-lounge #room-picker-view>.textsize-tip{order:1;}
+.btn-recommend{display:inline-flex;align-items:center;gap:5px;min-height:36px;margin-top:6px;padding:4px 10px 4px 8px;border-radius:8px;background:rgba(107,45,78,0.08);color:var(--brand);font-family:var(--sans);font-size:13px;font-weight:600;}
+#recommend-picker-modal{z-index:700;} /* opens from the show details popup (600) too */
 .lg-old{display:none!important;}
 svg.lg-new{display:block;}
 .nav-bell,.nav-settings{color:var(--brand);}
@@ -1046,6 +1048,7 @@ body.look-lounge .lg-row .friend-count{margin-top:2px;font-size:13px;font-weight
     <button onclick="closeShowDetails()" style="position:absolute;top:14px;right:14px;background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer;line-height:1;">&#x2715;</button>
     <div id="sd-body" style="text-align:center;padding:30px 0;color:var(--muted);font-size:14px;">Loading...</div>
     <button id="sd-add-btn" onclick="openAddPicker()" style="display:none;width:100%;margin-top:18px;background:var(--terra);color:white;border:none;border-radius:10px;padding:12px;font-family:var(--sans);font-size:14px;font-weight:700;cursor:pointer;">+ Add to My Lists</button>
+    <button id="sd-rec-btn" onclick="recommendFromDetails()" style="display:none;width:100%;margin-top:8px;align-items:center;justify-content:center;gap:6px;background:none;color:var(--brand);border:1px solid var(--brand);border-radius:10px;padding:11px;font-family:var(--sans);font-size:14px;font-weight:700;cursor:pointer;"><svg class="lg-ico" style="width:18px;height:18px;" aria-hidden="true"><use href="#lg-target"/></svg>Recommend</button>
   </div>
 </div>
 
@@ -2997,7 +3000,7 @@ function _renderListInner(list) {
 
 
 function recommendBtn(showId){
-  return '<button class="btn-recommend" onclick="openRecommendPicker(\''+showId+'\')" title="Recommend to a friend" aria-label="Recommend to a friend"><svg class="lg-ico" aria-hidden="true"><use href="#lg-target"/></svg></button>';
+  return '<button class="btn-recommend" onclick="openRecommendPicker(\''+showId+'\')" ><svg class="lg-ico" aria-hidden="true"><use href="#lg-target"/></svg>Recommend</button>';
 }
 
 // Session-only memory of which cards' ratings disclosures are expanded,
@@ -3065,8 +3068,8 @@ function buildDNFCard(s) {
     + '<div class="show-info"><div class="show-title">' + s.title + (s.hidden?'<span class="hidden-badge">Hidden from friends</span>':'') + '</div>'
     + '<div style="margin-top:3px;font-size:13px;color:var(--muted);">' + s.platform + '</div>'
     + platformRow
-    + '</div>'
     + recommendBtn(sid)
+    + '</div>'
     + menuHTML
     + '</div>'
     + otherRatingsDNF
@@ -3103,7 +3106,7 @@ function buildWatchingCard(s) {
 
   var newSeasonBadge = s.newSeasonAvailable ? '<span class="new-season-badge" onclick="tapNewSeasonOnWatching(\''+sid+'\')">New season!</span>' : '';
   return '<div class="show-card'+(s.hidden?' is-hidden':'')+'" id="card-'+sid+'">'
-    + '<div class="show-card-top">'+showTile(s)+'<div class="show-info"><div class="show-title">'+s.title+(s.hidden?'<span class="hidden-badge">Hidden from friends</span>':'')+newSeasonBadge+'</div>'+platformRow+'</div>'+recommendBtn(sid)+menuHTML+'</div>'
+    + '<div class="show-card-top">'+showTile(s)+'<div class="show-info"><div class="show-title">'+s.title+(s.hidden?'<span class="hidden-badge">Hidden from friends</span>':'')+newSeasonBadge+'</div>'+platformRow+recommendBtn(sid)+'</div>'+menuHTML+'</div>'
     + otherRatingsW
     + '<div class="show-move">'+primaryHTML+dnfHTML+'</div>'
     + '<div class="react-area">'+talkPreviewHTML(s.title)+reactToggle+'</div>'
@@ -3127,7 +3130,7 @@ function buildWaitingCard(s) {
   var otherRatingsWait=ownCardRatingsHTML(s.title, 'watchlist', sid, s.rating);
 
   var newSeasonBadge = s.newSeasonAvailable ? '<span class="new-season-badge" onclick="tapNewSeasonBadge(\''+sid+'\')">New season!</span>' : '';
-  return '<div class="show-card'+(s.hidden?' is-hidden':'')+'" id="card-'+sid+'"><div class="show-card-top">'+showTile(s)+'<div class="show-info"><div class="show-title">'+s.title+(s.hidden?'<span class="hidden-badge">Hidden from friends</span>':'')+newSeasonBadge+'</div>'+platformRow+'</div>'+recommendBtn(sid)+menuHTML+'</div>'
+  return '<div class="show-card'+(s.hidden?' is-hidden':'')+'" id="card-'+sid+'"><div class="show-card-top">'+showTile(s)+'<div class="show-info"><div class="show-title">'+s.title+(s.hidden?'<span class="hidden-badge">Hidden from friends</span>':'')+newSeasonBadge+'</div>'+platformRow+recommendBtn(sid)+'</div>'+menuHTML+'</div>'
     + otherRatingsWait
     + '<div class="show-move"><button class="resume-watching-btn" onclick="resumeWatching(\''+sid+'\')">Resume Watching</button><button class="didnt-finish-btn" onclick="markDNFFromWaiting(\''+sid+'\')">Didn&#39;t Finish</button></div>'
     + '<div class="react-area">'+talkPreviewHTML(s.title)+reactToggle+'</div>'
@@ -3155,7 +3158,7 @@ function buildWatchlistCard(s) {
   }
   var otherRatingsList=ownCardRatingsHTML(s.title, 'watchlist', sid, s.rating);
 
-  return '<div class="show-card'+(s.hidden?' is-hidden':'')+'" id="card-'+sid+'"><div class="show-card-top">'+showTile(s)+'<div class="show-info"><div class="show-title">'+s.title+(s.hidden?'<span class="hidden-badge">Hidden from friends</span>':'')+'</div>'+platformRow+recommendedBadge+'</div>'+recommendBtn(sid)+menuHTML+'</div>'
+  return '<div class="show-card'+(s.hidden?' is-hidden':'')+'" id="card-'+sid+'"><div class="show-card-top">'+showTile(s)+'<div class="show-info"><div class="show-title">'+s.title+(s.hidden?'<span class="hidden-badge">Hidden from friends</span>':'')+'</div>'+platformRow+recommendedBadge+recommendBtn(sid)+'</div>'+menuHTML+'</div>'
     + otherRatingsList
     + '<div class="show-move"><button class="btn-start" onclick="moveToWatching(\''+sid+'\')">Start Watching</button>' + (isDocFilm(s) ? '' : '<button class="waiting-season-btn" onclick="markWaitingFromList(\''+sid+'\')">Caught Up</button>') + '</div>'
     + '<div class="react-area">'+talkPreviewHTML(s.title)+reactToggle+'</div>'
@@ -3202,7 +3205,7 @@ function buildBingedCard(s) {
   var platformRow=s.editingPlatform?platformSelect('watched',sid,s.platform):'';
   var otherRatingsB=ownCardRatingsHTML(s.title, 'watched', sid, s.rating);
 
-  return '<div class="show-card'+(s.hidden?' is-hidden':'')+'" id="card-'+sid+'"><div class="show-card-top">'+showTile(s)+'<div class="show-info"><div class="show-title">'+s.title+(s.hidden?'<span class="hidden-badge">Hidden from friends</span>':'')+'</div>'+platformRow+'</div>'+recommendBtn(sid)+menuHTML+'</div>'
+  return '<div class="show-card'+(s.hidden?' is-hidden':'')+'" id="card-'+sid+'"><div class="show-card-top">'+showTile(s)+'<div class="show-info"><div class="show-title">'+s.title+(s.hidden?'<span class="hidden-badge">Hidden from friends</span>':'')+'</div>'+platformRow+recommendBtn(sid)+'</div>'+menuHTML+'</div>'
     + otherRatingsB
     + '<div class="react-area">'+talkPreviewHTML(s.title)+reactToggle+'</div>'
     + '</div>';
@@ -4030,12 +4033,12 @@ async function showFriend(id) {
               + (mineExisting ? '<div class="lr-rate-line">'+lrRatingPair('You', remoteRatingLR(mineExisting.list, mineExisting.show.id, mineExisting.show.rating, f.id))+'</div>' : '');
           }
         }
-        var corner='<button class="btn-recommend" onclick="openRecommendPicker(\''+s.id+'\')" title="Recommend to a friend" aria-label="Recommend to a friend"><svg class="lg-ico" aria-hidden="true"><use href="#lg-target"/></svg></button>';
+        var corner='';
         if(!isSelf) corner+= mineExisting
           ? '<span class="on-list-badge">'+onListBadgeContent(mineExisting)+'</span>'
           : '<button class="btn-add-prominent" onclick="addFromFriendCard(\''+s.id+'\')" title="Add to my list">+ Add</button>';
         var otherRatings=friendRatingsHTML(s.title,f.id,state.friends,!isSelf);
-        html+='<div class="show-card" id="card-'+s.id+'"><div class="show-card-top">'+showTile(s)+'<div class="show-info"><div class="show-title">'+s.title+'</div></div><div class="card-corner">'+corner+'</div></div>'+((ratingBlock||otherRatings)?'<div class="frv-ratings">'+ratingBlock+(otherRatings?'<div style="margin-top:4px;">'+otherRatings+'</div>':'')+'</div>':'')+'<div class="react-area">'+talkPreviewHTML(s.title,state.friends)+reactToggle+'</div></div>';
+        html+='<div class="show-card" id="card-'+s.id+'"><div class="show-card-top">'+showTile(s)+'<div class="show-info"><div class="show-title">'+s.title+'</div>'+recommendBtn(s.id)+'</div><div class="card-corner">'+corner+'</div></div>'+((ratingBlock||otherRatings)?'<div class="frv-ratings">'+ratingBlock+(otherRatings?'<div style="margin-top:4px;">'+otherRatings+'</div>':'')+'</div>':'')+'<div class="react-area">'+talkPreviewHTML(s.title,state.friends)+reactToggle+'</div></div>';
       });
       html+='</div></div>';
     });
@@ -7163,22 +7166,40 @@ var _recommendSelectedIds = [];
 window.openRecommendPicker = function(showId){
   var found = findShowAnywhere(showId);
   if(!found) return;
-  _recommendPending = { title:found.show.title, tmdbId:found.show.tmdb_id, posterPath:found.show.poster_path, platform:found.show.platform, ownerId:found.ownerId };
+  _openRecPicker({ title:found.show.title, tmdbId:found.show.tmdb_id, posterPath:found.show.poster_path, platform:found.show.platform, ownerId:found.ownerId });
+};
+var _recPromptOpen = false;
+window.recommendFromDetails = function(){
+  var d = _currentShowDetails;
+  if(!d) return;
+  _openRecPicker({ title:d.title, tmdbId:d.tmdb_id, posterPath:d.poster_path, platform:d.platform||null, ownerId:state.user?state.user.id:null });
+};
+// Everyone you share any room with, minus the show's owner.
+function _recPickerPeople(ownerId){
+  var seen = {};
+  return [].concat(state.allFriendsAcrossRooms||[], state.friends||[])
+    .filter(function(f){
+      if(!f || f.id === ownerId || seen[f.id]) return false;
+      seen[f.id] = true; return true;
+    })
+    .sort(function(a,b){ return a.name.localeCompare(b.name); });
+}
+function _openRecPicker(pending, ask){
+  _recommendPending = pending;
+  _recPromptOpen = !!ask;
   _recommendSelectedIds = [];
-  document.getElementById('rec-picker-title').textContent = found.show.title;
+  document.getElementById('rec-picker-lead').textContent = ask ? 'Who else would love ' : 'Recommend ';
+  document.getElementById('rec-picker-title').textContent = pending.title;
+  document.getElementById('rec-picker-tail').textContent = ask ? '?' : '';
+  document.getElementById('rec-picker-close-btn').textContent = ask ? 'Not now' : 'Cancel';
+  document.getElementById('rec-picker-sub').textContent = ask ? 'Tap anyone who'd like it. They'll get your recommendation.' : 'Who should see this? Tap as many as you want.';
   document.getElementById('rec-picker-note').value = '';
   // Recommendations are person-to-person, not room content, and the bullseye
   // fires from the personal tabs too -- so pull from everyone you share ANY
   // room with (state.allFriendsAcrossRooms, preloaded at boot), unioned with
   // the currently-entered room's crowd in case the background preload hasn't
   // landed yet. Deduped by id, excluding the show's owner.
-  var seen = {};
-  var friendsList = [].concat(state.allFriendsAcrossRooms||[], state.friends||[])
-    .filter(function(f){
-      if(!f || f.id === found.ownerId || seen[f.id]) return false;
-      seen[f.id] = true; return true;
-    })
-    .sort(function(a,b){ return a.name.localeCompare(b.name); });
+  var friendsList = _recPickerPeople(pending.ownerId);
   var container = document.getElementById('rec-picker-friends');
   container.innerHTML = friendsList.length
     ? friendsList.map(function(f){ return '<button class="picker-option-btn" id="rec-friend-'+f.id+'" onclick="toggleRecommendFriend(\''+f.id+'\')">'+escAttr(f.name)+'</button>'; }).join('')
@@ -7193,7 +7214,61 @@ window.toggleRecommendFriend = function(friendId){
   if(btn) btn.classList.toggle('selected', idx===-1);
 };
 
+// ---- "Who else would love this?" after a 4 or 5 remote rating ----------------
+// Limits, per device: at most once a day, never twice for the same show, and three
+// "Not now" in a row pause it for 30 days. Never for a show hidden from friends, for
+// someone with no friends to pick, or on top of another popup. A skip counts only
+// when they actually saw the question.
+var REC_PROMPT_KEY = 'showup_rec_prompt';
+var REC_PROMPT_PAUSE_DAYS = 30, REC_PROMPT_MAX_SKIPS = 3;
+function _recPromptPrefs() {
+  try { return JSON.parse(localStorage.getItem(REC_PROMPT_KEY)) || {}; } catch (e) { return {}; }
+}
+function _recPromptSave(p) {
+  try { localStorage.setItem(REC_PROMPT_KEY, JSON.stringify(p)); } catch (e) {}
+}
+function _recPromptDay() {
+  var d = new Date();
+  return d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate();
+}
+function _anotherPopupIsOpen() {
+  if (document.querySelector('.invite-modal-overlay.active')) return true;
+  if (document.getElementById('add-picker-modal').classList.contains('active')) return true;
+  if (document.getElementById('daily-prompt').classList.contains('active')) return true;
+  if (document.getElementById('rate-sheet')) return true;
+  return ['dwm-overlay', 'sd-overlay'].some(function(id) {
+    var el = document.getElementById(id);
+    return el && el.style.display && el.style.display !== 'none';
+  });
+}
+function maybeAskToRecommend(show, rating) {
+  if (!show || !show.title || rating < 4 || show.hidden) return;
+  if (!state.user || state.currentRoomIsAdminView) return;
+  var p = _recPromptPrefs();
+  var key = show.title.toLowerCase().trim();
+  if (p.pauseUntil && Date.now() < p.pauseUntil) return;
+  if (p.day === _recPromptDay() || (p.asked && p.asked[key])) return;
+  if (!_recPickerPeople(state.user.id).length) return;
+  setTimeout(function() {
+    if (_anotherPopupIsOpen()) return; // try again on their next great rating
+    var fresh = _recPromptPrefs();
+    fresh.day = _recPromptDay();
+    fresh.asked = fresh.asked || {};
+    fresh.asked[key] = true;
+    _recPromptSave(fresh);
+    _openRecPicker({ title: show.title, tmdbId: show.tmdb_id || null, posterPath: show.poster_path || null, platform: show.platform || null, ownerId: state.user.id }, true);
+  }, 400);
+}
+function _recPromptResult(sent) {
+  _recPromptOpen = false;
+  var p = _recPromptPrefs();
+  p.skips = sent ? 0 : (p.skips || 0) + 1;
+  if (p.skips >= REC_PROMPT_MAX_SKIPS) { p.skips = 0; p.pauseUntil = Date.now() + REC_PROMPT_PAUSE_DAYS * 86400 * 1000; }
+  _recPromptSave(p);
+}
+
 window.closeRecommendPicker = function(){
+  if (_recPromptOpen) _recPromptResult(false);
   _recommendPending = null;
   _recommendSelectedIds = [];
   document.getElementById('recommend-picker-modal').classList.remove('active');
@@ -7207,6 +7282,7 @@ window.sendRecommendation = async function(){
   var namePool = [].concat(state.allFriendsAcrossRooms||[], state.friends||[]);
   var names = ids.map(function(id){ var f=namePool.find(function(x){return x.id===id;}); return f?f.name:'them'; });
   document.getElementById('recommend-picker-modal').classList.remove('active');
+  if (_recPromptOpen) _recPromptResult(true);
   _recommendPending = null;
   _recommendSelectedIds = [];
   try {
@@ -9286,6 +9362,11 @@ window.dpNope = function(i) {
 // Only the Not now / Done button closes it -- a stray tap on the dim area
 // right as it slid up used to dismiss it unseen.
 window.closeDailyPrompt = async function() {
+  var great = _dpItems.filter(function(it) { return it.id && it.choice && it.choice !== 'want' && it.rating >= 4; })[0];
+  await _closeDailyPrompt();
+  if (great && !document.getElementById('daily-prompt').classList.contains('active')) maybeAskToRecommend(great, great.rating);
+};
+async function _closeDailyPrompt() {
   // A comment needs a saved show to attach to, so don't lose one typed before a status.
   var noStatus = _dpItems.filter(function(it) { return !it.choice && (it.comment || '').trim(); })[0];
   if (noStatus) { showToast('Tap where you are with ' + noStatus.title + ' so your comment can save.'); return; }
@@ -9312,7 +9393,7 @@ window.closeDailyPrompt = async function() {
     state.watched = shows.filter(function(s) { return s.status === 'watched' || s.status === 'dnf'; }).map(normalizeShow);
     renderAll();
   } catch (err) { console.error('[dailyPrompt] reload error:', err); }
-};
+}
 
 window.dpSettingsTap = function() {
   var p = _dpPrefs();
@@ -9943,9 +10024,11 @@ window.submitDoneWatching = async function() {
       if (saved && saved.id) newReact.id = saved.id;
     } catch(e) { console.error('dwm comment error:', e); }
   }
+  var _ratedHigh = _dwmRating;
   _dwmPending = null;
   _dwmRating = 0;
   _dwmUndo = null;
+  maybeAskToRecommend(show, _ratedHigh);
 };
 
 window.skipDoneWatching = function() {
@@ -10178,6 +10261,7 @@ window.rate = async function(list, id, n) {
   s.rating = (s.rating === n) ? 0 : n;
   renderList(list);
   try { await updateShowRating(id, s.rating); } catch(e) { console.error('rate error:', e); }
+  maybeAskToRecommend(s, s.rating);
 };
 
 window.toggleHide = async function(list, id) {
@@ -11407,6 +11491,8 @@ window.openShowDetails = async function(tmdbId, friendRatings, opts) {
   if (!overlay || !body) return;
   body.innerHTML = '<div style="padding:30px 0;color:var(--muted);font-size:14px;">Loading...</div>';
   if (addBtn) addBtn.style.display = 'none';
+  var recBtn = document.getElementById('sd-rec-btn');
+  if (recBtn) recBtn.style.display = 'none';
   _currentShowDetails = null;
   overlay.style.display = 'flex';
   try {
@@ -11476,6 +11562,7 @@ window.openShowDetails = async function(tmdbId, friendRatings, opts) {
       overview: d.overview || null, vote_average: d.vote_average || null,
     };
     if (addBtn && _currentShowDetails.title && !(opts && opts.noAdd)) addBtn.style.display = 'block';
+    if (recBtn && _currentShowDetails.title && !(opts && opts.noAdd)) recBtn.style.display = 'flex';
   } catch(e) {
     console.error('TMDB details error:', e);
     body.innerHTML = '<div style="padding:30px 0;color:var(--muted);font-size:14px;">Couldn\'t load show details.</div>';
@@ -12780,13 +12867,13 @@ bootstrap();
 <!-- RECOMMEND-TO-A-FRIEND PICKER -->
 <div class="invite-modal-overlay" id="recommend-picker-modal">
   <div class="invite-modal">
-    <div class="invite-modal-title">Recommend <span id="rec-picker-title"></span></div>
-    <div class="invite-modal-sub">Who should see this? Tap as many as you want.</div>
+    <div class="invite-modal-title"><span id="rec-picker-lead">Recommend </span><span id="rec-picker-title"></span><span id="rec-picker-tail"></span></div>
+    <div class="invite-modal-sub" id="rec-picker-sub">Who should see this? Tap as many as you want.</div>
     <div id="rec-picker-friends" style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px;max-height:200px;overflow-y:auto;"></div>
     <textarea id="rec-picker-note" placeholder="Add a note (optional) — why they'd like it" style="width:100%;box-sizing:border-box;border:1px solid var(--border);border-radius:8px;padding:9px 12px;font-family:var(--sans);font-size:13px;color:var(--charcoal);resize:none;margin-bottom:14px;" rows="2"></textarea>
     <div style="display:flex;gap:10px;">
       <button class="btn-invite-copy" id="rec-picker-send-btn" onclick="sendRecommendation()" style="flex:1;">Send</button>
-      <button class="btn-invite-close" onclick="closeRecommendPicker()" style="flex:1;">Cancel</button>
+      <button class="btn-invite-close" id="rec-picker-close-btn" onclick="closeRecommendPicker()" style="flex:1;">Cancel</button>
     </div>
   </div>
 </div>
