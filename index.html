@@ -326,6 +326,19 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
 .lr-search-clear{display:none;position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:16px;color:var(--muted);padding:4px;line-height:1;}
 .lr-search-wrap.has-text .lr-search-clear{display:block;}
 .lr-search-input:focus{border-color:var(--fig);}
+/* Show lookup: one card per show, from either Living Room search bar. */
+.lookup-card{background:var(--cream);border:1px solid var(--border);border-radius:var(--radius);padding:12px;margin-bottom:10px;box-shadow:var(--shadow);text-align:left;}
+.lookup-top{display:flex;gap:12px;align-items:flex-start;}
+.lookup-thumb{display:flex;align-items:center;justify-content:center;width:56px;height:84px;border-radius:6px;object-fit:cover;flex-shrink:0;background:var(--sand-dark);color:var(--brand);}
+.lookup-open{cursor:pointer;}
+.lookup-info{flex:1;min-width:0;}
+.lookup-title{font-size:16px;font-weight:700;line-height:1.25;color:var(--charcoal);}
+.lookup-line{font-size:12px;color:var(--muted);margin-top:2px;line-height:1.35;}
+.lookup-action{margin-top:8px;}
+.lookup-add{min-height:40px;padding:0 16px;border:none;border-radius:8px;background:var(--terra);color:#fff;font-family:var(--sans);font-size:13px;font-weight:700;cursor:pointer;}
+.lookup-people{margin-top:10px;border-top:1px solid var(--border);padding-top:4px;}
+.lookup-neighbors{display:block;min-height:44px;padding:0;background:none;border:none;color:var(--fig);font-family:var(--sans);font-size:13px;font-weight:600;cursor:pointer;}
+#room-picker-view.is-searching .tastemakers-banner,#room-picker-view.is-searching #lg-hub-rail{display:none!important;}
 .conversation-row{display:flex;gap:10px;align-items:flex-start;background:var(--cream);border:1px solid var(--border);border-radius:var(--radius);padding:12px 14px;box-shadow:var(--shadow);margin-bottom:8px;cursor:pointer;transition:border-color 0.15s;}
 .conversation-row:hover{border-color:var(--terra);}
 .conversation-icon{font-size:17px;flex-shrink:0;line-height:1.4;}
@@ -1347,6 +1360,8 @@ body.look-lounge .lg-row .friend-count{margin-top:2px;font-size:12px;font-weight
         </div>
         <div class="page-title"><span class="lg-old">&#127968;&nbsp; </span>Your Living Rooms</div>
         <div class="page-sub">Pick a room to enter, or start a new one.</div>
+        <div class="lr-search-wrap"><input type="text" id="room-picker-search" class="lr-search-input" placeholder="Look up any show or person" oninput="renderRoomPickerSearch();toggleSearchClearBtn(this)" autocomplete="off" /><button class="lr-search-clear" type="button" aria-label="Clear search" onclick="clearSearchInput('room-picker-search')">&#10005;</button></div>
+        <div id="room-picker-search-results" style="display:none;"></div>
         <div id="lg-hub-rail" class="lg-rail-wrap"></div>
         <div class="tastemakers-banner lg-hub-row" onclick="openFullLineupView()" style="margin-bottom:16px;background:linear-gradient(135deg,#3b6e8f,#2c4f66);">
           <div class="tastemakers-banner-icon lg-old">&#128293;</div><svg class="lg-ico lg-new" aria-hidden="true"><use href="#lg-flame"/></svg>
@@ -1380,9 +1395,7 @@ body.look-lounge .lg-row .friend-count{margin-top:2px;font-size:12px;font-weight
           </div>
           <div class="tastemakers-banner-arrow">&#8250;</div>
         </div>
-        <div class="lr-search-wrap"><input type="text" id="room-picker-search" class="lr-search-input" placeholder="Search a show to see who rated it..." oninput="renderRoomPickerSearch();toggleSearchClearBtn(this)" autocomplete="off" /><button class="lr-search-clear" type="button" aria-label="Clear search" onclick="clearSearchInput('room-picker-search')">&#10005;</button></div>
         <div class="room-picker-grid" id="room-picker-grid"></div>
-        <div id="room-picker-search-results" style="display:none;"></div>
       </div>
       <div id="prime-time-view" style="display:none">
         <div class="page-title"><button class="nav-back" onclick="backFromPrimeTimeView()" style="margin-right:6px;">&#8592;</button><span class="lg-old">&#128225;&nbsp; </span>Prime Time</div>
@@ -1428,7 +1441,7 @@ body.look-lounge .lg-row .friend-count{margin-top:2px;font-size:12px;font-weight
           <div id="tastemakers-banner-wrap"></div>
           <div id="room-ticker" class="room-ticker" style="display:none;" onclick="openNewThisWeekModal()" title="See what's new this week"></div>
           <div id="top5-banner-wrap"></div>
-          <div class="lr-search-wrap"><input type="text" id="crew-search" class="lr-search-input" placeholder="Search a show or friend to see who rated it..." oninput="renderFriends();toggleSearchClearBtn(this)" autocomplete="off" /><button class="lr-search-clear" type="button" aria-label="Clear search" onclick="clearSearchInput('crew-search')">&#10005;</button></div>
+          <div class="lr-search-wrap"><input type="text" id="crew-search" class="lr-search-input" placeholder="Look up any show or person" oninput="renderFriends();toggleSearchClearBtn(this)" autocomplete="off" /><button class="lr-search-clear" type="button" aria-label="Clear search" onclick="clearSearchInput('crew-search')">&#10005;</button></div>
           <div class="lg-crew-tools" style="display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap;">
             <button id="crew-platform-toggle" onclick="toggleCrewPlatformView()" style="background:none;border:1px solid var(--terra);color:var(--terra);border-radius:8px;padding:6px 12px;font-family:var(--sans);font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;"><span class="lg-old">&#128256; </span>Sort by Platform</button>
             <button type="button" id="invite-someone-link" class="invite-pill" onclick="openInviteModal()">+ Invite a Friend</button>
@@ -3865,7 +3878,7 @@ function renderFriends() {
     updateConversationsBadge();
     return;
   }
-  document.getElementById('friends-grid').innerHTML=(whoRatedHTML?'<div style="grid-column:1/-1;">'+whoRatedHTML+'</div>':selfTile)+sorted.map(function(f){
+  document.getElementById('friends-grid').innerHTML=(whoRatedHTML?'':selfTile)+sorted.map(function(f){
     var fRoom=f.room||'tuscany'; var fColor=ROOMS[fRoom]?ROOMS[fRoom].color:f.color;
     var fInitials=f.name.split(' ').map(function(x){return x[0];}).join('');
     var fFirst=f.name.split(' ')[0];
@@ -3881,7 +3894,7 @@ function renderFriends() {
       +'<div class="friend-count">'+fCounts.watching+' watching &middot; '+fCounts.list+' list &middot; '+fCounts.binged+' binged</div>'
       +matchDetail
       +'</div>';
-  }).join('');
+  }).join('')+(whoRatedHTML?'<div style="grid-column:1/-1;">'+whoRatedHTML+'</div>':'');
   updateConversationsBadge();
 }
 
@@ -4440,8 +4453,10 @@ function buildWhoRatedResults(q) {
     if (!s || !s.title || s.title.toLowerCase().indexOf(q) === -1) return;
     if (person.id !== meId && state.blockedIds && state.blockedIds.has(person.id)) return;
     var key = s.title.toLowerCase().trim();
-    var show = shows[key] || (shows[key] = { title: s.title, platform: s.platform || '', byId: {} });
+    var show = shows[key] || (shows[key] = { title: s.title, platform: s.platform || '', poster_path: null, tmdb_id: null, byId: {} });
     if (!show.platform && s.platform) show.platform = s.platform;
+    if (!show.poster_path && s.poster_path) show.poster_path = s.poster_path;
+    if (!show.tmdb_id && s.tmdb_id) show.tmdb_id = s.tmdb_id;
     var existing = show.byId[person.id];
     if (existing && (existing.rating || !s.rating)) return; // one row per person, rated copy wins
     show.byId[person.id] = { id: person.id, name: person.name, kind: person.kind, list: person.list, rating: s.rating || 0, showId: s.id };
@@ -4466,7 +4481,7 @@ function buildWhoRatedResults(q) {
     });
     var rated = people.filter(function(r) { return r.rating > 0; });
     var avg = rated.length ? rated.reduce(function(sum, r) { return sum + r.rating; }, 0) / rated.length : 0;
-    return { title: show.title, platform: show.platform, people: people, ratedCount: rated.length, avg: avg };
+    return { title: show.title, platform: show.platform, poster_path: show.poster_path, tmdb_id: show.tmdb_id, people: people, ratedCount: rated.length, avg: avg };
   });
   // Closest title first, so "homeland" puts Homeland above longer titles.
   results.sort(function(a, b) {
@@ -4490,32 +4505,181 @@ function whoRatedRowHTML(r) {
     + '<span class="rank-chev" style="font-size:18px;' + (jump ? '' : 'visibility:hidden;') + '">&rsaquo;</span></div>';
 }
 
-// Empty string when no show title matches, so callers can fall back to
-// person-name results.
+// ---- Show lookup: any show, with thumbnail, Add, and who rated it -----------
+// ShowUp's who-rated results merged with a TMDB title search, so a show nobody
+// here has added is still found. Shows with ShowUp ratings come first.
+var _lookupTmdb = {}, _lookupWaiting = null, _lookupTimer = null;
+var _lookupItems = [], _lookupIdByKey = {}, _lookupPlatforms = {};
+var _lookupNeighborsOpen = {};
+
+function _lookupRerender() {
+  renderRoomPickerSearch();
+  var crew = document.getElementById('crew-search');
+  if (state.currentRoomId && crew && crew.value.trim()) renderFriends();
+}
+
+// The results for q, or null while they're on the way (redraws when they land).
+function _lookupTmdbFor(q) {
+  if (q.length < 2) return [];
+  if (_lookupTmdb[q]) return _lookupTmdb[q];
+  if (_lookupWaiting === q) return null;
+  _lookupWaiting = q;
+  if (_lookupTimer) clearTimeout(_lookupTimer);
+  _lookupTimer = setTimeout(async function() {
+    var failed = false;
+    try { _lookupTmdb[q] = (await _tmdbTitleSearch(q)).slice(0, WHO_RATED_MAX_SHOWS); }
+    catch (e) { console.error('show lookup error:', e); _lookupTmdb[q] = []; failed = true; }
+    if (_lookupWaiting === q) _lookupWaiting = null;
+    _lookupRerender();
+    if (failed) delete _lookupTmdb[q]; // try again next time, once this draw has shown what we have
+  }, 400);
+  return null;
+}
+
+function _lookupRegister(item) {
+  var key = item.title.toLowerCase().trim();
+  if (_lookupIdByKey[key] === undefined) _lookupIdByKey[key] = _lookupItems.length;
+  _lookupItems[_lookupIdByKey[key]] = item;
+  return _lookupIdByKey[key];
+}
+
+function buildShowLookup(q) {
+  var rows = buildWhoRatedResults(q);
+  var tmdb = _lookupTmdbFor(q);
+  var used = {};
+  rows.forEach(function(r) {
+    var title = r.title.toLowerCase().trim();
+    var hit = (tmdb || []).filter(function(m) { return m.name.toLowerCase().trim() === title; })[0]
+      || (tmdb || []).filter(function(m) { return m.id === r.tmdb_id; })[0];
+    if (!hit) return;
+    used[hit.id] = true;
+    r.year = hit.year;
+    r.media_type = hit.media_type;
+    if (!r.tmdb_id) r.tmdb_id = hit.id;
+    if (!r.poster_path) r.poster_path = hit.poster_path;
+  });
+  var others = (tmdb || []).filter(function(m) { return !used[m.id]; }).map(function(m) {
+    return { title: m.name, year: m.year, media_type: m.media_type, tmdb_id: m.id, poster_path: m.poster_path, platform: '', people: [], ratedCount: 0, avg: 0 };
+  });
+  return {
+    shows: rows.filter(function(r) { return r.ratedCount > 0; })
+      .concat(rows.filter(function(r) { return !r.ratedCount; }), others),
+    waiting: tmdb === null,
+  };
+}
+
+function _lookupCardHTML(s) {
+  var id = _lookupRegister(s);
+  var open = s.tmdb_id ? ' onclick="lookupOpen(' + id + ')"' : '';
+  var openCls = s.tmdb_id ? ' lookup-open' : '';
+  var thumb = s.poster_path
+    ? '<img class="lookup-thumb' + openCls + '" src="' + TMDB_IMG + s.poster_path + '" alt="" loading="lazy"' + open + ' />'
+    : '<div class="lookup-thumb' + openCls + '"' + open + '><svg class="lg-ico" aria-hidden="true"><use href="#lg-tv"/></svg></div>';
+  var platform = s.platform && s.platform !== 'None' ? s.platform : (_lookupPlatforms[s.tmdb_id] || '');
+  var facts = '<span class="lookup-year">' + escAttr(s.year || '') + '</span>'
+    + (s.year && platform ? ' &middot; ' : '')
+    + '<span' + (platform || !s.tmdb_id ? '' : ' data-lookup-plat="' + parseInt(s.tmdb_id, 10) + '"') + '>' + escAttr(platform) + '</span>';
+  var summary = s.ratedCount
+    ? '<b>' + s.avg.toFixed(1) + '</b> average &middot; ' + s.ratedCount + (s.ratedCount === 1 ? ' rating' : ' ratings') + ' on ShowUp'
+    : 'No ShowUp ratings yet';
+  var mine = findMyShowByTitle(s.title);
+  var action = mine
+    ? onListBadgeHTML(mine, 'display:inline-block;white-space:normal;', true)
+    : '<button type="button" class="lookup-add" onclick="lookupAdd(' + id + ')">+ Add to My Lists</button>';
+  var known = s.people.filter(function(p) { return p.kind !== 'neighbor'; });
+  var neighbors = s.people.filter(function(p) { return p.kind === 'neighbor'; });
+  var neighborsHTML = '';
+  if (neighbors.length) {
+    var isOpen = !!_lookupNeighborsOpen[id];
+    neighborsHTML = '<button type="button" class="lookup-neighbors" onclick="lookupToggleNeighbors(this,' + id + ')">'
+      + (known.length ? '+ ' : '') + neighbors.length + (neighbors.length === 1 ? ' Neighbor' : ' Neighbors') + ' &rsaquo;</button>'
+      + '<div' + (isOpen ? '' : ' style="display:none;"') + '>' + neighbors.map(whoRatedRowHTML).join('') + '</div>';
+  }
+  var peopleHTML = known.length || neighbors.length
+    ? '<div class="lookup-people">' + known.map(whoRatedRowHTML).join('') + neighborsHTML + '</div>'
+    : '';
+  return '<div class="lookup-card"><div class="lookup-top">' + thumb + '<div class="lookup-info">'
+    + '<div class="lookup-title' + openCls + '"' + open + '>' + escAttr(s.title) + '</div>'
+    + '<div class="lookup-line">' + facts + '</div>'
+    + '<div class="lookup-line">' + summary + '</div>'
+    + '<div class="lookup-action">' + action + '</div>'
+    + '</div></div>' + peopleHTML + '</div>';
+}
+
+// TMDB's search doesn't say where a show streams, so that's filled in afterwards.
+function _lookupFillPlatforms(shows) {
+  shows.forEach(function(s) {
+    var tid = s.tmdb_id;
+    if (!tid || s.platform || _lookupPlatforms[tid] !== undefined) return;
+    _lookupPlatforms[tid] = '';
+    fetchAutoPlatform(tid, s.media_type).then(function(p) {
+      if (!p) return;
+      _lookupPlatforms[tid] = p;
+      document.querySelectorAll('[data-lookup-plat="' + parseInt(tid, 10) + '"]').forEach(function(el) {
+        el.textContent = p;
+        var year = el.parentNode.querySelector('.lookup-year');
+        if (year && year.textContent && el.previousSibling === year) year.insertAdjacentHTML('afterend', ' &middot; ');
+      });
+    });
+  });
+}
+
+// Empty string when nothing matches, so callers can show their "no match" message.
 function whoRatedResultsHTML(q) {
-  var results = buildWhoRatedResults(q);
-  if (!results.length) return '';
-  var cards = results.slice(0, WHO_RATED_MAX_SHOWS).map(function(s) {
-    var summary = s.ratedCount
-      ? '<b>' + s.avg.toFixed(1) + '</b> average &middot; ' + s.ratedCount + (s.ratedCount === 1 ? ' rating' : ' ratings')
-      : 'No ratings yet';
-    return '<div class="who-rated-card">'
-      + '<div class="who-rated-title">' + escAttr(s.title) + '</div>'
-      + '<div class="who-rated-summary">' + summary + (s.platform ? ' &middot; ' + escAttr(s.platform) : '') + '</div>'
-      + s.people.map(whoRatedRowHTML).join('')
-      + '</div>';
-  }).join('');
-  var more = results.length > WHO_RATED_MAX_SHOWS
+  var found = buildShowLookup(q);
+  var shown = found.shows.slice(0, WHO_RATED_MAX_SHOWS);
+  _lookupFillPlatforms(shown);
+  var searching = found.waiting
+    ? '<div class="who-rated-summary" style="text-align:center;margin-bottom:12px;">Looking for more shows&hellip;</div>'
+    : '';
+  if (!shown.length) return searching;
+  var more = found.shows.length > WHO_RATED_MAX_SHOWS
     ? '<div class="who-rated-summary" style="text-align:center;margin-bottom:12px;">Keep typing to narrow it down</div>'
     : '';
-  return cards + more;
+  return shown.map(_lookupCardHTML).join('') + searching + more;
 }
+
+window.lookupOpen = function(id) {
+  var s = _lookupItems[id];
+  if (!s || !s.tmdb_id) return;
+  var ratings = s.people.filter(function(p) { return p.kind !== 'neighbor'; })
+    .map(function(p) { return { name: p.name, rating: p.rating }; });
+  openShowDetails(s.tmdb_id, ratings);
+};
+window.lookupAdd = function(id) {
+  var s = _lookupItems[id];
+  if (!s) return;
+  var existing = findMyShowByTitle(s.title);
+  if (existing) {
+    showToast('Already on your list — ' + (ADD_LIST_LABELS[existing.list] || 'My Lists') + '.');
+    return;
+  }
+  var known = s.platform && s.platform !== 'None' ? s.platform : (_lookupPlatforms[s.tmdb_id] || null);
+  var info = {
+    tmdb_id: s.tmdb_id || null, title: s.title, poster_path: s.poster_path || null, platform: known,
+    media_type: s.media_type || 'tv', genre: null, original_network: null,
+    first_air_year: s.year ? parseInt(s.year, 10) : null,
+    number_of_seasons: null, show_status: null, overview: null, vote_average: null,
+  };
+  _currentShowDetails = info;
+  openAddPicker();
+  if (!known && s.tmdb_id) fetchAutoPlatform(s.tmdb_id, s.media_type).then(function(p) { if (p) info.platform = p; });
+};
+window.lookupToggleNeighbors = function(btn, id) {
+  var panel = btn.nextElementSibling;
+  if (!panel) return;
+  var opening = panel.style.display === 'none';
+  panel.style.display = opening ? '' : 'none';
+  _lookupNeighborsOpen[id] = opening;
+};
 
 function renderRoomPickerSearch() {
   var q = ((document.getElementById('room-picker-search') || {}).value || '').trim().toLowerCase();
   var grid = document.getElementById('room-picker-grid');
   var resultsEl = document.getElementById('room-picker-search-results');
   if (!resultsEl || !grid) return;
+  var pickerView = document.getElementById('room-picker-view');
+  if (pickerView) pickerView.classList.toggle('is-searching', !!q);
   if (!q) {
     resultsEl.style.display = 'none';
     grid.style.display = '';
@@ -4541,7 +4705,7 @@ function renderRoomPickerSearch() {
   _allRoomsSearchCache = list;
   var matchLabel = platformQuery
     ? '<div style="font-size:12px;color:var(--muted);margin-bottom:8px;">Showing: <b style="color:var(--terra);">' + matchedPlatformNames(q).map(escAttr).join(', ') + '</b></div>'
-    : whoRatedHTML;
+    : '';
   if (!list.length) {
     resultsEl.innerHTML = whoRatedHTML || (matchLabel + '<div class="empty"><div class="empty-icon">&#128269;</div>No shows or people match "' + escAttr(q) + '".</div>');
     return;
@@ -4560,7 +4724,7 @@ function renderRoomPickerSearch() {
       + (person.roomNames.length ? '<div class="friend-city">' + person.roomNames.map(escAttr).join(', ') + '</div>' : '')
       + (chips ? '<div class="friend-match-list">' + chips + '</div>' : '')
       + '</div>';
-  }).join('') + '</div>';
+  }).join('') + '</div>' + whoRatedHTML;
 }
 
 window.jumpToAllRoomsSearchMatch = function(pi, si) {
@@ -11035,6 +11199,30 @@ window.tapDupHint = function(prefix) {
   goToExistingShow(mine); // switches tab, scrolls, toasts
 };
 
+// TV series (incl. docuseries) + documentary FILMS. Films come from
+// /search/movie filtered to TMDB genre 99 -- that's the only non-TV
+// thing allowed in; no general movies. Both normalised to one shape.
+async function _tmdbTitleSearch(q) {
+  var qs = encodeURIComponent(q);
+  var pair = await Promise.all([
+    fetch('https://api.themoviedb.org/3/search/tv?query=' + qs + '&api_key=' + TMDB_KEY + '&language=en-US&page=1'),
+    fetch('https://api.themoviedb.org/3/search/movie?query=' + qs + '&api_key=' + TMDB_KEY + '&language=en-US&page=1')
+  ]);
+  var tvData = await pair[0].json();
+  var mvData = await pair[1].json();
+  var tv = (tvData.results || []).filter(function(r) { return r.name; }).map(function(r) {
+    return { id: r.id, media_type: 'tv', name: r.name, year: (r.first_air_date || '').substring(0, 4),
+      poster_path: r.poster_path || null, overview: r.overview || null, vote_average: r.vote_average || null };
+  });
+  var docs = (mvData.results || []).filter(function(r) {
+    return r.title && (r.genre_ids || []).indexOf(99) !== -1;
+  }).map(function(r) {
+    return { id: r.id, media_type: 'documentary', name: r.title, year: (r.release_date || '').substring(0, 4),
+      poster_path: r.poster_path || null, overview: r.overview || null, vote_average: r.vote_average || null };
+  });
+  return tv.concat(docs).sort(function(a, b) { return tmdbMatchScore(b.name, q) - tmdbMatchScore(a.name, q); });
+}
+
 window.tmdbSearch = function(prefix) {
   var inp = document.getElementById(prefix + '-title');
   var dd = document.getElementById(prefix + '-tmdb-dd');
@@ -11047,30 +11235,9 @@ window.tmdbSearch = function(prefix) {
   if (q.length < 2) { if (dd) { dd.innerHTML = ''; dd.classList.remove('open'); } return; }
   _tmdbTimers[prefix] = setTimeout(async function() {
     try {
-      // TV series (incl. docuseries) + documentary FILMS. Films come from
-      // /search/movie filtered to TMDB genre 99 -- that's the only non-TV
-      // thing allowed in; no general movies. Both normalised to one shape.
-      var qs = encodeURIComponent(q);
-      var pair = await Promise.all([
-        fetch('https://api.themoviedb.org/3/search/tv?query=' + qs + '&api_key=' + TMDB_KEY + '&language=en-US&page=1'),
-        fetch('https://api.themoviedb.org/3/search/movie?query=' + qs + '&api_key=' + TMDB_KEY + '&language=en-US&page=1')
-      ]);
-      var tvData = await pair[0].json();
-      var mvData = await pair[1].json();
+      var found = await _tmdbTitleSearch(q);
       if (_tmdbSeq[prefix] !== mySeq) return; // a newer keystroke has already superseded this request
-      var tv = (tvData.results || []).filter(function(r) { return r.name; }).map(function(r) {
-        return { id: r.id, media_type: 'tv', name: r.name, year: (r.first_air_date || '').substring(0, 4),
-          poster_path: r.poster_path || null, overview: r.overview || null, vote_average: r.vote_average || null };
-      });
-      var docs = (mvData.results || []).filter(function(r) {
-        return r.title && (r.genre_ids || []).indexOf(99) !== -1;
-      }).map(function(r) {
-        return { id: r.id, media_type: 'documentary', name: r.title, year: (r.release_date || '').substring(0, 4),
-          poster_path: r.poster_path || null, overview: r.overview || null, vote_average: r.vote_average || null };
-      });
-      var results = tv.concat(docs)
-        .sort(function(a, b) { return tmdbMatchScore(b.name, q) - tmdbMatchScore(a.name, q); })
-        .slice(0, 6);
+      var results = found.slice(0, 6);
       _tmdbResults[prefix] = results;
       if (!results.length) {
         dd.innerHTML = '<div style="padding:10px 12px;font-size:13px;color:var(--muted);">No results found</div>';
@@ -11678,6 +11845,12 @@ function showToast(msg) {
 }
 
 window.chooseAddDestination = async function(destKey) {
+  await _chooseAddDestination(destKey);
+  var hub = document.getElementById('room-picker-search');
+  var crew = document.getElementById('crew-search');
+  if ((hub && hub.value.trim()) || (crew && crew.value.trim())) _lookupRerender();
+};
+async function _chooseAddDestination(destKey) {
   var info = _currentShowDetails;
   if (!info) return;
   closeAddPicker();
@@ -11786,7 +11959,7 @@ window.chooseAddDestination = async function(destKey) {
   }
   _seenItRating = null;
   refreshDetailYourRating();
-};
+}
 
 // ============================================================
 // INVITE LINKS
