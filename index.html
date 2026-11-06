@@ -815,6 +815,13 @@ html.native-cover .status-shield{display:block;position:fixed;top:0;left:0;right
 .show-move .btn-start,.show-move .done-watching-btn,.show-move .resume-watching-btn,.show-move .btn-start:hover{background:var(--brand);color:#fff;}
 .show-move .waiting-season-btn:hover,.show-move .didnt-finish-btn:hover{background:rgba(107,45,78,0.08);}
 input::placeholder,textarea::placeholder{color:var(--muted);opacity:1;}
+.textsize-tip{display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:var(--cream);border:1px solid var(--border);border-radius:10px;padding:10px 12px;margin-bottom:14px;font-size:14px;color:var(--charcoal);}
+.textsize-tip b{flex:1 1 150px;font-weight:600;}
+.textsize-tip button{min-height:40px;padding:0 12px;border-radius:8px;font-family:var(--sans);font-size:14px;font-weight:700;cursor:pointer;}
+.textsize-tip .tip-go{background:var(--brand);border:none;color:#fff;}
+.textsize-tip .tip-no{background:none;border:none;color:var(--muted);}
+#room-picker-view.is-searching .textsize-tip{display:none;}
+body.look-lounge #room-picker-view>.textsize-tip{order:1;}
 .lg-old{display:none!important;}
 svg.lg-new{display:block;}
 .nav-bell,.nav-settings{color:var(--brand);}
@@ -1387,6 +1394,7 @@ body.look-lounge .lg-row .friend-count{margin-top:2px;font-size:13px;font-weight
           <span class="announcement-text" id="announcement-text"></span>
           <button class="announcement-dismiss" onclick="dismissAnnouncement()" title="Dismiss" aria-label="Dismiss">&#10005;</button>
         </div>
+        <div class="textsize-tip" id="textsize-tip" style="display:none;"><b>Want bigger text?</b><button type="button" class="tip-go" onclick="textSizeTip(true)">Show me</button><button type="button" class="tip-no" onclick="textSizeTip(false)">No thanks</button></div>
         <div class="page-title"><span class="lg-old"></span>Your Living Rooms</div>
         <div class="page-sub">Pick a room to enter, or start a new one.</div>
         <div class="lr-search-wrap"><input type="text" id="room-picker-search" class="lr-search-input" placeholder="Look up any show or person" oninput="renderRoomPickerSearch();toggleSearchClearBtn(this)" autocomplete="off" /><button class="lr-search-clear" type="button" aria-label="Clear search" onclick="clearSearchInput('room-picker-search')">&#10005;</button></div>
@@ -4228,6 +4236,7 @@ async function loadAndRenderAnnouncement(){
     _announcementData = null;
   }
   renderAnnouncementBanner();
+  renderTextSizeTip();
 }
 function renderAnnouncementBanner(){
   var el = document.getElementById('announcement-banner');
@@ -4240,12 +4249,35 @@ function renderAnnouncementBanner(){
   document.getElementById('announcement-icon').textContent = _announcementData.emoji || '📢';
   el.style.display = 'flex';
 }
+// One-time pointer to Settings > Text size, per device. Waits its turn behind the
+// announcement so there's only one message at a time, and skips anyone already on
+// a larger size.
+var TEXT_TIP_KEY = 'showup_textsize_tip_seen';
+function renderTextSizeTip() {
+  var el = document.getElementById('textsize-tip');
+  if (!el) return;
+  var seen = true;
+  try { seen = !!localStorage.getItem(TEXT_TIP_KEY); } catch (e) {}
+  var bar = document.getElementById('announcement-banner');
+  var barShowing = bar && bar.style.display !== 'none';
+  el.style.display = (!seen && !barShowing && window._textSize === 'standard') ? 'flex' : 'none';
+}
+window.textSizeTip = function(go) {
+  try { localStorage.setItem(TEXT_TIP_KEY, '1'); } catch (e) {}
+  renderTextSizeTip();
+  if (!go) return;
+  goToSettings();
+  var seg = document.getElementById('textsize-seg');
+  if (seg) setTimeout(function() { seg.scrollIntoView({ block: 'center' }); }, 50);
+};
+
 window.dismissAnnouncement = function(){
   if (_announcementData) {
     try { localStorage.setItem('showup_announcement_seen', _announcementData.updated_at); } catch(e) {}
   }
   var el = document.getElementById('announcement-banner');
   if (el) el.style.display = 'none';
+  renderTextSizeTip();
 };
 
 // Admin-only editor (Settings > Admin > Edit Announcement Banner) -- no
