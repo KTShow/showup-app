@@ -4491,6 +4491,11 @@ var _allRoomsSearchCache = [];
 // come from Prime Time's platform-wide data; people in your rooms who have
 // the show but haven't rated it come from the cross-room search data.
 var WHO_RATED_MAX_SHOWS = 8;
+
+// iPhones type curly quotes; titles mostly have straight ones. Compare both ways.
+function _normQ(t) {
+  return (t || '').toLowerCase().replace(/[‘’ʼ`´]/g, "'").replace(/[“”]/g, '"').replace(/\s+/g, ' ').trim();
+}
 var _whoRatedLoading = false;
 
 // Friends' lists arrive once (when a search bar is tapped). Ratings from everyone else
@@ -4541,6 +4546,7 @@ function _whoRatedRows(q) {
 }
 
 function buildWhoRatedResults(q) {
+  q = _normQ(q);
   var meId = state.user && state.user.id;
   var data = _whoRatedRows(q);
   var peopleById = {};
@@ -4552,9 +4558,9 @@ function buildWhoRatedResults(q) {
 
   var shows = {};
   function add(s, person) {
-    if (!s || !s.title || s.title.toLowerCase().indexOf(q) === -1) return;
+    if (!s || !s.title || _normQ(s.title).indexOf(q) === -1) return;
     if (person.id !== meId && state.blockedIds && state.blockedIds.has(person.id)) return;
-    var key = s.title.toLowerCase().trim();
+    var key = _normQ(s.title);
     var show = shows[key] || (shows[key] = { title: s.title, platform: s.platform || '', poster_path: null, tmdb_id: null, byId: {} });
     if (!show.platform && s.platform) show.platform = s.platform;
     if (!show.poster_path && s.poster_path) show.poster_path = s.poster_path;
@@ -4651,12 +4657,13 @@ function _lookupRegister(item) {
 }
 
 function buildShowLookup(q) {
+  q = _normQ(q);
   var rows = buildWhoRatedResults(q);
   var tmdb = _lookupTmdbFor(q);
   var used = {};
   rows.forEach(function(r) {
-    var title = r.title.toLowerCase().trim();
-    var hit = (tmdb || []).filter(function(m) { return m.name.toLowerCase().trim() === title; })[0]
+    var title = _normQ(r.title);
+    var hit = (tmdb || []).filter(function(m) { return _normQ(m.name) === title; })[0]
       || (tmdb || []).filter(function(m) { return m.id === r.tmdb_id; })[0];
     if (!hit) return;
     used[hit.id] = true;
@@ -4743,8 +4750,9 @@ function _notInListHTML(q, where) {
 }
 
 // Empty string when nothing matches, so callers can show their "no match" message.
-function whoRatedResultsHTML(q) {
+function whoRatedResultsHTML(q, skipTitles) {
   var found = buildShowLookup(q);
+  if (skipTitles) found.shows = found.shows.filter(function(s) { return !skipTitles[_normQ(s.title)]; });
   var shown = found.shows.slice(0, WHO_RATED_MAX_SHOWS);
   _lookupFillPlatforms(shown);
   var searching = found.waiting
@@ -5803,9 +5811,20 @@ function renderPrimeTimeList() {
     return;
   }
   var list = buildPrimeTimeLeaderboard(_primeTimeData);
-  var q = ((document.getElementById('prime-time-search')||{}).value||'').trim().toLowerCase();
-  if (q) list = list.filter(function(s){ return s.title.toLowerCase().indexOf(q) !== -1 || (s.platform||'').toLowerCase().indexOf(q) !== -1; });
+  var q = _normQ((document.getElementById('prime-time-search')||{}).value);
+  if (q) list = list.filter(function(s){ return _normQ(s.title).indexOf(q) !== -1 || (s.platform||'').toLowerCase().indexOf(q) !== -1; });
   _primeTimeListCache = list;
+  // A top-25 title that only contains the search ("Friends" inside a longer
+  // title) mustn't hide the show actually searched for: look further too.
+  var beyondHTML = '';
+  if (q && list.length && q.length >= 2 && !isPlatformQuery(q)
+      && !list.some(function(s){ return _normQ(s.title) === q; })) {
+    whoRatedDataReady();
+    var skip = {};
+    list.forEach(function(s){ skip[_normQ(s.title)] = true; });
+    var more = whoRatedResultsHTML(q, skip);
+    if (more) beyondHTML = '<div class="who-rated-summary" style="margin:18px 0 10px;">More shows matching "' + escAttr(q) + '" beyond Prime Time&rsquo;s top 25:</div>' + more;
+  }
   var matchLabel = isPlatformQuery(q)
     ? '<div style="font-size:13px;color:var(--muted);margin-bottom:8px;">Showing: <b style="color:var(--burnt);">'+matchedPlatformNames(q).map(escAttr).join(', ')+'</b></div>'
     : '';
@@ -5829,7 +5848,7 @@ function renderPrimeTimeList() {
       +'</div>'
       +mineBadge
       +'</div>';
-  }).join('');
+  }).join('') + beyondHTML;
 }
 
 window.showPrimeTimeDetail = function(idx){
