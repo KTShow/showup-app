@@ -118,11 +118,12 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
 .back-to-top{position:fixed;right:16px;bottom:calc(72px + env(safe-area-inset-bottom));width:42px;height:42px;border-radius:50%;background:var(--fig);color:#fff;border:none;box-shadow:0 4px 14px rgba(0,0,0,0.28);font-size:20px;line-height:1;cursor:pointer;z-index:150;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transform:translateY(10px);transition:opacity 0.2s,transform 0.2s;}
 .back-to-top.visible{opacity:0.92;pointer-events:auto;transform:none;}
 .back-to-top:active{transform:scale(0.92);}
-.nav-tab{background:none;border:none;display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 10px;font-family:var(--sans);font-size:11px;color:var(--muted);cursor:pointer;transition:all 0.2s;flex:1;}
+.nav-tab{background:none;border:none;display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 2px;min-width:0;font-family:var(--sans);font-size:11px;color:var(--muted);cursor:pointer;transition:all 0.2s;flex:1;}
 .nav-tab.active{color:white;background:var(--terra);border-radius:10px;box-shadow:0 2px 8px rgba(196,98,45,0.4);}
 .nav-tab:hover{color:var(--fig);}
 .nav-tab-icon{font-size:20px;line-height:1;}
 .nav-tab-label{font-size:11px;font-weight:600;letter-spacing:0.02em;white-space:nowrap;}
+@media (max-width:360px){.nav-tab-label{font-size:10px;letter-spacing:0;}}
 
 .boot-loader{position:fixed;inset:0;background:var(--sand);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:9999;}
 .boot-loader-logo{font-family:var(--serif);font-size:26px;color:var(--brand);font-weight:700;margin-bottom:16px;display:inline-flex;align-items:center;gap:10px;}
@@ -571,6 +572,19 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
 .tastemakers-banner-text{flex:1;min-width:0;}
 .tastemakers-banner-title{font-size:14px;font-weight:700;color:white;margin-bottom:3px;}
 .tastemakers-banner-sub{font-size:13px;color:rgba(255,255,255,0.85);line-height:1.4;}
+/* Find Shows (2026-11-08): its own bottom tab, sharing the Living Room pane --
+   the pane's find-mode class shows the discovery half, else the rooms half. */
+#tab-living-room:not(.find-mode) .find-only{display:none!important;}
+#tab-living-room.find-mode .rooms-only{display:none!important;}
+.find-row{display:flex;gap:10px;overflow-x:auto;margin:-6px 0 22px;padding:2px 2px 4px;scroll-snap-type:x proximity;-webkit-overflow-scrolling:touch;scrollbar-width:none;}
+.find-row::-webkit-scrollbar{display:none;}
+.find-row:empty{display:none;}
+.find-poster{flex:0 0 96px;width:96px;background:none;border:none;padding:0;margin:0;text-align:left;cursor:pointer;scroll-snap-align:start;font-family:var(--sans);display:block;}
+.find-poster img,.find-ph{width:96px;height:144px;border-radius:8px;object-fit:cover;display:block;background:#EDE4D6;}
+.find-skel{cursor:default;}
+.find-poster-title{display:block;font-size:12px;font-weight:600;color:var(--charcoal);margin-top:6px;line-height:1.25;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;}
+.find-poster-sub{display:block;font-size:11px;color:var(--muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+#room-picker-view.is-searching .find-row{display:none!important;}
 .announcement-banner{background:var(--fig);border-radius:10px;padding:10px 14px;margin-bottom:16px;display:flex;align-items:center;gap:10px;box-shadow:var(--shadow);}
 .announcement-icon{font-size:16px;flex-shrink:0;}
 .announcement-text{flex:1;min-width:0;color:white;font-size:13px;font-weight:600;line-height:1.4;}
@@ -993,6 +1007,7 @@ body.look-lounge .lg-row .friend-count{margin-top:2px;font-size:13px;font-weight
     <symbol id="lg-door" viewBox="0 0 24 24"><path d="M13.5 3.5H7A2 2 0 0 0 5 5.5v13a2 2 0 0 0 2 2h6.5"/><path d="M11 12h10M17.5 8.5 21 12l-3.5 3.5"/></symbol>
     <symbol id="lg-trash" viewBox="0 0 24 24"><path d="M4 6.5h16M9.5 6.5V4h5v2.5M6 6.5l1 14h10l1-14M10 10.5v6M14 10.5v6"/></symbol>
     <symbol id="lg-doc" viewBox="0 0 24 24"><path d="M6.5 3h7.5l4.5 4.5V21h-12z"/><path d="M14 3v4.5h4.5M9.5 12h5M9.5 16h5"/></symbol>
+    <symbol id="lg-search" viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m15.5 15.5 5 5"/></symbol>
     <symbol id="lg-eye" viewBox="0 0 24 24"><path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z"/><circle cx="12" cy="12" r="2.8"/></symbol>
   </svg>
 <div class="boot-loader" id="boot-loader">
@@ -1402,19 +1417,21 @@ body.look-lounge .lg-row .friend-count{margin-top:2px;font-size:13px;font-weight
     </div>
     <div id="tab-living-room" class="tab-pane" style="display:block">
       <div id="room-picker-view">
-        <div class="announcement-banner" id="announcement-banner" style="display:none;">
+        <div class="announcement-banner rooms-only" id="announcement-banner" style="display:none;">
           <span class="announcement-icon" id="announcement-icon">&#128226;</span>
           <span class="announcement-text" id="announcement-text"></span>
           <button class="announcement-dismiss" onclick="dismissAnnouncement()" title="Dismiss" aria-label="Dismiss">&#10005;</button>
         </div>
-        <div class="textsize-tip" id="textsize-tip" style="display:none;"><b>Want bigger text?</b><button type="button" class="tip-go" onclick="textSizeTip(true)">Show me</button><button type="button" class="tip-no" onclick="textSizeTip(false)">No thanks</button></div>
-        <div class="page-title"><span class="lg-old"></span>Your Living Rooms</div>
-        <div class="page-sub">Pick a room to enter, or start a new one.</div>
-        <div class="room-picker-grid" id="room-picker-grid"></div>
-        <div class="lr-search-wrap"><input type="text" id="room-picker-search" class="lr-search-input" placeholder="Look up any show or person" onfocus="loadAllRoomsSearchData()" oninput="renderRoomPickerSearch();toggleSearchClearBtn(this)" autocomplete="off" /><button class="lr-search-clear" type="button" aria-label="Clear search" onclick="clearSearchInput('room-picker-search')">&#10005;</button></div>
-        <div id="room-picker-search-results" style="display:none;"></div>
-        <div id="lg-hub-rail" class="lg-rail-wrap"></div>
-        <div class="tastemakers-banner lg-hub-row" onclick="openFullLineupView()" style="margin-bottom:16px;background:linear-gradient(135deg,#3b6e8f,#2c4f66);">
+        <div class="textsize-tip rooms-only" id="textsize-tip" style="display:none;"><b>Want bigger text?</b><button type="button" class="tip-go" onclick="textSizeTip(true)">Show me</button><button type="button" class="tip-no" onclick="textSizeTip(false)">No thanks</button></div>
+        <div class="page-title rooms-only"><span class="lg-old"></span>Your Living Rooms</div>
+        <div class="page-sub rooms-only">Pick a room to enter, or start a new one.</div>
+        <div class="room-picker-grid rooms-only" id="room-picker-grid"></div>
+        <div class="page-title find-only">Find Shows</div>
+        <div class="page-sub find-only">Look anything up, or see what&rsquo;s hot and what ShowUp loves.</div>
+        <div class="lr-search-wrap find-only"><input type="text" id="room-picker-search" class="lr-search-input" placeholder="Look up any show or person" onfocus="loadAllRoomsSearchData()" oninput="renderRoomPickerSearch();toggleSearchClearBtn(this)" autocomplete="off" /><button class="lr-search-clear" type="button" aria-label="Clear search" onclick="clearSearchInput('room-picker-search')">&#10005;</button></div>
+        <div id="room-picker-search-results" class="find-only" style="display:none;"></div>
+        <div id="lg-hub-rail" class="lg-rail-wrap find-only"></div>
+        <div class="tastemakers-banner lg-hub-row find-only" onclick="openFullLineupView()" style="margin-bottom:16px;background:linear-gradient(135deg,#3b6e8f,#2c4f66);">
           <div class="tastemakers-banner-icon lg-old"></div><svg class="lg-ico lg-new" aria-hidden="true"><use href="#lg-flame"/></svg>
           <div class="tastemakers-banner-text">
             <div class="tastemakers-banner-title">Hot Right Now</div>
@@ -1422,15 +1439,8 @@ body.look-lounge .lg-row .friend-count{margin-top:2px;font-size:13px;font-weight
           </div>
           <div class="tastemakers-banner-arrow">&#8250;</div>
         </div>
-        <div class="tastemakers-banner lg-hub-row" onclick="openLineupView()" style="margin-bottom:16px;background:linear-gradient(135deg,#5C6B3A,#3F4A26);">
-          <div class="tastemakers-banner-icon lg-old"></div><svg class="lg-ico lg-new" aria-hidden="true"><use href="#lg-feed"/></svg>
-          <div class="tastemakers-banner-text">
-            <div class="tastemakers-banner-title">The Full Lineup</div>
-            <div class="tastemakers-banner-sub">Every show on ShowUp, and how it's rated</div>
-          </div>
-          <div class="tastemakers-banner-arrow">&#8250;</div>
-        </div>
-        <div class="tastemakers-banner lg-hub-row" onclick="openPrimeTimeView()" style="margin-bottom:16px;">
+        <div class="find-row find-only" id="find-row-hot"></div>
+        <div class="tastemakers-banner lg-hub-row find-only" onclick="openPrimeTimeView()" style="margin-bottom:16px;">
           <div class="tastemakers-banner-icon lg-old"></div><svg class="lg-ico lg-new" aria-hidden="true"><use href="#lg-tv"/></svg>
           <div class="tastemakers-banner-text">
             <div class="tastemakers-banner-title">Prime Time</div>
@@ -1438,7 +1448,17 @@ body.look-lounge .lg-row .friend-count{margin-top:2px;font-size:13px;font-weight
           </div>
           <div class="tastemakers-banner-arrow">&#8250;</div>
         </div>
-        <div class="tastemakers-banner" id="admin-browse-banner" onclick="openAdminRoomsModal()" style="display:none;margin:16px 0;background:linear-gradient(135deg,#555,#222);">
+        <div class="find-row find-only" id="find-row-prime"></div>
+        <div class="tastemakers-banner lg-hub-row find-only" onclick="openLineupView()" style="margin-bottom:16px;background:linear-gradient(135deg,#5C6B3A,#3F4A26);">
+          <div class="tastemakers-banner-icon lg-old"></div><svg class="lg-ico lg-new" aria-hidden="true"><use href="#lg-feed"/></svg>
+          <div class="tastemakers-banner-text">
+            <div class="tastemakers-banner-title">The Full Lineup</div>
+            <div class="tastemakers-banner-sub">Every show on ShowUp, and how it's rated</div>
+          </div>
+          <div class="tastemakers-banner-arrow">&#8250;</div>
+        </div>
+        <div class="find-row find-only" id="find-row-lineup"></div>
+        <div class="tastemakers-banner rooms-only" id="admin-browse-banner" onclick="openAdminRoomsModal()" style="display:none;margin:16px 0;background:linear-gradient(135deg,#555,#222);">
           <div class="tastemakers-banner-icon lg-old"></div><svg class="lg-ico lg-new" aria-hidden="true"><use href="#lg-eye"/></svg>
           <div class="tastemakers-banner-text">
             <div class="tastemakers-banner-title">Browse All Rooms</div>
@@ -1521,6 +1541,7 @@ body.look-lounge .lg-row .friend-count{margin-top:2px;font-size:13px;font-weight
   </div>
   <div class="bottom-nav">
     <button class="nav-tab active" id="btab-living-room" onclick="showTab('living-room',this)"><span class="nav-tab-icon lg-old"></span><svg class="lg-ico lg-new" aria-hidden="true"><use href="#lg-home"/></svg><span class="nav-tab-label">Living Room</span></button>
+    <button class="nav-tab" id="btab-find" onclick="showTab('find',this)"><span class="nav-tab-icon lg-old"></span><svg class="lg-ico lg-new" aria-hidden="true"><use href="#lg-search"/></svg><span class="nav-tab-label">Find Shows</span></button>
     <button class="nav-tab" id="btab-watching" onclick="showTab('watching',this)"><span class="nav-tab-icon lg-old"></span><svg class="lg-ico lg-new" aria-hidden="true"><use href="#lg-tv"/></svg><span class="nav-tab-label">Watching</span></button>
     <button class="nav-tab" id="btab-watchlist" onclick="showTab('watchlist',this)"><span class="nav-tab-icon lg-old"></span><svg class="lg-ico lg-new" aria-hidden="true"><use href="#lg-list"/></svg><span class="nav-tab-label">My List</span></button>
     <button class="nav-tab" id="btab-watched" onclick="showTab('watched',this)"><span class="nav-tab-icon lg-old"></span><svg class="lg-ico lg-new" aria-hidden="true"><use href="#lg-remote"/></svg><span class="nav-tab-label">Binged</span></button>
@@ -2149,19 +2170,23 @@ function completeOnboard_OLD() {
 var _conversationsViewed = false;
 
 function showTab(tab, btn) {
+  // Find Shows shares the Living Room pane (find-mode shows its discovery half).
+  var toFind = tab === 'find';
+  var pane = toFind ? 'living-room' : tab;
+  var lrPane = document.getElementById('tab-living-room');
   window._lastTab = tab;
   // A genuine, deliberate move away from Living Room -- switching to a
   // different bottom tab -- is what marks the Conversations feed seen.
   // Clicking a conversation item never routes through here: every item,
   // including your own shows, opens in place via showFriend() without
   // leaving Living Room (see renderConversations).
-  var leavingLivingRoom = document.getElementById('tab-living-room').style.display==='block' && tab!=='living-room';
+  var leavingLivingRoom = lrPane.style.display==='block' && !lrPane.classList.contains('find-mode') && tab!=='living-room';
   _flashCardId = null; // a jump sets it again right after switching tabs
   // Switching INTO Watching / My List / Binged starts tidy: every streaming
   // group collapsed (only when there are 2+ groups -- one group collapsed
   // would hide the whole list). A jump to a specific show calls showTab and
   // then scrollToShowCard, which reopens just that show's group.
-  var switching = document.getElementById('tab-'+tab).style.display!=='block';
+  var switching = document.getElementById('tab-'+pane).style.display!=='block';
   var isListTab = tab==='watching'||tab==='watchlist'||tab==='watched';
   var collapsedNow = false;
   if (switching && isListTab) {
@@ -2174,7 +2199,8 @@ function showTab(tab, btn) {
   }
   document.querySelectorAll('.tab-pane').forEach(function(t){ t.style.display='none'; });
   document.querySelectorAll('.nav-tab').forEach(function(t){ t.classList.remove('active'); });
-  document.getElementById('tab-'+tab).style.display='block';
+  document.getElementById('tab-'+pane).style.display='block';
+  lrPane.classList.toggle('find-mode', toFind);
   // After the tab is showing, because renderList skips a hidden tab.
   if (isListTab && (collapsedNow || _listNeedsRender[tab])) renderList(tab);
   btn.classList.add('active');
@@ -2187,6 +2213,7 @@ function showTab(tab, btn) {
     _loungeViewed = false;
   }
   if (tab==='living-room') { showRoomPicker(); }
+  if (toFind) { window.scrollTo(0, 0); showFindShows(); }
   if (tab==='watched') { renderBingedTop5(); }
   if (tab!=='living-room') { state.lastViewedFriend = null; _friendDetailReturn = null; }
   if (state.user) state.user.lastActive = new Date().toISOString();
@@ -3487,6 +3514,61 @@ async function renderHubRail() {
   if (lookOn()) _paintHubTiles();
 }
 
+// ---- Find Shows: a row of posters under each banner -------------------------
+// Hot Right Now = this week's trending; Prime Time = top rated on ShowUp;
+// The Full Lineup = a fresh mix of ShowUp's shows each visit. A poster opens
+// that show's details. Loaded only when the tab opens.
+var _findItems = { hot: [], prime: [], lineup: [] }, _findTried = false, _findLineupPick = null;
+async function showFindShows() {
+  _paintFindRows();
+  await showRoomPicker();
+  var fq = document.getElementById('room-picker-search');
+  if (fq && fq.value.trim()) renderRoomPickerSearch();
+  await Promise.all([_loadHubTrending(), _loadHubPrimeTop(), loadLineupData()].map(function(p) {
+    return Promise.resolve(p).catch(function(e) { console.error('find shows load error:', e); });
+  }));
+  _findTried = true;
+  _paintFindRows();
+}
+function _findPosterHTML(kind, i, s, sub) {
+  var art = s.poster_path ? '<img src="https://image.tmdb.org/t/p/w185' + s.poster_path + '" alt="" loading="lazy" />' : '<span class="find-ph"></span>';
+  return '<button type="button" class="find-poster" onclick="findOpen(\'' + kind + '\',' + i + ')">' + art
+    + '<span class="find-poster-title">' + escAttr(s.title) + '</span>'
+    + (sub ? '<span class="find-poster-sub">' + sub + '</span>' : '') + '</button>';
+}
+function _paintFindRows() {
+  var skel = new Array(6).join('<span class="find-poster find-skel"><span class="find-ph"></span></span>');
+  function fill(kind, list, sub) {
+    var el = document.getElementById('find-row-' + kind);
+    if (!el) return;
+    if (!list) { el.innerHTML = _findTried ? '' : skel; return; }
+    var items = list.filter(function(s) { return s && s.tmdb_id && s.poster_path && s.title; }).slice(0, 12);
+    _findItems[kind] = items;
+    el.innerHTML = items.map(function(s, i) { return _findPosterHTML(kind, i, s, sub(s)); }).join('');
+  }
+  fill('hot', _lgTrending, function(s) { return s.year || ''; });
+  fill('prime', _lgPrimeTop, function(s) { return s.avg.toFixed(1) + ' &middot; ' + s.count + ' rated'; });
+  var lineup = null;
+  if (_lineupData && _lineupData.shows) {
+    if (!_findLineupPick) {
+      var inPrime = {};
+      (_lgPrimeTop || []).slice(0, 12).forEach(function(s) { inPrime[_normQ(s.title)] = true; });
+      var pool = _lineupData.shows.filter(function(s) { return s.tmdb_id && s.poster_path && s.title && !inPrime[_normQ(s.title)]; });
+      for (var i = pool.length - 1; i > 0; i--) { var j = Math.floor(Math.random() * (i + 1)); var t = pool[i]; pool[i] = pool[j]; pool[j] = t; }
+      _findLineupPick = pool.slice(0, 12);
+    }
+    lineup = _findLineupPick;
+  }
+  fill('lineup', lineup, function(s) { return s.rating_count ? Number(s.avg_rating).toFixed(1) + ' &middot; ' + s.rating_count + ' rated' : 'Not rated yet'; });
+}
+window.findOpen = function(kind, i) {
+  var s = (_findItems[kind] || [])[i];
+  if (!s) return;
+  var ratings = (s.raters || []).filter(function(r) { return r.isMe || r.inNetwork; })
+    .map(function(r) { return { name: r.name, rating: r.rating }; });
+  openShowDetails(s.tmdb_id, ratings.length ? ratings : undefined);
+};
+
 // Friend-row posters: up to 3 from Watching, else what they've binged.
 function _lgMiniPosters(primary, fallback) {
   function pick(list) {
@@ -3978,7 +4060,8 @@ function captureFriendDetailReturn(){
   } else if (_isShown('showtalk-hub-view')) {
     _friendDetailReturn = { kind:'showtalk-hub', detailIdx: _isShown('showtalk-hub-detail-panel') ? _showTalkDetailIdx : null, scrollY:scrollY, label:'← Back to Show Talk' };
   } else if (_isShown('room-picker-view')) {
-    _friendDetailReturn = { kind:'room-picker', scrollY:scrollY, label:'← Back to Your Living Rooms' };
+    var inFind = document.getElementById('tab-living-room').classList.contains('find-mode');
+    _friendDetailReturn = { kind:'room-picker', scrollY:scrollY, label: inFind ? '← Back to Find Shows' : '← Back to Your Living Rooms' };
   } else if (_isShown('friends-view')) {
     _friendDetailReturn = { kind:'room', subView:_currentLRView, scrollY:scrollY, label:'← Back to Living Room' };
   } else {
@@ -4364,7 +4447,18 @@ window.clearAnnouncementBanner = async function(){
 
 async function showRoomPicker() {
   _friendDetailReturn = null;
-  document.getElementById('room-picker-view').style.display = 'block';
+  ['prime-time-view','showtalk-hub-view','full-lineup-view','lineup-view'].forEach(function(id){
+    var el = document.getElementById(id);
+    if (el) el.style.display = 'none';
+  });
+  var pickerView = document.getElementById('room-picker-view');
+  pickerView.style.display = 'block';
+  // The search lives on Find Shows: the rooms half always shows its rooms.
+  if (!document.getElementById('tab-living-room').classList.contains('find-mode')) {
+    pickerView.classList.remove('is-searching');
+    var rg = document.getElementById('room-picker-grid');
+    if (rg) rg.style.display = '';
+  }
   document.getElementById('friends-view').style.display = 'none';
   document.getElementById('friend-detail-view').style.display = 'none';
   state.currentRoomId = null;
