@@ -3810,7 +3810,7 @@ function buildAllRoomShows(personFilterId){
 function renderCrewGroupedByPlatform(q){
   var personFilterId = (document.getElementById('crew-person-filter')||{}).value || '';
   var list = buildAllRoomShows(personFilterId);
-  if (q) list = list.filter(function(s){ return s.title.toLowerCase().indexOf(q)!==-1 || s.platform.toLowerCase().indexOf(q)!==-1; });
+  if (q) list = list.filter(function(s){ return _titleHas(s.title, q) || s.platform.toLowerCase().indexOf(q)!==-1; });
   var el = document.getElementById('friends-grid');
   if (!list.length) {
     el.innerHTML = '<div class="empty" style="grid-column:1/-1;"><div class="empty-icon"><svg class="lg-ph" aria-hidden="true"><use href="#lg-tv"/></svg></div>Nothing to show here yet.</div>';
@@ -3912,7 +3912,7 @@ function renderFriends() {
       for(var j=0;j<arr.length;j++){
         var s=arr[j];
         if(s.hidden) continue;
-        if((s.title||'').toLowerCase().indexOf(q)!==-1) matches.push(s);
+        if(_titleHas(s.title, q)) matches.push(s);
       }
     }
     if(matches.length) matchedShowsByFriendId[f.id]=matches;
@@ -4471,7 +4471,7 @@ function buildAllRoomsSearchResultsByPerson(q) {
     var matches = [];
     (p.shows || []).forEach(function(s) {
       if (!s || !s.title) return;
-      var matchesTitle = s.title.toLowerCase().indexOf(q) !== -1;
+      var matchesTitle = _titleHas(s.title, q);
       var matchesPlatform = (s.platform || '').toLowerCase().indexOf(q) !== -1;
       if (matchesTitle || matchesPlatform) matches.push(s);
     });
@@ -4492,9 +4492,32 @@ var _allRoomsSearchCache = [];
 // the show but haven't rated it come from the cross-room search data.
 var WHO_RATED_MAX_SHOWS = 8;
 
-// Apostrophes don't count: "queens", "queen's" and the iPhone's curly "queen’s" all match.
+// Forgiving search: case, accents, apostrophes, punctuation, "&" vs "and" and a
+// leading The / A / An don't count. "queens gambit" finds The Queen's Gambit.
+// The server's norm_title() follows the same rules.
 function _normQ(t) {
-  return (t || '').toLowerCase().replace(/['‘’ʼ`´]/g, '').replace(/[“”]/g, '"').replace(/\s+/g, ' ').trim();
+  return (t || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/['\u2018\u2019\u02bc`\u00b4]/g, '')
+    .replace(/&/g, ' and ')
+    .replace(/[^\p{L}\p{N}]+/gu, ' ')
+    .trim()
+    .replace(/^(the|a|an) /, '');
+}
+function _titleHas(title, q) {
+  var n = _normQ(q);
+  return !!n && _normQ(title).indexOf(n) !== -1;
+}
+// For list search bars: when no title in the list is the one searched for (only
+// longer titles containing it), also show what the rest of ShowUp has.
+function _beyondListHTML(q, list, where) {
+  var n = _normQ(q);
+  if (!list.length || n.length < 2 || isPlatformQuery(q)) return '';
+  if (list.some(function(s){ return _normQ(s.title) === n; })) return '';
+  whoRatedDataReady();
+  var skip = {};
+  list.forEach(function(s){ skip[_normQ(s.title)] = true; });
+  var more = whoRatedResultsHTML(q, skip);
+  return more ? '<div class="who-rated-summary" style="margin:18px 0 10px;">More shows matching "' + escAttr(q) + '" beyond ' + where + ':</div>' + more : '';
 }
 var _whoRatedLoading = false;
 
@@ -4513,8 +4536,15 @@ function whoRatedDataReady() {
 }
 
 var _whoRatedByQuery = {}, _whoRatedAsking = null, _whoRatedTimer = null, _whoRatedAllRows = null;
-async function _fetchWhoRated(q) {
-  var res = await sb.rpc('search_show_ratings', { p_query: q });
+var _whoRatedById = {}, _whoRatedNoIds = false;
+async function _fetchWhoRated(q, tmdbIds) {
+  var res;
+  if (tmdbIds && tmdbIds.length && !_whoRatedNoIds) {
+    res = await sb.rpc('search_show_ratings', { p_query: q, p_tmdb_ids: tmdbIds });
+    if (!res.error) return res.data || {};
+    _whoRatedNoIds = true; // database doesn't take ids yet: title matching only
+  }
+  res = await sb.rpc('search_show_ratings', { p_query: q });
   if (!_rpcMissing(res.error)) {
     if (res.error) throw res.error;
     return res.data || {};
@@ -4548,7 +4578,11 @@ function _whoRatedRows(q) {
 function buildWhoRatedResults(q) {
   q = _normQ(q);
   var meId = state.user && state.user.id;
-  var data = _whoRatedRows(q);
+  var data = _whoRatedById[q] || _whoRatedRows(q);
+  // Shows TMDB found for this search count as matches even when the typed
+  // spelling is off ("quens gambet").
+  var tmdbIds = {};
+  (_lookupTmdb[q] || []).forEach(function(m) { tmdbIds[m.id] = true; });
   var peopleById = {};
   (data.people || []).forEach(function(p) { peopleById[p.id] = p; });
   function fullName(p) { return p.first_name + (p.last_initial ? ' ' + p.last_initial + '.' : ''); }
@@ -4558,10 +4592,13 @@ function buildWhoRatedResults(q) {
 
   var shows = {};
   function add(s, person) {
-    if (!s || !s.title || _normQ(s.title).indexOf(q) === -1) return;
+    if (!s || !s.title) return;
+    var titleKey = _normQ(s.title);
+    if (titleKey.indexOf(q) === -1 && !(s.tmdb_id && tmdbIds[s.tmdb_id])) return;
     if (person.id !== meId && state.blockedIds && state.blockedIds.has(person.id)) return;
-    var key = _normQ(s.title);
-    var show = shows[key] || (shows[key] = { title: s.title, platform: s.platform || '', poster_path: null, tmdb_id: null, byId: {} });
+    // Same title, different show (a remake): keep them apart by TMDB id.
+    var key = s.tmdb_id ? 'id' + s.tmdb_id : 't' + titleKey;
+    var show = shows[key] || (shows[key] = { title: s.title, titleKey: titleKey, platform: s.platform || '', poster_path: null, tmdb_id: null, byId: {} });
     if (!show.platform && s.platform) show.platform = s.platform;
     if (!show.poster_path && s.poster_path) show.poster_path = s.poster_path;
     if (!show.tmdb_id && s.tmdb_id) show.tmdb_id = s.tmdb_id;
@@ -4582,6 +4619,21 @@ function buildWhoRatedResults(q) {
     (state[list] || []).forEach(function(s) { add(s, { id: meId, name: 'You', kind: 'me', list: list }); });
   });
 
+  // A copy saved without a TMDB id joins the one show with that title, if just one.
+  Object.keys(shows).forEach(function(k) {
+    if (k.charAt(0) !== 't') return;
+    var t = shows[k];
+    var same = Object.keys(shows).filter(function(k2) { return k2.charAt(0) === 'i' && shows[k2].titleKey === t.titleKey; });
+    if (same.length !== 1) return;
+    var into = shows[same[0]];
+    Object.keys(t.byId).forEach(function(pid) {
+      var e = into.byId[pid], r = t.byId[pid];
+      if (!e || (!e.rating && r.rating)) into.byId[pid] = r;
+    });
+    if (!into.platform) into.platform = t.platform;
+    if (!into.poster_path) into.poster_path = t.poster_path;
+    delete shows[k];
+  });
   var order = { me: 0, friend: 1, neighbor: 2 };
   var results = Object.values(shows).map(function(show) {
     var people = Object.values(show.byId).sort(function(a, b) {
@@ -4644,13 +4696,18 @@ function _lookupTmdbFor(q) {
     catch (e) { console.error('show lookup error:', e); _lookupTmdb[q] = []; failed = true; }
     if (_lookupWaiting === q) _lookupWaiting = null;
     _lookupRerender();
+    var ids = (_lookupTmdb[q] || []).map(function(m) { return m.id; }).filter(Boolean);
+    if (ids.length && !_whoRatedById[q]) {
+      _fetchWhoRated(q, ids).then(function(d) { _whoRatedById[q] = d; _lookupRerender(); })
+        .catch(function(e) { console.error('who-rated by id error:', e); });
+    }
     if (failed) delete _lookupTmdb[q]; // try again next time, once this draw has shown what we have
   }, 400);
   return null;
 }
 
 function _lookupRegister(item) {
-  var key = item.title.toLowerCase().trim();
+  var key = item.tmdb_id ? 'id' + item.tmdb_id : 't' + _normQ(item.title);
   if (_lookupIdByKey[key] === undefined) _lookupIdByKey[key] = _lookupItems.length;
   _lookupItems[_lookupIdByKey[key]] = item;
   return _lookupIdByKey[key];
@@ -4663,8 +4720,9 @@ function buildShowLookup(q) {
   var used = {};
   rows.forEach(function(r) {
     var title = _normQ(r.title);
-    var hit = (tmdb || []).filter(function(m) { return _normQ(m.name) === title; })[0]
-      || (tmdb || []).filter(function(m) { return m.id === r.tmdb_id; })[0];
+    var hit = r.tmdb_id
+      ? (tmdb || []).filter(function(m) { return String(m.id) === String(r.tmdb_id); })[0]
+      : (tmdb || []).filter(function(m) { return !used[m.id] && _normQ(m.name) === title; })[0];
     if (!hit) return;
     used[hit.id] = true;
     r.year = hit.year;
@@ -4696,7 +4754,7 @@ function _lookupCardHTML(s) {
   var summary = s.ratedCount
     ? '<b>' + s.avg.toFixed(1) + '</b> average &middot; ' + s.ratedCount + (s.ratedCount === 1 ? ' rating' : ' ratings') + ' on ShowUp'
     : 'No ShowUp ratings yet';
-  var mine = findMyShowByTitle(s.title);
+  var mine = findMyShow(s.title, s.tmdb_id);
   var action = mine
     ? onListBadgeHTML(mine, 'display:inline-block;white-space:normal;', true)
     : '<button type="button" class="lookup-add" onclick="lookupAdd(' + id + ')">+ Add to My Lists</button>';
@@ -5673,7 +5731,7 @@ function renderLineup() {
   if (!el || !_lineupData) return;
   var list = (_lineupData.shows || []).filter(function(s){ return s.title; });
   var q = ((document.getElementById('lineup-search')||{}).value||'').trim().toLowerCase();
-  if (q) list = list.filter(function(s){ return s.title.toLowerCase().indexOf(q) !== -1 || (s.platform||'').toLowerCase().indexOf(q) !== -1; });
+  if (q) list = list.filter(function(s){ return _titleHas(s.title, q) || (s.platform||'').toLowerCase().indexOf(q) !== -1; });
   // Sorted ignoring a leading The / A / An ("The Bear" under B), to match the headings.
   function key(t){ return t.toLowerCase().replace(/^(the|a|an)\s+/, '').replace(/^[^a-z0-9]+/, ''); }
   list.sort(function(a,b){ return key(a.title).localeCompare(key(b.title)); });
@@ -5707,7 +5765,7 @@ function renderLineup() {
   }).join('')
     + (az ? '<div class="lineup-az" id="lineup-az" aria-label="Jump to letter">'
         + _LINEUP_LETTERS.map(function(L){ return '<span data-l="' + L + '"' + (seen[L] ? '' : ' class="off"') + '>' + L + '</span>'; }).join('')
-        + '</div>' : '');
+        + '</div>' : _beyondListHTML(q, list, 'The Full Lineup'));
   if (az) _wireLineupAZ();
 }
 
@@ -5811,20 +5869,10 @@ function renderPrimeTimeList() {
     return;
   }
   var list = buildPrimeTimeLeaderboard(_primeTimeData);
-  var q = _normQ((document.getElementById('prime-time-search')||{}).value);
-  if (q) list = list.filter(function(s){ return _normQ(s.title).indexOf(q) !== -1 || (s.platform||'').toLowerCase().indexOf(q) !== -1; });
+  var q = ((document.getElementById('prime-time-search')||{}).value||'').trim().toLowerCase();
+  if (q) list = list.filter(function(s){ return _titleHas(s.title, q) || (s.platform||'').toLowerCase().indexOf(q) !== -1; });
   _primeTimeListCache = list;
-  // A top-25 title that only contains the search ("Friends" inside a longer
-  // title) mustn't hide the show actually searched for: look further too.
-  var beyondHTML = '';
-  if (q && list.length && q.length >= 2 && !isPlatformQuery(q)
-      && !list.some(function(s){ return _normQ(s.title) === q; })) {
-    whoRatedDataReady();
-    var skip = {};
-    list.forEach(function(s){ skip[_normQ(s.title)] = true; });
-    var more = whoRatedResultsHTML(q, skip);
-    if (more) beyondHTML = '<div class="who-rated-summary" style="margin:18px 0 10px;">More shows matching "' + escAttr(q) + '" beyond Prime Time&rsquo;s top 25:</div>' + more;
-  }
+  var beyondHTML = q ? _beyondListHTML(q, list, 'Prime Time&rsquo;s top 25') : '';
   var matchLabel = isPlatformQuery(q)
     ? '<div style="font-size:13px;color:var(--muted);margin-bottom:8px;">Showing: <b style="color:var(--burnt);">'+matchedPlatformNames(q).map(escAttr).join(', ')+'</b></div>'
     : '';
@@ -6377,8 +6425,9 @@ function renderShowTalk(){
   if(searchWrap)searchWrap.style.display='block';
   var list=buildShowTalk();
   var q=((document.getElementById(ids.search)||{}).value||'').trim().toLowerCase();
-  if(q) list=list.filter(function(s){return s.title.toLowerCase().indexOf(q)!==-1;});
+  if(q) list=list.filter(function(s){return _titleHas(s.title, q);});
   _showTalkListCache=list;
+  var beyondHTML = q ? _beyondListHTML(q, list, 'Show Talk') : '';
   if(!list.length){
     el.innerHTML = q
       ? _notInListHTML(q, 'Show Talk yet')
@@ -6400,7 +6449,7 @@ function renderShowTalk(){
       +'</div>'
       +'<span class="rank-chev">&rsaquo;</span>'
       +'</div>';
-  }).join('');
+  }).join('') + beyondHTML;
 }
 
 var _showTalkScrollY = 0;
@@ -7517,8 +7566,9 @@ function renderRankings(){
   if (!state.friendsLoaded) { el.innerHTML='<div class="empty"><div class="empty-spin"></div>Loading rankings&hellip;</div>'; return; }
   var list=buildRankings();
   var q=((document.getElementById('rankings-search')||{}).value||'').trim().toLowerCase();
-  if(q) list=list.filter(function(s){return s.title.toLowerCase().indexOf(q)!==-1;});
+  if(q) list=list.filter(function(s){return _titleHas(s.title, q);});
   _rankingsListCache=list;
+  var beyondHTML = q ? _beyondListHTML(q, list, 'this room&rsquo;s favorites') : '';
   if(!list.length){
     el.innerHTML = q
       ? _notInListHTML(q, 'this room&rsquo;s favorites')
@@ -7538,7 +7588,7 @@ function renderRankings(){
       +'</div>'
       +'<span class="rank-chev">&rsaquo;</span>'
       +'</div>';
-  }).join('');
+  }).join('') + beyondHTML;
 }
 
 var _rankScrollY = 0;
@@ -9436,6 +9486,7 @@ window.dpNope = function(i) {
   _dpSave(p);
   _dpItems.splice(i, 1);
   _dpTouched();
+  if (!_dpItems.length) { closeDailyPrompt(); return; } // nothing left: no extra "All set" screen
   renderDailyPrompt();
 };
 
