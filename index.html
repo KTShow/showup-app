@@ -576,10 +576,10 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
    the pane's find-mode class shows the discovery half, else the rooms half. */
 #tab-living-room:not(.find-mode) .find-only{display:none!important;}
 #tab-living-room.find-mode .rooms-only{display:none!important;}
-.find-row{display:flex;gap:10px;overflow-x:auto;margin:-6px 0 22px;padding:2px 2px 4px;scroll-snap-type:x proximity;-webkit-overflow-scrolling:touch;scrollbar-width:none;}
+.find-row{display:flex;align-items:flex-start;gap:10px;overflow-x:auto;margin:-6px 0 22px;padding:2px 2px 4px;scroll-snap-type:x proximity;-webkit-overflow-scrolling:touch;scrollbar-width:none;}
 .find-row::-webkit-scrollbar{display:none;}
 .find-row:empty{display:none;}
-.find-poster{flex:0 0 96px;width:96px;background:none;border:none;padding:0;margin:0;text-align:left;cursor:pointer;scroll-snap-align:start;font-family:var(--sans);display:block;}
+.find-poster{flex:0 0 96px;width:96px;background:none;border:none;padding:0;margin:0;text-align:left;cursor:pointer;scroll-snap-align:start;font-family:var(--sans);display:flex;flex-direction:column;align-items:stretch;justify-content:flex-start;align-self:flex-start;vertical-align:top;}
 .find-poster img,.find-ph{width:96px;height:144px;border-radius:8px;object-fit:cover;display:block;background:#EDE4D6;}
 .find-skel{cursor:default;}
 .find-poster-title{display:block;font-size:12px;font-weight:600;color:var(--charcoal);margin-top:6px;line-height:1.25;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;}
