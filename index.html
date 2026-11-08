@@ -1138,7 +1138,10 @@ body.look-lounge .lg-row .friend-count{margin-top:2px;font-size:13px;font-weight
         <label class="login-label">Email</label>
         <input class="login-input" id="login-pw-email" type="email" autocomplete="username" />
         <label class="login-label">Password</label>
-        <input class="login-input" id="login-pw-password" type="password" autocomplete="current-password" />
+        <div style="position:relative;">
+          <input class="login-input" id="login-pw-password" type="password" autocomplete="current-password" autocapitalize="off" autocorrect="off" spellcheck="false" style="padding-right:64px;" />
+          <button type="button" id="login-pw-toggle" onclick="toggleReviewerPassword()" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:none;font-family:var(--sans);font-size:13px;color:var(--burnt);cursor:pointer;padding:6px;">Show</button>
+        </div>
         <button class="btn-magic" id="login-pw-btn" onclick="handlePasswordLogin()">Sign in &rarr;</button>
         <button class="btn-magic" style="margin-top:10px;background:none;border:1px solid var(--border);color:var(--muted);font-size:13px;" onclick="resetLoginForm()">Back</button>
       </div>
@@ -1862,9 +1865,12 @@ var _bootstrapComplete = false; // true once bootstrap has determined the screen
 // shows/top5/friends load — and a sessions-table insert — multiple times in a
 // race, each competing for the same network connections. This makes every
 // caller share one in-flight load instead of starting a new one.
-var _userLoadPromise = null;
+var _userLoadPromise = null, _userLoadId = null;
 function loadUserOnce(profile) {
-  if (!_userLoadPromise) {
+  // A different account than the one loaded (signed out, then into another
+  // without closing the app) gets its own load.
+  if (!_userLoadPromise || (profile && profile.id !== _userLoadId)) {
+    _userLoadId = profile && profile.id;
     _userLoadPromise = loadUserIntoState(profile).then(function() { return recordSession(); });
   }
   return _userLoadPromise;
@@ -8809,6 +8815,14 @@ window.handleVerifyOtp = async function() {
   }
 };
 
+window.toggleReviewerPassword = function() {
+  var inp = document.getElementById('login-pw-password');
+  var btn = document.getElementById('login-pw-toggle');
+  var show = inp.type === 'password';
+  inp.type = show ? 'text' : 'password';
+  btn.textContent = show ? 'Hide' : 'Show';
+};
+
 window.showReviewerLogin = function() {
   document.getElementById('login-form-view').style.display = 'none';
   document.getElementById('login-pw-view').style.display = 'block';
@@ -8832,7 +8846,8 @@ window.handlePasswordLogin = async function() {
     if (error) throw error;
     // onAuthStateChange takes it from here, same as the code flow.
   } catch(e) {
-    errEl.textContent = 'That email and password didn’t match.';
+    var msg = (e && e.message) || '';
+    errEl.textContent = /invalid|credential/i.test(msg) ? 'That email and password didn’t match.' : 'Couldn’t sign in. Check your connection and try again.';
     errEl.style.display = 'block';
     btn.disabled = false;
     btn.textContent = 'Sign in →';
@@ -10592,8 +10607,10 @@ window.handleSignOut = async function() {
     await signOut();
     _forgetDeviceCopy();
     state.user = null; state.watching = []; state.watchlist = []; state.watched = []; state.friends = []; state.recommendations = []; state.lastVisitAt = null;
-    showScreen('login');
-  } catch(e) { console.error('Sign out error:', e); }
+    _userLoadPromise = null; _userLoadId = null;
+    // Start fresh so nothing from this account (rooms, searches) carries over.
+    location.replace(location.pathname);
+  } catch(e) { console.error('Sign out error:', e); showScreen('login'); }
 };
 
 window.handleDeleteData = async function() {
