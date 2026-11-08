@@ -584,7 +584,17 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
 .find-skel{cursor:default;}
 .find-poster-title{display:block;font-size:12px;font-weight:600;color:var(--charcoal);margin-top:6px;line-height:1.25;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;}
 .find-poster-sub{display:block;font-size:11px;color:var(--muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-#room-picker-view.is-searching .find-row{display:none!important;}
+#room-picker-view.is-searching .find-row,#room-picker-view.is-searching .find-chips{display:none!important;}
+.find-chips{display:flex;gap:6px;overflow-x:auto;margin:-6px 0 10px;padding:2px;scrollbar-width:none;}
+.find-chips::-webkit-scrollbar{display:none;}
+.find-chips .pill-btn{flex:0 0 auto;padding:6px 12px;font-size:13px;}
+.find-chips + .find-row{margin-top:0;}
+.fav-box{background:var(--cream);border:1px solid var(--border);border-radius:14px;padding:14px 16px;margin-bottom:16px;}
+.fav-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;}
+.fav-title{font-size:15px;font-weight:700;color:var(--charcoal);}
+.fav-sub{font-size:13px;color:var(--muted);margin-top:2px;}
+.fav-edit{background:none;border:1.5px solid var(--border);border-radius:20px;padding:6px 14px;font-family:var(--sans);font-size:13px;font-weight:600;color:var(--burnt);cursor:pointer;flex-shrink:0;}
+.find-poster-rank{position:absolute;left:5px;top:5px;background:var(--fig);color:#fff;font-size:12px;font-weight:700;border-radius:6px;padding:1px 6px;}
 .announcement-banner{background:var(--fig);border-radius:10px;padding:10px 14px;margin-bottom:16px;display:flex;align-items:center;gap:10px;box-shadow:var(--shadow);}
 .announcement-icon{font-size:16px;flex-shrink:0;}
 .announcement-text{flex:1;min-width:0;color:white;font-size:13px;font-weight:600;line-height:1.4;}
@@ -1385,8 +1395,19 @@ body.look-lounge .lg-row .friend-count{margin-top:2px;font-size:13px;font-weight
     <div id="tab-watched" class="tab-pane" style="display:none">
       <div class="page-title">Binged</div>
       <div class="page-sub">Build your taste profile &mdash; add everything you've loved and hated. Rate each one 1 to 5 remotes.</div>
-      <div style="background:var(--cream);border:1px solid var(--border);border-radius:14px;padding:16px;margin-bottom:16px;box-shadow:var(--shadow);">
-        <div style="font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--muted);margin-bottom:10px;">Top 5 Shows of All Time <span style="font-weight:400;text-transform:none;">— Visible to friends in your Living Room</span></div>
+      <div class="add-form">
+        <div class="form-row">
+          <div class="form-group" style="position:relative;"><label>Show title</label><div class="lr-search-wrap" style="margin-bottom:0;"><input id="wd-title" placeholder="Search for a show..." oninput="tmdbSearch('wd');toggleSearchClearBtn(this)" autocomplete="off" style="padding-right:34px;" /><button class="lr-search-clear" type="button" aria-label="Clear search" onclick="clearSearchInput('wd-title')">&#10005;</button></div><div class="tmdb-dropdown" id="wd-tmdb-dd"></div><div class="dup-hint" id="wd-dup-hint" style="display:none" onclick="tapDupHint('wd')"></div></div>
+          <div class="form-group" style="max-width:210px"><label>Streaming on</label><select id="wd-platform" onchange="togglePlatformOther('wd-platform')"><option value="">Platform...</option></select><input type="text" id="wd-platform-other" placeholder="Which platform?" style="display:none;margin-top:6px;width:100%;box-sizing:border-box;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-family:var(--sans);font-size:13px;" /></div>
+          <button class="btn-add" onclick="addBingedOrDnf()">+ Add</button>
+        </div>
+        <div class="hot-seg" id="wd-as" role="tablist" style="margin:10px 0 0;"><button type="button" class="active" data-as="watched" onclick="setBingedAddAs('watched')">Binged it</button><button type="button" data-as="dnf" onclick="setBingedAddAs('dnf')">Didn&rsquo;t finish</button></div>
+      </div>
+      <div class="fav-box">
+        <div class="fav-head"><div><div class="fav-title">All-time favorites</div><div class="fav-sub">Your top 5, visible to friends in your rooms</div></div>
+          <button type="button" class="fav-edit" id="binged-top5-edit" onclick="toggleTop5Editor()">Edit</button></div>
+        <div class="find-row" id="binged-top5-strip" style="margin:10px 0 0;"></div>
+        <div id="binged-top5-editor" style="display:none;margin-top:12px;">
         <div id="binged-top5-list" style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px;"></div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;">
           <div class="form-group" style="position:relative;flex:2;min-width:140px;margin:0;">
@@ -1397,15 +1418,9 @@ body.look-lounge .lg-row .friend-count{margin-top:2px;font-size:13px;font-weight
           <input type="text" id="binged-top5-platform-other" placeholder="Which platform?" style="display:none;flex-basis:100%;box-sizing:border-box;background:white;border:1px solid var(--border);border-radius:8px;padding:9px 12px;font-family:var(--sans);font-size:14px;color:var(--charcoal);outline:none;" />
           <button onclick="addBingedTop5()" style="background:var(--terra);color:white;border:none;border-radius:8px;padding:9px 14px;font-family:var(--sans);font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;">+ Add</button>
         </div>
-      </div>
-      <div class="add-form">
-        <div class="form-row">
-          <div class="form-group" style="position:relative;"><label>Show title</label><div class="lr-search-wrap" style="margin-bottom:0;"><input id="wd-title" placeholder="Search for a show..." oninput="tmdbSearch('wd');toggleSearchClearBtn(this)" autocomplete="off" style="padding-right:34px;" /><button class="lr-search-clear" type="button" aria-label="Clear search" onclick="clearSearchInput('wd-title')">&#10005;</button></div><div class="tmdb-dropdown" id="wd-tmdb-dd"></div><div class="dup-hint" id="wd-dup-hint" style="display:none" onclick="tapDupHint('wd')"></div></div>
-          <div class="form-group" style="max-width:210px"><label>Streaming on</label><select id="wd-platform" onchange="togglePlatformOther('wd-platform')"><option value="">Platform...</option></select><input type="text" id="wd-platform-other" placeholder="Which platform?" style="display:none;margin-top:6px;width:100%;box-sizing:border-box;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-family:var(--sans);font-size:13px;" /></div>
-          <button class="btn-add" onclick="addShow('watched')">+ Add</button>
         </div>
       </div>
-      <div class="add-form" style="border-left:3px solid #c0392b;">
+      <div class="add-form" style="display:none;border-left:3px solid #c0392b;">
         <div style="font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:#c0392b;margin-bottom:8px;">Didn't finish something?</div>
         <div class="form-row">
           <div class="form-group" style="position:relative;"><label>Show title</label><div class="lr-search-wrap" style="margin-bottom:0;"><input id="dnf-title" placeholder="Search for a show..." oninput="tmdbSearch('dnf');toggleSearchClearBtn(this)" autocomplete="off" style="padding-right:34px;" /><button class="lr-search-clear" type="button" aria-label="Clear search" onclick="clearSearchInput('dnf-title')">&#10005;</button></div><div class="tmdb-dropdown" id="dnf-tmdb-dd"></div></div>
@@ -1428,7 +1443,7 @@ body.look-lounge .lg-row .friend-count{margin-top:2px;font-size:13px;font-weight
         <div class="room-picker-grid rooms-only" id="room-picker-grid"></div>
         <div class="page-title find-only">Find Shows</div>
         <div class="page-sub find-only">Look anything up, or see what&rsquo;s hot and what ShowUp loves.</div>
-        <div class="lr-search-wrap find-only"><input type="text" id="room-picker-search" class="lr-search-input" placeholder="Look up any show or person" onfocus="loadAllRoomsSearchData()" oninput="renderRoomPickerSearch();toggleSearchClearBtn(this)" autocomplete="off" /><button class="lr-search-clear" type="button" aria-label="Clear search" onclick="clearSearchInput('room-picker-search')">&#10005;</button></div>
+        <div class="lr-search-wrap find-only"><input type="text" id="room-picker-search" class="lr-search-input" placeholder="Search shows or friends" onfocus="loadAllRoomsSearchData()" oninput="renderRoomPickerSearch();toggleSearchClearBtn(this)" autocomplete="off" /><button class="lr-search-clear" type="button" aria-label="Clear search" onclick="clearSearchInput('room-picker-search')">&#10005;</button></div>
         <div id="room-picker-search-results" class="find-only" style="display:none;"></div>
         <div id="lg-hub-rail" class="lg-rail-wrap find-only"></div>
         <div class="tastemakers-banner lg-hub-row find-only" onclick="openFullLineupView()" style="margin-bottom:16px;background:linear-gradient(135deg,#3b6e8f,#2c4f66);">
@@ -1439,6 +1454,7 @@ body.look-lounge .lg-row .friend-count{margin-top:2px;font-size:13px;font-weight
           </div>
           <div class="tastemakers-banner-arrow">&#8250;</div>
         </div>
+        <div class="find-chips find-only"><button type="button" class="pill-btn" onclick="openHotTab('trending')">Trending</button><button type="button" class="pill-btn" onclick="openHotTab('service')">By service</button><button type="button" class="pill-btn" onclick="openHotTab('new')">Just premiered</button><button type="button" class="pill-btn" onclick="openHotTab('showup')">On ShowUp</button></div>
         <div class="find-row find-only" id="find-row-hot"></div>
         <div class="tastemakers-banner lg-hub-row find-only" onclick="openPrimeTimeView()" style="margin-bottom:16px;">
           <div class="tastemakers-banner-icon lg-old"></div><svg class="lg-ico lg-new" aria-hidden="true"><use href="#lg-tv"/></svg>
@@ -1510,7 +1526,7 @@ body.look-lounge .lg-row .friend-count{margin-top:2px;font-size:13px;font-weight
           <div id="tastemakers-banner-wrap"></div>
           <div id="room-ticker" class="room-ticker" style="display:none;" onclick="openNewThisWeekModal()" title="See what's new this week"></div>
           <div id="top5-banner-wrap"></div>
-          <div class="lr-search-wrap"><input type="text" id="crew-search" class="lr-search-input" placeholder="Look up any show or person" onfocus="loadAllRoomsSearchData()" oninput="renderFriends();toggleSearchClearBtn(this)" autocomplete="off" /><button class="lr-search-clear" type="button" aria-label="Clear search" onclick="clearSearchInput('crew-search')">&#10005;</button></div>
+          <div class="lr-search-wrap"><input type="text" id="crew-search" class="lr-search-input" placeholder="Search shows or friends" onfocus="loadAllRoomsSearchData()" oninput="renderFriends();toggleSearchClearBtn(this)" autocomplete="off" /><button class="lr-search-clear" type="button" aria-label="Clear search" onclick="clearSearchInput('crew-search')">&#10005;</button></div>
           <div class="lg-crew-tools" style="display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap;">
             <button id="crew-platform-toggle" onclick="toggleCrewPlatformView()" style="background:none;border:1px solid var(--terra);color:var(--burnt);border-radius:8px;padding:6px 12px;font-family:var(--sans);font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;"><span class="lg-old">&#128256; </span>Sort by Platform</button>
             <button type="button" id="invite-someone-link" class="invite-pill" onclick="openInviteModal()">+ Invite a Friend</button>
@@ -1979,6 +1995,19 @@ function renderTop5() {
 function renderBingedTop5() {
   var list = document.getElementById('binged-top5-list');
   if (!list) return;
+  var strip = document.getElementById('binged-top5-strip');
+  var favs = state.user && state.user.top5 ? state.user.top5 : [];
+  if (strip) {
+    strip.innerHTML = favs.length ? favs.map(function(f, i) {
+      var t = typeof f === 'object' ? f.title : f;
+      var pp = typeof f === 'object' ? f.poster_path : null, tid = typeof f === 'object' ? f.tmdb_id : null;
+      return '<button type="button" class="find-poster" style="position:relative;"' + (tid ? ' onclick="openShowDetails(' + parseInt(tid, 10) + ')"' : '') + '>'
+        + (pp ? '<img src="https://image.tmdb.org/t/p/w185' + pp + '" alt="" loading="lazy" />' : '<span class="find-ph"></span>')
+        + '<span class="find-poster-rank">' + (i + 1) + '</span><span class="find-poster-title">' + escAttr(t) + '</span></button>';
+    }).join('') : '<div style="font-size:13px;color:var(--muted);">Pick up to 5 shows you&rsquo;d tell anyone to watch.</div>';
+    var eb = document.getElementById('binged-top5-edit'), ed = document.getElementById('binged-top5-editor');
+    if (eb && ed && ed.style.display === 'none') eb.textContent = favs.length ? 'Edit' : 'Add';
+  }
   var t5p = document.getElementById('binged-top5-platform');
   if (t5p && t5p.options.length <= 1) {
     PLATFORMS.forEach(function(p) { var o = document.createElement('option'); o.value = p; o.textContent = p; t5p.appendChild(o); });
@@ -3527,6 +3556,7 @@ async function showFindShows() {
   await Promise.all([_loadHubTrending(), _loadHubPrimeTop(), loadLineupData()].map(function(p) {
     return Promise.resolve(p).catch(function(e) { console.error('find shows load error:', e); });
   }));
+  await _loadHotFreshness((_lgTrending || []).slice(0, 30));
   _findTried = true;
   _paintFindRows();
 }
@@ -3546,7 +3576,7 @@ function _paintFindRows() {
     _findItems[kind] = items;
     el.innerHTML = items.map(function(s, i) { return _findPosterHTML(kind, i, s, sub(s)); }).join('');
   }
-  fill('hot', _lgTrending, function(s) { return s.year || ''; });
+  fill('hot', _findTried && _lgTrending ? _lgTrending.filter(_hotIsFresh) : null, _hotFreshLabel);
   fill('prime', _lgPrimeTop, function(s) { return s.avg.toFixed(1) + ' &middot; ' + s.count + ' rated'; });
   var lineup = null;
   if (_lineupData && _lineupData.shows) {
@@ -3568,6 +3598,21 @@ window.findOpen = function(kind, i) {
     .map(function(r) { return { name: r.name, rating: r.rating }; });
   openShowDetails(s.tmdb_id, ratings.length ? ratings : undefined);
 };
+
+// Someone's room: their latest finished shows as posters, above the full list.
+function _recentBingedHTML(f) {
+  var done = (f.watched || []).filter(function(s) { return !s.dnf && !s.hidden && s.poster_path && s.tmdb_id; })
+    .sort(function(a, b) { return new Date(b.added_at || b.addedAt || 0) - new Date(a.added_at || a.addedAt || 0); })
+    .slice(0, 8);
+  if (done.length < 2) return '';
+  return '<div style="font-size:13px;font-weight:700;color:var(--muted);margin:0 0 8px;">Recently binged</div>'
+    + '<div class="find-row" style="margin:0 0 16px;">' + done.map(function(s) {
+      return '<button type="button" class="find-poster" onclick="openShowDetails(' + parseInt(s.tmdb_id, 10) + ')">'
+        + '<img src="https://image.tmdb.org/t/p/w185' + s.poster_path + '" alt="" loading="lazy" />'
+        + '<span class="find-poster-title">' + escAttr(s.title) + '</span>'
+        + '<span class="find-poster-sub">' + (s.rating ? s.rating + ' of 5' : 'Not rated yet') + '</span></button>';
+    }).join('') + '</div>';
+}
 
 // Friend-row posters: up to 3 from Watching, else what they've binged.
 function _lgMiniPosters(primary, fallback) {
@@ -4141,7 +4186,7 @@ async function showFriend(id) {
 
     var top5HTML = '';
   if (f.top5 && f.top5.length) {
-    top5HTML = '<div class="section-label">Top 5 Shows of All Time</div><div style="display:flex;flex-direction:column;gap:6px;margin-bottom:20px;">'
+    top5HTML = '<div class="section-label">All-time favorites</div><div style="display:flex;flex-direction:column;gap:6px;margin-bottom:20px;">'
       + f.top5.map(function(s,i){
           var t=typeof s==='object'?s.title:s;
           var p=typeof s==='object'&&s.platform?s.platform:'';
@@ -4192,7 +4237,7 @@ async function showFriend(id) {
     ? '<div style="margin:24px 0 12px;background:var(--fig);color:white;padding:10px 18px;border-radius:8px;font-family:var(--serif);font-size:15px;font-weight:700;letter-spacing:0.2px;display:flex;align-items:center;gap:8px;">Caught Up: Waiting for New Season</div>'+frvSectionToggleControls(f.id,'waiting',waitingItems)+fGrouped(waitingItems,'wl','waiting')
     : '')
   +(f.watched&&f.watched.length
-    ? '<div style="margin:24px 0 12px;background:var(--fig);color:white;padding:10px 18px;border-radius:8px;font-family:var(--serif);font-size:15px;font-weight:700;letter-spacing:0.2px;display:flex;align-items:center;gap:8px;">Binged</div>'+frvSectionToggleControls(f.id,'binged',bingedItems)+fGrouped(bingedItems,'wd','binged')
+    ? '<div style="margin:24px 0 12px;background:var(--fig);color:white;padding:10px 18px;border-radius:8px;font-family:var(--serif);font-size:15px;font-weight:700;letter-spacing:0.2px;display:flex;align-items:center;gap:8px;">Binged</div>'+_recentBingedHTML(f)+frvSectionToggleControls(f.id,'binged',bingedItems)+fGrouped(bingedItems,'wd','binged')
       +(dnfItems.length
         ? '<div class="dnf-section'+(dnfCollapsed?' collapsed':'')+'" data-ckey="'+dnfKey+'" data-cfid="'+f.id+'"><div class="dnf-header" onclick="toggleFriendSection(\''+dnfKey+'\',\''+f.id+'\')">'+(dnfCollapsed?'&#9656;':'&#9662;')+' Didn&#39;t Finish <span class="service-count">('+dnfItems.length+')</span></div>'
           + '<div class="shows-grid">' + dnfItems.sort(function(a,b){return a.title.localeCompare(b.title);}).map(function(s){
@@ -5394,7 +5439,15 @@ window.openFullLineupView = async function() {
   renderFullLineup();
   _fillTrendingPlatforms();
   _fillTrendingCounts();
+  // Drop older shows that are only trending from rewatches; label the rest.
+  _loadHotFreshness(((_fullLineupData && _fullLineupData.trending) || []).slice(0, 45)).then(function() {
+    var view = document.getElementById('full-lineup-view');
+    var detail = document.getElementById('full-lineup-detail-view');
+    if (view && view.style.display === 'block' && !(detail && detail.style.display === 'block')) renderFullLineup();
+  });
 };
+// Find Shows' chips: straight into one of Hot Right Now's tabs.
+window.openHotTab = function(t) { _hotTab = t; openFullLineupView(); };
 
 // "On N lists" + ShowUp rating for every trending show people here have --
 // matched by TMDB id or title, including brand-new shows the daily season
@@ -5591,12 +5644,43 @@ function detailPosterHTML(s) {
 var HOT_TOTAL = 20;
 var _fullLineupListCache = [];
 
+// ---- Is a trending show actually current? ----------------------------------
+// TMDB's weekly trending includes older shows people are rewatching. A show
+// counts as current with an episode in the last 6 months or one due within 3;
+// its label says why: "New show", "Season 3", "Returns Nov 20".
+var _hotFresh = {}; // tmdb_id -> 'loading' | { ok, label }
+function _hotFreshFrom(d) {
+  var day = 86400000, now = Date.now();
+  function t(x) { return x ? new Date(x + 'T12:00:00').getTime() : NaN; }
+  var first = t(d.first_air_date), last = d.last_episode_to_air, next = d.next_episode_to_air;
+  var lastT = last ? t(last.air_date) : NaN, nextT = next ? t(next.air_date) : NaN;
+  var recent = lastT <= now && now - lastT <= 183 * day;
+  var soon = nextT >= now - day && nextT - now <= 90 * day;
+  if (!recent && !soon) return { ok: false, label: '' };
+  if (now - first <= 183 * day) return { ok: true, label: 'New show' };
+  if (soon && next.episode_number === 1) return { ok: true, label: 'Returns ' + new Date(nextT).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) };
+  var season = (recent ? last : next).season_number;
+  return { ok: true, label: season > 1 ? 'Season ' + season : 'New show' };
+}
+function _loadHotFreshness(list) {
+  var todo = (list || []).filter(function(s) { return s && s.tmdb_id && !_hotFresh[s.tmdb_id]; });
+  return Promise.all(todo.map(function(s) {
+    _hotFresh[s.tmdb_id] = 'loading';
+    return fetch('https://api.themoviedb.org/3/tv/' + parseInt(s.tmdb_id, 10) + '?api_key=' + TMDB_KEY + '&language=en-US')
+      .then(function(r) { return r.ok ? r.json() : null; })
+      .then(function(d) { _hotFresh[s.tmdb_id] = d ? _hotFreshFrom(d) : { ok: true, label: '' }; })
+      .catch(function() { _hotFresh[s.tmdb_id] = { ok: true, label: '' }; });
+  }));
+}
+function _hotIsFresh(s) { var f = _hotFresh[s.tmdb_id]; return !f || f === 'loading' || f.ok; }
+function _hotFreshLabel(s) { var f = _hotFresh[s.tmdb_id]; return f && f !== 'loading' ? f.label : ''; }
+
 function _hotRow(s, i, rankLabel) {
   var platform = s.platform ? '<div class="rank-meta-line"><span class="rank-platform">' + escAttr(s.platform) + '</span></div>' : '';
   // "4.6 · On 5 lists · Since 2025" -- wraps onto more lines rather than
   // dropping anything.
   var year = s.trending ? s.year : s.first_air_year;
-  var since = year ? 'Since ' + year : '';
+  var since = s.trending ? _hotFreshLabel(s) : (year ? 'Since ' + year : '');
   var score = s.people
     ? rankScoreLineHTML(s.avg_rating ? Number(s.avg_rating) : null, 'On ' + s.people + (s.people == 1 ? ' list' : ' lists'), since)
     : (since ? '<div class="rank-score-line">' + since + '</div>' : '');
@@ -5616,7 +5700,7 @@ function renderFullLineup(){
   var crowd = (_fullLineupData.shows || []).slice(0, HOT_TOTAL);
   var byTmdb = {};
   (_fullLineupData.shows || []).forEach(function(s) { if (s.tmdb_id) byTmdb[s.tmdb_id] = s; });
-  var trending = (_fullLineupData.trending || []).slice(0, HOT_TOTAL);
+  var trending = (_fullLineupData.trending || []).filter(_hotIsFresh).slice(0, HOT_TOTAL);
   trending.forEach(function(t) {
     var c = byTmdb[t.tmdb_id];
     if (c) { t.avg_rating = c.avg_rating; t.rating_count = c.rating_count; t.people = c.people; if (!t.platform) t.platform = c.platform; }
@@ -10037,11 +10121,31 @@ window.cancelAddShow = function() {
   document.getElementById('add-confirm-modal').classList.remove('active');
 };
 
-window.addDirectDNF = function() {
-  var tEl = document.getElementById('dnf-title');
-  var pEl = document.getElementById('dnf-platform');
+// Binged tab: one add box; the choice under it says Binged or Didn't finish.
+var _bingedAddAs = 'watched';
+window.setBingedAddAs = function(v) {
+  _bingedAddAs = v;
+  document.querySelectorAll('#wd-as button').forEach(function(b) { b.classList.toggle('active', b.getAttribute('data-as') === v); });
+};
+window.addBingedOrDnf = function() {
+  if (_bingedAddAs === 'dnf') addDirectDNF('wd-title', 'wd-platform');
+  else addShow('watched');
+};
+window.toggleTop5Editor = function() {
+  var ed = document.getElementById('binged-top5-editor');
+  var btn = document.getElementById('binged-top5-edit');
+  if (!ed) return;
+  var open = ed.style.display === 'none';
+  ed.style.display = open ? 'block' : 'none';
+  if (btn) btn.textContent = open ? 'Done' : ((state.user && state.user.top5 && state.user.top5.length) ? 'Edit' : 'Add');
+};
+
+window.addDirectDNF = function(tId, pId) {
+  tId = tId || 'dnf-title'; pId = pId || 'dnf-platform';
+  var tEl = document.getElementById(tId);
+  var pEl = document.getElementById(pId);
   var title = tEl.value.trim();
-  var platform = resolvedPlatformValue('dnf-platform');
+  var platform = resolvedPlatformValue(pId);
   if (!title || !platform) {
     tEl.style.borderColor = '#C4622D';
     setTimeout(function() { tEl.style.borderColor = ''; }, 900);
@@ -10049,12 +10153,12 @@ window.addDirectDNF = function() {
   }
   var existingDnf = findMyShowByTitle(title);
   if (existingDnf) {
-    tEl.value = ''; pEl.value = ''; resetPlatformOther('dnf-platform');
+    tEl.value = ''; pEl.value = ''; resetPlatformOther(pId);
     _tmdbPending = {};
     goToExistingShow(existingDnf);
     return;
   }
-  _addConfirmPending = { list: 'dnf', title: title, platform: platform, tId: 'dnf-title', pId: 'dnf-platform' };
+  _addConfirmPending = { list: 'dnf', title: title, platform: platform, tId: tId, pId: pId };
   document.getElementById('add-confirm-title').textContent = title;
   document.getElementById('add-confirm-sub').textContent = addConfirmSubtext('dnf', title, platform);
   document.getElementById('add-confirm-modal').classList.add('active');
