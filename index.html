@@ -934,8 +934,9 @@ body.look-lounge #room-picker-view>.announcement-banner{order:1;}
 body.look-lounge #lg-hub-rail{order:2;}
 body.look-lounge #room-picker-view>.page-title{order:3;}
 body.look-lounge #room-picker-view>.page-sub{order:4;margin-bottom:12px;}
-body.look-lounge #room-picker-view>.lr-search-wrap{order:5;}
-body.look-lounge #room-picker-grid,body.look-lounge #room-picker-search-results{order:6;margin-bottom:10px;}
+body.look-lounge #room-picker-view>.lr-search-wrap{order:7;}
+body.look-lounge #room-picker-grid{order:6;margin-bottom:10px;}
+body.look-lounge #room-picker-search-results{order:7;margin-bottom:10px;}
 body.look-lounge #room-picker-view>.tastemakers-banner{order:8;}
 body.look-lounge #room-picker-view>.lg-hub-row{display:none;}
 body.look-lounge #lg-room-rail{order:0;}
@@ -1409,6 +1410,7 @@ body.look-lounge .lg-row .friend-count{margin-top:2px;font-size:13px;font-weight
         <div class="textsize-tip" id="textsize-tip" style="display:none;"><b>Want bigger text?</b><button type="button" class="tip-go" onclick="textSizeTip(true)">Show me</button><button type="button" class="tip-no" onclick="textSizeTip(false)">No thanks</button></div>
         <div class="page-title"><span class="lg-old"></span>Your Living Rooms</div>
         <div class="page-sub">Pick a room to enter, or start a new one.</div>
+        <div class="room-picker-grid" id="room-picker-grid"></div>
         <div class="lr-search-wrap"><input type="text" id="room-picker-search" class="lr-search-input" placeholder="Look up any show or person" onfocus="loadAllRoomsSearchData()" oninput="renderRoomPickerSearch();toggleSearchClearBtn(this)" autocomplete="off" /><button class="lr-search-clear" type="button" aria-label="Clear search" onclick="clearSearchInput('room-picker-search')">&#10005;</button></div>
         <div id="room-picker-search-results" style="display:none;"></div>
         <div id="lg-hub-rail" class="lg-rail-wrap"></div>
@@ -1436,7 +1438,6 @@ body.look-lounge .lg-row .friend-count{margin-top:2px;font-size:13px;font-weight
           </div>
           <div class="tastemakers-banner-arrow">&#8250;</div>
         </div>
-        <div class="room-picker-grid" id="room-picker-grid"></div>
         <div class="tastemakers-banner" id="admin-browse-banner" onclick="openAdminRoomsModal()" style="display:none;margin:16px 0;background:linear-gradient(135deg,#555,#222);">
           <div class="tastemakers-banner-icon lg-old"></div><svg class="lg-ico lg-new" aria-hidden="true"><use href="#lg-eye"/></svg>
           <div class="tastemakers-banner-text">
