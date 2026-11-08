@@ -1126,7 +1126,7 @@ body.look-lounge .lg-row .friend-count{margin-top:2px;font-size:13px;font-weight
         </div>
         <div class="login-error" id="login-otp-error"></div>
         <label class="login-label">6-digit code</label>
-        <input class="login-input" id="login-otp" type="text" inputmode="numeric" maxlength="6" placeholder="123456" style="text-align:center;letter-spacing:0.3em;font-size:22px;" />
+        <input class="login-input" id="login-otp" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="123456" style="text-align:center;letter-spacing:0.3em;font-size:22px;" />
         <button class="btn-magic" id="login-verify-btn" onclick="handleVerifyOtp()">Verify &rarr;</button>
         <button class="btn-magic" style="margin-top:10px;background:none;border:1px solid var(--border);color:var(--muted);font-size:13px;" onclick="resetLoginForm()">Use a different email</button>
       </div>
@@ -1436,7 +1436,8 @@ body.look-lounge .lg-row .friend-count{margin-top:2px;font-size:13px;font-weight
           </div>
           <div class="tastemakers-banner-arrow">&#8250;</div>
         </div>
-        <div class="tastemakers-banner" id="admin-browse-banner" onclick="openAdminRoomsModal()" style="display:none;margin-bottom:16px;background:linear-gradient(135deg,#555,#222);">
+        <div class="room-picker-grid" id="room-picker-grid"></div>
+        <div class="tastemakers-banner" id="admin-browse-banner" onclick="openAdminRoomsModal()" style="display:none;margin:16px 0;background:linear-gradient(135deg,#555,#222);">
           <div class="tastemakers-banner-icon lg-old"></div><svg class="lg-ico lg-new" aria-hidden="true"><use href="#lg-eye"/></svg>
           <div class="tastemakers-banner-text">
             <div class="tastemakers-banner-title">Browse All Rooms</div>
@@ -1444,7 +1445,6 @@ body.look-lounge .lg-row .friend-count{margin-top:2px;font-size:13px;font-weight
           </div>
           <div class="tastemakers-banner-arrow">&#8250;</div>
         </div>
-        <div class="room-picker-grid" id="room-picker-grid"></div>
       </div>
       <div id="prime-time-view" style="display:none">
         <div class="page-title"><button class="nav-back" onclick="backFromPrimeTimeView()" style="margin-right:6px;">&#8592;</button><span class="lg-old"></span>Prime Time</div>
