@@ -4492,9 +4492,9 @@ var _allRoomsSearchCache = [];
 // the show but haven't rated it come from the cross-room search data.
 var WHO_RATED_MAX_SHOWS = 8;
 
-// iPhones type curly quotes; titles mostly have straight ones. Compare both ways.
+// Apostrophes don't count: "queens", "queen's" and the iPhone's curly "queen’s" all match.
 function _normQ(t) {
-  return (t || '').toLowerCase().replace(/[‘’ʼ`´]/g, "'").replace(/[“”]/g, '"').replace(/\s+/g, ' ').trim();
+  return (t || '').toLowerCase().replace(/['‘’ʼ`´]/g, '').replace(/[“”]/g, '"').replace(/\s+/g, ' ').trim();
 }
 var _whoRatedLoading = false;
 
@@ -4593,7 +4593,7 @@ function buildWhoRatedResults(q) {
   });
   // Closest title first, so "homeland" puts Homeland above longer titles.
   results.sort(function(a, b) {
-    return tmdbMatchScore(b.title, q) - tmdbMatchScore(a.title, q) || b.ratedCount - a.ratedCount || a.title.localeCompare(b.title);
+    return tmdbMatchScore(_normQ(b.title), q) - tmdbMatchScore(_normQ(a.title), q) || b.ratedCount - a.ratedCount || a.title.localeCompare(b.title);
   });
   return results;
 }
