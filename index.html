@@ -4692,10 +4692,15 @@ function buildWhoRatedResults(q) {
   (state.allRoomsSearchData || []).forEach(function(p) { if (p && p.user_id) network[p.user_id] = fullName(p); });
 
   var shows = {};
-  function add(s, person) {
+  // Shows the database matched (incl. close spellings): your own and friends'
+  // copies of them count too.
+  var serverKeys = {};
+  if (data !== _whoRatedAllRows) (data.shows || []).forEach(function(r) { if (r && r.title) serverKeys[_normQ(r.title)] = true; });
+  // fromServer: the database already matched it (title, TMDB id, or a close spelling).
+  function add(s, person, fromServer) {
     if (!s || !s.title) return;
     var titleKey = _normQ(s.title);
-    if (titleKey.indexOf(q) === -1 && !(s.tmdb_id && tmdbIds[s.tmdb_id])) return;
+    if (!fromServer && titleKey.indexOf(q) === -1 && !(s.tmdb_id && tmdbIds[s.tmdb_id]) && !serverKeys[titleKey]) return;
     if (person.id !== meId && state.blockedIds && state.blockedIds.has(person.id)) return;
     // Same title, different show (a remake): keep them apart by TMDB id.
     var key = s.tmdb_id ? 'id' + s.tmdb_id : 't' + titleKey;
@@ -4710,7 +4715,7 @@ function buildWhoRatedResults(q) {
   (data.shows || []).forEach(function(s) {
     if (s.user_id === meId) return; // your own row comes from your live lists below
     var inNetwork = !!network[s.user_id];
-    add(s, { id: s.user_id, name: inNetwork ? network[s.user_id] : 'Neighbor', kind: inNetwork ? 'friend' : 'neighbor' });
+    add(s, { id: s.user_id, name: inNetwork ? network[s.user_id] : 'Neighbor', kind: inNetwork ? 'friend' : 'neighbor' }, !_whoRatedAllRows || data !== _whoRatedAllRows);
   });
   (state.allRoomsSearchData || []).forEach(function(p) {
     if (!p || !p.user_id || p.user_id === meId) return;
