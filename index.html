@@ -4597,7 +4597,7 @@ function _roomCardHTML(r, single) {
     return '<span class="rc-dot" style="background:' + escAttr(pp.c) + '">' + escAttr((pp.n || '?').charAt(0).toUpperCase()) + '</span>';
   }).join('');
   var line = _roomPeopleLine(r.id, 3);
-  var who = line ? 'With ' + line : (r.member_count + ' member' + (r.member_count === 1 ? '' : 's'));
+  var who = line ? 'With ' + line : (r.member_count > 1 ? r.member_count + ' members' : 'Just you so far &middot; invite someone in');
   var m = a.moment, mHTML = '';
   if (m && m.started) mHTML = '<b>' + escAttr(m.who) + '</b> started ' + escAttr(m.show);
   else if (m) mHTML = '<b>' + escAttr(m.who) + '</b> on ' + escAttr(m.show) + ': &ldquo;' + escAttr(m.text.length > 90 ? m.text.slice(0, 88) + '…' : m.text) + '&rdquo;';
