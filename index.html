@@ -635,10 +635,8 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
 .watch-next-section{margin-bottom:22px;}
 .watch-next-header{display:flex;align-items:baseline;justify-content:space-between;font-size:13px;font-weight:800;text-transform:uppercase;letter-spacing:0.1em;color:white;background:var(--terra);padding:9px 16px;border-radius:8px;margin-bottom:10px;}
 .watch-next-header span{font-weight:600;letter-spacing:0;text-transform:none;opacity:0.85;}
-.btn-pin{background:none;border:none;cursor:pointer;padding:5px 6px;margin-right:2px;color:var(--muted);line-height:0;border-radius:7px;flex-shrink:0;}
-.btn-pin svg{width:18px;height:18px;}
-.btn-pin.on{color:var(--terra);}
-.card-top-actions{display:inline-flex;align-items:flex-start;flex-shrink:0;}
+.show-move .must-watch-btn.on{background:rgba(196,98,45,0.1);border-color:var(--terra);color:var(--terra);}
+.must-watch-hint{font-size:13px;color:var(--muted);margin:0 2px 14px;}
 .waiting-header{display:block;font-size:13px;font-weight:800;text-transform:uppercase;letter-spacing:0.1em;color:white;background:var(--fig);padding:9px 16px;border-radius:8px;margin-bottom:10px;box-shadow:0 2px 8px rgba(107,45,78,0.3);}
 .didnt-finish-btn:hover{background:#fdecea;}
 
@@ -3063,8 +3061,10 @@ function _renderListInner(list) {
     var waiting = items.filter(function(s){ return s.waitingForSeason; });
     var html = '';
     if (pinned.length) {
-      html += '<div class="watch-next-section"><div class="watch-next-header">Watch Next <span>'+pinned.length+' of '+WATCH_NEXT_MAX+'</span></div>'
+      html += '<div class="watch-next-section"><div class="watch-next-header">Must Watch <span>'+pinned.length+' of '+WATCH_NEXT_MAX+'</span></div>'
         + '<div class="shows-grid">'+pinned.map(function(s){ return buildCard(s,'watchlist'); }).join('')+'</div></div>';
+    } else if (active.length) {
+      html += '<div class="must-watch-hint">Tap Must Watch on up to '+WATCH_NEXT_MAX+' shows you don&#39;t want to miss.</div>';
     }
     html += sectionToggleControls('watchlist');
     if (active.length) {
@@ -3259,32 +3259,31 @@ function buildWatchlistCard(s) {
     if(recName) recommendedBadge='<div style="font-size:13px;color:var(--fig);font-weight:600;margin-top:2px;"><svg class="rec-mark" aria-hidden="true"><use href="#lg-target"/></svg>Recommended by '+recName+'</div>';
   }
   var otherRatingsList=ownCardRatingsHTML(s.title, 'watchlist', sid, s.rating, true);
-  var pinBtn='<button type="button" class="btn-pin'+(s.watchNext?' on':'')+'" onclick="toggleWatchNext(\''+sid+'\')" aria-pressed="'+(s.watchNext?'true':'false')+'" aria-label="'+(s.watchNext?'Remove from Watch Next':'Add to Watch Next')+'" title="'+(s.watchNext?'Remove from Watch Next':'Watch Next')+'">'
-    + '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h12a1 1 0 0 1 1 1v17l-7-4.5L5 21V4a1 1 0 0 1 1-1z" fill="'+(s.watchNext?'currentColor':'none')+'" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg></button>';
+  var mustBtn='<button type="button" class="must-watch-btn'+(s.watchNext?' on':'')+'" onclick="toggleWatchNext(\''+sid+'\')" aria-pressed="'+(s.watchNext?'true':'false')+'">'+(s.watchNext?'&#10003; Must Watch':'Must Watch')+'</button>';
 
-  return '<div class="show-card'+(s.hidden?' is-hidden':'')+'" id="card-'+sid+'"><div class="show-card-top">'+showTile(s)+'<div class="show-info"><div class="show-title">'+s.title+(s.hidden?'<span class="hidden-badge">Hidden from friends</span>':'')+'</div>'+platformRow+recommendedBadge+recommendBtn(sid)+'</div><div class="card-top-actions">'+pinBtn+menuHTML+'</div></div>'
+  return '<div class="show-card'+(s.hidden?' is-hidden':'')+'" id="card-'+sid+'"><div class="show-card-top">'+showTile(s)+'<div class="show-info"><div class="show-title">'+s.title+(s.hidden?'<span class="hidden-badge">Hidden from friends</span>':'')+'</div>'+platformRow+recommendedBadge+recommendBtn(sid)+'</div>'+menuHTML+'</div>'
     + otherRatingsList
-    + '<div class="show-move"><button class="btn-start" onclick="moveToWatching(\''+sid+'\')">Start Watching</button>' + (isDocFilm(s) ? '' : '<button class="waiting-season-btn" onclick="markWaitingFromList(\''+sid+'\')">Caught Up</button>') + '</div>'
+    + '<div class="show-move"><button class="btn-start" onclick="moveToWatching(\''+sid+'\')">Start Watching</button>' + (isDocFilm(s) ? '' : '<button class="waiting-season-btn" onclick="markWaitingFromList(\''+sid+'\')">Caught Up</button>') + mustBtn + '</div>'
     + '<div class="react-area">'+talkPreviewHTML(s.title)+reactToggle+'</div>'
     + '</div>';
 }
 
-// Watch Next: up to 5 My List shows pinned to the top of My List.
-var WATCH_NEXT_MAX = 5;
+// Must Watch (stored as watch_next): up to 3 My List shows pinned to the top of My List.
+var WATCH_NEXT_MAX = 3;
 window.toggleWatchNext = async function(sid) {
   var s = (state.watchlist || []).find(function(x) { return x.id === sid; });
   if (!s) return;
   var on = !s.watchNext;
   if (on) {
     var count = state.watchlist.filter(function(x) { return x.watchNext && !x.waitingForSeason; }).length;
-    if (count >= WATCH_NEXT_MAX) { showToast('Watch Next holds ' + WATCH_NEXT_MAX + ' shows. Unpin one first.'); return; }
+    if (count >= WATCH_NEXT_MAX) { showToast('Must Watch holds ' + WATCH_NEXT_MAX + ' shows. Tap one to take it off first.'); return; }
   }
   s.watchNext = on;
   renderList('watchlist');
   try {
     const { error } = await sb.from('shows').update({ watch_next: on }).eq('id', sid);
     if (error) throw error;
-    showToast(on ? 'Added to Watch Next' : 'Removed from Watch Next');
+    showToast(on ? 'Added to Must Watch' : 'Taken off Must Watch');
   } catch (e) {
     console.error('[watchNext]', e);
     s.watchNext = !on;
@@ -8395,7 +8394,7 @@ async function dbAddShow(showData) {
 
 async function updateShowStatus(showId, status, extra) {
   var update = Object.assign({ status: status }, extra || {});
-  // Watch Next only means something in My List (not Caught Up): leaving drops the pin.
+  // Must Watch only means something in My List (not Caught Up): leaving drops the pin.
   if (status !== 'watchlist' || update.waiting_for_season) {
     update.watch_next = false;
     ['watching', 'watchlist', 'watched'].forEach(function(lk) {
