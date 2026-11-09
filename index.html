@@ -633,8 +633,10 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
 .resume-watching-btn{background:var(--fig);color:white;border:none;border-radius:6px;padding:5px 12px;font-family:var(--sans);font-size:13px;font-weight:600;cursor:pointer;}
 .waiting-section{margin-top:28px;}
 .watch-next-section{margin-bottom:22px;}
-.watch-next-header{display:flex;align-items:baseline;justify-content:space-between;font-size:13px;font-weight:800;text-transform:uppercase;letter-spacing:0.1em;color:white;background:var(--terra);padding:9px 16px;border-radius:8px;margin-bottom:10px;}
-.watch-next-header span{font-weight:600;letter-spacing:0;text-transform:none;opacity:0.85;}
+.watch-next-header{color:white;background:var(--terra);padding:10px 16px;border-radius:8px;margin-bottom:10px;}
+.watch-next-header .wn-top{display:flex;align-items:baseline;justify-content:space-between;font-size:14px;font-weight:800;text-transform:uppercase;letter-spacing:0.1em;}
+.watch-next-header .wn-top span{font-weight:600;letter-spacing:0;text-transform:none;opacity:0.9;font-size:13px;}
+.watch-next-header .wn-sub{font-size:14px;font-weight:600;margin-top:3px;}
 .show-move .must-watch-btn.on{background:rgba(196,98,45,0.1);border-color:var(--terra);color:var(--terra);}
 .dwm-why{display:flex;gap:8px;justify-content:center;margin:-10px 0 20px;}
 .dwm-why button{flex:1;min-height:40px;border:1px solid var(--border);border-radius:10px;background:none;color:var(--charcoal);font-family:var(--sans);font-size:13px;font-weight:600;cursor:pointer;}
@@ -3075,7 +3077,7 @@ function _renderListInner(list) {
     var waiting = items.filter(function(s){ return s.waitingForSeason; });
     var html = '';
     if (pinned.length) {
-      html += '<div class="watch-next-section"><div class="watch-next-header">Must Watch: your next priority shows <span>'+pinned.length+' of '+WATCH_NEXT_MAX+'</span></div>'
+      html += '<div class="watch-next-section"><div class="watch-next-header"><div class="wn-top">Must Watch <span>'+pinned.length+' of '+WATCH_NEXT_MAX+'</span></div><div class="wn-sub">Your next priority shows</div></div>'
         + '<div class="shows-grid">'+pinned.map(function(s){ return buildCard(s,'watchlist'); }).join('')+'</div></div>';
     } else if (active.length) {
       html += '<div class="must-watch-hint">Tap Must Watch on up to '+WATCH_NEXT_MAX+' shows you don&#39;t want to miss.</div>';
@@ -10252,11 +10254,7 @@ window.addShow = function(list) {
   var pEl = document.getElementById(pId);
   var title = tEl.value.trim();
   var platform = resolvedPlatformValue(pId);
-  if (!title || !platform) {
-    tEl.style.borderColor = '#C4622D';
-    setTimeout(function() { tEl.style.borderColor = ''; }, 900);
-    return;
-  }
+  if (!title || !platform) { _addMissingHint(tEl, title); return; }
   var existing = findMyShow(title, _tmdbPending && _tmdbPending.tmdb_id);
   if (existing) {
     tEl.value = ''; pEl.value = ''; resetPlatformOther(pId);
@@ -10290,7 +10288,18 @@ var _bingedAddAs = 'watched';
 window.setBingedAddAs = function(v) {
   _bingedAddAs = v;
   document.querySelectorAll('#wd-as button').forEach(function(b) { b.classList.toggle('active', b.getAttribute('data-as') === v); });
+  var t = document.getElementById('wd-title');
+  if (t) {
+    t.placeholder = v === 'dnf' ? 'Search a show you didn’t finish...' : 'Search for a show...';
+    if (!t.value.trim()) t.focus();
+    else showToast(v === 'dnf' ? 'Tap + Add to save it as Didn’t finish.' : 'Tap + Add to save it as Binged.');
+  }
 };
+function _addMissingHint(tEl, title) {
+  tEl.style.borderColor = '#C4622D';
+  setTimeout(function() { tEl.style.borderColor = ''; }, 900);
+  showToast(!title ? 'Search for a show first.' : 'Pick the streaming service, then tap + Add.');
+}
 window.addBingedOrDnf = function() {
   if (_bingedAddAs === 'dnf') addDirectDNF('wd-title', 'wd-platform');
   else addShow('watched');
@@ -10310,11 +10319,7 @@ window.addDirectDNF = function(tId, pId) {
   var pEl = document.getElementById(pId);
   var title = tEl.value.trim();
   var platform = resolvedPlatformValue(pId);
-  if (!title || !platform) {
-    tEl.style.borderColor = '#C4622D';
-    setTimeout(function() { tEl.style.borderColor = ''; }, 900);
-    return;
-  }
+  if (!title || !platform) { _addMissingHint(tEl, title); return; }
   var existingDnf = findMyShowByTitle(title);
   if (existingDnf) {
     tEl.value = ''; pEl.value = ''; resetPlatformOther(pId);
