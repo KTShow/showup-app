@@ -641,7 +641,8 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
 .watch-next-header .wn-top span{font-weight:600;letter-spacing:0;text-transform:none;opacity:0.9;font-size:13px;}
 .watch-next-header .wn-sub{font-size:14px;font-weight:700;margin-top:3px;color:#FFE08A;}
 .watch-next-section{border-radius:10px;}
-.watch-next-header.saved-later-header{background:var(--terra);margin-top:22px;}
+.watch-next-header.saved-later-header{margin-top:22px;}
+.watch-next-header.wn-click{cursor:pointer;}
 .show-move .must-watch-btn.on{background:rgba(196,98,45,0.1);border-color:var(--terra);color:var(--terra);}
 .dwm-why{display:flex;gap:8px;justify-content:center;margin:-10px 0 20px;}
 .dwm-why button{flex:1;min-height:40px;border:1px solid var(--border);border-radius:10px;background:none;color:var(--charcoal);font-family:var(--sans);font-size:13px;font-weight:600;cursor:pointer;}
@@ -3095,11 +3096,14 @@ function _renderListInner(list) {
       });
     }
     if (waiting.length) {
-      html+='<div class="waiting-section"><div class="waiting-header">Caught Up: Waiting for New Season</div>';
-      var wGroups=groupByService(waiting); var wServices=Object.keys(wGroups).sort();
-      wServices.forEach(function(svc){
-        html += renderServiceGroup('watchlist:waiting:'+svc, svc, wGroups[svc], 'watchlist');
-      });
+      var waitCollapsed=!!_collapsedSections['watchlist:caughtup'];
+      html+='<div class="waiting-section"><div class="watch-next-header wn-click" onclick="toggleServiceSection(\'watchlist:caughtup\')"><div class="wn-top">'+(waitCollapsed?'&#9656;':'&#9662;')+' Caught Up <span>'+waiting.length+'</span></div><div class="wn-sub">Waiting for a new season</div></div>';
+      if (!waitCollapsed) {
+        var wGroups=groupByService(waiting); var wServices=Object.keys(wGroups).sort();
+        wServices.forEach(function(svc){
+          html += renderServiceGroup('watchlist:waiting:'+svc, svc, wGroups[svc], 'watchlist');
+        });
+      }
       html+='</div>';
     }
     el.innerHTML=html;
