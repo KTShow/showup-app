@@ -636,7 +636,8 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
 .watch-next-header{color:white;background:var(--terra);padding:10px 16px;border-radius:8px;margin-bottom:10px;}
 .watch-next-header .wn-top{display:flex;align-items:baseline;justify-content:space-between;font-size:14px;font-weight:800;text-transform:uppercase;letter-spacing:0.1em;}
 .watch-next-header .wn-top span{font-weight:600;letter-spacing:0;text-transform:none;opacity:0.9;font-size:13px;}
-.watch-next-header .wn-sub{font-size:14px;font-weight:600;margin-top:3px;}
+.watch-next-header .wn-sub{font-size:14px;font-weight:700;margin-top:3px;color:#FFE08A;}
+.watch-next-section{border-radius:10px;}
 .show-move .must-watch-btn.on{background:rgba(196,98,45,0.1);border-color:var(--terra);color:var(--terra);}
 .dwm-why{display:flex;gap:8px;justify-content:center;margin:-10px 0 20px;}
 .dwm-why button{flex:1;min-height:40px;border:1px solid var(--border);border-radius:10px;background:none;color:var(--charcoal);font-family:var(--sans);font-size:13px;font-weight:600;cursor:pointer;}
@@ -1424,9 +1425,8 @@ body.look-lounge .lg-row .friend-count{margin-top:2px;font-size:13px;font-weight
         <div class="form-row">
           <div class="form-group" style="position:relative;"><label>Show title</label><div class="lr-search-wrap" style="margin-bottom:0;"><input id="wd-title" placeholder="Search for a show..." oninput="tmdbSearch('wd');toggleSearchClearBtn(this)" autocomplete="off" style="padding-right:34px;" /><button class="lr-search-clear" type="button" aria-label="Clear search" onclick="clearSearchInput('wd-title')">&#10005;</button></div><div class="tmdb-dropdown" id="wd-tmdb-dd"></div><div class="dup-hint" id="wd-dup-hint" style="display:none" onclick="tapDupHint('wd')"></div></div>
           <div class="form-group" style="max-width:210px"><label>Streaming on</label><select id="wd-platform" onchange="togglePlatformOther('wd-platform')"><option value="">Platform...</option></select><input type="text" id="wd-platform-other" placeholder="Which platform?" style="display:none;margin-top:6px;width:100%;box-sizing:border-box;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-family:var(--sans);font-size:13px;" /></div>
-          <button class="btn-add" onclick="addBingedOrDnf()">+ Add</button>
         </div>
-        <div class="hot-seg" id="wd-as" role="tablist" style="margin:10px 0 0;"><button type="button" class="active" data-as="watched" onclick="setBingedAddAs('watched')">Binged it</button><button type="button" data-as="dnf" onclick="setBingedAddAs('dnf')">Didn&rsquo;t finish</button></div>
+        <div class="hot-seg" id="wd-as" style="margin:10px 0 0;"><button type="button" class="active" onclick="addBingedAs('watched')">+ Binged it</button><button type="button" class="active" onclick="addBingedAs('dnf')">+ Didn&rsquo;t finish</button></div>
       </div>
       <div class="fav-box">
         <div class="fav-head"><div><div class="fav-title">All-time favorites</div><div class="fav-sub">Your top 5, visible to friends in your rooms</div></div>
@@ -3077,7 +3077,7 @@ function _renderListInner(list) {
     var waiting = items.filter(function(s){ return s.waitingForSeason; });
     var html = '';
     if (pinned.length) {
-      html += '<div class="watch-next-section"><div class="watch-next-header"><div class="wn-top">Must Watch <span>'+pinned.length+' of '+WATCH_NEXT_MAX+'</span></div><div class="wn-sub">Your next priority shows</div></div>'
+      html += '<div class="watch-next-section"><div class="watch-next-header"><div class="wn-top">Must Watch Next <span>'+pinned.length+' of '+WATCH_NEXT_MAX+'</span></div><div class="wn-sub">Your next priority shows</div></div>'
         + '<div class="shows-grid">'+pinned.map(function(s){ return buildCard(s,'watchlist'); }).join('')+'</div></div>';
     } else if (active.length) {
       html += '<div class="must-watch-hint">Tap Must Watch on up to '+WATCH_NEXT_MAX+' shows you don&#39;t want to miss.</div>';
@@ -3297,6 +3297,10 @@ window.toggleWatchNext = async function(sid) {
   }
   s.watchNext = on;
   renderList('watchlist');
+  if (on) {
+    var wn = document.querySelector('#watchlist-list .watch-next-section');
+    if (wn) { wn.classList.add('flash-pulse'); setTimeout(function() { wn.classList.remove('flash-pulse'); }, 2600); }
+  }
   try {
     const { error } = await sb.from('shows').update({ watch_next: on }).eq('id', sid);
     if (error) throw error;
@@ -10300,6 +10304,23 @@ function _addMissingHint(tEl, title) {
   setTimeout(function() { tEl.style.borderColor = ''; }, 900);
   showToast(!title ? 'Search for a show first.' : 'Pick the streaming service, then tap + Add.');
 }
+// One tap adds it: no confirm box, the rating screen that follows has Cancel.
+window.addBingedAs = function(v) {
+  var tEl = document.getElementById('wd-title');
+  var title = tEl.value.trim();
+  var platform = resolvedPlatformValue('wd-platform');
+  if (!title || !platform) { _addMissingHint(tEl, title); return; }
+  var existing = findMyShow(title, _tmdbPending && _tmdbPending.tmdb_id) || findMyShowByTitle(title);
+  if (existing) {
+    tEl.value = ''; document.getElementById('wd-platform').value = ''; resetPlatformOther('wd-platform');
+    _tmdbPending = {};
+    _clearDupHint('wd');
+    goToExistingShow(existing);
+    return;
+  }
+  _addConfirmPending = { list: v === 'dnf' ? 'dnf' : 'watched', title: title, platform: platform, tId: 'wd-title', pId: 'wd-platform', oneTap: true };
+  confirmAddShow();
+};
 window.addBingedOrDnf = function() {
   if (_bingedAddAs === 'dnf') addDirectDNF('wd-title', 'wd-platform');
   else addShow('watched');
@@ -10414,8 +10435,9 @@ window.confirmAddShow = async function() {
     _addConfirmPending = null;
     renderList(destList);
     showToast('Added "' + title + '" to ' + ADD_DEST_DISPLAY_LABELS[list] + '.');
-    if (isDnf) openDWM(newShow, "Didn't finish? Rate it anyway", '🎬');
-    else if (list === 'watched') openDWM(newShow);
+    var undoNew = pending.oneTap ? { removeNew: true, currentList: 'watched' } : null;
+    if (isDnf) openDWM(newShow, "Didn't finish? Rate it anyway", '🎬', undoNew);
+    else if (list === 'watched') openDWM(newShow, null, null, undoNew);
   } catch(e) {
     console.error('Error adding show:', e);
     showToast('Error adding show. Please try again.');
@@ -10491,8 +10513,10 @@ window.cancelDoneWatching = async function(){
   _dwmPending = null; _dwmRating = 0; _dwmUndo = null;
   if (!show || !undo) return;
   if (undo.removeNew) {
-    // Just added from a ranked list / search -- take it back off.
-    await removeShow(undo.currentList, show.id);
+    // Just added from a ranked list / search -- take it back off (no second "are you sure").
+    state[undo.currentList] = state[undo.currentList].filter(function(x) { return x.id !== show.id; });
+    renderList(undo.currentList);
+    try { await dbRemoveShow(show.id); } catch(e) { console.error('cancel add error:', e); }
     showToast('Cancelled \u2014 "' + show.title + '" was not added.');
     refreshOpenRankDetail();
     return;
