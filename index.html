@@ -9694,7 +9694,7 @@ function _dpRowHTML(it, i) {
     + (it.note ? '<div class="dp-note">&#8220;' + escAttr(it.note) + '&#8221;</div>' : '')
     + status
     + '<div class="fs-remotes dp-remotes' + (want ? ' dp-off' : '') + '">' + remotes + '</div>'
-    + '<textarea class="react-input dp-comment" rows="1"' + (want ? ' disabled' : '') + ' placeholder="Add a comment (optional)" oninput="dpCommentInput(' + i + ',this)">' + (want ? '' : escAttr(it.comment || '')) + '</textarea>'
+    + '<textarea class="react-input dp-comment" rows="1"' + (want ? ' disabled' : '') + ' placeholder="Add a comment (optional)" oninput="dpCommentInput(' + i + ',this)" onblur="dpMaybeAutoClose()">' + (want ? '' : escAttr(it.comment || '')) + '</textarea>'
     + '</div>';
 }
 
@@ -9735,7 +9735,27 @@ function _dpTouched() {
 }
 
 window.dpDetails = function(i) { var it = _dpItems[i]; if (it) openShowDetails(it.tmdb_id, it.friendRatings, { noAdd: true }); };
-window.dpChoose = function(i, choice) { _dpTouched(); return _showPickChoose(_dpItems, i, choice, renderDailyPrompt); };
+// Once every show is answered (status + rating, or "want" which has no
+// rating), close by itself a beat later -- no extra Done tap. Waits while a
+// comment box is in use or a save is still going; any new tap restarts it.
+var _dpAutoTimer = null;
+function _dpAllAnswered() {
+  return _dpItems.length > 0 && _dpItems.every(function(it) { return it.choice && (it.choice === 'want' || it.rating > 0); });
+}
+window.dpMaybeAutoClose = function() {
+  if (_dpAutoTimer) { clearTimeout(_dpAutoTimer); _dpAutoTimer = null; }
+  if (!_dpAllAnswered()) return;
+  _dpAutoTimer = setTimeout(function tick() {
+    _dpAutoTimer = null;
+    var sheet = document.getElementById('daily-prompt');
+    if (!sheet || !sheet.classList.contains('active') || !_dpAllAnswered()) return;
+    var ae = document.activeElement;
+    if (ae && ae.classList && ae.classList.contains('dp-comment')) return; // its blur re-checks
+    if (_dpItems.some(function(it) { return it.busy; })) { _dpAutoTimer = setTimeout(tick, 300); return; }
+    closeDailyPrompt();
+  }, 1200);
+};
+window.dpChoose = async function(i, choice) { _dpTouched(); await _showPickChoose(_dpItems, i, choice, renderDailyPrompt); dpMaybeAutoClose(); };
 window.dpChange = function(i) { _showPickChange(_dpItems, i, renderDailyPrompt); };
 window.dpRate = function(i, n) {
   var it = _dpItems[i];
@@ -9743,7 +9763,9 @@ window.dpRate = function(i, n) {
   if (!it.choice) { showToast('First tap where you are with ' + it.title + '.'); return; }
   if (it.choice === 'want') return;
   _dpTouched();
-  return _showPickRate(_dpItems, i, n, renderDailyPrompt);
+  var saving = _showPickRate(_dpItems, i, n, renderDailyPrompt); // sets it.rating right away
+  dpMaybeAutoClose();
+  return saving;
 };
 window.dpNope = function(i) {
   var it = _dpItems[i];
@@ -9757,6 +9779,7 @@ window.dpNope = function(i) {
   _dpTouched();
   if (!_dpItems.length) { closeDailyPrompt(); return; } // nothing left: no extra "All set" screen
   renderDailyPrompt();
+  dpMaybeAutoClose(); // the other show may already be answered
 };
 
 // Only the Not now / Done button closes it -- a stray tap on the dim area
