@@ -632,6 +632,13 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
 .waiting-season-btn:hover{background:rgba(107,45,78,0.08);}
 .resume-watching-btn{background:var(--fig);color:white;border:none;border-radius:6px;padding:5px 12px;font-family:var(--sans);font-size:13px;font-weight:600;cursor:pointer;}
 .waiting-section{margin-top:28px;}
+.watch-next-section{margin-bottom:22px;}
+.watch-next-header{display:flex;align-items:baseline;justify-content:space-between;font-size:13px;font-weight:800;text-transform:uppercase;letter-spacing:0.1em;color:white;background:var(--terra);padding:9px 16px;border-radius:8px;margin-bottom:10px;}
+.watch-next-header span{font-weight:600;letter-spacing:0;text-transform:none;opacity:0.85;}
+.btn-pin{background:none;border:none;cursor:pointer;padding:5px 6px;margin-right:2px;color:var(--muted);line-height:0;border-radius:7px;flex-shrink:0;}
+.btn-pin svg{width:18px;height:18px;}
+.btn-pin.on{color:var(--terra);}
+.card-top-actions{display:inline-flex;align-items:flex-start;flex-shrink:0;}
 .waiting-header{display:block;font-size:13px;font-weight:800;text-transform:uppercase;letter-spacing:0.1em;color:white;background:var(--fig);padding:9px 16px;border-radius:8px;margin-bottom:10px;box-shadow:0 2px 8px rgba(107,45,78,0.3);}
 .didnt-finish-btn:hover{background:#fdecea;}
 
@@ -3050,9 +3057,16 @@ function _renderListInner(list) {
   }
 
   if (list === 'watchlist') {
-    var active = items.filter(function(s){ return !s.waitingForSeason; });
+    var pinned = items.filter(function(s){ return s.watchNext && !s.waitingForSeason; })
+      .sort(function(a,b){ return a.title.localeCompare(b.title); });
+    var active = items.filter(function(s){ return !s.waitingForSeason && !s.watchNext; });
     var waiting = items.filter(function(s){ return s.waitingForSeason; });
-    var html = sectionToggleControls('watchlist');
+    var html = '';
+    if (pinned.length) {
+      html += '<div class="watch-next-section"><div class="watch-next-header">Watch Next <span>'+pinned.length+' of '+WATCH_NEXT_MAX+'</span></div>'
+        + '<div class="shows-grid">'+pinned.map(function(s){ return buildCard(s,'watchlist'); }).join('')+'</div></div>';
+    }
+    html += sectionToggleControls('watchlist');
     if (active.length) {
       var groups=groupByService(active); var services=Object.keys(groups).sort();
       services.forEach(function(svc){
@@ -3245,13 +3259,39 @@ function buildWatchlistCard(s) {
     if(recName) recommendedBadge='<div style="font-size:13px;color:var(--fig);font-weight:600;margin-top:2px;"><svg class="rec-mark" aria-hidden="true"><use href="#lg-target"/></svg>Recommended by '+recName+'</div>';
   }
   var otherRatingsList=ownCardRatingsHTML(s.title, 'watchlist', sid, s.rating, true);
+  var pinBtn='<button type="button" class="btn-pin'+(s.watchNext?' on':'')+'" onclick="toggleWatchNext(\''+sid+'\')" aria-pressed="'+(s.watchNext?'true':'false')+'" aria-label="'+(s.watchNext?'Remove from Watch Next':'Add to Watch Next')+'" title="'+(s.watchNext?'Remove from Watch Next':'Watch Next')+'">'
+    + '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h12a1 1 0 0 1 1 1v17l-7-4.5L5 21V4a1 1 0 0 1 1-1z" fill="'+(s.watchNext?'currentColor':'none')+'" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg></button>';
 
-  return '<div class="show-card'+(s.hidden?' is-hidden':'')+'" id="card-'+sid+'"><div class="show-card-top">'+showTile(s)+'<div class="show-info"><div class="show-title">'+s.title+(s.hidden?'<span class="hidden-badge">Hidden from friends</span>':'')+'</div>'+platformRow+recommendedBadge+recommendBtn(sid)+'</div>'+menuHTML+'</div>'
+  return '<div class="show-card'+(s.hidden?' is-hidden':'')+'" id="card-'+sid+'"><div class="show-card-top">'+showTile(s)+'<div class="show-info"><div class="show-title">'+s.title+(s.hidden?'<span class="hidden-badge">Hidden from friends</span>':'')+'</div>'+platformRow+recommendedBadge+recommendBtn(sid)+'</div><div class="card-top-actions">'+pinBtn+menuHTML+'</div></div>'
     + otherRatingsList
     + '<div class="show-move"><button class="btn-start" onclick="moveToWatching(\''+sid+'\')">Start Watching</button>' + (isDocFilm(s) ? '' : '<button class="waiting-season-btn" onclick="markWaitingFromList(\''+sid+'\')">Caught Up</button>') + '</div>'
     + '<div class="react-area">'+talkPreviewHTML(s.title)+reactToggle+'</div>'
     + '</div>';
 }
+
+// Watch Next: up to 5 My List shows pinned to the top of My List.
+var WATCH_NEXT_MAX = 5;
+window.toggleWatchNext = async function(sid) {
+  var s = (state.watchlist || []).find(function(x) { return x.id === sid; });
+  if (!s) return;
+  var on = !s.watchNext;
+  if (on) {
+    var count = state.watchlist.filter(function(x) { return x.watchNext && !x.waitingForSeason; }).length;
+    if (count >= WATCH_NEXT_MAX) { showToast('Watch Next holds ' + WATCH_NEXT_MAX + ' shows. Unpin one first.'); return; }
+  }
+  s.watchNext = on;
+  renderList('watchlist');
+  try {
+    const { error } = await sb.from('shows').update({ watch_next: on }).eq('id', sid);
+    if (error) throw error;
+    showToast(on ? 'Added to Watch Next' : 'Removed from Watch Next');
+  } catch (e) {
+    console.error('[watchNext]', e);
+    s.watchNext = !on;
+    renderList('watchlist');
+    showToast('Couldn’t save that — try again.');
+  }
+};
 
 function toggleCardMenu(btn) {
   var wrap = btn.closest('.card-menu-wrap');
@@ -8355,6 +8395,13 @@ async function dbAddShow(showData) {
 
 async function updateShowStatus(showId, status, extra) {
   var update = Object.assign({ status: status }, extra || {});
+  // Watch Next only means something in My List (not Caught Up): leaving drops the pin.
+  if (status !== 'watchlist' || update.waiting_for_season) {
+    update.watch_next = false;
+    ['watching', 'watchlist', 'watched'].forEach(function(lk) {
+      (state[lk] || []).forEach(function(x) { if (x.id === showId) x.watchNext = false; });
+    });
+  }
   const { error } = await sb.from('shows').update(update).eq('id', showId);
   if (error) throw error;
 }
@@ -8558,6 +8605,7 @@ function normalizeShow(s) {
     hidden: s.hidden || false,
     dnf: s.dnf || false,
     waitingForSeason: s.waiting_for_season || false,
+    watchNext: s.watch_next || false,
     waitingSince: s.waiting_since || null,
     newSeasonAvailable: s.new_season_available || false,
     numberOfSeasons: s.number_of_seasons || null,
