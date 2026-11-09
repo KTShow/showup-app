@@ -4234,13 +4234,15 @@ async function showFriend(id) {
   var fRoom=f.room||'tuscany'; var fColor=ROOMS[fRoom]?ROOMS[fRoom].color:f.color;
   var fInitials=isSelf?(state.user.initials||'Y'):f.name.split(' ').map(function(x){return x[0]||'';}).join('').toUpperCase();
 
-  function fGrouped(arr,lk,sectionKey){
+  function fGrouped(arr,lk,sectionKey,flat){
     var groups={};
-    arr.forEach(function(s){if(!groups[s.platform])groups[s.platform]=[];groups[s.platform].push(s);});
+    if (flat) groups['']=arr.slice();
+    else arr.forEach(function(s){if(!groups[s.platform])groups[s.platform]=[];groups[s.platform].push(s);});
     var svcs=Object.keys(groups).sort(); var html='';
     svcs.forEach(function(svc){
       var key='frv:'+f.id+':'+sectionKey+':'+svc;
       var isCollapsed=_collapsedSections[key]!==false;
+      if (flat) html+='<div><div class="shows-grid">'; else
       html+='<div class="service-group'+(isCollapsed?' collapsed':'')+'" data-ckey="'+key+'" data-cfid="'+f.id+'"><div class="service-divider" onclick="toggleFriendSection(\''+key+'\',\''+f.id+'\')"><span class="service-divider-text">'+(isCollapsed?'&#9656;':'&#9662;')+' '+svc+' <span class="service-count">('+groups[svc].length+')</span></span></div><div class="shows-grid">';
       groups[svc].sort(function(a,b){return a.title.localeCompare(b.title);}).forEach(function(s){
         var inpId='finp-'+lk+'-'+f.id+'-'+s.id;
@@ -4313,7 +4315,13 @@ async function showFriend(id) {
   var roomTitle=isSelf?'Your Living Room':f.name+"'s Living Room";
   var cityLine=isSelf?'':'<div style="font-size:13px;color:var(--muted)">'+f.city+'</div>';
   var onItems=friendSectionItems(f,'on');
-  var seatItems=friendSectionItems(f,'seat');
+  var seatAll=friendSectionItems(f,'seat');
+  var mustItems=seatAll.filter(function(x){return x.watch_next||x.watchNext;});
+  var seatItems=seatAll.filter(function(x){return !(x.watch_next||x.watchNext);});
+  var mustHTML = mustItems.length
+    ? '<div class="watch-next-header"><div class="wn-top">Must Watch Next <span>'+mustItems.length+'</span></div><div class="wn-sub">'+(isSelf?'Your':escHtml(fFirst)+'&#39;s')+' next priority shows</div></div>'+fGrouped(mustItems,'wl','mustwatch',true)
+      + (seatItems.length ? '<div class="watch-next-header saved-later-header"><div class="wn-top">Saved for Later <span>'+seatItems.length+'</span></div></div>' : '')
+    : '';
   var waitingItems=friendSectionItems(f,'waiting');
   var bingedItems=friendSectionItems(f,'binged');
   var dnfItems=(f.watched||[]).filter(function(x){return x.dnf;});
@@ -4331,7 +4339,7 @@ async function showFriend(id) {
     +cityLine+'</div></div>'
     +frvAllControls
     +'<div style="margin:24px 0 12px;background:var(--fig);color:white;padding:10px 18px;border-radius:8px;font-family:var(--serif);font-size:15px;font-weight:700;letter-spacing:0.2px;display:flex;align-items:center;gap:8px;">Watching</div>'+frvSectionToggleControls(f.id,'on',onItems)+fGrouped(onItems,'w','on')
-    +'<div style="margin:24px 0 12px;background:var(--fig);color:white;padding:10px 18px;border-radius:8px;font-family:var(--serif);font-size:15px;font-weight:700;letter-spacing:0.2px;display:flex;align-items:center;gap:8px;">My List</div>'+frvSectionToggleControls(f.id,'seat',seatItems)+fGrouped(seatItems,'wl','seat')
+    +'<div style="margin:24px 0 12px;background:var(--fig);color:white;padding:10px 18px;border-radius:8px;font-family:var(--serif);font-size:15px;font-weight:700;letter-spacing:0.2px;display:flex;align-items:center;gap:8px;">My List</div>'+mustHTML+frvSectionToggleControls(f.id,'seat',seatItems)+fGrouped(seatItems,'wl','seat')
   +(waitingItems.length
     ? '<div style="margin:24px 0 12px;background:var(--fig);color:white;padding:10px 18px;border-radius:8px;font-family:var(--serif);font-size:15px;font-weight:700;letter-spacing:0.2px;display:flex;align-items:center;gap:8px;">Caught Up: Waiting for New Season</div>'+frvSectionToggleControls(f.id,'waiting',waitingItems)+fGrouped(waitingItems,'wl','waiting')
     : '')
@@ -9911,16 +9919,17 @@ async function _closeDailyPrompt() {
 
 window.dpSettingsTap = function() {
   var p = _dpPrefs();
-  if (p.last === _dpToday() && !p.off) {
-    showToast('Daily show question: shown today (' + (p.how || 'no details') + '). Showing it again…');
-    delete p.last;
-    _dpSave(p);
-    backFromSettings();
+  if (p.off) { showToast('Daily show question is turned off on this device.'); return; }
+  showToast('Showing the daily show question now…');
+  delete p.last;
+  _dpSave(p);
+  backFromSettings();
+  setTimeout(async function() {
     _dpForce = true;
-    setTimeout(maybeShowDailyPrompt, 600);
-    return;
-  }
-  showToast('Daily show question: ' + _dpWhy);
+    await maybeShowDailyPrompt();
+    _dpForce = false;
+    if (!document.getElementById('daily-prompt').classList.contains('active')) showToast('Daily show question didn’t open: ' + _dpWhy);
+  }, 600);
 };
 
 function renderDailyPromptPref() {
