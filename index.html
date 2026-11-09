@@ -3305,13 +3305,13 @@ window.toggleWatchNext = async function(sid) {
   var wn = on ? document.querySelector('#watchlist-list .watch-next-section') : null;
   if (wn) {
     var backY = fromY + (wn.offsetHeight - beforeH);
-    window.scrollTo({ top: Math.max(0, wn.getBoundingClientRect().top + window.scrollY - 90), behavior: 'smooth' });
+    window.scrollTo(0, Math.max(0, wn.getBoundingClientRect().top + window.scrollY - 90));
     setTimeout(function() { wn.classList.add('flash-pulse'); setTimeout(function() { wn.classList.remove('flash-pulse'); }, 2600); }, 350);
   }
   try {
     const { error } = await sb.from('shows').update({ watch_next: on }).eq('id', sid);
     if (error) throw error;
-    if (wn) showToastAction('Added to Must Watch Next', 'Back', function() { window.scrollTo({ top: backY, behavior: 'smooth' }); });
+    if (wn) showToastAction('Added to Must Watch Next', 'Back', function() { window.scrollTo(0, backY); });
     else showToast(on ? 'Added to Must Watch Next' : 'Taken off Must Watch');
   } catch (e) {
     console.error('[watchNext]', e);
