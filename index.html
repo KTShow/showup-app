@@ -541,6 +541,8 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
 .invite-modal-overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:200;display:none;align-items:center;justify-content:center;padding:20px;}
 .toast{position:fixed;left:50%;top:22%;transform:translate(-50%,-10px);background:var(--charcoal);color:white;font-family:var(--sans);font-size:14px;font-weight:600;padding:13px 20px;border-radius:10px;box-shadow:0 6px 20px rgba(0,0,0,0.28);z-index:300;opacity:0;pointer-events:none;transition:opacity 0.35s,transform 0.35s;max-width:90vw;text-align:center;}
 .toast.show{opacity:1;transform:translate(-50%,0);}
+.toast.show.has-action{pointer-events:auto;}
+.toast-action{margin-left:12px;padding:4px 12px;border:1.5px solid #FFE08A;border-radius:8px;background:none;color:#FFE08A;font-family:var(--sans);font-size:14px;font-weight:700;cursor:pointer;}
 .invite-modal-overlay.active{display:flex;}
 .invite-modal{background:var(--cream);border-radius:20px;padding:28px;width:100%;max-width:400px;box-shadow:0 8px 40px rgba(0,0,0,0.2);}
 .invite-modal-title{font-family:var(--serif);font-size:20px;color:var(--charcoal);font-weight:700;margin-bottom:6px;}
@@ -3295,16 +3297,22 @@ window.toggleWatchNext = async function(sid) {
     var count = state.watchlist.filter(function(x) { return x.watchNext && !x.waitingForSeason; }).length;
     if (count >= WATCH_NEXT_MAX) { showToast('Must Watch holds ' + WATCH_NEXT_MAX + ' shows. Tap one to take it off first.'); return; }
   }
+  // Adding: glide up to the strip and glow; Back returns you to your spot.
+  var topEl = function() { return document.querySelector('#watchlist-list .watch-next-section') || document.querySelector('#watchlist-list .must-watch-hint'); };
+  var before = topEl(), beforeH = before ? before.offsetHeight : 0, fromY = window.scrollY;
   s.watchNext = on;
   renderList('watchlist');
-  if (on) {
-    var wn = document.querySelector('#watchlist-list .watch-next-section');
-    if (wn) { wn.classList.add('flash-pulse'); setTimeout(function() { wn.classList.remove('flash-pulse'); }, 2600); }
+  var wn = on ? document.querySelector('#watchlist-list .watch-next-section') : null;
+  if (wn) {
+    var backY = fromY + (wn.offsetHeight - beforeH);
+    window.scrollTo({ top: Math.max(0, wn.getBoundingClientRect().top + window.scrollY - 90), behavior: 'smooth' });
+    setTimeout(function() { wn.classList.add('flash-pulse'); setTimeout(function() { wn.classList.remove('flash-pulse'); }, 2600); }, 350);
   }
   try {
     const { error } = await sb.from('shows').update({ watch_next: on }).eq('id', sid);
     if (error) throw error;
-    showToast(on ? 'Added to Must Watch' : 'Taken off Must Watch');
+    if (wn) showToastAction('Added to Must Watch Next', 'Back', function() { window.scrollTo({ top: backY, behavior: 'smooth' }); });
+    else showToast(on ? 'Added to Must Watch Next' : 'Taken off Must Watch');
   } catch (e) {
     console.error('[watchNext]', e);
     s.watchNext = !on;
@@ -12671,10 +12679,24 @@ window.appPrompt = function(title, value) {
 };
 
 var _toastTimer = null;
+// A toast with one button (e.g. "Back"). Stays a little longer so it can be tapped.
+function showToastAction(msg, label, fn) {
+  var el = document.getElementById('toast');
+  if (!el) return;
+  if (_toastTimer) clearTimeout(_toastTimer);
+  el.textContent = msg;
+  var b = document.createElement('button');
+  b.type = 'button'; b.className = 'toast-action'; b.textContent = label;
+  b.onclick = function() { el.classList.remove('show', 'has-action'); fn(); };
+  el.appendChild(b);
+  el.classList.add('show', 'has-action');
+  _toastTimer = setTimeout(function() { el.classList.remove('show', 'has-action'); }, 6000);
+}
 function showToast(msg) {
   var el = document.getElementById('toast');
   if (!el) return;
   if (_toastTimer) clearTimeout(_toastTimer);
+  el.classList.remove('has-action');
   el.textContent = msg;
   el.classList.add('show');
   _toastTimer = setTimeout(function() { el.classList.remove('show'); }, 4500);
