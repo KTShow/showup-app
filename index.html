@@ -9524,11 +9524,13 @@ function _dpShowKey(title, tmdbId) {
 var _dpWhy = 'hasn’t checked yet';
 function _dpNo(why) { _dpWhy = why; return false; }
 
+var _dpForce = false;
 function _dpIsDue() {
   var u = state.user;
   if (!u) return _dpNo('not signed in yet');
   var p = _dpPrefs();
   if (p.off) return _dpNo('turned off on this device');
+  if (_dpForce) { _dpForce = false; return true; } // Settings test: show it now
   if (p.last === _dpToday()) return _dpNo('already shown today on this device');
   if (p.pauseUntil && Date.now() < p.pauseUntil) return _dpNo('resting after 3 Not nows, until ' + new Date(p.pauseUntil).toLocaleDateString());
   var joined = u.createdAt ? new Date(u.createdAt).getTime() : 0;
@@ -9825,6 +9827,7 @@ window.dpSettingsTap = function() {
     delete p.last;
     _dpSave(p);
     backFromSettings();
+    _dpForce = true;
     setTimeout(maybeShowDailyPrompt, 600);
     return;
   }
