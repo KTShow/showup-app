@@ -542,7 +542,8 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
 .toast{position:fixed;left:50%;top:22%;transform:translate(-50%,-10px);background:var(--charcoal);color:white;font-family:var(--sans);font-size:14px;font-weight:600;padding:13px 20px;border-radius:10px;box-shadow:0 6px 20px rgba(0,0,0,0.28);z-index:300;opacity:0;pointer-events:none;transition:opacity 0.35s,transform 0.35s;max-width:90vw;text-align:center;}
 .toast.show{opacity:1;transform:translate(-50%,0);}
 .toast.show.has-action{pointer-events:auto;}
-.toast-action{margin-left:12px;padding:4px 12px;border:1.5px solid #FFE08A;border-radius:8px;background:none;color:#FFE08A;font-family:var(--sans);font-size:14px;font-weight:700;cursor:pointer;}
+.toast.has-action{display:flex;align-items:center;gap:14px;white-space:nowrap;}
+.toast-action{margin-left:0;padding:6px 14px;border:1.5px solid #FFE08A;border-radius:8px;background:none;color:#FFE08A;font-family:var(--sans);font-size:14px;font-weight:700;cursor:pointer;}
 .invite-modal-overlay.active{display:flex;}
 .invite-modal{background:var(--cream);border-radius:20px;padding:28px;width:100%;max-width:400px;box-shadow:0 8px 40px rgba(0,0,0,0.2);}
 .invite-modal-title{font-family:var(--serif);font-size:20px;color:var(--charcoal);font-weight:700;margin-bottom:6px;}
@@ -3311,7 +3312,7 @@ window.toggleWatchNext = async function(sid) {
   try {
     const { error } = await sb.from('shows').update({ watch_next: on }).eq('id', sid);
     if (error) throw error;
-    if (wn) showToastAction('Added to Must Watch Next', 'Back', function() { window.scrollTo(0, backY); });
+    if (wn) showToastAction('Added to Must Watch', 'Back', function() { window.scrollTo(0, backY); });
     else showToast(on ? 'Added to Must Watch Next' : 'Taken off Must Watch');
   } catch (e) {
     console.error('[watchNext]', e);
