@@ -4201,9 +4201,20 @@ async function showFriend(id) {
   if (f.top5 && f.top5.length) {
     top5HTML = '<div class="section-label">All-time favorites</div><div style="display:flex;flex-direction:column;gap:6px;margin-bottom:20px;">'
       + f.top5.map(function(s,i){
-          var t=typeof s==='object'?s.title:s;
-          var p=typeof s==='object'&&s.platform?s.platform:'';
-          return '<div style="display:flex;align-items:center;gap:10px;background:var(--cream);border:1px solid var(--border);border-radius:8px;padding:9px 12px;box-shadow:var(--shadow);"><span style="font-size:13px;font-weight:800;color:var(--fig);min-width:18px;">'+(i+1)+'</span><div style="flex:1;"><div style="font-size:13px;font-weight:600;color:var(--charcoal);">'+t+'</div>'+(p?'<div style="font-size:13px;color:var(--muted);">'+p+'</div>':'')+'</div></div>';
+          var t5=_friendTop5Item(f,i);
+          var t=t5.title, p=t5.platform||'';
+          var thumb = t5.poster_path
+            ? '<img src="https://image.tmdb.org/t/p/w92'+t5.poster_path+'" alt="" style="width:34px;height:51px;object-fit:cover;border-radius:4px;flex-shrink:0;'+(t5.tmdb_id?'cursor:pointer;':'')+'"'+(t5.tmdb_id?' onclick="openShowDetails('+Number(t5.tmdb_id)+')"':'')+' />'
+            : '';
+          // Same + Add / "on my list" corner as the friend's other cards.
+          var t5Corner='';
+          if(!isSelf){
+            var t5Mine=findMyShow(t, t5.tmdb_id);
+            t5Corner = t5Mine
+              ? '<span class="on-list-badge">'+onListBadgeContent(t5Mine)+'</span>'
+              : '<button class="btn-add-prominent" onclick="addFromFriendTop5(\''+f.id+'\','+i+')" title="Add to my list">+ Add</button>';
+          }
+          return '<div style="display:flex;align-items:center;gap:10px;background:var(--cream);border:1px solid var(--border);border-radius:8px;padding:9px 12px;box-shadow:var(--shadow);"><span style="font-size:13px;font-weight:800;color:var(--fig);min-width:18px;">'+(i+1)+'</span>'+thumb+'<div style="flex:1;min-width:0;"><div style="font-size:13px;font-weight:600;color:var(--charcoal);">'+escHtml(t)+'</div>'+(p?'<div style="font-size:13px;color:var(--muted);">'+escHtml(p)+'</div>':'')+'</div>'+(t5Corner?'<div style="flex-shrink:0;">'+t5Corner+'</div>':'')+'</div>';
         }).join('')
       + '</div>';
   }
@@ -7495,6 +7506,49 @@ window.addFromFriendCard = function(showId){
   openAddPicker();
 };
 
+// A friend's Top 5 pick, with poster / TMDB id / seasons filled in from
+// their own copy of the show when the Top 5 row lacks them (Top 5 picks are
+// auto-mirrored into Binged, so a copy usually exists).
+function _friendTop5Item(f, idx) {
+  var raw = (f && f.top5 || [])[idx];
+  var item = typeof raw === 'object' && raw ? Object.assign({}, raw) : { title: String(raw || ''), platform: '' };
+  var key = (item.title || '').toLowerCase().trim();
+  var copy = null;
+  ['watched', 'watching', 'watchlist'].some(function(list) {
+    copy = (f[list] || []).find(function(s) {
+      return (item.tmdb_id && s.tmdb_id && String(s.tmdb_id) === String(item.tmdb_id))
+        || (s.title || '').toLowerCase().trim() === key;
+    }) || null;
+    return !!copy;
+  });
+  if (copy) {
+    if (!item.poster_path) item.poster_path = copy.poster_path || null;
+    if (!item.tmdb_id) item.tmdb_id = copy.tmdb_id || null;
+    if (!item.platform) item.platform = copy.platform || '';
+    item.numberOfSeasons = copy.numberOfSeasons || null;
+  }
+  return item;
+}
+
+window.addFromFriendTop5 = function(friendId, idx){
+  var f = (state.friends || []).find(function(x){ return x.id === friendId; });
+  if (!f) return;
+  var s = _friendTop5Item(f, idx);
+  if (!s.title) return;
+  var existing = findMyShow(s.title, s.tmdb_id);
+  if (existing) {
+    showToast('Already on your list — ' + (ADD_LIST_LABELS[existing.list]||'My Lists') + '.');
+    return;
+  }
+  _currentShowDetails = {
+    tmdb_id: s.tmdb_id||null, title: s.title, poster_path: s.poster_path||null, platform: s.platform||null,
+    genre: null, original_network: null, first_air_year: null,
+    number_of_seasons: s.numberOfSeasons||null, show_status: null, overview: null, vote_average: null,
+    shareFrom: state.lastViewedFriend ? { user: state.lastViewedFriend, source: 'living_room' } : null,
+  };
+  openAddPicker();
+};
+
 var _recommendPending = null;
 var _recommendSelectedIds = [];
 
@@ -8434,7 +8488,7 @@ async function getFriendsWithShows(roomId) {
       city: u.state || '', // state only; city is no longer shown (older accounts may still have one on file)
       room: u.room || 'tuscany',
       muted: mutedSet.has(u.id),
-      top5: friendTop5.map(function(t) { return { title: t.title, platform: t.platform }; }),
+      top5: friendTop5.map(function(t) { return { title: t.title, platform: t.platform, poster_path: t.poster_path || null, tmdb_id: t.tmdb_id || null }; }),
       watching: friendShows.filter(function(s) { return s.status === 'watching'; }).map(normShow),
       watchlist: friendShows.filter(function(s) { return s.status === 'watchlist'; }).map(normShow),
       watched: friendShows.filter(function(s) { return s.status === 'watched' || s.status === 'dnf'; }).map(normShow),
