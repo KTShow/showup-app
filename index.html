@@ -636,6 +636,10 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
 .watch-next-header{display:flex;align-items:baseline;justify-content:space-between;font-size:13px;font-weight:800;text-transform:uppercase;letter-spacing:0.1em;color:white;background:var(--terra);padding:9px 16px;border-radius:8px;margin-bottom:10px;}
 .watch-next-header span{font-weight:600;letter-spacing:0;text-transform:none;opacity:0.85;}
 .show-move .must-watch-btn.on{background:rgba(196,98,45,0.1);border-color:var(--terra);color:var(--terra);}
+.dwm-why{display:flex;gap:8px;justify-content:center;margin:-10px 0 20px;}
+.dwm-why button{flex:1;min-height:40px;border:1px solid var(--border);border-radius:10px;background:none;color:var(--charcoal);font-family:var(--sans);font-size:13px;font-weight:600;cursor:pointer;}
+.dwm-why button.on{border-color:var(--fig);background:rgba(107,45,78,0.08);color:var(--fig);}
+.paused-section{margin-top:22px;}
 .must-watch-hint{font-size:13px;color:var(--muted);margin:0 2px 14px;}
 .waiting-header{display:block;font-size:13px;font-weight:800;text-transform:uppercase;letter-spacing:0.1em;color:white;background:var(--fig);padding:9px 16px;border-radius:8px;margin-bottom:10px;box-shadow:0 2px 8px rgba(107,45,78,0.3);}
 .didnt-finish-btn:hover{background:#fdecea;}
@@ -1082,6 +1086,7 @@ body.look-lounge .lg-row .friend-count{margin-top:2px;font-size:13px;font-weight
     <div id="dwm-emoji" style="font-size:36px;margin-bottom:6px;">🍿</div>
     <div id="dwm-heading" style="font-family:var(--serif);font-size:21px;font-weight:700;color:var(--burnt);margin-bottom:4px;">You binged it!</div>
     <div id="dwm-title" style="font-size:14px;color:var(--muted);margin-bottom:22px;"></div>
+    <div id="dwm-why" class="dwm-why" style="display:none;"><button type="button" data-why="no" onclick="dwmWhy(false)">Not for me</button><button type="button" data-why="paused" onclick="dwmWhy(true)">Paused, I&#39;ll go back</button></div>
     <div style="font-size:13px;font-weight:700;color:var(--charcoal);margin-bottom:12px;" id="dwm-rate-label">How many remotes?</div>
     <div id="dwm-remotes" style="display:flex;justify-content:center;gap:10px;margin-bottom:22px;"></div>
     <input id="dwm-comment" placeholder="Leave a comment for friends... (optional)" style="width:100%;box-sizing:border-box;border:1px solid var(--border);border-radius:10px;padding:11px 14px;font-family:var(--sans);font-size:13px;color:var(--charcoal);outline:none;margin-bottom:16px;" />
@@ -3030,7 +3035,8 @@ function _renderListInner(list) {
 
   if (list === 'watched') {
     var rated = items.filter(function(s){ return !s.dnf; });
-    var dnf = items.filter(function(s){ return s.dnf; });
+    var paused = items.filter(function(s){ return s.dnf && s.dnfPaused; });
+    var dnf = items.filter(function(s){ return s.dnf && !s.dnfPaused; });
     var html = '';
     if (rated.length) {
       var groups=groupByService(rated); var services=Object.keys(groups).sort();
@@ -3038,6 +3044,14 @@ function _renderListInner(list) {
       services.forEach(function(svc){
         html += renderServiceGroup('watched:main:'+svc, svc, groups[svc], 'watched');
       });
+    }
+    if (paused.length) {
+      var pausedCollapsed=!!_collapsedSections['watched:paused'];
+      paused.sort(function(a,b){return a.title.localeCompare(b.title);});
+      html+='<div class="dnf-section paused-section'+(pausedCollapsed?' collapsed':'')+'" data-ckey="watched:paused">'
+        + '<div class="dnf-header" onclick="toggleServiceSection(\'watched:paused\')">'+(pausedCollapsed?'&#9656;':'&#9662;')+' Paused: I&#39;ll go back <span class="service-count">('+paused.length+')</span></div>'
+        + '<div class="shows-grid">' + (pausedCollapsed ? '' : paused.map(function(s){ return buildDNFCard(s); }).join('')) + '</div>'
+        + '</div>';
     }
     if (dnf.length) {
       var dnfCollapsed=!!_collapsedSections['watched:dnf'];
@@ -3047,7 +3061,7 @@ function _renderListInner(list) {
         + '<div class="shows-grid">' + (dnfCollapsed ? '' : dnf.map(function(s){ return buildDNFCard(s); }).join('')) + '</div>'
         + '</div>';
     }
-    if (!rated.length && !dnf.length) {
+    if (!rated.length && !dnf.length && !paused.length) {
       html='<div class="empty"><div class="empty-icon"></div>No credits have rolled yet. Get watching.</div>';
     }
     el.innerHTML=html;
@@ -3061,7 +3075,7 @@ function _renderListInner(list) {
     var waiting = items.filter(function(s){ return s.waitingForSeason; });
     var html = '';
     if (pinned.length) {
-      html += '<div class="watch-next-section"><div class="watch-next-header">Must Watch <span>'+pinned.length+' of '+WATCH_NEXT_MAX+'</span></div>'
+      html += '<div class="watch-next-section"><div class="watch-next-header">Must Watch: your next priority shows <span>'+pinned.length+' of '+WATCH_NEXT_MAX+'</span></div>'
         + '<div class="shows-grid">'+pinned.map(function(s){ return buildCard(s,'watchlist'); }).join('')+'</div></div>';
     } else if (active.length) {
       html += '<div class="must-watch-hint">Tap Must Watch on up to '+WATCH_NEXT_MAX+' shows you don&#39;t want to miss.</div>';
@@ -3157,6 +3171,7 @@ function buildDNFCard(s) {
   var menuHTML = '<div class="card-menu-wrap">'
     + '<button class="btn-more" onclick="toggleCardMenu(this)" title="More">&#8942;</button>'
     + '<div class="card-menu">'
+    + '<button class="card-menu-item" onclick="toggleDnfPaused(\''+sid+'\');closeCardMenus();">'+(s.dnfPaused?'Not for me':'Paused, I&#39;ll go back')+'</button>'
     + '<button class="card-menu-item" onclick="moveShowTo(\'watched\',\''+sid+'\');closeCardMenus();">Move to another list</button>'
     + '<button class="card-menu-item" onclick="toggleHide(\'watched\',\''+sid+'\');closeCardMenus();">'+hideLabel+'</button>'
     + '<button class="card-menu-item" onclick="togglePlatEdit(\'watched\',\''+sid+'\');closeCardMenus();">Edit streaming service</button>'
@@ -3173,7 +3188,7 @@ function buildDNFCard(s) {
     + menuHTML
     + '</div>'
     + otherRatingsDNF
-    + '<div class="show-move"><button class="btn-start" onclick="startWatchingFromDNF(\''+sid+'\')">Start Watching</button>'
+    + '<div class="show-move"><button class="btn-start" onclick="startWatchingFromDNF(\''+sid+'\')">'+(s.dnfPaused?'Pick back up':'Start Watching')+'</button>'
     + (isDocFilm(s) ? '' : '<button class="waiting-season-btn" onclick="moveToWaiting(\'watched\',\''+sid+'\')">Caught Up</button>')
     + '</div>'
     + '<div class="react-area">' + talkPreviewHTML(s.title) + reactToggle + '</div>'
@@ -4323,7 +4338,7 @@ async function showFriend(id) {
                 : '<button class="btn-add-prominent" onclick="addFromFriendCard(\''+s.id+'\')" title="Add to my list">+ Add</button>');
               return '<div class="dnf-card" id="card-'+s.id+'"><div class="show-card-top">'+showTile(s)
                 +'<div class="show-info"><div class="show-title">'+s.title+'</div>'
-                +'<div style="margin-top:3px;"><span class="dnf-badge">Didn&#39;t Finish</span>'
+                +'<div style="margin-top:3px;"><span class="dnf-badge">'+(s.dnf_paused||s.dnfPaused?'Paused':'Didn&#39;t Finish')+'</span>'
                 +'<span style="font-size:13px;color:var(--muted);margin-left:6px;">'+s.platform+'</span>'
                 +'</div>'+dnfRatingRow
                 +(friendRatingsHTML(s.title,f.id,state.friends,!isSelf)?'<div style="margin-top:4px;">'+friendRatingsHTML(s.title,f.id,state.friends,!isSelf)+'</div>':'')
@@ -8394,6 +8409,11 @@ async function dbAddShow(showData) {
 
 async function updateShowStatus(showId, status, extra) {
   var update = Object.assign({ status: status }, extra || {});
+  // Paused is a kind of Didn't Finish: leaving it drops the flag.
+  if (status !== 'dnf' && update.dnf !== true) {
+    update.dnf_paused = false;
+    (state.watched || []).concat(state.watching || [], state.watchlist || []).forEach(function(x) { if (x.id === showId) x.dnfPaused = false; });
+  }
   // Must Watch only means something in My List (not Caught Up): leaving drops the pin.
   if (status !== 'watchlist' || update.waiting_for_season) {
     update.watch_next = false;
@@ -8605,6 +8625,7 @@ function normalizeShow(s) {
     dnf: s.dnf || false,
     waitingForSeason: s.waiting_for_season || false,
     watchNext: s.watch_next || false,
+    dnfPaused: s.dnf_paused || false,
     waitingSince: s.waiting_since || null,
     newSeasonAvailable: s.new_season_available || false,
     numberOfSeasons: s.number_of_seasons || null,
@@ -10400,6 +10421,41 @@ var _dwmPending = null;
 var _dwmRating = 0;
 var _dwmUndo = null; // how to put the show back if this was opened by mistake -- see cancelDoneWatching
 
+// Didn't Finish has two meanings: "Not for me" (the default) and "Paused,
+// I'll go back". Saved the moment it's tapped, so Skip rating keeps it.
+var _dwmHeading = '';
+function _renderDwmWhy(show) {
+  document.querySelectorAll('#dwm-why button').forEach(function(b) {
+    b.classList.toggle('on', (b.getAttribute('data-why') === 'paused') === !!show.dnfPaused);
+  });
+  document.getElementById('dwm-heading').textContent = show.dnfPaused ? 'Paused for now' : _dwmHeading;
+}
+window.dwmWhy = function(paused) {
+  var show = _dwmPending;
+  if (!show || !!show.dnfPaused === paused) return;
+  setDnfPaused(show, paused);
+  _renderDwmWhy(show);
+};
+async function setDnfPaused(show, paused) {
+  show.dnfPaused = paused;
+  renderList('watched');
+  try {
+    const { error } = await sb.from('shows').update({ dnf_paused: paused }).eq('id', show.id);
+    if (error) throw error;
+  } catch (e) {
+    console.error('[dnfPaused]', e);
+    show.dnfPaused = !paused;
+    renderList('watched');
+    showToast('Couldn\u2019t save that \u2014 try again.');
+  }
+}
+window.toggleDnfPaused = function(id) {
+  var s = (state.watched || []).find(function(x) { return x.id === id; });
+  if (!s) return;
+  setDnfPaused(s, !s.dnfPaused);
+  showToast(s.dnfPaused ? 'Moved to Paused.' : 'Moved to Didn\u2019t Finish.');
+};
+
 function openDWM(show, heading, emoji, undo) {
   _dwmPending = show;
   _dwmRating = show.rating || 0; // already rated: show it, ready to keep or change
@@ -10412,6 +10468,9 @@ function openDWM(show, heading, emoji, undo) {
   document.getElementById('dwm-title').textContent = show.title;
   document.getElementById('dwm-comment').value = '';
   document.getElementById('dwm-cancel-btn').style.display = undo ? 'block' : 'none';
+  _dwmHeading = heading || 'You binged it!';
+  document.getElementById('dwm-why').style.display = show.dnf ? 'flex' : 'none';
+  if (show.dnf) _renderDwmWhy(show);
   renderDWMRemotes();
   document.getElementById('dwm-overlay').style.display = 'flex';
 }
