@@ -1,0 +1,25 @@
+name: Login code for a user
+
+# Admin backup for when someone's login code email never arrives.
+# Emails a fresh code to admin@showuproom.com -- see scripts/send-login-code.mjs.
+# Have the person on the "enter your code" screen first, then run this.
+on:
+  workflow_dispatch:
+    inputs:
+      email:
+        description: "The person's ShowUp email address"
+        required: true
+
+jobs:
+  send:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v5
+      - name: Make and email the code
+        run: node scripts/send-login-code.mjs
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          TARGET_EMAIL: ${{ inputs.email }}
