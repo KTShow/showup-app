@@ -641,6 +641,7 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
 .watch-next-header .wn-top span{font-weight:600;letter-spacing:0;text-transform:none;opacity:0.9;font-size:13px;}
 .watch-next-header .wn-sub{font-size:14px;font-weight:700;margin-top:3px;color:#FFE08A;}
 .watch-next-section{border-radius:10px;}
+.watch-next-header.saved-later-header{background:var(--terra);margin-top:22px;}
 .show-move .must-watch-btn.on{background:rgba(196,98,45,0.1);border-color:var(--terra);color:var(--terra);}
 .dwm-why{display:flex;gap:8px;justify-content:center;margin:-10px 0 20px;}
 .dwm-why button{flex:1;min-height:40px;border:1px solid var(--border);border-radius:10px;background:none;color:var(--charcoal);font-family:var(--sans);font-size:13px;font-weight:600;cursor:pointer;}
@@ -3082,6 +3083,7 @@ function _renderListInner(list) {
     if (pinned.length) {
       html += '<div class="watch-next-section"><div class="watch-next-header"><div class="wn-top">Must Watch Next <span>'+pinned.length+' of '+WATCH_NEXT_MAX+'</span></div><div class="wn-sub">Your next priority shows</div></div>'
         + '<div class="shows-grid">'+pinned.map(function(s){ return buildCard(s,'watchlist'); }).join('')+'</div></div>';
+      if (active.length) html += '<div class="watch-next-header saved-later-header"><div class="wn-top">Saved for Later <span>'+active.length+'</span></div></div>';
     } else if (active.length) {
       html += '<div class="must-watch-hint">Tap Must Watch on up to '+WATCH_NEXT_MAX+' shows you don&#39;t want to miss.</div>';
     }
