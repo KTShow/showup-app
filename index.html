@@ -4622,11 +4622,13 @@ async function showRoomPicker() {
   state.currentRoomIsOwner = false;
   state.currentRoomIsAdminView = false;
   state.friendsLoaded = false;
+  // Admin box shows only once the rooms are in, so it doesn't flash alone at open.
   var adminBanner = document.getElementById('admin-browse-banner');
-  if (adminBanner) adminBanner.style.display = (state.user && state.user.isAdmin) ? 'flex' : 'none';
+  if (adminBanner) adminBanner.style.display = 'none';
   loadAndRenderAnnouncement();
   renderHubRail();
   await loadAndRenderRoomPicker();
+  if (adminBanner && state.user && state.user.isAdmin && !state.currentRoomId) adminBanner.style.display = 'flex';
 }
 
 async function loadAndRenderRoomPicker() {
