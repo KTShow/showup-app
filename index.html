@@ -489,7 +489,8 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
 .dp-lead{font-size:12px;color:var(--muted);margin:2px 0 0;}
 .dp-actions{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;}
 .dp-actions .fs-chip{padding:0 12px;font-size:13px;min-height:36px;}
-.dp-add-comment{padding:0;margin-top:2px;}
+.fs-chip.dp-dim{opacity:0.4;}
+.dp-comment{margin-top:8px;}
 .fs-chip.dp-on,.fs-chip.dp-on:hover{background:var(--terra);border-color:var(--terra);color:#fff;}
 .fs-skip{display:block;width:100%;min-height:44px;margin-top:8px;background:none;border:none;color:var(--muted);font-family:var(--sans);font-size:13px;cursor:pointer;}
 .onboard-sub{font-family:var(--serif);font-size:15px;color:var(--fig);font-style:italic;margin-bottom:22px;}
@@ -9635,6 +9636,10 @@ function _dpIsDue() {
   if (p.off) return _dpNo('turned off on this device');
   if (_dpForce) { _dpForce = false; return true; } // Settings test: show it now
   if (p.last === _dpToday()) return _dpNo('already shown today on this device');
+  // Never two days in a row, and no more than 3 times in any 7 days.
+  if (p.last === new Date(Date.now() - 86400 * 1000).toDateString()) return _dpNo('asked yesterday, so it skips today');
+  var weekAgo = Date.now() - 7 * 86400 * 1000;
+  if ((p.shownAt || []).filter(function(t) { return t > weekAgo; }).length >= 3) return _dpNo('already asked 3 times this week');
   if (p.pauseUntil && Date.now() < p.pauseUntil) return _dpNo('resting after 3 Not nows, until ' + new Date(p.pauseUntil).toLocaleDateString());
   var joined = u.createdAt ? new Date(u.createdAt).getTime() : 0;
   if (joined ? Date.now() - joined < 20 * 3600 * 1000 : (u.sessionCount || 0) < 2) return _dpNo('first day on ShowUp');
@@ -9649,11 +9654,16 @@ function _dpIsDue() {
 // Something on their own lists with no rating yet. Watching first: "how is
 // it so far?" is the easiest rating to get.
 function _dpPickOwn(nope, later) {
+  // Only what's fresh in their mind: Watching, plus Caught Up / Binged
+  // shows from the last 60 days. Didn't Finish is never asked (2026-11-10:
+  // nobody can fairly rate a show they quit long ago). Shows have no
+  // "finished on" date, so Binged uses the date it was added.
+  var fresh = Date.now() - 60 * 86400 * 1000;
+  function recent(d) { return d && new Date(d).getTime() > fresh; }
   var pools = [
-    { list: state.watching, choice: 'watching', tag: 'You’re watching this. How is it so far?' },
-    { list: (state.watchlist || []).filter(function(s) { return s.waitingForSeason; }), choice: 'waiting', tag: 'You’re waiting for the next season. How was the last one?' },
-    { list: (state.watched || []).filter(function(s) { return s.dnf; }), choice: 'dnf', tag: 'You didn’t finish this one. How was it?' },
-    { list: (state.watched || []).filter(function(s) { return !s.dnf; }), choice: 'binged', tag: 'You finished this one. How was it?' },
+    { list: state.watching, choice: 'watching', tag: 'You\u2019re watching this. How is it so far?' },
+    { list: (state.watchlist || []).filter(function(s) { return s.waitingForSeason && recent(s.waitingSince); }), choice: 'waiting', tag: 'You\u2019re waiting for the next season. How was the last one?' },
+    { list: (state.watched || []).filter(function(s) { return !s.dnf && recent(s.addedAt); }), choice: 'binged', tag: 'You finished this one. How was it?' },
   ];
   for (var k = 0; k < pools.length; k++) {
     var c = (pools[k].list || []).filter(function(s) {
@@ -9662,9 +9672,10 @@ function _dpPickOwn(nope, later) {
     });
     if (!c.length) continue;
     var s = c[Math.floor(Math.random() * c.length)];
+    var watching = pools[k].choice === 'watching';
     return { title: s.title, tmdb_id: s.tmdb_id, poster_path: s.poster_path, platform: s.platform || null,
       media_type: s.media_type || 'tv', tag: pools[k].tag, choice: pools[k].choice, startChoice: pools[k].choice, rating: 0, id: s.id,
-      nopeLabel: pools[k].choice === 'watching' ? 'Haven’t started yet' : 'Ask me later', later: true };
+      nopeLabel: watching ? 'Haven\u2019t started yet' : 'Don\u2019t ask me about this', later: watching };
   }
   return null;
 }
@@ -9717,7 +9728,7 @@ function _dpPickFriend(nope, later) {
     return { name: p.first_name, rating: mineOf ? mineOf.rating : 0 };
   });
   return { title: s.title, tmdb_id: s.tmdb_id || null, poster_path: s.poster_path || null, platform: s.platform || null,
-    media_type: s.media_type || 'tv', tag: tag, note: note, friendRatings: friendRatings, choice: null, rating: 0, id: null, nopeLabel: 'Not right now', later: true, laterDays: 90, source: 'daily_prompt' };
+    media_type: s.media_type || 'tv', tag: tag, note: note, friendRatings: friendRatings, choice: null, rating: 0, id: null, nopeLabel: 'Not for me', later: true, laterDays: 90, source: 'daily_prompt' };
 }
 
 var _dpChecking = false;
@@ -9749,6 +9760,7 @@ async function _dpCheckAndOpen() {
   _dpLog('shown', null, items.length);
   var p = _dpPrefs();
   p.last = _dpToday();
+  p.shownAt = (p.shownAt || []).filter(function(t) { return t > Date.now() - 7 * 86400 * 1000; }).concat([Date.now()]);
   p.how = 'it opened, and hasn’t been closed with Not now or Done';
   _dpSave(p);
 }
@@ -9790,33 +9802,31 @@ function _dpRowHTML(it, i) {
   var poster = it.poster_path
     ? '<img class="fs-poster" src="' + TMDB_IMG + it.poster_path + '" alt=""' + tap + ' />'
     : '<div class="fs-poster"' + tap + '><svg class="lg-ph" aria-hidden="true"><use href="#lg-tv"/></svg></div>';
-  var head = '<div class="dp-head">' + poster + '<div class="fs-main">'
-    + '<div class="fs-show-title"' + tap + '>' + escAttr(it.title) + '</div>'
-    + (it.tag ? '<div class="fs-tag">' + escAttr(it.tag) + '</div>' : '')
-    + '</div></div>';
-  var note = it.note ? '<div class="dp-note">&#8220;' + escAttr(it.note) + '&#8221;</div>' : '';
-  if (it.snoozed) return '<div class="fs-row dp-row">' + head + '<div class="fs-chosen">&#10003; ' + escAttr(it.snoozedMsg) + '</div></div>';
-  if (it.choice === 'want') return '<div class="fs-row dp-row">' + head + note + '<div class="fs-chosen">&#10003; Added to My List</div></div>';
   var friend = !it.startChoice;
+  var want = it.choice === 'want';
+  var chipPicked = it.snoozed || want; // a button answer: remotes fade
   var remotes = '';
   for (var n = 1; n <= 5; n++) {
     remotes += '<button type="button" class="fs-remote" aria-label="' + n + ' of 5" onclick="dpRate(' + i + ',' + n + ')">'
       + '<span style="opacity:' + (n <= it.rating ? '1' : '0.3') + ';display:inline-flex;">' + remoteIcon(30, n <= it.rating) + '</span></button>';
   }
-  var after;
-  if (it.rating > 0) {
-    after = it.commentOpen
-      ? '<textarea class="react-input dp-comment" rows="1" placeholder="Add a comment for your friends" oninput="dpCommentInput(' + i + ',this)">' + escAttr(it.comment || '') + '</textarea>'
-      : '<button type="button" class="fs-change dp-add-comment" onclick="dpOpenComment(' + i + ')">Add a comment</button>';
-  } else {
-    after = '<div class="dp-actions">'
-      + (friend ? '<button type="button" class="fs-chip" onclick="dpWant(' + i + ')">Add to My List</button>' : '')
-      + '<button type="button" class="fs-chip" onclick="dpNope(' + i + ')">' + it.nopeLabel + '</button></div>';
+  var rated = it.rating > 0; // a rating answer: the other buttons fade
+  function chip(label, on, fn, off) {
+    return '<button type="button" class="fs-chip' + (on ? ' dp-on' : '') + (off ? ' dp-dim' : '') + '" onclick="' + fn + '(' + i + ')">' + label + '</button>';
   }
-  return '<div class="fs-row dp-row">' + head + note
-    + (friend && !it.rating ? '<div class="dp-lead">Seen it? Rate it:</div>' : '')
-    + '<div class="fs-remotes dp-remotes">' + remotes + '</div>'
-    + after + '</div>';
+  var chips = (friend ? chip('Add to My List', want, 'dpWant', rated || it.snoozed) : '')
+    + chip(it.nopeLabel, it.snoozed, 'dpNope', rated || want)
+    + chip('Comment', it.commentOpen, 'dpOpenComment', !rated);
+  return '<div class="fs-row dp-row"><div class="dp-head">' + poster + '<div class="fs-main">'
+    + '<div class="fs-show-title"' + tap + '>' + escAttr(it.title) + '</div>'
+    + (it.tag ? '<div class="fs-tag">' + escAttr(it.tag) + '</div>' : '')
+    + '</div></div>'
+    + (it.note ? '<div class="dp-note">&#8220;' + escAttr(it.note) + '&#8221;</div>' : '')
+    + (friend ? '<div class="dp-lead">Seen it? Rate it:</div>' : '')
+    + '<div class="fs-remotes dp-remotes' + (chipPicked ? ' dp-off' : '') + '">' + remotes + '</div>'
+    + '<div class="dp-actions">' + chips + '</div>'
+    + (it.commentOpen ? '<textarea class="react-input dp-comment" rows="1" placeholder="Add a comment for your friends" oninput="dpCommentInput(' + i + ',this)">' + escAttr(it.comment || '') + '</textarea>' : '')
+    + '</div>';
 }
 
 window.dpCommentInput = function(i, box) {
@@ -9827,6 +9837,8 @@ window.dpCommentInput = function(i, box) {
 window.dpOpenComment = function(i) {
   var it = _dpItems[i];
   if (!it) return;
+  if (!(it.rating > 0)) { showToast('Rate it first, then add a comment.'); return; }
+  if (it.commentOpen) return;
   it.commentOpen = true;
   if (_dpAutoTimer) { clearTimeout(_dpAutoTimer); _dpAutoTimer = null; }
   renderDailyPrompt();
@@ -9912,7 +9924,7 @@ async function _dpSaveRating(it) {
 }
 window.dpRate = function(i, n) {
   var it = _dpItems[i];
-  if (!it || it.snoozed || it.choice === 'want') return;
+  if (!it || it.snoozed || it.choice === 'want' || it.busy && !it.id) return;
   _dpTouched();
   it.rating = (it.rating === n) ? 0 : n; // tap the same remote again to clear
   if (!it.rating) it.commentOpen = false;
@@ -9923,7 +9935,7 @@ window.dpRate = function(i, n) {
 };
 window.dpWant = async function(i) {
   var it = _dpItems[i];
-  if (!it || it.busy) return;
+  if (!it || it.busy || it.rating > 0 || it.snoozed || it.choice === 'want') return;
   _dpTouched();
   await _showPickChoose(_dpItems, i, 'want', renderDailyPrompt);
   if (it.choice === 'want') _dpLog('add_list', it, null);
@@ -9931,14 +9943,13 @@ window.dpWant = async function(i) {
 };
 window.dpNope = function(i) {
   var it = _dpItems[i];
-  if (!it) return;
+  if (!it || it.rating > 0 || it.choice === 'want' || it.snoozed) return;
   var p = _dpPrefs();
   var k = _dpShowKey(it.title, it.tmdb_id);
   if (it.later) { p.later = p.later || {}; p.later[k] = Date.now() + (it.laterDays || 14) * 86400 * 1000; } // own shows: 2 weeks; friends' shows: 90 days
   else { p.nope = p.nope || {}; p.nope[k] = true; }
   _dpSave(p);
   it.snoozed = true;
-  it.snoozedMsg = it.startChoice ? 'Got it. We’ll ask again in a couple of weeks.' : 'Got it. We won’t suggest it for a while.';
   _dpLog('snooze', it, null);
   _dpTouched();
   renderDailyPrompt();
