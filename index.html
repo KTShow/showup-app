@@ -1753,10 +1753,9 @@ body.look-lounge .lg-row .friend-count{margin-top:2px;font-size:13px;font-weight
       </div>
     </div>
 
-    <div class="settings-section">
+    <div class="settings-section" id="room-section" style="display:none;">
       <div class="settings-section-label">Your Living Room</div>
-      <div style="font-size:13px;color:var(--muted);margin-bottom:14px;">Pick the room that feels like you.</div>
-      <div class="room-grid" id="room-grid"></div>
+      <div id="room-grid"></div>
     </div>
 
     <div class="settings-section">
@@ -2193,18 +2192,19 @@ window.closeTastemakersModal = function() {
   document.getElementById('tastemakers-modal').classList.remove('active');
 };
 
+// Room colors are on hold: everyone is on Tuscany (the brand look). People
+// who picked another color before keep it, and get one button to switch to
+// Tuscany. Once on Tuscany, the choice is gone. ROOMS/CSS stay for later.
 function renderRoomGrid() {
   var grid = document.getElementById('room-grid');
-  if (!grid) return;
+  var sec = document.getElementById('room-section');
+  if (!grid || !sec) return;
   var currentRoom = state.user && state.user.room ? state.user.room : 'tuscany';
-  grid.innerHTML = Object.keys(ROOMS).map(function(k) {
-    var r = ROOMS[k];
-    var isSelected = k === currentRoom;
-    return '<button class="room-btn' + (isSelected ? ' selected' : '') + '" onclick="setRoomAndSave(\'' + k + '\')" style="border-color:' + (isSelected ? r.color : '') + ';">'
-      + '<div style="width:40px;height:40px;border-radius:50%;background:' + r.color + ';margin:0 auto;display:flex;align-items:center;justify-content:center;font-size:22px;"><svg class="lg-ph" aria-hidden="true"><use href="#lg-home"/></svg></div>'
-      + '<div class="room-btn-name">' + r.name + '</div>'
-      + '</button>';
-  }).join('');
+  var r = ROOMS[currentRoom];
+  if (currentRoom === 'tuscany' || !r) { sec.style.display = 'none'; grid.innerHTML = ''; return; }
+  sec.style.display = '';
+  grid.innerHTML = '<div style="font-size:14px;color:var(--muted);margin-bottom:10px;">You’re using the ' + r.name + ' look.</div>'
+    + '<button type="button" class="btn-invite-copy" style="width:100%;" onclick="setRoomAndSave(&#39;tuscany&#39;)">Switch to the standard ShowUp look</button>';
 }
 
 function completeOnboard_OLD() {
