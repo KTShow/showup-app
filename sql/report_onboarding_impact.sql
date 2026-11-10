@@ -81,3 +81,25 @@ where not coalesce(u.exclude_from_reports, false)
   and (s.added_at >= timestamptz '2026-11-02' or s.rated_at >= timestamptz '2026-11-02')
 group by 1
 order by shows_added desc;
+
+-- ---------- 4. Daily popup, day by day (needs add_daily_prompt_events.sql) --
+-- Opens, how many answered vs Not now, and what it produced. Counting
+-- starts the day that SQL was run.
+select (e.created_at at time zone 'America/New_York')::date as day,
+       count(*) filter (where e.event = 'shown') as opened,
+       count(*) filter (where e.event = 'done') as answered,
+       count(*) filter (where e.event = 'not_now') as not_now,
+       count(*) filter (where e.event = 'done' and e.value >= 2) as answered_both,
+       count(*) filter (where e.event = 'rate') as ratings,
+       count(*) filter (where e.event = 'rate' and e.kind = 'own') as rated_own_show,
+       count(*) filter (where e.event = 'rate' and e.kind = 'friend') as rated_friends_show,
+       count(*) filter (where e.event = 'add_list') as added_to_my_list,
+       count(*) filter (where e.event = 'snooze') as ask_later,
+       count(*) filter (where e.event = 'comment') as comments,
+       count(distinct e.user_id) as members
+from daily_prompt_events e
+join users u on u.id = e.user_id
+where not coalesce(u.exclude_from_reports, false)
+  and not coalesce(u.is_admin, false)
+group by 1
+order by 1 desc;

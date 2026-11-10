@@ -486,6 +486,10 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
 .dp-row .fs-chip{padding:0 10px;font-size:13px;min-height:34px;}
 .dp-remotes{margin-top:2px;}
 .dp-remotes.dp-off{opacity:0.45;}
+.dp-lead{font-size:12px;color:var(--muted);margin:2px 0 0;}
+.dp-actions{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;}
+.dp-actions .fs-chip{padding:0 12px;font-size:13px;min-height:36px;}
+.dp-add-comment{padding:0;margin-top:2px;}
 .fs-chip.dp-on,.fs-chip.dp-on:hover{background:var(--terra);border-color:var(--terra);color:#fff;}
 .fs-skip{display:block;width:100%;min-height:44px;margin-top:8px;background:none;border:none;color:var(--muted);font-family:var(--sans);font-size:13px;cursor:pointer;}
 .onboard-sub{font-family:var(--serif);font-size:15px;color:var(--fig);font-style:italic;margin-bottom:22px;}
@@ -9740,6 +9744,7 @@ async function _dpCheckAndOpen() {
   renderDailyPrompt();
   document.getElementById('daily-prompt').classList.add('active');
   _dpWhy = 'shown today';
+  _dpLog('shown', null, items.length);
   var p = _dpPrefs();
   p.last = _dpToday();
   p.how = 'it opened, and hasn’t been closed with Not now or Done';
@@ -9758,57 +9763,77 @@ function renderDailyPrompt() {
   _dpSetCloseButton();
 }
 
-// One fixed screen: status, remotes and comment box are all there from the
-// start, and answering fills them in without changing the row's shape. Your
-// own shows (startChoice) already know their status, so only "change" shows.
+// One window, one tap per show (Tracey, 2026-11-10: "1 window, 2 simple
+// responses, done"). Your show: tap a remote, or "Haven't started yet".
+// A friend's show: tap a remote (you've seen it, it saves as Binged), or
+// "Add to My List", or "Not right now". Answered rows stay where they are
+// with a check line, so nothing slides up and looks like a second card.
+// "Add a comment" only appears after a rating.
+function _dpAnswered(it) { return !!(it.snoozed || it.rating > 0 || it.choice === 'want'); }
+
+// Popup results for the report (sql/add_daily_prompt_events.sql). Never
+// blocks or breaks the popup if the table isn't there.
+function _dpLog(event, it, value) {
+  try {
+    if (!state.user) return;
+    sb.from('daily_prompt_events').insert({
+      event: event, show_id: (it && it.id) || null, show_title: (it && it.title) || null,
+      kind: it ? (it.startChoice ? 'own' : 'friend') : null, value: value == null ? null : value
+    }).then(function(r) { if (r && r.error) console.warn('[dailyPrompt] log:', r.error.message); });
+  } catch (e) {}
+}
+
 function _dpRowHTML(it, i) {
   var tap = it.tmdb_id ? ' onclick="dpDetails(' + i + ')" style="cursor:pointer;"' : '';
   var poster = it.poster_path
     ? '<img class="fs-poster" src="' + TMDB_IMG + it.poster_path + '" alt=""' + tap + ' />'
     : '<div class="fs-poster"' + tap + '><svg class="lg-ph" aria-hidden="true"><use href="#lg-tv"/></svg></div>';
-  var status;
-  if (it.startChoice && it.choice) {
-    var label = FS_CHOICES.filter(function(c) { return c.key === it.choice; })[0].label;
-    status = '<div><span class="fs-chosen">&#10003; ' + label + '</span>'
-      + '<button type="button" class="fs-change" onclick="dpChange(' + i + ')">change</button></div>';
-  } else {
-    status = '<div class="fs-chips">' + FS_CHOICES.map(function(c) {
-      return '<button type="button" class="fs-chip' + (c.key === it.choice ? ' dp-on' : '') + '" onclick="dpChoose(' + i + ',\'' + c.key + '\')">' + c.label + '</button>';
-    }).join('') + '</div>';
-  }
-  var want = it.choice === 'want'; // nothing to rate or comment on yet
+  var head = '<div class="dp-head">' + poster + '<div class="fs-main">'
+    + '<div class="fs-show-title"' + tap + '>' + escAttr(it.title) + '</div>'
+    + (it.tag ? '<div class="fs-tag">' + escAttr(it.tag) + '</div>' : '')
+    + '</div></div>';
+  var note = it.note ? '<div class="dp-note">&#8220;' + escAttr(it.note) + '&#8221;</div>' : '';
+  if (it.snoozed) return '<div class="fs-row dp-row">' + head + '<div class="fs-chosen">&#10003; ' + escAttr(it.snoozedMsg) + '</div></div>';
+  if (it.choice === 'want') return '<div class="fs-row dp-row">' + head + note + '<div class="fs-chosen">&#10003; Added to My List</div></div>';
+  var friend = !it.startChoice;
   var remotes = '';
   for (var n = 1; n <= 5; n++) {
     remotes += '<button type="button" class="fs-remote" aria-label="' + n + ' of 5" onclick="dpRate(' + i + ',' + n + ')">'
       + '<span style="opacity:' + (n <= it.rating ? '1' : '0.3') + ';display:inline-flex;">' + remoteIcon(30, n <= it.rating) + '</span></button>';
   }
-  // Your own show's status line is only true until it's changed.
-  var tag = (it.startChoice && it.choice !== it.startChoice) ? '' : (it.tag || '');
-  return '<div class="fs-row dp-row"><div class="dp-head">' + poster + '<div class="fs-main">'
-    + '<div class="fs-show-title"' + tap + '>' + escAttr(it.title) + '</div>'
-    + (tag ? '<div class="fs-tag">' + escAttr(tag) + '</div>' : '')
-    + '</div>'
-    + (it.nopeLabel ? '<button type="button" class="fs-change dp-nope" onclick="dpNope(' + i + ')">' + it.nopeLabel + '</button>' : '')
-    + '</div>'
-    + (it.note ? '<div class="dp-note">&#8220;' + escAttr(it.note) + '&#8221;</div>' : '')
-    + status
-    + '<div class="fs-remotes dp-remotes' + (want ? ' dp-off' : '') + '">' + remotes + '</div>'
-    + '<textarea class="react-input dp-comment" rows="1"' + (want ? ' disabled' : '') + ' placeholder="Add a comment (optional)" oninput="dpCommentInput(' + i + ',this)" onblur="dpMaybeAutoClose()">' + (want ? '' : escAttr(it.comment || '')) + '</textarea>'
-    + '</div>';
+  var after;
+  if (it.rating > 0) {
+    after = it.commentOpen
+      ? '<textarea class="react-input dp-comment" rows="1" placeholder="Add a comment for your friends" oninput="dpCommentInput(' + i + ',this)">' + escAttr(it.comment || '') + '</textarea>'
+      : '<button type="button" class="fs-change dp-add-comment" onclick="dpOpenComment(' + i + ')">Add a comment</button>';
+  } else {
+    after = '<div class="dp-actions">'
+      + (friend ? '<button type="button" class="fs-chip" onclick="dpWant(' + i + ')">Add to My List</button>' : '')
+      + '<button type="button" class="fs-chip" onclick="dpNope(' + i + ')">' + it.nopeLabel + '</button></div>';
+  }
+  return '<div class="fs-row dp-row">' + head + note
+    + (friend && !it.rating ? '<div class="dp-lead">Seen it? Rate it:</div>' : '')
+    + '<div class="fs-remotes dp-remotes">' + remotes + '</div>'
+    + after + '</div>';
 }
 
-// The optional comment box sits right on the show's row and is saved by Done,
-// so there's no extra step. Typing keeps the box in place (no redraw).
 window.dpCommentInput = function(i, box) {
   var it = _dpItems[i];
   if (!it) return;
   it.comment = box.value;
-  if (!_dpEngaged) { _dpTouched(); _dpSetCloseButton(); }
+};
+window.dpOpenComment = function(i) {
+  var it = _dpItems[i];
+  if (!it) return;
+  it.commentOpen = true;
+  if (_dpAutoTimer) { clearTimeout(_dpAutoTimer); _dpAutoTimer = null; }
+  renderDailyPrompt();
+  var rows = document.querySelectorAll('#dp-list .dp-row');
+  var box = rows[i] && rows[i].querySelector('.dp-comment');
+  if (box) box.focus();
 };
 function _dpCommentsToSave() {
-  return _dpItems.filter(function(it) {
-    return it.choice && it.choice !== 'want' && (it.comment || '').trim();
-  });
+  return _dpItems.filter(function(it) { return it.rating > 0 && (it.comment || '').trim(); });
 }
 // Runs after the popup closes. Waits out a show that's still being added.
 async function _dpSaveComments(items) {
@@ -9819,6 +9844,7 @@ async function _dpSaveComments(items) {
       if (!it.id) throw new Error('show was not saved');
       var txt = it.comment.trim();
       await dbAddReaction(it.id, txt, detectSentiment(txt));
+      _dpLog('comment', it, txt.length);
     } catch (e) {
       console.error('daily comment error:', e);
       showToast('Couldn’t save your comment on ' + it.title + '. Try again from your list.');
@@ -9831,40 +9857,75 @@ function _dpTouched() {
   var p = _dpPrefs();
   p.skips = 0;
   _dpSave(p);
+  _dpSetCloseButton();
 }
 
 window.dpDetails = function(i) { var it = _dpItems[i]; if (it) openShowDetails(it.tmdb_id, it.friendRatings, { noAdd: true }); };
-// Once every show is answered (status + rating, or "want" which has no
-// rating), close by itself a beat later -- no extra Done tap. Waits while a
-// comment box is in use or a save is still going; any new tap restarts it.
+// Once both shows are answered, close by itself a beat later and go to the
+// Living Room. An open comment box waits for Done instead.
 var _dpAutoTimer = null;
-function _dpAllAnswered() {
-  return _dpItems.length > 0 && _dpItems.every(function(it) { return it.choice && (it.choice === 'want' || it.rating > 0); });
-}
+function _dpAllAnswered() { return _dpItems.length > 0 && _dpItems.every(_dpAnswered); }
 window.dpMaybeAutoClose = function() {
   if (_dpAutoTimer) { clearTimeout(_dpAutoTimer); _dpAutoTimer = null; }
-  if (!_dpAllAnswered()) return;
+  if (!_dpAllAnswered() || _dpItems.some(function(it) { return it.commentOpen; })) return;
   _dpAutoTimer = setTimeout(function tick() {
     _dpAutoTimer = null;
     var sheet = document.getElementById('daily-prompt');
     if (!sheet || !sheet.classList.contains('active') || !_dpAllAnswered()) return;
-    var ae = document.activeElement;
-    if (ae && ae.classList && ae.classList.contains('dp-comment')) return; // its blur re-checks
+    if (_dpItems.some(function(it) { return it.commentOpen; })) return;
     if (_dpItems.some(function(it) { return it.busy; })) { _dpAutoTimer = setTimeout(tick, 300); return; }
     closeDailyPrompt();
-  }, 1200);
+  }, 1400);
 };
-window.dpChoose = async function(i, choice) { _dpTouched(); await _showPickChoose(_dpItems, i, choice, renderDailyPrompt); dpMaybeAutoClose(); };
-window.dpChange = function(i) { _showPickChange(_dpItems, i, renderDailyPrompt); };
+
+// Saves a rating. A friend's show isn't on your lists yet, so the first
+// rating adds it as Binged. Taps that land mid-save are applied after.
+async function _dpSaveRating(it) {
+  if (it.busy) { it.pendingRate = true; return; }
+  it.busy = true;
+  try {
+    if (!it.id) {
+      it.choice = 'binged';
+      var f = _fsDbFields('binged');
+      var d = await _fsDetails(it);
+      var row = await dbAddShow(Object.assign({ title: it.title, platform: it.platform || null, status: f.status,
+        dnf: false, tmdb_id: it.tmdb_id, media_type: it.media_type, source: it.source }, d));
+      it.id = row.id;
+      _dpLog('add_binged', it, null);
+    }
+    do {
+      it.pendingRate = false;
+      var r = it.rating;
+      await updateShowRating(it.id, r);
+      if (r) _dpLog('rate', it, r);
+    } while (it.pendingRate);
+  } catch (e) {
+    console.error('[dailyPrompt] rate error:', e);
+    if (!it.id) it.choice = null;
+    it.rating = 0;
+    renderDailyPrompt();
+    showToast('Couldn’t save that rating. Try again.');
+  }
+  it.busy = false;
+}
 window.dpRate = function(i, n) {
   var it = _dpItems[i];
-  if (!it) return;
-  if (!it.choice) { showToast('First tap where you are with ' + it.title + '.'); return; }
-  if (it.choice === 'want') return;
+  if (!it || it.snoozed || it.choice === 'want') return;
   _dpTouched();
-  var saving = _showPickRate(_dpItems, i, n, renderDailyPrompt); // sets it.rating right away
+  it.rating = (it.rating === n) ? 0 : n; // tap the same remote again to clear
+  if (!it.rating) it.commentOpen = false;
+  renderDailyPrompt();
+  var saving = _dpSaveRating(it);
   dpMaybeAutoClose();
   return saving;
+};
+window.dpWant = async function(i) {
+  var it = _dpItems[i];
+  if (!it || it.busy) return;
+  _dpTouched();
+  await _showPickChoose(_dpItems, i, 'want', renderDailyPrompt);
+  if (it.choice === 'want') _dpLog('add_list', it, null);
+  dpMaybeAutoClose();
 };
 window.dpNope = function(i) {
   var it = _dpItems[i];
@@ -9874,11 +9935,12 @@ window.dpNope = function(i) {
   if (it.later) { p.later = p.later || {}; p.later[k] = Date.now() + (it.laterDays || 14) * 86400 * 1000; } // own shows: 2 weeks; friends' shows: 90 days
   else { p.nope = p.nope || {}; p.nope[k] = true; }
   _dpSave(p);
-  _dpItems.splice(i, 1);
+  it.snoozed = true;
+  it.snoozedMsg = it.startChoice ? 'Got it. We’ll ask again in a couple of weeks.' : 'Got it. We won’t suggest it for a while.';
+  _dpLog('snooze', it, null);
   _dpTouched();
-  if (!_dpItems.length) { closeDailyPrompt(); return; } // nothing left: no extra "All set" screen
   renderDailyPrompt();
-  dpMaybeAutoClose(); // the other show may already be answered
+  dpMaybeAutoClose();
 };
 
 // Only the Not now / Done button closes it -- a stray tap on the dim area
@@ -9890,12 +9952,11 @@ window.closeDailyPrompt = async function() {
 };
 async function _closeDailyPrompt() {
   // A comment needs a saved show to attach to, so don't lose one typed before a status.
-  var noStatus = _dpItems.filter(function(it) { return !it.choice && (it.comment || '').trim(); })[0];
-  if (noStatus) { showToast('Tap where you are with ' + noStatus.title + ' so your comment can save.'); return; }
   var comments = _dpCommentsToSave();
   // A flagged comment keeps the popup open so it can be edited.
   if (comments.some(function(it) { return _isObjectionable(it.comment.trim()); })) return;
   document.getElementById('daily-prompt').classList.remove('active');
+  _dpLog(_dpEngaged ? 'done' : 'not_now', null, _dpItems.filter(_dpAnswered).length);
   var p0 = _dpPrefs();
   p0.how = _dpEngaged ? 'you answered it' : 'you tapped Not now';
   _dpSave(p0);
@@ -9906,6 +9967,10 @@ async function _closeDailyPrompt() {
     _dpSave(p);
     return;
   }
+  // Answered: straight into the Living Room (her call). Not now leaves them where they were.
+  var lrBtn = document.getElementById('btab-living-room');
+  var lrPane = document.getElementById('tab-living-room');
+  if (lrBtn && lrPane && (lrPane.style.display !== 'block' || lrPane.classList.contains('find-mode'))) showTab('living-room', lrBtn);
   await _dpSaveComments(comments);
   // Pull what they saved back into their lists.
   try {
