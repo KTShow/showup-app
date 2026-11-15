@@ -156,7 +156,8 @@ body.card-v2 .show-card .show-title{font-size:17px;font-weight:700;line-height:1
 body.card-v2 .card-friends-line{margin-top:4px;font-size:13px;color:var(--muted);line-height:1.35;}
 body.card-v2 .show-card .fr-disclosure{margin-top:8px;}
 body.card-v2 .card-side{display:flex;flex-direction:column;align-items:center;gap:6px;flex-shrink:0;}
-body.card-v2 .btn-recommend-icon{margin-top:0;min-height:36px;padding:6px 9px;}
+body.card-v2 .react-area .btn-rec-link{margin-left:16px;gap:5px;}
+body.card-v2 .btn-rec-link .lg-ico{display:block;width:16px;height:16px;color:var(--fig);}
 
 .svc-shelf-item{position:relative;flex:0 0 92px;width:92px;height:138px;border:none;padding:0;background:var(--cream);border-radius:8px;overflow:hidden;cursor:pointer;scroll-snap-align:start;box-shadow:var(--shadow);}
 .svc-shelf-item img{width:100%;height:100%;object-fit:cover;display:block;}
@@ -3244,7 +3245,7 @@ function buildDNFCard(s) {
 
 // Card cleanup trial (2026-11-15, ADMIN-ONLY, Watching + My List): bigger
 // title, a plain-words line about friends with this show, the ratings row up
-// beside the poster, Recommend as an icon next to the ... menu. Every action
+// beside the poster, Recommend (with its word) next to Add a comment. Every action
 // stays visible. Turn on for everyone by making cardV2On() return true.
 function cardV2On() { return !!(state.user && state.user.isAdmin); }
 function _friendsLineHTML(title) {
@@ -3274,8 +3275,14 @@ function _cardInfoExtras(s, ratingsHTML) {
   return cardV2On() ? _friendsLineHTML(s.title) + ratingsHTML : recommendBtn(s.id);
 }
 function _cardSide(sid, menuHTML) {
-  if (!cardV2On()) return menuHTML;
-  return '<div class="card-side"><button class="btn-recommend btn-recommend-icon" onclick="openRecommendPicker(\'' + sid + '\')" aria-label="Recommend to a friend" title="Recommend to a friend"><svg class="lg-ico" aria-hidden="true"><use href="#lg-target"/></svg></button>' + menuHTML + '</div>';
+  return cardV2On() ? '<div class="card-side">' + menuHTML + '</div>' : menuHTML;
+}
+// Recommend sits with Add a comment: both are talking to friends. It keeps
+// its WORD -- the icon alone wasn't used. If use stays low, try the label
+// "Send to a friend" (her pick, 2026-11-15) before moving it again.
+function _cardRecLink(sid) {
+  if (!cardV2On()) return '';
+  return '<button type="button" class="btn-add-comment btn-rec-link" onclick="openRecommendPicker(\'' + sid + '\')"><svg class="lg-ico" aria-hidden="true"><use href="#lg-target"/></svg>Recommend</button>';
 }
 
 function buildWatchingCard(s) {
@@ -3307,7 +3314,7 @@ function buildWatchingCard(s) {
     + '<div class="show-card-top">'+showTile(s)+'<div class="show-info"><div class="show-title">'+s.title+(s.hidden?'<span class="hidden-badge">Hidden from friends</span>':'')+newSeasonBadge+'</div>'+platformRow+_cardInfoExtras(s, otherRatingsW)+'</div>'+_cardSide(sid, menuHTML)+'</div>'
     + (cardV2On() ? '' : otherRatingsW)
     + '<div class="show-move">'+primaryHTML+dnfHTML+'</div>'
-    + '<div class="react-area">'+talkPreviewHTML(s.title)+reactToggle+'</div>'
+    + '<div class="react-area">'+talkPreviewHTML(s.title)+reactToggle+_cardRecLink(sid)+'</div>'
     + '</div>';
 }
 
@@ -3332,7 +3339,7 @@ function buildWaitingCard(s) {
   return '<div class="show-card'+(s.hidden?' is-hidden':'')+'" id="card-'+sid+'"><div class="show-card-top">'+showTile(s)+'<div class="show-info"><div class="show-title">'+s.title+(s.hidden?'<span class="hidden-badge">Hidden from friends</span>':'')+newSeasonBadge+'</div>'+platformRow+_cardInfoExtras(s, otherRatingsWait)+'</div>'+_cardSide(sid, menuHTML)+'</div>'
     + (cardV2On() ? '' : otherRatingsWait)
     + '<div class="show-move"><button class="resume-watching-btn" onclick="resumeWatching(\''+sid+'\')">Resume Watching</button><button class="didnt-finish-btn" onclick="markDNFFromWaiting(\''+sid+'\')">Didn&#39;t Finish</button></div>'
-    + '<div class="react-area">'+talkPreviewHTML(s.title)+reactToggle+'</div>'
+    + '<div class="react-area">'+talkPreviewHTML(s.title)+reactToggle+_cardRecLink(sid)+'</div>'
     + '</div>';
 }
 
@@ -3362,7 +3369,7 @@ function buildWatchlistCard(s) {
   return '<div class="show-card'+(s.hidden?' is-hidden':'')+'" id="card-'+sid+'"><div class="show-card-top">'+showTile(s)+'<div class="show-info"><div class="show-title">'+s.title+(s.hidden?'<span class="hidden-badge">Hidden from friends</span>':'')+'</div>'+platformRow+recommendedBadge+_cardInfoExtras(s, otherRatingsList)+'</div>'+_cardSide(sid, menuHTML)+'</div>'
     + (cardV2On() ? '' : otherRatingsList)
     + '<div class="show-move"><button class="btn-start" onclick="moveToWatching(\''+sid+'\')">Start Watching</button>' + mustBtn + '</div>'
-    + '<div class="react-area">'+talkPreviewHTML(s.title)+reactToggle+'</div>'
+    + '<div class="react-area">'+talkPreviewHTML(s.title)+reactToggle+_cardRecLink(sid)+'</div>'
     + '</div>';
 }
 
