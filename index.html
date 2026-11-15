@@ -151,6 +151,13 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
 .service-group.collapsed .shows-grid{display:none;}
 .svc-shelf{display:flex;gap:8px;overflow-x:auto;padding:2px 2px 8px;margin-top:-4px;scroll-snap-type:x proximity;-webkit-overflow-scrolling:touch;scrollbar-width:none;}
 .svc-shelf::-webkit-scrollbar{display:none;}
+body.card-v2 .show-card .show-card-top{align-items:flex-start;flex-wrap:nowrap;gap:14px;}
+body.card-v2 .show-card .show-title{font-size:17px;font-weight:700;line-height:1.25;}
+body.card-v2 .card-friends-line{margin-top:4px;font-size:13px;color:var(--muted);line-height:1.35;}
+body.card-v2 .show-card .fr-disclosure{margin-top:8px;}
+body.card-v2 .card-side{display:flex;flex-direction:column;align-items:center;gap:6px;flex-shrink:0;}
+body.card-v2 .btn-recommend-icon{margin-top:0;min-height:36px;padding:6px 9px;}
+
 .svc-shelf-item{position:relative;flex:0 0 92px;width:92px;height:138px;border:none;padding:0;background:var(--cream);border-radius:8px;overflow:hidden;cursor:pointer;scroll-snap-align:start;box-shadow:var(--shadow);}
 .svc-shelf-item img{width:100%;height:100%;object-fit:cover;display:block;}
 .svc-shelf-ph{display:flex;align-items:center;justify-content:center;height:100%;padding:8px;box-sizing:border-box;font-size:12px;font-weight:700;color:var(--charcoal);text-align:center;border:1px solid var(--border);border-radius:8px;}
@@ -3235,6 +3242,42 @@ function buildDNFCard(s) {
     + '</div>';
 }
 
+// Card cleanup trial (2026-11-15, ADMIN-ONLY, Watching + My List): bigger
+// title, a plain-words line about friends with this show, the ratings row up
+// beside the poster, Recommend as an icon next to the ... menu. Every action
+// stays visible. Turn on for everyone by making cardV2On() return true.
+function cardV2On() { return !!(state.user && state.user.isAdmin); }
+function _friendsLineHTML(title) {
+  var key = (title || '').toLowerCase().trim();
+  if (!key) return '';
+  var groups = { watching: [], binged: [], saved: [] };
+  (state.allFriendsAcrossRooms || []).forEach(function(f) {
+    if (state.user && f.id === state.user.id) return;
+    var hit = function(lk) { return (f[lk] || []).find(function(x) { return !x.hidden && (x.title || '').toLowerCase().trim() === key; }); };
+    var name = (f.name || '').split(' ')[0];
+    if (!name) return;
+    if (hit('watching')) groups.watching.push(name);
+    else { var w = hit('watched'); if (w && !w.dnf) groups.binged.push(name); else if (hit('watchlist')) groups.saved.push(name); }
+  });
+  var names = function(a) {
+    if (a.length === 1) return a[0];
+    if (a.length === 2) return a[0] + ' and ' + a[1];
+    return a[0] + ', ' + a[1] + ' +' + (a.length - 2);
+  };
+  var parts = [];
+  if (groups.watching.length) parts.push(names(groups.watching) + (groups.watching.length === 1 ? ' is' : ' are') + ' watching');
+  if (groups.binged.length) parts.push(names(groups.binged) + ' binged it');
+  if (groups.saved.length) parts.push(names(groups.saved) + ' saved it');
+  return parts.length ? '<div class="card-friends-line">' + escAttr(parts.join(' · ')) + '</div>' : '';
+}
+function _cardInfoExtras(s, ratingsHTML) {
+  return cardV2On() ? _friendsLineHTML(s.title) + ratingsHTML : recommendBtn(s.id);
+}
+function _cardSide(sid, menuHTML) {
+  if (!cardV2On()) return menuHTML;
+  return '<div class="card-side"><button class="btn-recommend btn-recommend-icon" onclick="openRecommendPicker(\'' + sid + '\')" aria-label="Recommend to a friend" title="Recommend to a friend"><svg class="lg-ico" aria-hidden="true"><use href="#lg-target"/></svg></button>' + menuHTML + '</div>';
+}
+
 function buildWatchingCard(s) {
   var sid = s.id;
   // All three status choices are always visible, in this fixed order, as
@@ -3261,8 +3304,8 @@ function buildWatchingCard(s) {
 
   var newSeasonBadge = s.newSeasonAvailable ? '<span class="new-season-badge" onclick="tapNewSeasonOnWatching(\''+sid+'\')">New season!</span>' : '';
   return '<div class="show-card'+(s.hidden?' is-hidden':'')+'" id="card-'+sid+'">'
-    + '<div class="show-card-top">'+showTile(s)+'<div class="show-info"><div class="show-title">'+s.title+(s.hidden?'<span class="hidden-badge">Hidden from friends</span>':'')+newSeasonBadge+'</div>'+platformRow+recommendBtn(sid)+'</div>'+menuHTML+'</div>'
-    + otherRatingsW
+    + '<div class="show-card-top">'+showTile(s)+'<div class="show-info"><div class="show-title">'+s.title+(s.hidden?'<span class="hidden-badge">Hidden from friends</span>':'')+newSeasonBadge+'</div>'+platformRow+_cardInfoExtras(s, otherRatingsW)+'</div>'+_cardSide(sid, menuHTML)+'</div>'
+    + (cardV2On() ? '' : otherRatingsW)
     + '<div class="show-move">'+primaryHTML+dnfHTML+'</div>'
     + '<div class="react-area">'+talkPreviewHTML(s.title)+reactToggle+'</div>'
     + '</div>';
@@ -3286,8 +3329,8 @@ function buildWaitingCard(s) {
   var otherRatingsWait=ownCardRatingsHTML(s.title, 'watchlist', sid, s.rating);
 
   var newSeasonBadge = s.newSeasonAvailable ? '<span class="new-season-badge" onclick="tapNewSeasonBadge(\''+sid+'\')">New season!</span>' : '';
-  return '<div class="show-card'+(s.hidden?' is-hidden':'')+'" id="card-'+sid+'"><div class="show-card-top">'+showTile(s)+'<div class="show-info"><div class="show-title">'+s.title+(s.hidden?'<span class="hidden-badge">Hidden from friends</span>':'')+newSeasonBadge+'</div>'+platformRow+recommendBtn(sid)+'</div>'+menuHTML+'</div>'
-    + otherRatingsWait
+  return '<div class="show-card'+(s.hidden?' is-hidden':'')+'" id="card-'+sid+'"><div class="show-card-top">'+showTile(s)+'<div class="show-info"><div class="show-title">'+s.title+(s.hidden?'<span class="hidden-badge">Hidden from friends</span>':'')+newSeasonBadge+'</div>'+platformRow+_cardInfoExtras(s, otherRatingsWait)+'</div>'+_cardSide(sid, menuHTML)+'</div>'
+    + (cardV2On() ? '' : otherRatingsWait)
     + '<div class="show-move"><button class="resume-watching-btn" onclick="resumeWatching(\''+sid+'\')">Resume Watching</button><button class="didnt-finish-btn" onclick="markDNFFromWaiting(\''+sid+'\')">Didn&#39;t Finish</button></div>'
     + '<div class="react-area">'+talkPreviewHTML(s.title)+reactToggle+'</div>'
     + '</div>';
@@ -3316,8 +3359,8 @@ function buildWatchlistCard(s) {
   var otherRatingsList=ownCardRatingsHTML(s.title, 'watchlist', sid, s.rating, true);
   var mustBtn='<button type="button" class="must-watch-btn'+(s.watchNext?' on':'')+'" onclick="toggleWatchNext(\''+sid+'\')" aria-pressed="'+(s.watchNext?'true':'false')+'">'+(s.watchNext?'&#10003; Must Watch':'Must Watch')+'</button>';
 
-  return '<div class="show-card'+(s.hidden?' is-hidden':'')+'" id="card-'+sid+'"><div class="show-card-top">'+showTile(s)+'<div class="show-info"><div class="show-title">'+s.title+(s.hidden?'<span class="hidden-badge">Hidden from friends</span>':'')+'</div>'+platformRow+recommendedBadge+recommendBtn(sid)+'</div>'+menuHTML+'</div>'
-    + otherRatingsList
+  return '<div class="show-card'+(s.hidden?' is-hidden':'')+'" id="card-'+sid+'"><div class="show-card-top">'+showTile(s)+'<div class="show-info"><div class="show-title">'+s.title+(s.hidden?'<span class="hidden-badge">Hidden from friends</span>':'')+'</div>'+platformRow+recommendedBadge+_cardInfoExtras(s, otherRatingsList)+'</div>'+_cardSide(sid, menuHTML)+'</div>'
+    + (cardV2On() ? '' : otherRatingsList)
     + '<div class="show-move"><button class="btn-start" onclick="moveToWatching(\''+sid+'\')">Start Watching</button>' + mustBtn + '</div>'
     + '<div class="react-area">'+talkPreviewHTML(s.title)+reactToggle+'</div>'
     + '</div>';
@@ -8642,6 +8685,7 @@ function _syncLookTab() {
 }
 function applyLook() {
   document.body.classList.toggle('look-lounge', lookOn());
+  document.body.classList.toggle('card-v2', cardV2On());
   _syncLookTab();
 }
 window.toggleLookPreview = function() {
