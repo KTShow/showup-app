@@ -9495,15 +9495,13 @@ window.fsSearch = function() {
   if (q.length < 2) { box.innerHTML = ''; return; }
   _fsSearchTimer = setTimeout(async function() {
     try {
-      var res = await fetch('https://api.themoviedb.org/3/search/tv?query=' + encodeURIComponent(q) + '&api_key=' + TMDB_KEY + '&language=en-US&page=1');
-      var data = await res.json();
+      var found = await _tmdbTitleSearch(q, { tvOnly: true });
       if (mySeq !== _fsSearchSeq) return; // a newer keystroke superseded this one
-      _fsSearchResults = (data.results || []).filter(function(r) { return r.name; })
-        .sort(function(a, b) { return tmdbMatchScore(b.name, q) - tmdbMatchScore(a.name, q); }).slice(0, 6);
+      _fsSearchResults = found.slice(0, 6);
       box.innerHTML = _fsSearchResults.length ? _fsSearchResults.map(function(r, k) {
         var img = r.poster_path ? '<img class="tmdb-poster" src="' + TMDB_IMG + r.poster_path + '" alt="" />' : '<div class="tmdb-poster-empty"><svg class="lg-ph" aria-hidden="true"><use href="#lg-tv"/></svg></div>';
         return '<div class="fs-result" onclick="fsPickSearch(' + k + ')">' + img + '<div><div class="tmdb-result-title">' + escAttr(r.name) + '</div>'
-          + (r.first_air_date ? '<div class="tmdb-result-year">' + r.first_air_date.slice(0, 4) + '</div>' : '') + '</div></div>';
+          + (r.year ? '<div class="tmdb-result-year">' + r.year + '</div>' : '') + '</div></div>';
       }).join('') : '<div style="padding:10px 4px;font-size:13px;color:var(--muted);">No results found</div>';
     } catch (e) { console.error('[firstShows] search error:', e); }
   }, 400);
@@ -12070,14 +12068,13 @@ window.tapDupHint = function(prefix) {
 // TV series (incl. docuseries) + documentary FILMS. Films come from
 // /search/movie filtered to TMDB genre 99 -- that's the only non-TV
 // thing allowed in; no general movies. Both normalised to one shape.
-async function _tmdbTitleSearch(q) {
+async function _tmdbRawSearch(q, tvOnly) {
   var qs = encodeURIComponent(q);
-  var pair = await Promise.all([
-    fetch('https://api.themoviedb.org/3/search/tv?query=' + qs + '&api_key=' + TMDB_KEY + '&language=en-US&page=1'),
-    fetch('https://api.themoviedb.org/3/search/movie?query=' + qs + '&api_key=' + TMDB_KEY + '&language=en-US&page=1')
-  ]);
-  var tvData = await pair[0].json();
-  var mvData = await pair[1].json();
+  var reqs = [fetch('https://api.themoviedb.org/3/search/tv?query=' + qs + '&api_key=' + TMDB_KEY + '&language=en-US&page=1')];
+  if (!tvOnly) reqs.push(fetch('https://api.themoviedb.org/3/search/movie?query=' + qs + '&api_key=' + TMDB_KEY + '&language=en-US&page=1'));
+  var resps = await Promise.all(reqs);
+  var tvData = await resps[0].json();
+  var mvData = tvOnly ? {} : await resps[1].json();
   var tv = (tvData.results || []).filter(function(r) { return r.name; }).map(function(r) {
     return { id: r.id, media_type: 'tv', name: r.name, year: (r.first_air_date || '').substring(0, 4),
       poster_path: r.poster_path || null, overview: r.overview || null, vote_average: r.vote_average || null };
@@ -12088,7 +12085,67 @@ async function _tmdbTitleSearch(q) {
     return { id: r.id, media_type: 'documentary', name: r.title, year: (r.release_date || '').substring(0, 4),
       poster_path: r.poster_path || null, overview: r.overview || null, vote_average: r.vote_average || null };
   });
-  return tv.concat(docs).sort(function(a, b) { return tmdbMatchScore(b.name, q) - tmdbMatchScore(a.name, q); });
+  return tv.concat(docs);
+}
+
+function _searchWords(s) {
+  return (s || '').toLowerCase().replace(/[^a-z0-9\s]/g, ' ').split(/\s+/).filter(Boolean);
+}
+
+// Edit distance, capped: we only care whether it's 0, 1 or 2.
+function _editDist(a, b) {
+  if (Math.abs(a.length - b.length) > 2) return 3;
+  var prev = [], cur, i, j;
+  for (j = 0; j <= b.length; j++) prev[j] = j;
+  for (i = 1; i <= a.length; i++) {
+    cur = [i];
+    for (j = 1; j <= b.length; j++) {
+      cur[j] = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+    }
+    prev = cur;
+  }
+  return prev[b.length];
+}
+
+// How many of the typed words show up in the title, allowing small typos
+// (Natalie ~ Natalee). Longer words get more slack.
+function _fuzzyWordHits(name, q) {
+  var tw = _searchWords(name);
+  return _searchWords(q).reduce(function(n, w) {
+    var slack = w.length >= 7 ? 2 : (w.length >= 4 ? 1 : 0);
+    return n + (tw.some(function(t) { return t === w || t.indexOf(w) === 0 || (slack && _editDist(w, t) <= slack); }) ? 1 : 0);
+  }, 0);
+}
+
+// Same show listed by TMDB as both a series and a doc film -> show it once.
+function _dedupeShows(list) {
+  var seen = {};
+  return list.filter(function(r) {
+    var k = _searchWords(r.name).join(' ') + '|' + r.year;
+    var kid = r.media_type + ':' + r.id;
+    if (seen[k] || seen[kid]) return false;
+    seen[k] = seen[kid] = true;
+    return true;
+  });
+}
+
+// TMDB only matches exact spellings, so one misspelled word ("Natalie" for
+// "Natalee") returns nothing. When that happens, quietly retry with each word
+// left out in turn and keep what best matches what was typed.
+async function _tmdbTitleSearch(q, opts) {
+  var tvOnly = !!(opts && opts.tvOnly);
+  var rank = function(a, b) {
+    return (_fuzzyWordHits(b.name, q) - _fuzzyWordHits(a.name, q)) || (tmdbMatchScore(b.name, q) - tmdbMatchScore(a.name, q));
+  };
+  var found = await _tmdbRawSearch(q, tvOnly);
+  if (found.length) return _dedupeShows(found.sort(rank));
+  var words = _searchWords(q).slice(0, 5);
+  if (words.length < 2) return [];
+  var tries = words.map(function(w, i) { return words.filter(function(_, j) { return j !== i; }).join(' '); });
+  var sets = await Promise.all(tries.map(function(t) { return _tmdbRawSearch(t, tvOnly).catch(function() { return []; }); }));
+  var need = Math.max(1, Math.ceil(words.length / 2));
+  var all = [].concat.apply([], sets).filter(function(r) { return _fuzzyWordHits(r.name, q) >= need; });
+  return _dedupeShows(all.sort(rank));
 }
 
 window.tmdbSearch = function(prefix) {
