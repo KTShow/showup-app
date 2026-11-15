@@ -154,7 +154,6 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
 .svc-shelf-item{position:relative;flex:0 0 92px;width:92px;height:138px;border:none;padding:0;background:var(--cream);border-radius:8px;overflow:hidden;cursor:pointer;scroll-snap-align:start;box-shadow:var(--shadow);}
 .svc-shelf-item img{width:100%;height:100%;object-fit:cover;display:block;}
 .svc-shelf-ph{display:flex;align-items:center;justify-content:center;height:100%;padding:8px;box-sizing:border-box;font-size:12px;font-weight:700;color:var(--charcoal);text-align:center;border:1px solid var(--border);border-radius:8px;}
-.svc-shelf-dot{position:absolute;right:5px;bottom:5px;min-width:22px;height:22px;padding:0 6px;box-sizing:border-box;border-radius:11px;background:var(--terra);color:#fff;font-size:11px;font-weight:700;border:2px solid #fff;display:flex;align-items:center;justify-content:center;}
 
 .service-divider{margin-bottom:10px;cursor:pointer;user-select:none;}
 .service-divider-text{display:block;font-size:13px;font-weight:800;text-transform:uppercase;letter-spacing:0.1em;color:white;background:var(--terra);padding:9px 16px;border-radius:8px;box-shadow:0 2px 8px rgba(196,98,45,0.3);}
@@ -3021,29 +3020,16 @@ function frvSectionToggleControls(fid, sectionKey, arr){
 // Poster shelf (2026-11-15, ADMIN-ONLY preview): a collapsed service group
 // shows a swipeable row of its posters instead of a bare "Netflix (4)" line.
 // Tap a poster -> opens the group and jumps to that show's full card.
+// (A friend-initial badge was tried and dropped: too cryptic.)
 // Turn on for everyone by making shelfOn() return true.
 function shelfOn() { return !!(state.user && state.user.isAdmin); }
-function _friendsOnShow(title) {
-  var key = (title || '').toLowerCase().trim();
-  if (!key) return [];
-  return (state.allFriendsAcrossRooms || []).filter(function(f) {
-    if (state.user && f.id === state.user.id) return false;
-    return ['watching', 'watchlist', 'watched'].some(function(lk) {
-      return (f[lk] || []).some(function(s) { return !s.hidden && (s.title || '').toLowerCase().trim() === key; });
-    });
-  }).map(function(f) { return f.name || ''; });
-}
 function _serviceShelfHTML(shows) {
   var items = shows.slice().sort(function(a, b) { return (a.title || '').localeCompare(b.title || ''); });
   return '<div class="svc-shelf">' + items.map(function(s) {
     var art = s.poster_path
       ? '<img src="https://image.tmdb.org/t/p/w185' + s.poster_path + '" alt="" loading="lazy" />'
       : '<span class="svc-shelf-ph">' + escAttr(s.title || '') + '</span>';
-    var fr = _friendsOnShow(s.title);
-    var dot = fr.length
-      ? '<span class="svc-shelf-dot" title="' + escAttr(fr.join(', ')) + '">' + escAttr((fr[0] || '?').charAt(0).toUpperCase()) + (fr.length > 1 ? '+' + (fr.length - 1) : '') + '</span>'
-      : '';
-    return '<button type="button" class="svc-shelf-item" aria-label="' + escAttr(s.title || '') + '" onclick="scrollToShowCard(\'' + s.id + '\')">' + art + dot + '</button>';
+    return '<button type="button" class="svc-shelf-item" aria-label="' + escAttr(s.title || '') + '" onclick="scrollToShowCard(\'' + s.id + '\')">' + art + '</button>';
   }).join('') + '</div>';
 }
 
