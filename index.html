@@ -603,13 +603,14 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
 .fav-sub{font-size:13px;color:var(--muted);margin-top:2px;}
 .fav-edit{background:none;border:1.5px solid var(--border);border-radius:20px;padding:6px 14px;font-family:var(--sans);font-size:13px;font-weight:600;color:var(--burnt);cursor:pointer;flex-shrink:0;}
 .find-poster-rank{position:absolute;left:5px;top:5px;background:var(--fig);color:#fff;font-size:12px;font-weight:700;border-radius:6px;padding:1px 6px;}
-.room-card2{grid-column:1/-1;background:var(--cream);border:1px solid var(--border);border-radius:14px;overflow:hidden;cursor:pointer;box-shadow:var(--shadow);}
+.room-card2{grid-column:1/-1;background:var(--cream);border:1px solid var(--border);border-left:6px solid var(--rc,var(--terra));border-radius:14px;overflow:hidden;cursor:pointer;box-shadow:var(--shadow);}
 .rc-art{display:flex;gap:3px;height:100px;overflow:hidden;background:var(--rc,var(--terra));}
 .rc-art img{width:66px;height:100px;object-fit:cover;flex:0 0 66px;display:block;}
 .rc-art-empty{height:44px;align-items:center;padding:0 14px;color:#fff;font-size:13px;font-weight:600;}
-.rc-body{padding:12px 14px 14px;}
+.rc-body{padding:10px 14px 14px;}
 .rc-top{display:flex;align-items:center;justify-content:space-between;gap:8px;}
-.rc-name{font-size:18px;font-weight:700;color:var(--charcoal);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.rc-head{padding:12px 14px 10px;}
+.rc-name{font-size:20px;font-weight:800;color:var(--charcoal);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .rc-people{display:flex;align-items:center;gap:8px;margin-top:6px;font-size:13px;color:var(--muted);}
 .rc-dots{display:flex;flex-shrink:0;padding-left:6px;}
 .rc-dot{width:24px;height:24px;border-radius:50%;color:#fff;font-size:11px;font-weight:700;display:inline-flex;align-items:center;justify-content:center;border:2px solid var(--cream);margin-left:-6px;box-sizing:border-box;}
@@ -4703,9 +4704,10 @@ function _roomCardHTML(r, single) {
   if (m && m.started) mHTML = '<b>' + escAttr(m.who) + '</b> started ' + escAttr(m.show);
   else if (m) mHTML = '<b>' + escAttr(m.who) + '</b> on ' + escAttr(m.show) + ': &ldquo;' + escAttr(m.text.length > 90 ? m.text.slice(0, 88) + '…' : m.text) + '&rdquo;';
   return '<div class="room-card2" role="button" tabindex="0" onclick="enterLivingRoom(\'' + r.id + '\')" style="--rc:' + theme.color + ';">'
-    + art
-    + '<div class="rc-body"><div class="rc-top"><div class="rc-name">' + escAttr(r.name) + '</div>'
+    + '<div class="rc-top rc-head"><div class="rc-name">' + escAttr(r.name) + '</div>'
     + (n ? '<span class="room-new-pill" title="New comments in the last 7 days">' + n + ' new</span>' : '') + '</div>'
+    + art
+    + '<div class="rc-body">'
     + '<div class="rc-people">' + (dots ? '<span class="rc-dots">' + dots + '</span>' : '') + '<span>' + who + '</span></div>'
     + (mHTML ? '<div class="rc-moment">' + mHTML + '</div>' : '')
     + (single ? '<div class="rc-cta">Enter your Living Room &rsaquo;</div>' : '')
