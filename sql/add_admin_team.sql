@@ -11,8 +11,8 @@
 
 alter table users add column if not exists on_team boolean not null default false;
 
--- George's main account (fill in from the check query).
-update users set on_team = true where lower(email) = 'GEORGE_EMAIL_HERE';
+-- George's account(s): anything with 'lanzano' in the email.
+update users set on_team = true where lower(email) like '%lanzano%';
 
 create or replace function get_admin_team()
 returns jsonb
