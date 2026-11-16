@@ -3030,7 +3030,7 @@ function frvSectionToggleControls(fid, sectionKey, arr){
 // Tap a poster -> opens the group and jumps to that show's full card.
 // (A friend-initial badge was tried and dropped: too cryptic.)
 // Turn on for everyone by making shelfOn() return true.
-function shelfOn() { return !!(state.user && state.user.isAdmin); }
+function shelfOn() { return true; } // on for everyone 2026-11-16
 function _serviceShelfHTML(shows) {
   var items = shows.slice().sort(function(a, b) { return (a.title || '').localeCompare(b.title || ''); });
   return '<div class="svc-shelf">' + items.map(function(s) {
@@ -3247,7 +3247,7 @@ function buildDNFCard(s) {
 // title, a plain-words line about friends with this show, the ratings row up
 // beside the poster, Recommend (with its word) next to Add a comment. Every action
 // stays visible. Turn on for everyone by making cardV2On() return true.
-function cardV2On() { return !!(state.user && state.user.isAdmin); }
+function cardV2On() { return true; } // on for everyone 2026-11-16
 function _friendsLineHTML(title) {
   var key = (title || '').toLowerCase().trim();
   if (!key) return '';
