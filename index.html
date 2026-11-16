@@ -151,10 +151,10 @@ body{font-family:var(--sans);background:var(--sand);color:var(--charcoal);min-he
 .service-group.collapsed .shows-grid{display:none;}
 .svc-shelf{display:flex;gap:8px;overflow-x:auto;padding:2px 2px 8px;margin-top:-4px;scroll-snap-type:x proximity;-webkit-overflow-scrolling:touch;scrollbar-width:none;}
 .svc-shelf::-webkit-scrollbar{display:none;}
-body.card-v2 .show-card .show-card-top{align-items:flex-start;flex-wrap:nowrap;gap:14px;}
-body.card-v2 .show-card .show-title{font-size:17px;font-weight:700;line-height:1.25;}
+body.card-v2 .show-card .show-card-top,body.card-v2 .dnf-card .show-card-top{align-items:flex-start;flex-wrap:nowrap;gap:14px;}
+body.card-v2 .show-card .show-title,body.card-v2 .dnf-card .show-title{font-size:17px;font-weight:700;line-height:1.25;}
 body.card-v2 .card-friends-line{margin-top:4px;font-size:13px;color:var(--muted);line-height:1.35;}
-body.card-v2 .show-card .fr-disclosure{margin-top:8px;}
+body.card-v2 .show-card .fr-disclosure,body.card-v2 .dnf-card .fr-disclosure{margin-top:8px;}
 body.card-v2 .card-side{display:flex;flex-direction:column;align-items:center;gap:6px;flex-shrink:0;}
 body.card-v2 .react-area .btn-rec-link{margin-left:16px;gap:5px;}
 body.card-v2 .btn-rec-link .lg-ico{display:block;width:16px;height:16px;color:var(--fig);}
@@ -636,6 +636,12 @@ body.card-v2 .btn-rec-link .lg-ico{display:block;width:16px;height:16px;color:va
 .announcement-text{flex:1;min-width:0;color:white;font-size:16px;font-weight:600;line-height:1.45;}
 .announcement-dismiss{background:none;border:none;color:rgba(255,255,255,0.75);cursor:pointer;font-size:16px;padding:2px 4px;flex-shrink:0;line-height:1;}
 .announcement-dismiss:hover{color:white;}
+.mem-team{margin:0 0 12px;}
+.mem-team:empty{display:none;}
+.mem-team-head{font-size:13px;font-weight:700;color:var(--charcoal);margin-bottom:6px;}
+.mem-team-head span{font-weight:400;color:var(--muted);margin-left:6px;}
+.mem-team-row{display:flex;flex-wrap:wrap;gap:4px 10px;align-items:baseline;padding:8px 10px;background:var(--cream);border:1px solid var(--border);border-radius:10px;font-size:14px;margin-bottom:6px;}
+.mem-team-row span{font-size:13px;color:var(--muted);}
 .tastemakers-banner-arrow{font-size:20px;color:rgba(255,255,255,0.7);flex-shrink:0;}
 .tastemakers-row{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border);}
 .tastemakers-row:last-child{border-bottom:none;}
@@ -1278,7 +1284,7 @@ body.look-lounge .lg-row .friend-count{margin-top:2px;font-size:13px;font-weight
       <div class="fs-search-label">You can add more shows anytime from your lists.</div>
       <button type="button" class="fs-change" id="fs-search-open" style="padding:0;margin:-4px 0 14px;" onclick="fsOpenSearch()">Or search for one now</button>
       <div class="fs-search-wrap" id="fs-search-area" style="display:none;">
-        <input type="text" id="fs-search" class="ob-input" placeholder="Search for a show" oninput="fsSearch()" autocomplete="off" />
+        <input type="text" id="fs-search" class="ob-input" autocorrect="off" autocapitalize="off" spellcheck="false" enterkeyhint="search" placeholder="Search for a show" oninput="fsSearch()" autocomplete="off" />
         <div id="fs-search-results"></div>
       </div>
       <button class="btn-join" id="fs-done-btn" onclick="finishFirstShows()">Done &rarr;</button>
@@ -1424,7 +1430,7 @@ body.look-lounge .lg-row .friend-count{margin-top:2px;font-size:13px;font-weight
       <div class="page-sub" id="watching-sub">On my TV right now.</div>
       <div class="add-form">
         <div class="form-row">
-          <div class="form-group" style="position:relative;"><label>Show title</label><div class="lr-search-wrap" style="margin-bottom:0;"><input id="w-title" placeholder="Search for a show..." oninput="tmdbSearch('w');toggleSearchClearBtn(this)" autocomplete="off" style="padding-right:34px;" /><button class="lr-search-clear" type="button" aria-label="Clear search" onclick="clearSearchInput('w-title')">&#10005;</button></div><div class="tmdb-dropdown" id="w-tmdb-dd"></div><div class="dup-hint" id="w-dup-hint" style="display:none" onclick="tapDupHint('w')"></div></div>
+          <div class="form-group" style="position:relative;"><label>Show title</label><div class="lr-search-wrap" style="margin-bottom:0;"><input id="w-title" placeholder="Search for a show..." autocorrect="off" autocapitalize="off" spellcheck="false" enterkeyhint="search" oninput="tmdbSearch('w');toggleSearchClearBtn(this)" autocomplete="off" style="padding-right:34px;" /><button class="lr-search-clear" type="button" aria-label="Clear search" onclick="clearSearchInput('w-title')">&#10005;</button></div><div class="tmdb-dropdown" id="w-tmdb-dd"></div><div class="dup-hint" id="w-dup-hint" style="display:none" onclick="tapDupHint('w')"></div></div>
           <div class="form-group" style="max-width:210px"><label>Streaming on</label><select id="w-platform" onchange="togglePlatformOther('w-platform')"><option value="">Platform...</option></select><input type="text" id="w-platform-other" placeholder="Which platform?" style="display:none;margin-top:6px;width:100%;box-sizing:border-box;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-family:var(--sans);font-size:13px;" /></div>
           <button class="btn-add" onclick="addShow('watching')">+ Add</button>
         </div>
@@ -1436,7 +1442,7 @@ body.look-lounge .lg-row .friend-count{margin-top:2px;font-size:13px;font-weight
       <div class="page-sub">Saving a seat for these.</div>
       <div class="add-form">
         <div class="form-row">
-          <div class="form-group" style="position:relative;"><label>Show title</label><div class="lr-search-wrap" style="margin-bottom:0;"><input id="wl-title" placeholder="Search for a show..." oninput="tmdbSearch('wl');toggleSearchClearBtn(this)" autocomplete="off" style="padding-right:34px;" /><button class="lr-search-clear" type="button" aria-label="Clear search" onclick="clearSearchInput('wl-title')">&#10005;</button></div><div class="tmdb-dropdown" id="wl-tmdb-dd"></div><div class="dup-hint" id="wl-dup-hint" style="display:none" onclick="tapDupHint('wl')"></div></div>
+          <div class="form-group" style="position:relative;"><label>Show title</label><div class="lr-search-wrap" style="margin-bottom:0;"><input id="wl-title" placeholder="Search for a show..." autocorrect="off" autocapitalize="off" spellcheck="false" enterkeyhint="search" oninput="tmdbSearch('wl');toggleSearchClearBtn(this)" autocomplete="off" style="padding-right:34px;" /><button class="lr-search-clear" type="button" aria-label="Clear search" onclick="clearSearchInput('wl-title')">&#10005;</button></div><div class="tmdb-dropdown" id="wl-tmdb-dd"></div><div class="dup-hint" id="wl-dup-hint" style="display:none" onclick="tapDupHint('wl')"></div></div>
           <div class="form-group" style="max-width:210px"><label>Streaming on</label><select id="wl-platform" onchange="togglePlatformOther('wl-platform')"><option value="">Platform...</option></select><input type="text" id="wl-platform-other" placeholder="Which platform?" style="display:none;margin-top:6px;width:100%;box-sizing:border-box;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-family:var(--sans);font-size:13px;" /></div>
           <button class="btn-add" onclick="addShow('watchlist')">+ Add</button>
         </div>
@@ -1448,7 +1454,7 @@ body.look-lounge .lg-row .friend-count{margin-top:2px;font-size:13px;font-weight
       <div class="page-sub">Build your taste profile &mdash; add everything you've loved and hated. Rate each one 1 to 5 remotes.</div>
       <div class="add-form">
         <div class="form-row">
-          <div class="form-group" style="position:relative;"><label>Show title</label><div class="lr-search-wrap" style="margin-bottom:0;"><input id="wd-title" placeholder="Search for a show..." oninput="tmdbSearch('wd');toggleSearchClearBtn(this)" autocomplete="off" style="padding-right:34px;" /><button class="lr-search-clear" type="button" aria-label="Clear search" onclick="clearSearchInput('wd-title')">&#10005;</button></div><div class="tmdb-dropdown" id="wd-tmdb-dd"></div><div class="dup-hint" id="wd-dup-hint" style="display:none" onclick="tapDupHint('wd')"></div></div>
+          <div class="form-group" style="position:relative;"><label>Show title</label><div class="lr-search-wrap" style="margin-bottom:0;"><input id="wd-title" placeholder="Search for a show..." autocorrect="off" autocapitalize="off" spellcheck="false" enterkeyhint="search" oninput="tmdbSearch('wd');toggleSearchClearBtn(this)" autocomplete="off" style="padding-right:34px;" /><button class="lr-search-clear" type="button" aria-label="Clear search" onclick="clearSearchInput('wd-title')">&#10005;</button></div><div class="tmdb-dropdown" id="wd-tmdb-dd"></div><div class="dup-hint" id="wd-dup-hint" style="display:none" onclick="tapDupHint('wd')"></div></div>
           <div class="form-group" style="max-width:210px"><label>Streaming on</label><select id="wd-platform" onchange="togglePlatformOther('wd-platform')"><option value="">Platform...</option></select><input type="text" id="wd-platform-other" placeholder="Which platform?" style="display:none;margin-top:6px;width:100%;box-sizing:border-box;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-family:var(--sans);font-size:13px;" /></div>
         </div>
         <div class="hot-seg" id="wd-as" style="margin:10px 0 0;"><button type="button" class="active" onclick="addBingedAs('watched')">+ Binged it</button><button type="button" class="active" onclick="addBingedAs('dnf')">+ Didn&rsquo;t finish</button></div>
@@ -1461,7 +1467,7 @@ body.look-lounge .lg-row .friend-count{margin-top:2px;font-size:13px;font-weight
         <div id="binged-top5-list" style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px;"></div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;">
           <div class="form-group" style="position:relative;flex:2;min-width:140px;margin:0;">
-            <div class="lr-search-wrap" style="margin-bottom:0;"><input id="bt5-title" placeholder="Search for a show..." oninput="tmdbSearch('bt5');toggleSearchClearBtn(this)" autocomplete="off" style="width:100%;background:white;border:1px solid var(--border);border-radius:8px;padding:9px 34px 9px 12px;font-family:var(--sans);font-size:14px;color:var(--charcoal);outline:none;box-sizing:border-box;" /><button class="lr-search-clear" type="button" aria-label="Clear search" onclick="clearSearchInput('bt5-title')">&#10005;</button></div>
+            <div class="lr-search-wrap" style="margin-bottom:0;"><input id="bt5-title" placeholder="Search for a show..." autocorrect="off" autocapitalize="off" spellcheck="false" enterkeyhint="search" oninput="tmdbSearch('bt5');toggleSearchClearBtn(this)" autocomplete="off" style="width:100%;background:white;border:1px solid var(--border);border-radius:8px;padding:9px 34px 9px 12px;font-family:var(--sans);font-size:14px;color:var(--charcoal);outline:none;box-sizing:border-box;" /><button class="lr-search-clear" type="button" aria-label="Clear search" onclick="clearSearchInput('bt5-title')">&#10005;</button></div>
             <div class="tmdb-dropdown" id="bt5-tmdb-dd"></div>
           </div>
           <select id="binged-top5-platform" style="flex:1;min-width:150px;background:white;border:1px solid var(--border);border-radius:8px;padding:9px 12px;font-family:var(--sans);font-size:14px;color:var(--charcoal);outline:none;" onchange="togglePlatformOther('binged-top5-platform')"><option value="">Platform...</option></select>
@@ -1473,7 +1479,7 @@ body.look-lounge .lg-row .friend-count{margin-top:2px;font-size:13px;font-weight
       <div class="add-form" style="display:none;border-left:3px solid #c0392b;">
         <div style="font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:#c0392b;margin-bottom:8px;">Didn't finish something?</div>
         <div class="form-row">
-          <div class="form-group" style="position:relative;"><label>Show title</label><div class="lr-search-wrap" style="margin-bottom:0;"><input id="dnf-title" placeholder="Search for a show..." oninput="tmdbSearch('dnf');toggleSearchClearBtn(this)" autocomplete="off" style="padding-right:34px;" /><button class="lr-search-clear" type="button" aria-label="Clear search" onclick="clearSearchInput('dnf-title')">&#10005;</button></div><div class="tmdb-dropdown" id="dnf-tmdb-dd"></div></div>
+          <div class="form-group" style="position:relative;"><label>Show title</label><div class="lr-search-wrap" style="margin-bottom:0;"><input id="dnf-title" placeholder="Search for a show..." autocorrect="off" autocapitalize="off" spellcheck="false" enterkeyhint="search" oninput="tmdbSearch('dnf');toggleSearchClearBtn(this)" autocomplete="off" style="padding-right:34px;" /><button class="lr-search-clear" type="button" aria-label="Clear search" onclick="clearSearchInput('dnf-title')">&#10005;</button></div><div class="tmdb-dropdown" id="dnf-tmdb-dd"></div></div>
           <div class="form-group" style="max-width:210px"><label>Streaming on</label><select id="dnf-platform" onchange="togglePlatformOther('dnf-platform')"><option value="">Platform...</option></select><input type="text" id="dnf-platform-other" placeholder="Which platform?" style="display:none;margin-top:6px;width:100%;box-sizing:border-box;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-family:var(--sans);font-size:13px;" /></div>
           <button class="btn-add" onclick="addDirectDNF()">+ Add</button>
         </div>
@@ -1493,7 +1499,7 @@ body.look-lounge .lg-row .friend-count{margin-top:2px;font-size:13px;font-weight
         <div class="room-picker-grid rooms-only" id="room-picker-grid"></div>
         <div class="page-title find-only">Find Shows</div>
         <div class="page-sub find-only">Look anything up, or see what&rsquo;s hot and what ShowUp loves.</div>
-        <div class="lr-search-wrap find-only"><input type="text" id="room-picker-search" class="lr-search-input" placeholder="Search shows or friends" onfocus="loadAllRoomsSearchData()" oninput="renderRoomPickerSearch();toggleSearchClearBtn(this)" autocomplete="off" /><button class="lr-search-clear" type="button" aria-label="Clear search" onclick="clearSearchInput('room-picker-search')">&#10005;</button></div>
+        <div class="lr-search-wrap find-only"><input type="text" id="room-picker-search" class="lr-search-input" autocorrect="off" autocapitalize="off" spellcheck="false" enterkeyhint="search" placeholder="Search shows or friends" onfocus="loadAllRoomsSearchData()" oninput="renderRoomPickerSearch();toggleSearchClearBtn(this)" autocomplete="off" /><button class="lr-search-clear" type="button" aria-label="Clear search" onclick="clearSearchInput('room-picker-search')">&#10005;</button></div>
         <div id="room-picker-search-results" class="find-only" style="display:none;"></div>
         <div id="lg-hub-rail" class="lg-rail-wrap find-only"></div>
         <div class="tastemakers-banner lg-hub-row find-only" onclick="openFullLineupView()" style="margin-bottom:16px;background:linear-gradient(135deg,#3b6e8f,#2c4f66);">
@@ -1536,14 +1542,14 @@ body.look-lounge .lg-row .friend-count{margin-top:2px;font-size:13px;font-weight
       <div id="prime-time-view" style="display:none">
         <div class="page-title"><button class="nav-back" onclick="backFromPrimeTimeView()" style="margin-right:6px;">&#8592;</button><span class="lg-old"></span>Prime Time</div>
         <div class="page-sub">Top-rated shows across all of ShowUp.</div>
-        <div class="lr-search-wrap" id="prime-time-search-wrap"><input type="text" id="prime-time-search" class="lr-search-input" placeholder="Search shows or platforms..." oninput="renderPrimeTimeList();toggleSearchClearBtn(this)" autocomplete="off" /><button class="lr-search-clear" type="button" aria-label="Clear search" onclick="clearSearchInput('prime-time-search')">&#10005;</button></div>
+        <div class="lr-search-wrap" id="prime-time-search-wrap"><input type="text" id="prime-time-search" class="lr-search-input" autocorrect="off" autocapitalize="off" spellcheck="false" enterkeyhint="search" placeholder="Search shows or platforms..." oninput="renderPrimeTimeList();toggleSearchClearBtn(this)" autocomplete="off" /><button class="lr-search-clear" type="button" aria-label="Clear search" onclick="clearSearchInput('prime-time-search')">&#10005;</button></div>
         <div id="prime-time-list-view"></div>
         <div id="prime-time-detail-view" style="display:none"></div>
       </div>
       <div id="showtalk-hub-view" style="display:none">
         <div class="page-title"><button class="nav-back" onclick="backFromShowTalkHub()" style="margin-right:6px;">&#8592;</button><span class="lg-old"></span>Show Talk</div>
         <div class="page-sub">What your crowd's saying, across every room.</div>
-        <div class="lr-search-wrap" id="showtalk-hub-search-wrap"><input type="text" id="showtalk-hub-search" class="lr-search-input" placeholder="Search shows or platforms..." oninput="renderShowTalk();toggleSearchClearBtn(this)" autocomplete="off" /><button class="lr-search-clear" type="button" aria-label="Clear search" onclick="clearSearchInput('showtalk-hub-search')">&#10005;</button></div>
+        <div class="lr-search-wrap" id="showtalk-hub-search-wrap"><input type="text" id="showtalk-hub-search" class="lr-search-input" autocorrect="off" autocapitalize="off" spellcheck="false" enterkeyhint="search" placeholder="Search shows or platforms..." oninput="renderShowTalk();toggleSearchClearBtn(this)" autocomplete="off" /><button class="lr-search-clear" type="button" aria-label="Clear search" onclick="clearSearchInput('showtalk-hub-search')">&#10005;</button></div>
         <div id="showtalk-hub-list"></div>
         <div id="showtalk-hub-detail-panel" style="display:none"></div>
       </div>
@@ -1556,7 +1562,7 @@ body.look-lounge .lg-row .friend-count{margin-top:2px;font-size:13px;font-weight
       <div id="lineup-view" style="display:none">
         <div class="page-title"><button class="nav-back" onclick="backFromLineupView()" style="margin-right:6px;">&#8592;</button><span class="lg-old"></span>The Full Lineup</div>
         <div class="page-sub">Every show on ShowUp, A to Z, and how it's rated.</div>
-        <div class="lr-search-wrap" id="lineup-search-wrap"><input type="text" id="lineup-search" class="lr-search-input" placeholder="Search shows or platforms..." oninput="renderLineup();toggleSearchClearBtn(this)" autocomplete="off" /><button class="lr-search-clear" type="button" aria-label="Clear search" onclick="clearSearchInput('lineup-search')">&#10005;</button></div>
+        <div class="lr-search-wrap" id="lineup-search-wrap"><input type="text" id="lineup-search" class="lr-search-input" autocorrect="off" autocapitalize="off" spellcheck="false" enterkeyhint="search" placeholder="Search shows or platforms..." oninput="renderLineup();toggleSearchClearBtn(this)" autocomplete="off" /><button class="lr-search-clear" type="button" aria-label="Clear search" onclick="clearSearchInput('lineup-search')">&#10005;</button></div>
         <div id="lineup-list"></div>
         <div id="lineup-detail-view" style="display:none"></div>
       </div>
@@ -1576,7 +1582,7 @@ body.look-lounge .lg-row .friend-count{margin-top:2px;font-size:13px;font-weight
           <div id="tastemakers-banner-wrap"></div>
           <div id="room-ticker" class="room-ticker" style="display:none;" onclick="openNewThisWeekModal()" title="See what's new this week"></div>
           <div id="top5-banner-wrap"></div>
-          <div class="lr-search-wrap"><input type="text" id="crew-search" class="lr-search-input" placeholder="Search shows or friends" onfocus="loadAllRoomsSearchData()" oninput="renderFriends();toggleSearchClearBtn(this)" autocomplete="off" /><button class="lr-search-clear" type="button" aria-label="Clear search" onclick="clearSearchInput('crew-search')">&#10005;</button></div>
+          <div class="lr-search-wrap"><input type="text" id="crew-search" class="lr-search-input" autocorrect="off" autocapitalize="off" spellcheck="false" enterkeyhint="search" placeholder="Search shows or friends" onfocus="loadAllRoomsSearchData()" oninput="renderFriends();toggleSearchClearBtn(this)" autocomplete="off" /><button class="lr-search-clear" type="button" aria-label="Clear search" onclick="clearSearchInput('crew-search')">&#10005;</button></div>
           <div class="lg-crew-tools" style="display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap;">
             <button id="crew-platform-toggle" onclick="toggleCrewPlatformView()" style="background:none;border:1px solid var(--terra);color:var(--burnt);border-radius:8px;padding:6px 12px;font-family:var(--sans);font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;"><span class="lg-old">&#128256; </span>Sort by Platform</button>
             <button type="button" id="invite-someone-link" class="invite-pill" onclick="openInviteModal()">+ Invite a Friend</button>
@@ -1585,12 +1591,12 @@ body.look-lounge .lg-row .friend-count{margin-top:2px;font-size:13px;font-weight
           <div class="friends-grid" id="friends-grid"></div>
         </div>
         <div id="lr-picks-view" style="display:none">
-          <div class="lr-search-wrap" id="rankings-search-wrap"><input type="text" id="rankings-search" class="lr-search-input" placeholder="Search shows..." oninput="renderRankings();toggleSearchClearBtn(this)" autocomplete="off" /><button class="lr-search-clear" type="button" aria-label="Clear search" onclick="clearSearchInput('rankings-search')">&#10005;</button></div>
+          <div class="lr-search-wrap" id="rankings-search-wrap"><input type="text" id="rankings-search" class="lr-search-input" autocorrect="off" autocapitalize="off" spellcheck="false" enterkeyhint="search" placeholder="Search shows..." oninput="renderRankings();toggleSearchClearBtn(this)" autocomplete="off" /><button class="lr-search-clear" type="button" aria-label="Clear search" onclick="clearSearchInput('rankings-search')">&#10005;</button></div>
           <div id="rankings-list"></div>
           <div id="rank-detail-panel" style="display:none"></div>
         </div>
         <div id="lr-showtalk-view" style="display:none">
-          <div class="lr-search-wrap" id="showtalk-search-wrap"><input type="text" id="showtalk-search" class="lr-search-input" placeholder="Search shows..." oninput="renderShowTalk();toggleSearchClearBtn(this)" autocomplete="off" /><button class="lr-search-clear" type="button" aria-label="Clear search" onclick="clearSearchInput('showtalk-search')">&#10005;</button></div>
+          <div class="lr-search-wrap" id="showtalk-search-wrap"><input type="text" id="showtalk-search" class="lr-search-input" autocorrect="off" autocapitalize="off" spellcheck="false" enterkeyhint="search" placeholder="Search shows..." oninput="renderShowTalk();toggleSearchClearBtn(this)" autocomplete="off" /><button class="lr-search-clear" type="button" aria-label="Clear search" onclick="clearSearchInput('showtalk-search')">&#10005;</button></div>
           <div id="showtalk-list"></div>
           <div id="showtalk-detail-panel" style="display:none"></div>
         </div>
@@ -1649,7 +1655,7 @@ body.look-lounge .lg-row .friend-count{margin-top:2px;font-size:13px;font-weight
       <div id="top5-list" style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px;"></div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;">
         <div class="form-group" style="position:relative;flex:2;min-width:140px;margin:0;">
-          <div class="lr-search-wrap" style="margin-bottom:0;"><input class="ob-input" id="t5p-title" placeholder="Search for a show..." oninput="tmdbSearch('t5p');toggleSearchClearBtn(this)" autocomplete="off" style="width:100%;box-sizing:border-box;padding-right:34px;" /><button class="lr-search-clear" type="button" aria-label="Clear search" onclick="clearSearchInput('t5p-title')">&#10005;</button></div>
+          <div class="lr-search-wrap" style="margin-bottom:0;"><input class="ob-input" id="t5p-title" placeholder="Search for a show..." autocorrect="off" autocapitalize="off" spellcheck="false" enterkeyhint="search" oninput="tmdbSearch('t5p');toggleSearchClearBtn(this)" autocomplete="off" style="width:100%;box-sizing:border-box;padding-right:34px;" /><button class="lr-search-clear" type="button" aria-label="Clear search" onclick="clearSearchInput('t5p-title')">&#10005;</button></div>
           <div class="tmdb-dropdown" id="t5p-tmdb-dd"></div>
         </div>
         <select class="ob-select" id="top5-platform" style="flex:1;min-width:150px;" onchange="togglePlatformOther('top5-platform')"><option value="">Platform...</option></select>
@@ -3231,15 +3237,15 @@ function buildDNFCard(s) {
     + '<div class="show-info"><div class="show-title">' + s.title + (s.hidden?'<span class="hidden-badge">Hidden from friends</span>':'') + '</div>'
     + '<div style="margin-top:3px;font-size:13px;color:var(--muted);">' + s.platform + '</div>'
     + platformRow
-    + recommendBtn(sid)
+    + _cardInfoExtras(s, otherRatingsDNF)
     + '</div>'
-    + menuHTML
+    + _cardSide(sid, menuHTML)
     + '</div>'
-    + otherRatingsDNF
+    + (cardV2On() ? '' : otherRatingsDNF)
     + '<div class="show-move"><button class="btn-start" onclick="startWatchingFromDNF(\''+sid+'\')">'+(s.dnfPaused?'Pick back up':'Start Watching')+'</button>'
     + (isDocFilm(s) ? '' : '<button class="waiting-season-btn" onclick="moveToWaiting(\'watched\',\''+sid+'\')">Caught Up</button>')
     + '</div>'
-    + '<div class="react-area">' + talkPreviewHTML(s.title) + reactToggle + '</div>'
+    + '<div class="react-area">' + talkPreviewHTML(s.title) + reactToggle + _cardRecLink(sid) + '</div>'
     + '</div>';
 }
 
@@ -3445,9 +3451,9 @@ function buildBingedCard(s) {
   var platformRow=s.editingPlatform?platformSelect('watched',sid,s.platform):'';
   var otherRatingsB=ownCardRatingsHTML(s.title, 'watched', sid, s.rating);
 
-  return '<div class="show-card'+(s.hidden?' is-hidden':'')+'" id="card-'+sid+'"><div class="show-card-top">'+showTile(s)+'<div class="show-info"><div class="show-title">'+s.title+(s.hidden?'<span class="hidden-badge">Hidden from friends</span>':'')+'</div>'+platformRow+recommendBtn(sid)+'</div>'+menuHTML+'</div>'
-    + otherRatingsB
-    + '<div class="react-area">'+talkPreviewHTML(s.title)+reactToggle+'</div>'
+  return '<div class="show-card'+(s.hidden?' is-hidden':'')+'" id="card-'+sid+'"><div class="show-card-top">'+showTile(s)+'<div class="show-info"><div class="show-title">'+s.title+(s.hidden?'<span class="hidden-badge">Hidden from friends</span>':'')+'</div>'+platformRow+_cardInfoExtras(s, otherRatingsB)+'</div>'+_cardSide(sid, menuHTML)+'</div>'
+    + (cardV2On() ? '' : otherRatingsB)
+    + '<div class="react-area">'+talkPreviewHTML(s.title)+reactToggle+_cardRecLink(sid)+'</div>'
     + '</div>';
 }
 
@@ -9571,7 +9577,7 @@ window.fsSearch = function() {
   if (q.length < 2) { box.innerHTML = ''; return; }
   _fsSearchTimer = setTimeout(async function() {
     try {
-      var found = await _tmdbTitleSearch(q, { tvOnly: true });
+      var found = await _tmdbTitleSearch(q);
       if (mySeq !== _fsSearchSeq) return; // a newer keystroke superseded this one
       _fsSearchResults = found.slice(0, 6);
       box.innerHTML = _fsSearchResults.length ? _fsSearchResults.map(function(r, k) {
@@ -9591,7 +9597,7 @@ window.fsPickSearch = function(k) {
   var already = _fsItems.findIndex(function(it) { return it.tmdb_id === r.id; });
   if (already === -1) {
     _fsItems.unshift({ title: r.name, tmdb_id: r.id, poster_path: r.poster_path || null, platform: null,
-      media_type: 'tv', tag: 'Your pick', choice: null, rating: 0, id: null, isNew: true });
+      media_type: r.media_type || 'tv', tag: 'Your pick', choice: null, rating: 0, id: null, isNew: true });
   } else {
     showToast('It’s already in the list above.');
   }
@@ -13489,11 +13495,39 @@ window.openMembersAdmin = async function() {
     if (res.error) throw res.error;
     _membersData = res.data || [];
     renderMembersAdmin();
+    _loadAdminTeam();
   } catch (e) {
     console.error('get_admin_members error:', e);
     document.getElementById('members-list').innerHTML = '<div class="empty">Couldn’t load members — try again in a moment.</div>';
   }
 };
+// Team box (sql/add_admin_team.sql): George etc. -- when they were last in,
+// kept out of every count. Quietly absent until that SQL is run.
+async function _loadAdminTeam() {
+  var box = document.getElementById('members-team');
+  if (!box) {
+    var list = document.getElementById('members-list');
+    if (!list || !list.parentNode) return;
+    box = document.createElement('div');
+    box.id = 'members-team';
+    box.className = 'mem-team';
+    var summary = document.getElementById('members-summary');
+    (summary && summary.parentNode ? summary.parentNode : list.parentNode).insertBefore(box, summary || list);
+  }
+  box.innerHTML = '';
+  try {
+    var res = await sb.rpc('get_admin_team');
+    if (res.error) throw res.error;
+    var team = res.data || [];
+    if (!team.length) return;
+    box.innerHTML = '<div class="mem-team-head">Team <span>not counted in the numbers</span></div>'
+      + team.map(function(m) {
+        return '<div class="mem-team-row"><b>' + escAttr(m.name || '') + '</b>'
+          + '<span>Last in ' + _memAgo(m.last_visit) + (m.last_how ? ' &middot; ' + escAttr(m.last_how) : '')
+          + ' &middot; ' + (m.visits_7d || 0) + ' visit' + (m.visits_7d === 1 ? '' : 's') + ' this week</span></div>';
+      }).join('');
+  } catch (e) { console.warn('admin team not available yet:', e && e.message); }
+}
 window.closeMembersAdmin = function() { document.getElementById('members-modal').classList.remove('active'); };
 window.setMembersTab = function(t) { _membersTab = t; renderMembersAdmin(); };
 window.setMembersSort = function(k) { _membersSort = k; renderMembersAdmin(); };
