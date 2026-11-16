@@ -11,8 +11,8 @@
 
 alter table users add column if not exists on_team boolean not null default false;
 
--- George's account(s): anything with 'lanzano' in the email.
-update users set on_team = true where lower(email) like '%lanzano%';
+-- George's app account only (NOT a pattern match: other Lanzanos are real members).
+update users set on_team = (lower(email) = 'lanzanogeorge81@gmail.com') where on_team or lower(email) = 'lanzanogeorge81@gmail.com';
 
 create or replace function get_admin_team()
 returns jsonb
