@@ -1844,11 +1844,6 @@ body.look-lounge .lg-row .friend-count{margin-top:2px;font-size:13px;font-weight
         <button class="settings-row" onclick="openReportsAdmin()">
           <span class="settings-row-icon"><svg class="lg-ico" aria-hidden="true"><use href="#lg-flag"/></svg></span><span class="settings-row-label">Flagged content<span class="settings-row-sub">Comments and people someone reported</span></span><span class="settings-row-arrow">&#8250;</span>
         </button>
-        <div class="settings-row" style="cursor:default;">
-          <span class="settings-row-icon"><svg class="lg-ico" aria-hidden="true"><use href="#lg-eye"/></svg></span>
-          <span class="settings-row-label">New look preview<span class="settings-row-sub">Only admins can turn this on, on this device. Members keep today's look.</span></span>
-          <button type="button" class="switch" id="look-switch" role="switch" aria-checked="false" aria-label="New look preview" onclick="toggleLookPreview()"></button>
-        </div>
       </div>
     </div>
 
@@ -8714,10 +8709,8 @@ async function getFriendsWithShows(roomId) {
 // always false, whatever this device has saved. Remove with the switch once the
 // new look is on for all members.
 var LOOK_KEY = 'showup_look';
-function lookOn() {
-  if (!state.user || !state.user.isAdmin) return false;
-  try { return localStorage.getItem(LOOK_KEY) === 'lounge'; } catch (e) { return false; }
-}
+function lookOn() { return false; } // RETIRED 2026-11-17 (admin switch removed); body.look-lounge CSS is now dead code
+try { localStorage.removeItem(LOOK_KEY); } catch (e) {}
 function _syncLookTab() {
   var pane = document.getElementById('tab-living-room');
   document.body.classList.toggle('lr-on', !!pane && pane.style.display === 'block');
@@ -10341,8 +10334,6 @@ window.goToSettings = function() {
   renderAlertsUI();
   var adminSection = document.getElementById('settings-admin-section');
   if (adminSection) adminSection.style.display = (state.user && state.user.isAdmin) ? 'block' : 'none';
-  var lookSwitch = document.getElementById('look-switch');
-  if (lookSwitch) lookSwitch.setAttribute('aria-checked', lookOn() ? 'true' : 'false');
 };
 window.backFromSettings = function() { showScreen('app'); };
 
