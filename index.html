@@ -655,6 +655,17 @@ body.card-v2 .btn-rec-link .lg-ico{display:block;width:16px;height:16px;color:va
 .dnf-section{margin-top:28px;}
 .dnf-section.collapsed .shows-grid{display:none;}
 .dnf-header{display:block;font-size:13px;font-weight:800;text-transform:uppercase;letter-spacing:0.1em;color:white;background:#c0392b;padding:9px 16px;border-radius:8px;margin-bottom:10px;box-shadow:0 2px 8px rgba(192,57,43,0.3);cursor:pointer;user-select:none;}
+/* Quiet section headers (admin-only preview, 2026-11-17). Own Watching / My
+   List / Binged tabs only: bars become shelf labels -- colored text + a
+   colored rule instead of solid boxes. Remove the body.quiet-heads scoping
+   when it goes live for everyone. */
+body.quiet-heads :is(#tab-watching,#tab-watchlist,#tab-watched) .service-divider-text{background:none;box-shadow:none;border-radius:0;color:var(--burnt);text-transform:none;letter-spacing:0;font-size:17px;font-weight:800;padding:12px 2px 9px;min-height:44px;box-sizing:border-box;border-bottom:2px solid var(--terra);}
+body.quiet-heads :is(#tab-watching,#tab-watchlist,#tab-watched) .service-count{color:var(--muted);opacity:1;font-weight:600;}
+body.quiet-heads :is(#tab-watching,#tab-watchlist,#tab-watched) .dnf-header{background:none;box-shadow:none;border-radius:0;color:var(--muted);text-transform:none;letter-spacing:0;font-size:17px;font-weight:800;padding:12px 2px 9px;min-height:44px;box-sizing:border-box;border-bottom:2px solid var(--border);}
+body.quiet-heads :is(#tab-watching,#tab-watchlist,#tab-watched) .watch-next-header{background:none;color:var(--fig);padding:6px 2px 10px;border-radius:0;}
+body.quiet-heads :is(#tab-watching,#tab-watchlist,#tab-watched) .watch-next-header .wn-top{font-family:var(--serif);font-size:22px;text-transform:none;letter-spacing:-0.01em;}
+body.quiet-heads :is(#tab-watching,#tab-watchlist,#tab-watched) .watch-next-header .wn-top span{color:var(--muted);opacity:1;font-size:14px;}
+body.quiet-heads :is(#tab-watching,#tab-watchlist,#tab-watched) .watch-next-header .wn-sub{color:var(--muted);font-size:14px;font-weight:600;margin-top:2px;}
 .dnf-badge{display:inline-flex;align-items:center;background:#fdecea;color:#c0392b;font-size:11px;font-weight:800;padding:2px 8px;border-radius:10px;letter-spacing:0.04em;border:1px solid rgba(192,57,43,0.2);}
 .dnf-card{background:var(--cream);border:1px solid rgba(192,57,43,0.2);border-left:4px solid #c0392b;border-radius:var(--radius);padding:9px 12px;box-shadow:var(--shadow);margin-bottom:7px;opacity:0.85;}
 .dnf-card .show-title{color:var(--muted);}
@@ -1829,6 +1840,11 @@ body.look-lounge .lg-row .friend-count{margin-top:2px;font-size:13px;font-weight
           <span class="settings-row-icon"><svg class="lg-ico" aria-hidden="true"><use href="#lg-eye"/></svg></span>
           <span class="settings-row-label">New look preview<span class="settings-row-sub">Only admins can turn this on, on this device. Members keep today's look.</span></span>
           <button type="button" class="switch" id="look-switch" role="switch" aria-checked="false" aria-label="New look preview" onclick="toggleLookPreview()"></button>
+        </div>
+        <div class="settings-row" style="cursor:default;">
+          <span class="settings-row-icon"><svg class="lg-ico" aria-hidden="true"><use href="#lg-eye"/></svg></span>
+          <span class="settings-row-label">Quiet headers preview<span class="settings-row-sub">Softer section and platform headers on Watching, My List, Binged. Admins only, this device.</span></span>
+          <button type="button" class="switch" id="quiet-heads-switch" role="switch" aria-checked="false" aria-label="Quiet headers preview" onclick="toggleQuietHeads()"></button>
         </div>
       </div>
     </div>
@@ -8701,8 +8717,25 @@ function _syncLookTab() {
 function applyLook() {
   document.body.classList.toggle('look-lounge', lookOn());
   document.body.classList.toggle('card-v2', cardV2On());
+  document.body.classList.toggle('quiet-heads', quietHeadsOn());
   _syncLookTab();
 }
+// ---- Quiet section headers (admin-only preview, 2026-11-17) ----
+var QUIET_HEADS_KEY = 'showup_quiet_heads';
+function quietHeadsOn() {
+  if (!state.user || !state.user.isAdmin) return false;
+  try { return localStorage.getItem(QUIET_HEADS_KEY) === '1'; } catch (e) { return false; }
+}
+window.toggleQuietHeads = function() {
+  if (!state.user || !state.user.isAdmin) return;
+  try {
+    if (quietHeadsOn()) localStorage.removeItem(QUIET_HEADS_KEY);
+    else localStorage.setItem(QUIET_HEADS_KEY, '1');
+  } catch (e) { return; }
+  applyLook();
+  var sw = document.getElementById('quiet-heads-switch');
+  if (sw) sw.setAttribute('aria-checked', quietHeadsOn() ? 'true' : 'false');
+};
 window.toggleLookPreview = function() {
   if (!state.user || !state.user.isAdmin) return;
   try {
@@ -10304,6 +10337,8 @@ window.goToSettings = function() {
   if (adminSection) adminSection.style.display = (state.user && state.user.isAdmin) ? 'block' : 'none';
   var lookSwitch = document.getElementById('look-switch');
   if (lookSwitch) lookSwitch.setAttribute('aria-checked', lookOn() ? 'true' : 'false');
+  var qhSwitch = document.getElementById('quiet-heads-switch');
+  if (qhSwitch) qhSwitch.setAttribute('aria-checked', quietHeadsOn() ? 'true' : 'false');
 };
 window.backFromSettings = function() { showScreen('app'); };
 
