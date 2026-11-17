@@ -659,12 +659,16 @@ body.card-v2 .btn-rec-link .lg-ico{display:block;width:16px;height:16px;color:va
    List / Binged tabs only. Two levels: CATEGORIES (Must Watch Next, Saved for
    Later, Caught Up, Paused, Didn't Finish) = large plum titles; PLATFORMS =
    terracotta labels. Platform treatment differs by tab so both can be
-   compared: Watching + Binged = stripe only (no band), My List = stripe on a cream label.
+   compared: stripe on a cream label everywhere; caps test = My List in small caps,
+   Watching + Binged sentence case. Collapsed poster shelves 2/3 size.
    Remove the body.quiet-heads scoping when one goes live for everyone. */
 body.quiet-heads :is(#tab-watching,#tab-watchlist,#tab-watched) .service-divider-text{box-shadow:none;color:var(--burnt);text-transform:none;letter-spacing:0;font-size:17px;font-weight:800;padding:11px 14px;min-height:44px;box-sizing:border-box;}
 body.quiet-heads :is(#tab-watching,#tab-watchlist,#tab-watched) .service-count{color:var(--muted);opacity:1;font-weight:600;}
-body.quiet-heads :is(#tab-watching,#tab-watched) .service-divider-text{background:none;border-left:6px solid var(--terra);border-radius:0;padding-left:12px;}
-body.quiet-heads #tab-watchlist .service-divider-text{background:var(--cream);border-left:6px solid var(--terra);border-radius:4px;}
+body.quiet-heads :is(#tab-watching,#tab-watchlist,#tab-watched) .service-divider-text{background:var(--cream);border-left:6px solid var(--terra);border-radius:4px;}
+body.quiet-heads #tab-watchlist .service-divider-text{text-transform:uppercase;letter-spacing:0.08em;font-size:14px;}
+body.quiet-heads :is(#tab-watching,#tab-watchlist,#tab-watched) .service-count{margin-left:6px;}
+body.quiet-heads :is(#tab-watching,#tab-watchlist,#tab-watched) .svc-shelf-item{flex-basis:62px;width:62px;height:93px;border-radius:6px;}
+body.quiet-heads :is(#tab-watching,#tab-watchlist,#tab-watched) .svc-shelf-ph{font-size:10px;padding:4px;}
 body.quiet-heads :is(#tab-watching,#tab-watchlist,#tab-watched) .watch-next-header,body.quiet-heads :is(#tab-watching,#tab-watchlist,#tab-watched) .dnf-header{background:none;box-shadow:none;border-radius:0;color:var(--fig);padding:14px 2px 8px;min-height:44px;box-sizing:border-box;}
 body.quiet-heads :is(#tab-watching,#tab-watchlist,#tab-watched) .watch-next-header .wn-top,body.quiet-heads :is(#tab-watching,#tab-watchlist,#tab-watched) .dnf-header{font-family:var(--serif);font-size:22px;font-weight:800;text-transform:none;letter-spacing:-0.01em;}
 body.quiet-heads :is(#tab-watching,#tab-watchlist,#tab-watched) .watch-next-header .wn-top span,body.quiet-heads :is(#tab-watching,#tab-watchlist,#tab-watched) .dnf-header .service-count{color:var(--muted);opacity:1;font-size:14px;font-weight:600;letter-spacing:0;}
@@ -3071,6 +3075,9 @@ function _serviceShelfHTML(shows) {
   }).join('') + '</div>';
 }
 
+// Header counts on the own tabs: bare number under the quiet-headers preview,
+// "(n)" otherwise.
+function _ownCount(n){ return quietHeadsOn() ? String(n) : '('+n+')'; }
 function renderServiceGroup(key, svc, shows, list){
   var isCollapsed = !!_collapsedSections[key];
   // A collapsed group's cards aren't built until it's opened (see
@@ -3078,7 +3085,7 @@ function renderServiceGroup(key, svc, shows, list){
   var cardsHTML = isCollapsed ? '' : shows.map(function(s){ return buildCard(s,list); }).join('');
   return '<div class="service-group'+(isCollapsed?' collapsed':'')+'" data-ckey="'+key+'">'
     + '<div class="service-divider" onclick="toggleServiceSection(\''+key+'\')">'
-    + '<span class="service-divider-text">'+(isCollapsed?'&#9656;':'&#9662;')+' '+svc+' <span class="service-count">('+shows.length+')</span></span>'
+    + '<span class="service-divider-text">'+(isCollapsed?'&#9656;':'&#9662;')+' '+svc+' <span class="service-count">'+_ownCount(shows.length)+'</span></span>'
     + '</div>'
     + (isCollapsed && shelfOn() ? _serviceShelfHTML(shows) : '')
     + '<div class="shows-grid">'+cardsHTML+'</div>'
@@ -3123,7 +3130,7 @@ function _renderListInner(list) {
       var pausedCollapsed=!!_collapsedSections['watched:paused'];
       paused.sort(function(a,b){return a.title.localeCompare(b.title);});
       html+='<div class="dnf-section paused-section'+(pausedCollapsed?' collapsed':'')+'" data-ckey="watched:paused">'
-        + '<div class="dnf-header" onclick="toggleServiceSection(\'watched:paused\')">'+(pausedCollapsed?'&#9656;':'&#9662;')+' Paused: I&#39;ll go back <span class="service-count">('+paused.length+')</span></div>'
+        + '<div class="dnf-header" onclick="toggleServiceSection(\'watched:paused\')">'+(pausedCollapsed?'&#9656;':'&#9662;')+' Paused: I&#39;ll go back <span class="service-count">'+_ownCount(paused.length)+'</span></div>'
         + '<div class="shows-grid">' + (pausedCollapsed ? '' : paused.map(function(s){ return buildDNFCard(s); }).join('')) + '</div>'
         + '</div>';
     }
@@ -3131,7 +3138,7 @@ function _renderListInner(list) {
       var dnfCollapsed=!!_collapsedSections['watched:dnf'];
       dnf.sort(function(a,b){return a.title.localeCompare(b.title);});
       html+='<div class="dnf-section'+(dnfCollapsed?' collapsed':'')+'" data-ckey="watched:dnf">'
-        + '<div class="dnf-header" onclick="toggleServiceSection(\'watched:dnf\')">'+(dnfCollapsed?'&#9656;':'&#9662;')+' Didn&#39;t Finish <span class="service-count">('+dnf.length+')</span></div>'
+        + '<div class="dnf-header" onclick="toggleServiceSection(\'watched:dnf\')">'+(dnfCollapsed?'&#9656;':'&#9662;')+' Didn&#39;t Finish <span class="service-count">'+_ownCount(dnf.length)+'</span></div>'
         + '<div class="shows-grid">' + (dnfCollapsed ? '' : dnf.map(function(s){ return buildDNFCard(s); }).join('')) + '</div>'
         + '</div>';
     }
@@ -8741,6 +8748,7 @@ window.toggleQuietHeads = function() {
   applyLook();
   var sw = document.getElementById('quiet-heads-switch');
   if (sw) sw.setAttribute('aria-checked', quietHeadsOn() ? 'true' : 'false');
+  renderAll();
 };
 window.toggleLookPreview = function() {
   if (!state.user || !state.user.isAdmin) return;
