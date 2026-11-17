@@ -659,11 +659,11 @@ body.card-v2 .btn-rec-link .lg-ico{display:block;width:16px;height:16px;color:va
    List / Binged tabs only. Two levels: CATEGORIES (Must Watch Next, Saved for
    Later, Caught Up, Paused, Didn't Finish) = large plum titles; PLATFORMS =
    terracotta labels. Platform treatment differs by tab so both can be
-   compared: Watching + Binged = soft tinted band, My List = left stripe.
+   compared: Watching + Binged = stripe only (no band), My List = stripe on a cream label.
    Remove the body.quiet-heads scoping when one goes live for everyone. */
 body.quiet-heads :is(#tab-watching,#tab-watchlist,#tab-watched) .service-divider-text{box-shadow:none;color:var(--burnt);text-transform:none;letter-spacing:0;font-size:17px;font-weight:800;padding:11px 14px;min-height:44px;box-sizing:border-box;}
 body.quiet-heads :is(#tab-watching,#tab-watchlist,#tab-watched) .service-count{color:var(--muted);opacity:1;font-weight:600;}
-body.quiet-heads :is(#tab-watching,#tab-watched) .service-divider-text{background:rgba(196,98,45,0.13);background:color-mix(in srgb,var(--terra) 14%,transparent);border-radius:8px;}
+body.quiet-heads :is(#tab-watching,#tab-watched) .service-divider-text{background:none;border-left:6px solid var(--terra);border-radius:0;padding-left:12px;}
 body.quiet-heads #tab-watchlist .service-divider-text{background:var(--cream);border-left:6px solid var(--terra);border-radius:4px;}
 body.quiet-heads :is(#tab-watching,#tab-watchlist,#tab-watched) .watch-next-header,body.quiet-heads :is(#tab-watching,#tab-watchlist,#tab-watched) .dnf-header{background:none;box-shadow:none;border-radius:0;color:var(--fig);padding:14px 2px 8px;min-height:44px;box-sizing:border-box;}
 body.quiet-heads :is(#tab-watching,#tab-watchlist,#tab-watched) .watch-next-header .wn-top,body.quiet-heads :is(#tab-watching,#tab-watchlist,#tab-watched) .dnf-header{font-family:var(--serif);font-size:22px;font-weight:800;text-transform:none;letter-spacing:-0.01em;}
