@@ -121,13 +121,22 @@ export function mapProviderToPlatform(name) {
 
 // Ordered, de-duplicated app service names TMDB lists for the US. Sorted most-popular-first;
 // the first one is the same pick the app makes when a show is added.
+// Provider names we see but don't map to an app service, with how many
+// shows list them -- logged at the end so we know what's worth adding.
+export const unmapped = new Map();
+
 export function servicesFromProviders(d) {
   const us = d && d.results && d.results.US;
   if (!us) return [];
   const out = [];
+  const seen = new Set();
   for (const p of [...(us.flatrate || []), ...(us.free || []), ...(us.ads || [])]) {
     const svc = mapProviderToPlatform(p.provider_name);
     if (svc && !out.includes(svc)) out.push(svc);
+    if (!svc && !seen.has(p.provider_name)) {
+      seen.add(p.provider_name);
+      unmapped.set(p.provider_name, (unmapped.get(p.provider_name) || 0) + 1);
+    }
   }
   // Most widely held services first, so services[0] (the one a moved show
   // gets) matches the app's pickPopularPlatform(). Stable sort keeps TMDB's
@@ -322,6 +331,8 @@ async function main() {
   }
 
   console.log(`[platforms] done: ${applied} moves applied (${rowsChanged} rows), ${remembered} pending, ${cleared} cleared, ${relabeled} moved to people's own services, ${filled} None filled in, ${errors} errors`);
+  const top = [...unmapped].sort((a, b) => b[1] - a[1]).slice(0, 25);
+  console.log(`[platforms] services we don't track (shows listing them): ${top.map(([n, c]) => `${n} ${c}`).join(' | ')}`);
   if (errors && errors >= groups.size / 2) process.exit(1); // something systemic, fail the run
 }
 
