@@ -97,6 +97,8 @@ const PROVIDER_KEYWORD_FALLBACK = [
   ['discovery plus', 'Discovery+'], ['showtime', 'Showtime'], ['starz', 'Starz'],
   ['pbs', 'PBS Passport'], ['britbox', 'BritBox'], ['tubi', 'Tubi'], ['pluto tv', 'Pluto TV'],
 ];
+// KEEP IN SYNC with POPULAR_PLATFORM_ORDER in index.html.
+const POPULAR_ORDER = ['Netflix', 'Amazon Prime', 'Hulu', 'HBO Max', 'Disney+', 'Apple TV+', 'Peacock', 'Paramount+'];
 const KNOWN_SERVICES = new Set(Object.values(PROVIDER_NAME_MAP));
 
 export function mapProviderToPlatform(name) {
@@ -109,8 +111,8 @@ export function mapProviderToPlatform(name) {
   return null;
 }
 
-// Ordered, de-duplicated app service names TMDB lists for the US. The first
-// one is the same pick the app makes when a show is added.
+// Ordered, de-duplicated app service names TMDB lists for the US. Sorted most-popular-first;
+// the first one is the same pick the app makes when a show is added.
 export function servicesFromProviders(d) {
   const us = d && d.results && d.results.US;
   if (!us) return [];
@@ -119,7 +121,11 @@ export function servicesFromProviders(d) {
     const svc = mapProviderToPlatform(p.provider_name);
     if (svc && !out.includes(svc)) out.push(svc);
   }
-  return out;
+  // Most widely held services first, so services[0] (the one a moved show
+  // gets) matches the app's pickPopularPlatform(). Stable sort keeps TMDB's
+  // order among the rest.
+  const rank = (x) => { const i = POPULAR_ORDER.indexOf(x); return i === -1 ? POPULAR_ORDER.length : i; };
+  return out.sort((a, b) => rank(a) - rank(b));
 }
 
 // What to do with one saved service, given TMDB's current list and any

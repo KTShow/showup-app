@@ -12131,6 +12131,19 @@ function loadInfluencerNames() {
     .catch(function(e){ console.error('loadInfluencerNames error:', e); });
 }
 
+// When a show streams on several services, label it with the one most
+// people have, not whichever TMDB happens to list first. Services not in
+// this list keep TMDB's order, after these. KEEP IN SYNC with
+// POPULAR_ORDER in scripts/refresh-platforms.mjs.
+var POPULAR_PLATFORM_ORDER = ['Netflix', 'Amazon Prime', 'Hulu', 'HBO Max', 'Disney+', 'Apple TV+', 'Peacock', 'Paramount+'];
+function pickPopularPlatform(list) {
+  if (!list || !list.length) return null;
+  for (var i = 0; i < POPULAR_PLATFORM_ORDER.length; i++) {
+    if (list.indexOf(POPULAR_PLATFORM_ORDER[i]) !== -1) return POPULAR_PLATFORM_ORDER[i];
+  }
+  return list[0];
+}
+
 async function fetchAutoPlatform(tmdbId, mediaType) {
   try {
     var kind = mediaType === 'documentary' ? 'movie' : 'tv';
@@ -12139,11 +12152,12 @@ async function fetchAutoPlatform(tmdbId, mediaType) {
     var us = d.results && d.results.US;
     if (!us) return null;
     var candidates = (us.flatrate || []).concat(us.free || []).concat(us.ads || []);
+    var found = [];
     for (var i = 0; i < candidates.length; i++) {
       var mapped = mapProviderToPlatform(candidates[i].provider_name);
-      if (mapped) return mapped;
+      if (mapped && found.indexOf(mapped) === -1) found.push(mapped);
     }
-    return null;
+    return pickPopularPlatform(found);
   } catch(e) { console.error('TMDB watch providers error:', e); return null; }
 }
 
