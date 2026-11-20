@@ -539,6 +539,9 @@ body.card-v2 .btn-rec-link .lg-ico{display:block;width:16px;height:16px;color:va
 .switch[aria-checked="true"]{background:var(--terra);}
 .switch::after{content:"";position:absolute;top:2px;left:2px;width:20px;height:20px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,0.25);transition:transform 0.2s;}
 .textsize-seg{display:flex;gap:6px;margin-top:8px;}
+.mysvc-grid{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px;}
+.mysvc-grid button{padding:8px 12px;border:1px solid var(--border);border-radius:999px;background:#fff;font-family:var(--sans);font-size:14px;color:var(--charcoal);cursor:pointer;line-height:1.1;}
+.mysvc-grid button.on{background:var(--terra);border-color:var(--terra);color:#fff;font-weight:600;}
 .textsize-seg button{flex:1;padding:8px 4px;border:1px solid var(--border);border-radius:var(--radius-btn,8px);background:#fff;font-family:var(--sans);color:var(--charcoal);cursor:pointer;line-height:1.1;}
 .textsize-seg button.active{background:var(--terra);border-color:var(--terra);color:#fff;font-weight:600;}
 .switch[aria-checked="true"]::after{transform:translateX(18px);}
@@ -1779,6 +1782,15 @@ body.look-lounge .lg-row .friend-count{margin-top:2px;font-size:13px;font-weight
         </div>
       </div>
       <div style="font-size:13px;color:var(--muted);margin-top:6px;padding-left:4px;">New seasons and Lounge replies also show in the inside ShowUp; comments and new Lounge posts show in your Living Room.</div>
+    </div>
+
+    <div class="settings-section">
+      <div class="settings-section-label">My services</div>
+      <div class="settings-card" style="padding:12px 14px;">
+        <div style="font-size:14px;color:var(--charcoal);">Check what you subscribe to. When a show is on more than one service, ShowUp will label it with one you have.</div>
+        <div class="mysvc-grid" id="mysvc-grid"></div>
+        <div style="font-size:13px;color:var(--muted);margin-top:10px;">Your existing shows will switch to your services the next Monday.</div>
+      </div>
     </div>
 
     <div class="settings-section">
@@ -8837,6 +8849,7 @@ function _userFromProfile(profile, top5) {
     createdAt: profile.created_at || null,
     conversationsLastSeenAt: profile.conversations_last_seen_at || null,
     isAdmin: profile.is_admin || false,
+    myServices: profile.my_services || [],
   };
 }
 
@@ -10331,6 +10344,7 @@ window.goToSettings = function() {
   showScreen('settings');
   renderRoomGrid();
   renderNotifPrefs();
+  renderMyServices();
   renderAlertsUI();
   var adminSection = document.getElementById('settings-admin-section');
   if (adminSection) adminSection.style.display = (state.user && state.user.isAdmin) ? 'block' : 'none';
@@ -12138,11 +12152,43 @@ function loadInfluencerNames() {
 var POPULAR_PLATFORM_ORDER = ['Netflix', 'Amazon Prime', 'Hulu', 'HBO Max', 'Disney+', 'Apple TV+', 'Peacock', 'Paramount+'];
 function pickPopularPlatform(list) {
   if (!list || !list.length) return null;
+  // Settings > My services: a service you actually have wins.
+  var mine = (state.user && state.user.myServices) || [];
+  var yours = list.filter(function(p) { return mine.indexOf(p) !== -1; });
+  if (yours.length) list = yours;
   for (var i = 0; i < POPULAR_PLATFORM_ORDER.length; i++) {
     if (list.indexOf(POPULAR_PLATFORM_ORDER[i]) !== -1) return POPULAR_PLATFORM_ORDER[i];
   }
   return list[0];
 }
+
+// Settings > My services. Stored on users.my_services (text[]). Read by
+// pickPopularPlatform() here and by the Monday refresh job, which moves
+// existing shows onto a service you have.
+function renderMyServices() {
+  var grid = document.getElementById('mysvc-grid');
+  if (!grid) return;
+  var mine = (state.user && state.user.myServices) || [];
+  grid.innerHTML = PLATFORMS.filter(function(p) { return p !== 'None' && p !== 'Other'; }).map(function(p) {
+    var on = mine.indexOf(p) !== -1;
+    return '<button type="button" class="' + (on ? 'on' : '') + '" aria-pressed="' + on + '" data-svc="' + p + '" onclick="toggleMyService(this.dataset.svc)">' + (on ? '&#10003; ' : '') + p + '</button>';
+  }).join('');
+}
+var _mySvcSave = null;
+window.toggleMyService = function(svc) {
+  if (!state.user) return;
+  var mine = (state.user.myServices || []).slice();
+  var i = mine.indexOf(svc);
+  if (i === -1) mine.push(svc); else mine.splice(i, 1);
+  state.user.myServices = mine;
+  renderMyServices();
+  // Short debounce so a run of taps is one save.
+  clearTimeout(_mySvcSave);
+  _mySvcSave = setTimeout(async function() {
+    var { error } = await sb.from('users').update({ my_services: state.user.myServices }).eq('id', state.user.id);
+    if (error) console.error('Save my services error:', error);
+  }, 600);
+};
 
 async function fetchAutoPlatform(tmdbId, mediaType) {
   try {

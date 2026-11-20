@@ -20,6 +20,11 @@
 //                                            a check 6+ days later: switch
 //                                            every copy saved as X to Y.
 //                                            (APPLY_NOW=1: switch right away.)
+// Also: anyone who has checked services in Settings > My services gets
+// their copies moved onto one of those when the show streams there and
+// the saved service isn't one of theirs (right away, no two-week wait --
+// both services are currently listed, so there's no flip-flop to guard).
+// Moved shows likewise land on one of the person's own services.
 // Quiet by design: no notifications. 'None', 'Other', blank and typed-in
 // services are never touched, nor is PBS Passport (see PROTECTED).
 //
@@ -145,6 +150,23 @@ export function decide(saved, services, pending, now = Date.now(), applyNow = fa
   return { action: 'remember', to }; // new or changed target: (re)start the clock
 }
 
+// The service a given person's copy should get: one they've checked in
+// Settings > My services if the show is on any, else the most popular.
+export function pickFor(services, mine) {
+  const yours = services.filter((x) => mine.includes(x));
+  return (yours.length ? yours : services)[0] || null;
+}
+
+// Saved service still streams the show, but the person has told us which
+// services they have and this isn't one of them while another is: move
+// their copy to theirs. Returns the new service or null.
+export function relabelFor(saved, services, mine) {
+  if (PROTECTED.has(saved) || !mine.length || mine.includes(saved)) return null;
+  if (!services.includes(saved)) return null; // that's a move, handled by decide()
+  const yours = services.filter((x) => mine.includes(x));
+  return yours.length ? yours[0] : null;
+}
+
 async function sb(method, path, body, extraHeaders = {}) {
   const res = await fetch(`${REST}/${path}`, {
     method,
@@ -185,11 +207,14 @@ const enc = encodeURIComponent;
 async function main() {
   console.log(`[platforms] run start ${new Date().toISOString()}${DRY_RUN ? ' (DRY RUN)' : ''}${APPLY_NOW ? ' (APPLY NOW)' : ''}`);
 
-  const shows = await sbGetAll('shows?select=id,title,tmdb_id,media_type,platform&tmdb_id=not.is.null&order=id');
+  const shows = await sbGetAll('shows?select=id,user_id,title,tmdb_id,media_type,platform&tmdb_id=not.is.null&order=id');
+  const userRows = await sbGetAll('users?select=id,my_services');
+  const myServices = new Map(userRows.map((u) => [u.id, u.my_services || []]));
+  const mineOf = (row) => myServices.get(row.user_id) || [];
   const pendingRows = await sbGetAll('platform_moves?select=tmdb_id,media_type,from_platform,to_platform,first_seen');
   const pendingMap = new Map(pendingRows.map((r) => [`${r.tmdb_id}|${r.media_type}|${r.from_platform}`, r]));
 
-  // (tmdb_id|media_type) -> { title, saved: Map(service -> row count) }
+  // (tmdb_id|media_type) -> { title, saved: Map(service -> [rows]) }
   const groups = new Map();
   for (const s of shows) {
     if (!KNOWN_SERVICES.has(s.platform)) continue; // None / Other / blank / typed-in
@@ -197,11 +222,30 @@ async function main() {
     const k = `${s.tmdb_id}|${mt}`;
     if (!groups.has(k)) groups.set(k, { tmdbId: s.tmdb_id, mt, title: s.title, saved: new Map() });
     const g = groups.get(k);
-    g.saved.set(s.platform, (g.saved.get(s.platform) || 0) + 1);
+    if (!g.saved.has(s.platform)) g.saved.set(s.platform, []);
+    g.saved.get(s.platform).push(s);
   }
   console.log(`[platforms] ${shows.length} show rows, ${groups.size} distinct shows to check`);
 
-  let remembered = 0, applied = 0, rowsChanged = 0, cleared = 0, errors = 0;
+  let remembered = 0, applied = 0, rowsChanged = 0, cleared = 0, relabeled = 0, errors = 0;
+
+  // Set a batch of rows to their new services, grouped so it's one PATCH
+  // per target. pick(row) -> new service (or null = leave alone).
+  async function patchRows(rows, pick) {
+    const byTarget = new Map();
+    for (const r of rows) {
+      const to = pick(r);
+      if (!to || to === r.platform) continue;
+      if (!byTarget.has(to)) byTarget.set(to, []);
+      byTarget.get(to).push(r.id);
+    }
+    let n = 0;
+    for (const [to, ids] of byTarget) {
+      n += ids.length;
+      if (!DRY_RUN) await sb('PATCH', `shows?id=in.(${ids.join(',')})`, { platform: to }, { Prefer: 'return=minimal' });
+    }
+    return { n, targets: [...byTarget.keys()] };
+  }
 
   for (const g of groups.values()) {
     let services;
@@ -216,7 +260,8 @@ async function main() {
       continue;
     }
 
-    for (const [saved, count] of g.saved) {
+    for (const [saved, rows] of g.saved) {
+      const count = rows.length;
       const pk = `${g.tmdbId}|${g.mt}|${saved}`;
       const pending = pendingMap.get(pk);
       const { action, to } = decide(saved, services, pending, Date.now(), APPLY_NOW);
@@ -225,6 +270,13 @@ async function main() {
         if (action === 'clear') {
           cleared++;
           if (!DRY_RUN) await sb('DELETE', `platform_moves?${pkFilter}`);
+        }
+        if (action === 'keep' || action === 'clear') {
+          const { n, targets } = await patchRows(rows, (r) => relabelFor(saved, services, mineOf(r)));
+          if (n) {
+            relabeled += n;
+            console.log(`[platforms] to their services: ${g.title} ${saved} -> ${targets.join('/')} (${n} copies)`);
+          }
         } else if (action === 'remember') {
           remembered++;
           console.log(`[platforms] maybe moved: ${g.title} ${saved} -> ${to} (${count} copies; confirm next week)`);
@@ -235,14 +287,10 @@ async function main() {
           }
         } else if (action === 'apply') {
           applied++;
-          rowsChanged += count;
-          console.log(`[platforms] MOVED: ${g.title} ${saved} -> ${to} (${count} copies)`);
-          if (!DRY_RUN) {
-            const mtFilter = g.mt === 'tv' ? 'or=(media_type.eq.tv,media_type.is.null)' : `media_type=eq.${enc(g.mt)}`;
-            await sb('PATCH', `shows?tmdb_id=eq.${g.tmdbId}&${mtFilter}&platform=eq.${enc(saved)}`,
-              { platform: to }, { Prefer: 'return=minimal' });
-            await sb('DELETE', `platform_moves?${pkFilter}`);
-          }
+          const { n, targets } = await patchRows(rows, (r) => pickFor(services, mineOf(r)));
+          rowsChanged += n;
+          console.log(`[platforms] MOVED: ${g.title} ${saved} -> ${targets.join('/') || to} (${n} copies)`);
+          if (!DRY_RUN) await sb('DELETE', `platform_moves?${pkFilter}`);
         }
       } catch (e) {
         errors++;
@@ -252,7 +300,7 @@ async function main() {
     await sleep(60); // stay well under TMDB's rate limit
   }
 
-  console.log(`[platforms] done: ${applied} moves applied (${rowsChanged} rows), ${remembered} pending, ${cleared} cleared, ${errors} errors`);
+  console.log(`[platforms] done: ${applied} moves applied (${rowsChanged} rows), ${remembered} pending, ${cleared} cleared, ${relabeled} moved to people's own services, ${errors} errors`);
   if (errors && errors >= groups.size / 2) process.exit(1); // something systemic, fail the run
 }
 
