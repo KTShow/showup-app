@@ -1,0 +1,32 @@
+name: Refresh streaming services
+
+# Weekly: fix shows whose saved service no longer streams them.
+# Quiet (no alerts). See scripts/refresh-platforms.mjs.
+
+on:
+  schedule:
+    - cron: '0 13 * * 1' # Mondays 13:00 UTC (~8-9am ET)
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Dry run (log only, change nothing)'
+        type: boolean
+        default: false
+
+concurrency:
+  group: refresh-platforms
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+      - name: Run service refresh
+        run: node scripts/refresh-platforms.mjs
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          TMDB_API_KEY: ${{ secrets.TMDB_API_KEY }}
+          DRY_RUN: ${{ inputs.dry_run && '1' || '0' }}
