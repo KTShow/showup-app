@@ -3102,7 +3102,7 @@ function _notYoursNote(svc, list){
   var mine = (state.user && state.user.myServices) || [];
   if (list !== 'watchlist' || !mine.length || mine.indexOf(svc) !== -1) return '';
   if (svc === 'None' || svc === 'Other' || PLATFORMS.indexOf(svc) === -1) return '';
-  return ' <span class="svc-not-yours">&middot; not one of your services</span>';
+  return ' <span class="svc-not-yours">&middot; not subscribed</span>';
 }
 function renderServiceGroup(key, svc, shows, list){
   var isCollapsed = !!_collapsedSections[key];
