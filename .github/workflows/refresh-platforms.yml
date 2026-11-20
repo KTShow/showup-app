@@ -12,6 +12,10 @@ on:
         description: 'Dry run (log only, change nothing)'
         type: boolean
         default: false
+      apply_now:
+        description: 'Apply moves now (skip the two-week confirmation)'
+        type: boolean
+        default: false
 
 concurrency:
   group: refresh-platforms
@@ -30,3 +34,4 @@ jobs:
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           TMDB_API_KEY: ${{ secrets.TMDB_API_KEY }}
           DRY_RUN: ${{ inputs.dry_run && '1' || '0' }}
+          APPLY_NOW: ${{ inputs.apply_now && '1' || '0' }}

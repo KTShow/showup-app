@@ -19,8 +19,9 @@
 //                                            platform_moves. Same move seen on
 //                                            a check 6+ days later: switch
 //                                            every copy saved as X to Y.
+//                                            (APPLY_NOW=1: switch right away.)
 // Quiet by design: no notifications. 'None', 'Other', blank and typed-in
-// services are never touched.
+// services are never touched, nor is PBS Passport (see PROTECTED).
 //
 // Zero dependencies: Node 20+ global fetch, Supabase REST, TMDB REST.
 // ============================================================
@@ -29,6 +30,11 @@ const SUPABASE_URL = need('SUPABASE_URL');
 const SERVICE_KEY = need('SUPABASE_SERVICE_ROLE_KEY');
 const TMDB_KEY = need('TMDB_API_KEY');
 const DRY_RUN = process.env.DRY_RUN === '1';
+// APPLY_NOW=1 skips the two-week wait (one-off catch-up runs, by hand).
+const APPLY_NOW = process.env.APPLY_NOW === '1';
+// Services people choose on purpose that TMDB rarely lists (e.g. British
+// mysteries watched on PBS Passport). Never switched away from.
+const PROTECTED = new Set(['PBS Passport']);
 const CONFIRM_AFTER_MS = 6 * 86400000; // second sighting must be a later weekly run
 
 const REST = `${SUPABASE_URL}/rest/v1`;
@@ -119,10 +125,12 @@ export function servicesFromProviders(d) {
 // What to do with one saved service, given TMDB's current list and any
 // pending move from an earlier run. Pure, so it's easy to test.
 //   -> { action: 'keep' | 'clear' | 'remember' | 'apply', to? }
-export function decide(saved, services, pending, now = Date.now()) {
+export function decide(saved, services, pending, now = Date.now(), applyNow = false) {
+  if (PROTECTED.has(saved)) return { action: pending ? 'clear' : 'keep' };
   if (!services.length) return { action: pending ? 'clear' : 'keep' };
   if (services.includes(saved)) return { action: pending ? 'clear' : 'keep' };
   const to = services[0];
+  if (applyNow) return { action: 'apply', to };
   if (pending && pending.to_platform === to &&
       now - new Date(pending.first_seen).getTime() >= CONFIRM_AFTER_MS) {
     return { action: 'apply', to };
@@ -169,7 +177,7 @@ async function fetchProviders(tmdbId, mediaType) {
 const enc = encodeURIComponent;
 
 async function main() {
-  console.log(`[platforms] run start ${new Date().toISOString()}${DRY_RUN ? ' (DRY RUN)' : ''}`);
+  console.log(`[platforms] run start ${new Date().toISOString()}${DRY_RUN ? ' (DRY RUN)' : ''}${APPLY_NOW ? ' (APPLY NOW)' : ''}`);
 
   const shows = await sbGetAll('shows?select=id,title,tmdb_id,media_type,platform&tmdb_id=not.is.null&order=id');
   const pendingRows = await sbGetAll('platform_moves?select=tmdb_id,media_type,from_platform,to_platform,first_seen');
@@ -205,7 +213,7 @@ async function main() {
     for (const [saved, count] of g.saved) {
       const pk = `${g.tmdbId}|${g.mt}|${saved}`;
       const pending = pendingMap.get(pk);
-      const { action, to } = decide(saved, services, pending);
+      const { action, to } = decide(saved, services, pending, Date.now(), APPLY_NOW);
       const pkFilter = `tmdb_id=eq.${g.tmdbId}&media_type=eq.${enc(g.mt)}&from_platform=eq.${enc(saved)}`;
       try {
         if (action === 'clear') {
