@@ -95,6 +95,14 @@ const PROVIDER_NAME_MAP = {
   'tubi': 'Tubi',
   'tubi tv': 'Tubi',
   'pluto tv': 'Pluto TV',
+  // Amazon/Apple add-on channels whose names the keyword fallback misses.
+  'apple tv amazon channel': 'Apple TV+',
+  'acorntv amazon channel': 'Acorn TV',
+  'acorntv': 'Acorn TV',
+  // Local PBS station apps (where Passport lives).
+  'thirteen': 'PBS Passport',
+  'weta plus': 'PBS Passport',
+  'kqed': 'PBS Passport',
 };
 const PROVIDER_KEYWORD_FALLBACK = [
   ['acorn tv', 'Acorn TV'], ['amc plus', 'AMC+'],
