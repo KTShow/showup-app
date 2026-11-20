@@ -25,6 +25,9 @@
 // the saved service isn't one of theirs (right away, no two-week wait --
 // both services are currently listed, so there's no flip-flop to guard).
 // Moved shows likewise land on one of the person's own services.
+// Also: shows saved as None (or blank) get a service filled in, once, when
+// TMDB now lists one -- preferring the person's own services. If they set
+// it back to None, shows.platform_filled_at keeps us from refilling it.
 // Quiet by design: no notifications. 'None', 'Other', blank and typed-in
 // services are never touched, nor is PBS Passport (see PROTECTED).
 //
@@ -207,7 +210,7 @@ const enc = encodeURIComponent;
 async function main() {
   console.log(`[platforms] run start ${new Date().toISOString()}${DRY_RUN ? ' (DRY RUN)' : ''}${APPLY_NOW ? ' (APPLY NOW)' : ''}`);
 
-  const shows = await sbGetAll('shows?select=id,user_id,title,tmdb_id,media_type,platform&tmdb_id=not.is.null&order=id');
+  const shows = await sbGetAll('shows?select=id,user_id,title,tmdb_id,media_type,platform,platform_filled_at&tmdb_id=not.is.null&order=id');
   const userRows = await sbGetAll('users?select=id,my_services');
   const myServices = new Map(userRows.map((u) => [u.id, u.my_services || []]));
   const mineOf = (row) => myServices.get(row.user_id) || [];
@@ -217,21 +220,25 @@ async function main() {
   // (tmdb_id|media_type) -> { title, saved: Map(service -> [rows]) }
   const groups = new Map();
   for (const s of shows) {
-    if (!KNOWN_SERVICES.has(s.platform)) continue; // None / Other / blank / typed-in
+    const blank = !s.platform || s.platform === 'None';
+    // Blank/None gets filled in ONCE (platform_filled_at); if the person sets
+    // it back to None, we leave it. 'Other' and typed-in names: never.
+    if (blank ? s.platform_filled_at : !KNOWN_SERVICES.has(s.platform)) continue;
     const mt = s.media_type || 'tv';
     const k = `${s.tmdb_id}|${mt}`;
-    if (!groups.has(k)) groups.set(k, { tmdbId: s.tmdb_id, mt, title: s.title, saved: new Map() });
+    if (!groups.has(k)) groups.set(k, { tmdbId: s.tmdb_id, mt, title: s.title, saved: new Map(), blank: [] });
     const g = groups.get(k);
+    if (blank) { g.blank.push(s); continue; }
     if (!g.saved.has(s.platform)) g.saved.set(s.platform, []);
     g.saved.get(s.platform).push(s);
   }
   console.log(`[platforms] ${shows.length} show rows, ${groups.size} distinct shows to check`);
 
-  let remembered = 0, applied = 0, rowsChanged = 0, cleared = 0, relabeled = 0, errors = 0;
+  let remembered = 0, applied = 0, rowsChanged = 0, cleared = 0, relabeled = 0, filled = 0, errors = 0;
 
   // Set a batch of rows to their new services, grouped so it's one PATCH
   // per target. pick(row) -> new service (or null = leave alone).
-  async function patchRows(rows, pick) {
+  async function patchRows(rows, pick, extra = {}) {
     const byTarget = new Map();
     for (const r of rows) {
       const to = pick(r);
@@ -242,7 +249,7 @@ async function main() {
     let n = 0;
     for (const [to, ids] of byTarget) {
       n += ids.length;
-      if (!DRY_RUN) await sb('PATCH', `shows?id=in.(${ids.join(',')})`, { platform: to }, { Prefer: 'return=minimal' });
+      if (!DRY_RUN) await sb('PATCH', `shows?id=in.(${ids.join(',')})`, { platform: to, ...extra }, { Prefer: 'return=minimal' });
     }
     return { n, targets: [...byTarget.keys()] };
   }
@@ -258,6 +265,20 @@ async function main() {
       console.error(`[platforms] ${g.title}: ${e.message}`);
       await sleep(500);
       continue;
+    }
+
+    if (g.blank.length && services.length) {
+      try {
+        const { n, targets } = await patchRows(g.blank, (r) => pickFor(services, mineOf(r)),
+          { platform_filled_at: new Date().toISOString() });
+        if (n) {
+          filled += n;
+          console.log(`[platforms] filled in None: ${g.title} -> ${targets.join('/')} (${n} copies)`);
+        }
+      } catch (e) {
+        errors++;
+        console.error(`[platforms] ${g.title} (None): ${e.message}`);
+      }
     }
 
     for (const [saved, rows] of g.saved) {
@@ -300,7 +321,7 @@ async function main() {
     await sleep(60); // stay well under TMDB's rate limit
   }
 
-  console.log(`[platforms] done: ${applied} moves applied (${rowsChanged} rows), ${remembered} pending, ${cleared} cleared, ${relabeled} moved to people's own services, ${errors} errors`);
+  console.log(`[platforms] done: ${applied} moves applied (${rowsChanged} rows), ${remembered} pending, ${cleared} cleared, ${relabeled} moved to people's own services, ${filled} None filled in, ${errors} errors`);
   if (errors && errors >= groups.size / 2) process.exit(1); // something systemic, fail the run
 }
 
