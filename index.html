@@ -539,7 +539,12 @@ body.card-v2 .btn-rec-link .lg-ico{display:block;width:16px;height:16px;color:va
 .switch[aria-checked="true"]{background:var(--terra);}
 .switch::after{content:"";position:absolute;top:2px;left:2px;width:20px;height:20px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,0.25);transition:transform 0.2s;}
 .textsize-seg{display:flex;gap:6px;margin-top:8px;}
-.mysvc-grid{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px;}
+.mysvc-grid{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px;}
+.mysvc-group{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);margin-top:14px;}
+.mysvc-help{margin-top:14px;font-size:14px;color:var(--charcoal);}
+.mysvc-help summary{cursor:pointer;color:var(--terra);font-weight:600;}
+.mysvc-help ul{margin:8px 0 0;padding-left:18px;line-height:1.45;}
+.mysvc-help li{margin-bottom:4px;}
 .mysvc-grid button{padding:8px 12px;border:1px solid var(--border);border-radius:999px;background:#fff;font-family:var(--sans);font-size:14px;color:var(--charcoal);cursor:pointer;line-height:1.1;}
 .mysvc-grid button.on{background:var(--terra);border-color:var(--terra);color:#fff;font-weight:600;}
 .textsize-seg button{flex:1;padding:8px 4px;border:1px solid var(--border);border-radius:var(--radius-btn,8px);background:#fff;font-family:var(--sans);color:var(--charcoal);cursor:pointer;line-height:1.1;}
@@ -1788,7 +1793,16 @@ body.look-lounge .lg-row .friend-count{margin-top:2px;font-size:13px;font-weight
       <div class="settings-section-label">My services</div>
       <div class="settings-card" style="padding:12px 14px;">
         <div style="font-size:14px;color:var(--charcoal);">Check what you subscribe to. When a show is on more than one service, ShowUp will label it with one you have.</div>
-        <div class="mysvc-grid" id="mysvc-grid"></div>
+        <div id="mysvc-grid"></div>
+        <details class="mysvc-help">
+          <summary>Not sure what you have?</summary>
+          <ul>
+            <li><b>On iPhone:</b> open Settings, tap your name, then Subscriptions.</li>
+            <li><b>On Amazon:</b> Account, then Memberships &amp; Subscriptions. Add-ons like AMC+ or BritBox you pay for through Amazon show up there.</li>
+            <li><b>Or</b> look at your credit card statement.</li>
+            <li>Showtime is now part of Paramount+.</li>
+          </ul>
+        </details>
         <div style="font-size:13px;color:var(--muted);margin-top:10px;">Your existing shows will switch to your services the next Monday.</div>
       </div>
     </div>
@@ -12169,10 +12183,14 @@ function renderMyServices() {
   var grid = document.getElementById('mysvc-grid');
   if (!grid) return;
   var mine = (state.user && state.user.myServices) || [];
-  grid.innerHTML = PLATFORMS.filter(function(p) { return p !== 'None' && p !== 'Other'; }).map(function(p) {
+  var FREE = ['Tubi', 'Pluto TV'];
+  function btn(p) {
     var on = mine.indexOf(p) !== -1;
     return '<button type="button" class="' + (on ? 'on' : '') + '" aria-pressed="' + on + '" data-svc="' + p + '" onclick="toggleMyService(this.dataset.svc)">' + (on ? '&#10003; ' : '') + p + '</button>';
-  }).join('');
+  }
+  var paid = PLATFORMS.filter(function(p) { return p !== 'None' && p !== 'Other' && FREE.indexOf(p) === -1; });
+  grid.innerHTML = '<div class="mysvc-group">Free for everyone</div><div class="mysvc-grid">' + FREE.map(btn).join('') + '</div>'
+    + '<div class="mysvc-group">Subscriptions</div><div class="mysvc-grid">' + paid.map(btn).join('') + '</div>';
 }
 var _mySvcSave = null;
 window.toggleMyService = function(svc) {
