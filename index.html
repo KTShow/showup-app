@@ -540,6 +540,7 @@ body.card-v2 .btn-rec-link .lg-ico{display:block;width:16px;height:16px;color:va
 .switch::after{content:"";position:absolute;top:2px;left:2px;width:20px;height:20px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,0.25);transition:transform 0.2s;}
 .textsize-seg{display:flex;gap:6px;margin-top:8px;}
 .mysvc-grid{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px;}
+.svc-not-yours{text-transform:none !important;letter-spacing:0 !important;font-size:13px;font-weight:600;color:var(--muted);}
 .mysvc-group{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);margin-top:14px;}
 .mysvc-help{margin-top:14px;font-size:14px;color:var(--charcoal);}
 .mysvc-help summary{cursor:pointer;color:var(--terra);font-weight:600;}
@@ -3094,6 +3095,15 @@ function _serviceShelfHTML(shows) {
 // Header counts on the own tabs: bare number under the quiet-headers preview,
 // "(n)" otherwise.
 function _ownCount(n){ return quietHeadsOn() ? String(n) : '('+n+')'; }
+// My List only, and only for people who've filled in Settings > My
+// services: a quiet note on a service header they don't have. (Watching is
+// skipped on purpose -- if you're watching it, you have it.)
+function _notYoursNote(svc, list){
+  var mine = (state.user && state.user.myServices) || [];
+  if (list !== 'watchlist' || !mine.length || mine.indexOf(svc) !== -1) return '';
+  if (svc === 'None' || svc === 'Other' || PLATFORMS.indexOf(svc) === -1) return '';
+  return ' <span class="svc-not-yours">&middot; not one of your services</span>';
+}
 function renderServiceGroup(key, svc, shows, list){
   var isCollapsed = !!_collapsedSections[key];
   // A collapsed group's cards aren't built until it's opened (see
@@ -3101,7 +3111,7 @@ function renderServiceGroup(key, svc, shows, list){
   var cardsHTML = isCollapsed ? '' : shows.map(function(s){ return buildCard(s,list); }).join('');
   return '<div class="service-group'+(isCollapsed?' collapsed':'')+'" data-ckey="'+key+'">'
     + '<div class="service-divider" onclick="toggleServiceSection(\''+key+'\')">'
-    + '<span class="service-divider-text">'+(isCollapsed?'&#9656;':'&#9662;')+' '+svc+' <span class="service-count">'+_ownCount(shows.length)+'</span></span>'
+    + '<span class="service-divider-text">'+(isCollapsed?'&#9656;':'&#9662;')+' '+svc+' <span class="service-count">'+_ownCount(shows.length)+'</span>'+_notYoursNote(svc, list)+'</span>'
     + '</div>'
     + (isCollapsed && shelfOn() ? _serviceShelfHTML(shows) : '')
     + '<div class="shows-grid">'+cardsHTML+'</div>'
@@ -12208,6 +12218,7 @@ window.toggleMyService = function(svc) {
   if (i === -1) mine.push(svc); else mine.splice(i, 1);
   state.user.myServices = mine;
   renderMyServices();
+  renderList('watchlist');
   // Short debounce so a run of taps is one save.
   clearTimeout(_mySvcSave);
   _mySvcSave = setTimeout(async function() {
